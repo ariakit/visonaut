@@ -784,6 +784,86 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       source: "automatic",
     });
   });
+  it("fails an unfinished run when its trusted capture executor changes", async () => {
+    const test = await fixture();
+    test.bindings.configuration.reusableWorkflowRef =
+      "ariakit/ariakit/.github/workflows/new-capture.yml@sha";
+    const result = await reconcileIngest(apiContext(test.bindings));
+    expect(result).toEqual({ checked: 1, errors: [], progressed: 1 });
+    expect((await test.service.run(test.runId)).state).toBe("failed");
+    const audit = await database
+      .prepare(
+        "SELECT action,detail_json FROM visonaut_audit WHERE run_id=? ORDER BY created_at DESC LIMIT 1",
+      )
+      .bind(test.runId)
+      .first<{ action: string; detail_json: string }>();
+    expect(audit?.action).toBe("capture-failed");
+    expect(JSON.parse(audit?.detail_json ?? "{}")).toMatchObject({
+      reason: "The trusted capture executor changed. Start a new capture attempt.",
+    });
+  });
+  it("retires an old attempt under a changed executor without blocking a later attempt", async () => {
+    const test = await fixture(true);
+    test.bindings.configuration.reusableWorkflowSha = "e".repeat(40);
+    await trySealRun(apiContext(test.bindings), test.runId, true);
+    expect((await test.service.run(test.runId)).state).toBe("failed");
+    await expect(trySealRun(apiContext(test.bindings), test.runId, true)).resolves.toBeUndefined();
+    test.startRerun();
+    const github = await createGitHubClient(test.bindings.configuration.github);
+    const inheritance = await inheritedShards(
+      apiContext(test.bindings),
+      github,
+      {
+        ...test.manifest.run,
+        workflowAttempt: 2,
+        shardKey: "firefox-1",
+        jobId: "792",
+        checkRunId: "1",
+        event: "push",
+        ref: "refs/heads/main",
+        sourceHead: test.manifest.run.testedSha,
+        targetHead: test.manifest.run.testedSha,
+      },
+      test.plan,
+    );
+    expect(inheritance).toEqual({ rerunShardKeys: ["chrome-1", "firefox-1"] });
+    const next = await test.service.reserveRun({
+      id: crypto.randomUUID(),
+      projectId: test.bindings.configuration.projectId,
+      externalRunId: "456",
+      attempt: 2,
+      kind: "main",
+      testedSha: test.manifest.run.testedSha,
+      lineageKey: "main",
+      plan: test.servicePlan,
+      verifiedRelatedRunIds: [test.runId],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified-rerun",
+      ...inheritance,
+      now: Date.now(),
+    });
+    expect(next.attempt).toBe(2);
+  });
+  it("fails an obsolete run even when its stored plan is unavailable", async () => {
+    const test = await fixture();
+    const key = `plans/${test.servicePlan.digest}.json`;
+    const stored = await quarantine.get(key);
+    expect(stored).not.toBeNull();
+    const body = await stored!.arrayBuffer();
+    await quarantine.delete(key);
+    try {
+      test.bindings.configuration.reusableWorkflowRef =
+        "ariakit/ariakit/.github/workflows/new-capture.yml@sha";
+      expect(await reconcileIngest(apiContext(test.bindings))).toEqual({
+        checked: 1,
+        errors: [],
+        progressed: 1,
+      });
+      expect((await test.service.run(test.runId)).state).toBe("failed");
+    } finally {
+      await quarantine.put(key, body);
+    }
+  });
   it("accepts the service's opaque promotion ID when saving a review after a baseline exists", async () => {
     const test = await fixture();
     const digest = await test.upload();
@@ -877,6 +957,13 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         .first<{ state: string }>(),
     ).toEqual({ state: "complete" });
     expect((await test.service.run(test.runId)).sealed_at).toBeNull();
+  });
+  it("does not inherit a carried shard captured under an obsolete executor", async () => {
+    const test = await rerunFixture();
+    test.bindings.configuration.reusableWorkflowSha = "e".repeat(40);
+    await trySealRun(apiContext(test.bindings), test.runId, true);
+    expect((await test.service.run(test.runId)).state).toBe("failed");
+    await expect(test.inherit()).rejects.toThrow("original verified manifest");
   });
   it("inherits GitHub carried-success aliases using the original job execution", async () => {
     const test = await fixture(true, true);

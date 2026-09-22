@@ -102,7 +102,7 @@ async function privateJson(
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await stored.arrayBuffer()));
 }
 
-async function runPlan(context: ApiContext, runId: string) {
+async function runProvenance(context: ApiContext, runId: string) {
   const provenance = await context.database
     .prepare("SELECT verified_json, plan_object_key FROM ingest_run_provenance WHERE run_id = ?")
     .bind(runId)
@@ -110,15 +110,21 @@ async function runPlan(context: ApiContext, runId: string) {
   if (!provenance) {
     throw new IncompleteError("Trusted run provenance is unavailable.");
   }
-  const plan = parseTrustedPlan(
-    await privateJson(
-      context,
-      provenance.plan_object_key,
-      context.configuration.limits.maximumPlanBytes,
-    ),
+  return {
+    planObjectKey: provenance.plan_object_key,
+    verified: object(JSON.parse(provenance.verified_json)),
+  };
+}
+
+async function storedPlan(context: ApiContext, objectKey: string) {
+  return parseTrustedPlan(
+    await privateJson(context, objectKey, context.configuration.limits.maximumPlanBytes),
   );
-  const verified = object(JSON.parse(provenance.verified_json));
-  return { plan, verified };
+}
+
+async function runPlan(context: ApiContext, runId: string) {
+  const { planObjectKey, verified } = await runProvenance(context, runId);
+  return { plan: await storedPlan(context, planObjectKey), verified };
 }
 
 async function verifyAncestry(context: ApiContext, github: GitHubClient, testedSha: string) {
@@ -853,7 +859,22 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
     await scheduleComparison(context, run.id);
     return;
   }
-  const { plan, verified } = await runPlan(context, run.id);
+  const { planObjectKey, verified } = await runProvenance(context, run.id);
+  if (
+    verified.reusableWorkflowRef !== context.configuration.reusableWorkflowRef ||
+    verified.reusableWorkflowSha !== context.configuration.reusableWorkflowSha
+  ) {
+    // A deployment can change the trusted executor while an old run is still uploading.
+    // That run cannot seal under the new pin, so preserve its evidence and fail it once.
+    // A later full capture attempt may continue; inherited shards must check the pin too.
+    await context.service.failRun({
+      runId: run.id,
+      reason: "The trusted capture executor changed. Start a new capture attempt.",
+      now: Date.now(),
+    });
+    return;
+  }
+  const plan = await storedPlan(context, planObjectKey);
   const github = await createGitHubClient(context.configuration.github);
   const identity = {
     workflowRunId: run.external_run_id,
@@ -913,14 +934,6 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
     ) {
       incomplete = true;
       continue;
-    }
-    if (
-      verified.reusableWorkflowRef !== context.configuration.reusableWorkflowRef ||
-      verified.reusableWorkflowSha !== context.configuration.reusableWorkflowSha
-    ) {
-      throw new IncompleteError(
-        "The trusted capture executor changed. Run the full capture again.",
-      );
     }
     const manifestBody = parseManifest(
       await privateJson(
