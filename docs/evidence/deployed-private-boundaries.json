@@ -1,0 +1,241 @@
+{
+  "at": "2026-09-22T07:52:42.164Z",
+  "rows": [
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/runs",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/operations",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/v1/runs/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/exports/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "POST",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111/review-sessions",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "POST",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111/decisions",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/images",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/api/search",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/images/11111111-1111-4111-8111-111111111111",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/images/11111111-1111-4111-8111-111111111111?download=1",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/images/",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "preview",
+      "method": "GET",
+      "path": "/images/not-an-image",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/runs",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/operations",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/v1/runs/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/exports/11111111-1111-4111-8111-111111111111",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "POST",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111/review-sessions",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "POST",
+      "path": "/api/runs/11111111-1111-4111-8111-111111111111/decisions",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/images",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/api/search",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private",
+      "nosniff": "nosniff",
+      "frame": "DENY"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/images/11111111-1111-4111-8111-111111111111",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/images/11111111-1111-4111-8111-111111111111?download=1",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/images/",
+      "status": 404,
+      "cacheControl": "no-store"
+    },
+    {
+      "environment": "diagnostics",
+      "method": "GET",
+      "path": "/images/not-an-image",
+      "status": 404,
+      "cacheControl": "no-store"
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "at": "2026-09-22T07:57:30.896Z",
+  "scope": "Preview D1-seeded session probes; real OAuth login/renewal/expiry/logout are separate browser evidence. Revocation payload is synthetic and correctly signed, not an actual GitHub delivery.",
+  "observations": [
+    {
+      "label": "D1-seeded maintainer session checked against live GitHub",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "D1-seeded non-maintainer refused by live GitHub permission check",
+      "status": 403,
+      "code": "not_maintainer",
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Preview bearer absent from diagnostic storage",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Cross-origin private mutation refused",
+      "status": 403,
+      "code": "invalid_origin",
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 8",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 6",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 1",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 2",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 3",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 7",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 4",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Concurrent live request 5",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Aborted client request",
+      "result": "AbortError"
+    },
+    {
+      "label": "Independent request succeeds after client abort",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Synthetic signed revocation accepted (not a GitHub delivery)",
+      "status": 202
+    },
+    {
+      "label": "Revoked fixture session no longer authenticated",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Logout invalidates fixture bearer",
+      "status": 200,
+      "code": null,
+      "cacheControl": "no-store, private"
+    },
+    {
+      "label": "Signed-out fixture session refused",
+      "status": 401,
+      "code": "sign_in_required",
+      "cacheControl": "no-store, private"
+    }
+  ]
+}

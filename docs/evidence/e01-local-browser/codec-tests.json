@@ -1,0 +1,150 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 10,
+  "numPassedTests": 10,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1790077731350,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels preserves original PNG and WebP bytes and exact RGBA including alpha",
+          "status": "passed",
+          "title": "preserves original PNG and WebP bytes and exact RGBA including alpha",
+          "duration": 13.485207999999986,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels accepts only the exact tested ICC in PNG and WebP",
+          "status": "passed",
+          "title": "accepts only the exact tested ICC in PNG and WebP",
+          "duration": 3.1418330000000196,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels checks sRGB gamma/chromaticity and refuses unknown color metadata",
+          "status": "passed",
+          "title": "checks sRGB gamma/chromaticity and refuses unknown color metadata",
+          "duration": 0.9625000000000057,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels supports WebKit's exact sRGB EXIF layout and rejects altered color/dimensions",
+          "status": "passed",
+          "title": "supports WebKit's exact sRGB EXIF layout and rejects altered color/dimensions",
+          "duration": 0.8088329999999928,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels rejects checksums, truncation, animation, unsupported depth and critical chunks",
+          "status": "passed",
+          "title": "rejects checksums, truncation, animation, unsupported depth and critical chunks",
+          "duration": 1.0621250000000089,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels bounds encoded, decoded and compressed profile sizes before codec allocation",
+          "status": "passed",
+          "title": "bounds encoded, decoded and compressed profile sizes before codec allocation",
+          "duration": 1.1138749999999789,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels rejects lossy, malformed, mismatched-size and corrupt lossless WebP",
+          "status": "passed",
+          "title": "rejects lossy, malformed, mismatched-size and corrupt lossless WebP",
+          "duration": 0.6840420000000051,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels ignores hidden RGB, detects alpha/color changes, and makes red-only masks",
+          "status": "passed",
+          "title": "ignores hidden RGB, detects alpha/color changes, and makes red-only masks",
+          "duration": 0.3248749999999916,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels always reports dimensions as changed and never substitutes a thumbnail baseline",
+          "status": "passed",
+          "title": "always reports dimensions as changed and never substitutes a thumbnail baseline",
+          "duration": 0.2290840000000003,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["validated originals and visible pixels"],
+          "fullName": "validated originals and visible pixels makes repeated tolerated drift explicit and strict policy detects each step",
+          "status": "passed",
+          "title": "makes repeated tolerated drift explicit and strict policy detects each step",
+          "duration": 0.31574999999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1790077731483,
+      "endTime": 1790077731505.325,
+      "status": "passed",
+      "message": "",
+      "name": "/private/tmp/ariviso-e01-closure/packages/compare/test/image.test.ts"
+    }
+  ]
+}

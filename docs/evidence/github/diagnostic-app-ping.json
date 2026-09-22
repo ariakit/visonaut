@@ -1,0 +1,61 @@
+{
+  "at": "2026-09-22T11:26:02.374Z",
+  "config": {
+    "url": "https://ariviso-diagnostics.ariakit.workers.dev/webhooks/github",
+    "content_type": "json",
+    "insecure_ssl": "0"
+  },
+  "app": {
+    "id": 5028451,
+    "events": ["check_run", "merge_group", "pull_request", "push", "workflow_run"],
+    "permissions": {
+      "actions": "read",
+      "checks": "write",
+      "contents": "read",
+      "emails": "read",
+      "merge_queues": "read",
+      "metadata": "read",
+      "pull_requests": "read"
+    }
+  },
+  "deliveries": [
+    {
+      "id": "3844159558400360448",
+      "guid": "053d8986-b631-11f1-99bd-c293179a419e",
+      "delivered_at": "2026-09-22T11:24:48.62Z",
+      "redelivery": true,
+      "duration": "0.27",
+      "status": "OK",
+      "status_code": 202,
+      "event": "ping",
+      "action": null,
+      "installation_id": null,
+      "repository_id": null,
+      "url": "",
+      "throttled_at": null
+    },
+    {
+      "id": "3844093888929202176",
+      "guid": "053d8986-b631-11f1-99bd-c293179a419e",
+      "delivered_at": "2026-09-22T02:55:08.89Z",
+      "redelivery": false,
+      "duration": "0.01",
+      "status": "Invalid HTTP Response: 403",
+      "status_code": 403,
+      "event": "ping",
+      "action": null,
+      "installation_id": null,
+      "repository_id": null,
+      "url": "",
+      "throttled_at": null
+    }
+  ],
+  "scope": "Genuine GitHub App ping manually redelivered. Automatic webhook activation, merge-group delivery, and OAuth revocation remain unproved.",
+  "privateReceipt": {
+    "deliveryId": "053d8986-b631-11f1-99bd-c293179a419e",
+    "event": "ping",
+    "receivedAt": 1790076287761,
+    "processedAt": 1790076287841,
+    "verificationRowsWritten": 0
+  }
+}

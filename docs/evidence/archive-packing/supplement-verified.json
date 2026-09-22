@@ -1,0 +1,38 @@
+{
+  "step": 179,
+  "report": {
+    "completed": ["e0800000-0000-4000-8000-000000000007"],
+    "deferred": [],
+    "attention": [],
+    "hasMore": false
+  },
+  "row": {
+    "state": "ready",
+    "page_count": 1799,
+    "progress_bytes": 2
+  },
+  "maxQueries": 149,
+  "maxProgressBytes": 787479,
+  "maxStepMilliseconds": 10634,
+  "maxHeapBytes": 72897432,
+  "maxArrayBufferBytes": 10584984,
+  "rootBytes": 787717,
+  "rootDigest": "a3604ae41bf13a1d8487053659a43afd94cea477b9b8d0b7b1010f24318253f4",
+  "verifiedPages": 1799,
+  "maximumPageBytes": 311638,
+  "counts": {
+    "images": 107460,
+    "captures": 35820,
+    "comparisons": 1,
+    "comparisonRows": 35820,
+    "referenceCaptures": 35820,
+    "referenceImages": 35820,
+    "profiles": 1,
+    "policies": 1,
+    "tasks": 35820
+  },
+  "exactDerivedArtifactIds": 71640,
+  "exactCommandPayloads": 0,
+  "exactPreservedDecisions": 0,
+  "foreignKeyViolations": 0
+}

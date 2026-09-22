@@ -1,0 +1,18 @@
+{
+  "startedAt": 1790077642975,
+  "jobs": [
+    {
+      "id": "fd6d4d45-1f51-4cf7-9b42-219757537ce3",
+      "mode": "known"
+    },
+    {
+      "id": "961f384a-f4b2-488d-8810-fcecbcfafe3f",
+      "mode": "unknown"
+    }
+  ],
+  "completedAt": 1790077948272,
+  "expected": {
+    "bytes": 1182101421,
+    "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491"
+  }
+}

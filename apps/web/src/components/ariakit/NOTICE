@@ -1,0 +1,4 @@
+Ariakit UI components and recipes copied from ariakit/ariakit commit fc85b809f3b44d3bc72fa1eae927f785ce744f02.
+Source: https://github.com/ariakit/ariakit/tree/fc85b809f3b44d3bc72fa1eae927f785ce744f02/packages/ariakit-ui/src
+Copyright Diego Haz. Distributed under the MIT license in LICENSE.
+The source behavior is retained; styles/ui.css requires @ariakit/tailwind.

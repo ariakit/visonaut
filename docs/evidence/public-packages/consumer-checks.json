@@ -1,0 +1,131 @@
+{
+  "scope": "Fresh tarball install. Status uses only an explicit loopback synthetic fixture, not remote authentication or hosted status.",
+  "checks": [
+    {
+      "label": "ESM imports, Node 24 require, no workspace protocol",
+      "argv": ["imports.mjs"],
+      "code": 0,
+      "stdout": "{\"ariviso\":{\"path\":\"<consumer>/node_modules/.pnpm/ariviso@file+..+tarballs+ariviso-0.1.0.tgz/node_modules/ariviso/dist/index.js\",\"esm\":true,\"require\":true},\"@ariviso/playwright\":{\"path\":\"<consumer>/node_modules/.pnpm/@ariviso+playwright@file+..+tarballs+ariviso-playwright-0.1.0.tgz_@playwright+test@1.63.0/node_modules/@ariviso/playwright/dist/index.js\",\"esm\":true,\"require\":true},\"@ariviso/playwright/reporter\":{\"path\":\"<consumer>/node_modules/.pnpm/@ariviso+playwright@file+..+tarballs+ariviso-playwright-0.1.0.tgz_@playwright+test@1.63.0/node_modules/@ariviso/playwright/dist/reporter.js\",\"esm\":true,\"require\":true}}\n",
+      "stderr": ""
+    },
+    {
+      "label": "Source condition still resolves packed dist",
+      "argv": ["--conditions=source", "imports.mjs"],
+      "code": 0,
+      "stdout": "{\"ariviso\":{\"path\":\"<consumer>/node_modules/.pnpm/ariviso@file+..+tarballs+ariviso-0.1.0.tgz/node_modules/ariviso/dist/index.js\",\"esm\":true,\"require\":true},\"@ariviso/playwright\":{\"path\":\"<consumer>/node_modules/.pnpm/@ariviso+playwright@file+..+tarballs+ariviso-playwright-0.1.0.tgz_@playwright+test@1.63.0/node_modules/@ariviso/playwright/dist/index.js\",\"esm\":true,\"require\":true},\"@ariviso/playwright/reporter\":{\"path\":\"<consumer>/node_modules/.pnpm/@ariviso+playwright@file+..+tarballs+ariviso-playwright-0.1.0.tgz_@playwright+test@1.63.0/node_modules/@ariviso/playwright/dist/reporter.js\",\"esm\":true,\"require\":true}}\n",
+      "stderr": ""
+    },
+    {
+      "label": "TypeScript 6.0.2 NodeNext declarations",
+      "argv": [
+        "node_modules/typescript/bin/tsc6",
+        "--noEmit",
+        "--strict",
+        "--types",
+        "node",
+        "--target",
+        "ES2024",
+        "--module",
+        "NodeNext",
+        "--moduleResolution",
+        "NodeNext",
+        "types.mts"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "TypeScript 6.0.2 Bundler declarations",
+      "argv": [
+        "node_modules/typescript/bin/tsc6",
+        "--noEmit",
+        "--strict",
+        "--types",
+        "node",
+        "--target",
+        "ES2024",
+        "--module",
+        "ESNext",
+        "--moduleResolution",
+        "Bundler",
+        "types.mts"
+      ],
+      "code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm exec ariviso --help",
+      "argv": ["exec", "ariviso", "--help"],
+      "code": 0,
+      "stdout": "Usage:\n  ariviso upload --manifest <file> [--server <origin>] [--json]\n  ariviso finalize --manifest <file> [--server <origin>] [--json]\n  ariviso status --run <id> [--server <origin>] [--json]\n\nARIVISO_SERVER supplies the service origin when --server is absent.\nARIVISO_RUN supplies the run ID when status has no --run.\nUpload and finalize require GitHub Actions OIDC (id-token: write).\nStatus requires ARIVISO_TOKEN, a maintainer session token.\nUpload success is data acceptance. It is not visual approval.\n\nExit codes: 0 success, 1 operation failure, 2 invalid arguments,\n            3 status is not passed, 4 authentication or permission failure.\n",
+      "stderr": ""
+    },
+    {
+      "label": "Unsupported command",
+      "argv": ["exec", "ariviso", "approve", "--json"],
+      "code": 2,
+      "stdout": "",
+      "stderr": "{\"error\":\"Choose upload, finalize, or status. Use --help for usage.\",\"exitCode\":2}\n"
+    },
+    {
+      "label": "Status without credentials",
+      "argv": ["exec", "ariviso", "status", "--json"],
+      "code": 4,
+      "stdout": "",
+      "stderr": "{\"error\":\"Status requires ARIVISO_TOKEN with a current maintainer session. Upload capabilities cannot read status.\",\"exitCode\":4}\n"
+    },
+    {
+      "label": "pnpm exec ariviso status: passed text",
+      "argv": ["exec", "ariviso", "status"],
+      "code": 0,
+      "stdout": "Run local-run: passed\nShards: 2/2\nReview: http://127.0.0.1:58555/runs/local-run\n",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm exec ariviso status: needs-review JSON",
+      "argv": ["exec", "ariviso", "status", "--json"],
+      "code": 3,
+      "stdout": "{\"schemaVersion\":\"1.0\",\"runId\":\"local-run\",\"state\":\"needs-review\",\"reviewUrl\":\"http://127.0.0.1:58555/runs/local-run\",\"completedShards\":2,\"expectedShards\":2,\"errors\":[]}\n",
+      "stderr": ""
+    },
+    {
+      "label": "pnpm exec ariviso status: refused",
+      "argv": ["exec", "ariviso", "status", "--json"],
+      "code": 4,
+      "stdout": "",
+      "stderr": "{\"error\":\"Authentication or permission failed. Check the credential and repository access.\",\"exitCode\":4}\n"
+    },
+    {
+      "label": "pnpm exec ariviso status: malformed protocol",
+      "argv": ["exec", "ariviso", "status", "--json"],
+      "code": 1,
+      "stdout": "",
+      "stderr": "{\"error\":\"The service returned an unknown run state.\",\"exitCode\":1}\n"
+    }
+  ],
+  "fixtureRequests": [
+    {
+      "method": "GET",
+      "path": "/v1/runs/local-run",
+      "syntheticBearerMatched": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/runs/local-run",
+      "syntheticBearerMatched": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/runs/local-run",
+      "syntheticBearerMatched": true
+    },
+    {
+      "method": "GET",
+      "path": "/v1/runs/local-run",
+      "syntheticBearerMatched": true
+    }
+  ],
+  "portabilityNote": "Only the machine-specific consumer-root prefix in the two import receipts was replaced with <consumer>/. Command arguments, exit codes, fixture request observations, and all other output are unchanged. The original receipt hash is preserved in manifest.json."
+}

@@ -1,0 +1,14 @@
+{
+  "scope": "Native local Miniflare D1/R2; export orchestration in Node; no hosted latency, Worker CPU/memory, or sustained capacity claim",
+  "seededMilliseconds": 14683.366833,
+  "preparationMilliseconds": 20492.101041999995,
+  "totalMilliseconds": 83290.112083,
+  "bytes": 70951424,
+  "tarEntries": 11171,
+  "captures": 35820,
+  "images": 10580,
+  "capturePages": 359,
+  "indexPages": 106,
+  "checksumPages": 12,
+  "sha256": "d85d3c8725295eec2356b3384f4c68019027dc096cbf20b465582f8725030e04"
+}

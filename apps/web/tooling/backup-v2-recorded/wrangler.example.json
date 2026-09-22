@@ -1,0 +1,63 @@
+{
+  "name": "replace-with-disposable-v2-worker",
+  "account_id": "00000000000000000000000000000000",
+  "main": "recorded-worker.js",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "limits": {
+    "cpu_ms": 30000,
+    "subrequests": 150000
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ACCOUNT_ID": "00000000000000000000000000000000",
+    "SOURCE_DATABASE_ID": "00000000-0000-0000-0000-000000000000",
+    "SECRET_EPOCH": "before-restore"
+  },
+  "d1_databases": [
+    {
+      "binding": "SOURCE_DB",
+      "database_name": "replace-with-disposable-source-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "binding": "TARGET_DB",
+      "database_name": "replace-with-disposable-target-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "binding": "PAGE_DB",
+      "database_name": "replace-with-disposable-page-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "SOURCE_IMAGES",
+      "bucket_name": "replace-with-disposable-source-images"
+    },
+    {
+      "binding": "SOURCE_PRIVATE",
+      "bucket_name": "replace-with-disposable-source-private"
+    },
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "replace-with-disposable-backups"
+    },
+    {
+      "binding": "TARGET_IMAGES",
+      "bucket_name": "replace-with-disposable-target-images"
+    },
+    {
+      "binding": "TARGET_PRIVATE",
+      "bucket_name": "replace-with-disposable-target-private"
+    }
+  ],
+  "placement": {
+    "region": "aws:us-east-1"
+  }
+}

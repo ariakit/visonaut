@@ -1,0 +1,785 @@
+{
+  "evidence": "E08 isolated full-scale backup v2 and restore with fixture secret rotation",
+  "date": "2026-09-22",
+  "passed": true,
+  "activated": false,
+  "scope": {
+    "backupFormat": 2,
+    "laterV3Covered": false,
+    "capturesPerRun": 35820,
+    "captureRowsAcrossTwoAttempts": 71640,
+    "corpusFiles": 1058,
+    "distinctCorpusDigests": 989,
+    "originalKeys": 35820,
+    "protectedCopyKeys": 35820,
+    "privatePlanManifestObjects": 73,
+    "objects": 71713,
+    "bytes": 2056543382,
+    "originalBytes": 1018254966,
+    "protectedBytes": 1018254966,
+    "privateBytes": 20033450,
+    "thumbnails": 0,
+    "masks": 0,
+    "profiles": 1
+  },
+  "resources": {
+    "createdFor": "disposable E08 drill only",
+    "accountId": "b04f3af3f0f10a6b9481bc23ba974eca",
+    "worker": "ariviso-e08-drill-20260922",
+    "databases": [
+      {
+        "binding": "SOURCE_DB",
+        "database_name": "ariviso-e08-source-20260922",
+        "database_id": "612d1030-6539-4b08-ad4c-b010b42f2ee6"
+      },
+      {
+        "binding": "TARGET_DB",
+        "database_name": "ariviso-e08-restore-20260922",
+        "database_id": "3d203a8b-bbcc-4d03-b0f9-26e4c1ad386e"
+      },
+      {
+        "binding": "PAGE_DB",
+        "database_name": "ariviso-e08-page-probe-20260922",
+        "database_id": "0b75801e-d267-484b-8603-799219e44312"
+      }
+    ],
+    "buckets": [
+      {
+        "binding": "SOURCE_IMAGES",
+        "bucket_name": "ariviso-e08-source-images-20260922"
+      },
+      {
+        "binding": "SOURCE_PRIVATE",
+        "bucket_name": "ariviso-e08-source-private-20260922"
+      },
+      {
+        "binding": "BACKUPS",
+        "bucket_name": "ariviso-e08-backups-20260922"
+      },
+      {
+        "binding": "TARGET_IMAGES",
+        "bucket_name": "ariviso-e08-restore-images-20260922"
+      },
+      {
+        "binding": "TARGET_PRIVATE",
+        "bucket_name": "ariviso-e08-restore-private-20260922"
+      }
+    ]
+  },
+  "workerVersions": {
+    "backup": "04fee5d2-c834-458b-aaa3-67ea583932e1",
+    "restoreAndPageProbe": "3afe87dc-14a7-4f22-9fee-b543078f9bb8"
+  },
+  "consistentSqlSnapshot": {
+    "exportStartedAt": 1790063929682,
+    "exportedAt": 1790063964510,
+    "stagedAt": 1790064045031,
+    "digest": "81a599f48faaf0ed780938db22134b2ae007430f798a8056fe70d79b4bf4e38d",
+    "bytes": 275653334
+  },
+  "backup": {
+    "asOf": "2026-09-22T09:04:46.177Z",
+    "complete": true,
+    "fixture": "35,820 per-run original keys, 35,820 protected copies, two capture attempts, historical image bytes replicated; synthetic all-changed review data",
+    "source": {
+      "objects": 71713,
+      "images": 71640,
+      "privateObjects": 73,
+      "bytes": 2056543382,
+      "imageBytes": 2036509932,
+      "privateBytes": 20033450,
+      "physicalD1BytesAfterInitialImport": 315023360,
+      "sqlDumpBytes": 275653334
+    },
+    "copiedObjects": 71713,
+    "completedPageCount": 287,
+    "copyStepsObserved": 287,
+    "stepsObserved": 289,
+    "backupStartedAt": 1790063929248,
+    "backupCompletedAt": 1790067884628,
+    "backupMilliseconds": 3955380,
+    "maximumPhysicalDatabaseBytes": 364437504,
+    "lastPhysicalDatabaseBytes": 353005568,
+    "perPage": {
+      "wallMilliseconds": {
+        "p50": 10660,
+        "p95": 24714,
+        "p100": 27287
+      },
+      "sqlMilliseconds": {
+        "p50": 15.241299999999999,
+        "p95": 21.7344,
+        "p100": 27.362400000000004
+      },
+      "rowsRead": {
+        "p50": 1760,
+        "p95": 1760,
+        "p100": 1760
+      },
+      "rowsWritten": {
+        "p50": 1759,
+        "p95": 1759,
+        "p100": 1759
+      },
+      "queries": {
+        "p50": 12,
+        "p95": 12,
+        "p100": 12
+      }
+    },
+    "observedTotals": {
+      "sqlMilliseconds": 5648.549999999999,
+      "rowsRead": 1043075,
+      "rowsWritten": 791441,
+      "queries": 3468,
+      "r2": {
+        "backups.put": 72002,
+        "backups.get": 143714,
+        "sourceImages.get": 71640,
+        "sourcePrivate.get": 73
+      }
+    },
+    "exportOnly": {
+      "wallMilliseconds": 25473,
+      "queries": 12,
+      "counts": {
+        "backups.put": 1,
+        "backups.get": 1
+      }
+    },
+    "policy": {
+      "objectsPerStep": 250,
+      "copyConcurrency": 6,
+      "maximumDatabaseBytes": 536870912,
+      "leaseMilliseconds": 600000
+    },
+    "unknowns": [
+      "Worker CPU and peak memory are not captured by D1 meta",
+      "Warm subsequent-day backup has not run",
+      "Production scheduled continuation delay is absent in this direct harness",
+      "HTTP staging and local export are separate from observed backup step R2 counts",
+      "No thumbnails or masks in this recovery fixture",
+      "Totals exclude the initial pin-establishment call, inventory verification and object seeding"
+    ]
+  },
+  "restore": {
+    "syntheticReplicatedCorpus": true,
+    "activated": false,
+    "startedAt": 1790067901971,
+    "completedAt": 1790073508822,
+    "milliseconds": 5606851,
+    "rpoMillisecondsUpperBound": 3972289,
+    "rpoMillisecondsLowerBound": 3937461,
+    "objects": 71713,
+    "bytes": 2056543382,
+    "references": 71713,
+    "report": {
+      "counts": {
+        "captures": 71640,
+        "images": 35820,
+        "baselineCopies": 35820,
+        "commands": 3702,
+        "sessions": 0,
+        "credentials": 0,
+        "activeRuns": 0,
+        "unfencedTasks": 0,
+        "unfencedDeliveries": 0
+      },
+      "foreignKeys": [],
+      "secretEpoch": "before-restore",
+      "now": 1790073508038,
+      "responsePlacement": "remote-IAD"
+    },
+    "readyAfterSecretRotationAt": 1790073517451,
+    "completeRestorationMilliseconds": 5615480
+  },
+  "restoreCopyReceipts": {
+    "pages": 287,
+    "concurrency": 6,
+    "r2Counts": {
+      "backups.get": 71713,
+      "target.get": 143426,
+      "target.put": 71713
+    },
+    "wallMilliseconds": {
+      "p50": 16037,
+      "p95": 18843,
+      "max": 20479
+    },
+    "scope": "Page copy calls only. Inventory-page fetches, SQL download/import, and final reference rehash are excluded from these R2 counts."
+  },
+  "nativeSqlImport": {
+    "sqlMilliseconds": 34176.4819,
+    "rowsRead": 557671,
+    "rowsWritten": 1198438,
+    "queries": 366297,
+    "changes": 366230,
+    "physicalDatabaseBytes": 314343424,
+    "tables": 51,
+    "region": "ENAM",
+    "colo": "EWR"
+  },
+  "beforeRestoreSentinels": {
+    "sessions": 1,
+    "credentials": 1,
+    "activeRuns": 1,
+    "unfencedTasks": 1,
+    "unfencedDeliveries": 1,
+    "captures": 71640,
+    "images": 35820,
+    "baselineCopies": 35820,
+    "commands": 3702
+  },
+  "rotation": {
+    "before": {
+      "authSecretDigest": "9c8e46dc407479c06db467344d7674d320759efc0d3c53f8d09cc26266c16abb",
+      "ingestSecretDigest": "c1e01cb818863994ca021055832d6718d4376a01f7a2e4af5f48c67044028a09",
+      "epoch": "before-restore",
+      "responsePlacement": "remote-IAD"
+    },
+    "after": {
+      "authSecretDigest": "4233a98a4d05f2b44351a842e84882b640cb68541c48b782a69ae5b3648e3a7d",
+      "ingestSecretDigest": "8b75168ad5fbf5d649d38e3776389ce096b2ad7421fa8a243ac6d7efc14b2a3d",
+      "epoch": "before-restore",
+      "responsePlacement": "remote-IAD"
+    },
+    "oldCapabilityUnexpired": true,
+    "oldAccessStatus": 401,
+    "oldIngestStatus": 401,
+    "freshIngestValid": true,
+    "rotatedAt": 1790073517451
+  },
+  "rotationScope": {
+    "rotated": ["DRILL_TOKEN", "AUTH_SECRET", "INGEST_CAPABILITY_SECRET"],
+    "notRotated": [
+      "Existing GitHub App credentials",
+      "Existing OAuth client credentials",
+      "Existing Cloudflare account credentials",
+      "Local export-only API token"
+    ],
+    "reason": "Only the disposable fixture used these three credentials. No real application credential was bound to the drill."
+  },
+  "credentialCleanup": {
+    "worker": "ariviso-e08-drill-20260922",
+    "removedAt": 1790073631812,
+    "secretNames": ["DRILL_TOKEN", "AUTH_SECRET", "INGEST_CAPABILITY_SECRET"],
+    "formerAccessStatus": 401,
+    "unauthenticatedStatus": 401,
+    "localCredentialFilesRemoved": [
+      "drill-token",
+      "auth-secret",
+      "ingest-secret",
+      "secrets-before.json",
+      "secrets-after.json",
+      "rotation-checkpoint.json"
+    ],
+    "exportTokenPreserved": true,
+    "existingApplicationOrGitHubCredentialsChanged": false
+  },
+  "d1ReviewUndo": {
+    "samples": 30,
+    "method": {
+      "percentile": "nearest-rank",
+      "formula": "sorted ascending values[ceil(p * n) - 1]",
+      "p50Rank": 15,
+      "p95Rank": 29,
+      "combinedGuardP50Rank": 30,
+      "combinedGuardP95Rank": 57,
+      "warmupExcluded": false,
+      "sampling": "30 serial pairs; approve the same row, then Undo; no concurrent load",
+      "wallClock": "Worker performance.now around Service.review and Service.undo; excludes client-to-Worker HTTP transport and preparatory target/project reads",
+      "sqlClock": "D1 meta.timings.sql_duration_ms, confirmed equal to meta.duration for every statement",
+      "guardSelectionPrefix": "INSERT INTO ariviso_assertions (valid) VALUES (CASE WHEN (NOT EXISTS (SELECT 1 FROM ariviso_projects project",
+      "guardAttribution": "First matching statement per sample is review, second is Undo; each occurs before its operation DELETE FROM ariviso_assertions",
+      "batchWallCaveat": "milliseconds on each batched statement is the entire batch elapsed time, repeated for every statement; it is not isolated statement wall time and must not be summed",
+      "sqlTextLimit": 110
+    },
+    "dataset": {
+      "baselineRows": 35820,
+      "reviewRows": 35820,
+      "baseline": "35,820 changed rows with active human approvals in the current accepted snapshot",
+      "review": "35,820 changed rows initially pending; one row is approved and then returned to pending after each pair",
+      "uniqueOriginalKeys": 35820,
+      "protectedCopyKeys": 35820,
+      "captureRowsAcrossRuns": 71640,
+      "physicalWebpCorpusFiles": 1058,
+      "distinctWebpDigests": 989,
+      "provenance": "Raw SQL synthetic metadata with repeated older real WebP bytes; not new capture, comparator, or authorized ingestion evidence"
+    },
+    "statistics": {
+      "reviewWallMs": {
+        "count": 30,
+        "p50": 1026,
+        "p95": 1279,
+        "max": 1296
+      },
+      "undoWallMs": {
+        "count": 30,
+        "p50": 528,
+        "p95": 624,
+        "max": 2016
+      },
+      "reviewSqlTotalMs": {
+        "count": 30,
+        "p50": 404.3499,
+        "p95": 491.66360000000003,
+        "max": 526.5183000000001
+      },
+      "undoSqlTotalMs": {
+        "count": 30,
+        "p50": 171.12890000000002,
+        "p95": 202.1445,
+        "max": 222.49779999999998
+      },
+      "reviewGuardSqlMs": {
+        "count": 30,
+        "p50": 165.3116,
+        "p95": 196.683,
+        "max": 198.1281
+      },
+      "undoGuardSqlMs": {
+        "count": 30,
+        "p50": 167.5643,
+        "p95": 198.6174,
+        "max": 218.9751
+      },
+      "reviewWriteBatchWallMs": {
+        "count": 30,
+        "p50": 274,
+        "p95": 428,
+        "max": 530
+      },
+      "undoWriteBatchWallMs": {
+        "count": 30,
+        "p50": 266,
+        "p95": 380,
+        "max": 1759
+      },
+      "reviewAllRowsFetchWallMs": {
+        "count": 30,
+        "p50": 519,
+        "p95": 623,
+        "max": 809
+      },
+      "reviewAllRowsFetchSqlMs": {
+        "count": 30,
+        "p50": 229.7492,
+        "p95": 327.9569,
+        "max": 374.0785
+      },
+      "reviewGuardRowsRead": {
+        "count": 30,
+        "p50": 250743,
+        "p95": 250743,
+        "max": 250743
+      },
+      "undoGuardRowsRead": {
+        "count": 30,
+        "p50": 250743,
+        "p95": 250743,
+        "max": 250743
+      },
+      "reviewAllRowsFetchRowsRead": {
+        "count": 30,
+        "p50": 71640,
+        "p95": 71640,
+        "max": 71640
+      },
+      "reviewAllRowsFetchWallFraction": {
+        "count": 30,
+        "p50": 0.5004945598417408,
+        "p95": 0.5714285714285714,
+        "max": 0.6325254104769351
+      },
+      "combinedGuardSqlMs": {
+        "count": 60,
+        "p50": 167.5643,
+        "p95": 198.1281,
+        "max": 218.9751
+      }
+    },
+    "unplacedStatistics": {
+      "reviewWallMs": {
+        "count": 30,
+        "p50": 2344,
+        "p95": 2964,
+        "max": 3283
+      },
+      "undoWallMs": {
+        "count": 30,
+        "p50": 1410,
+        "p95": 1546,
+        "max": 1610
+      },
+      "reviewSqlTotalMs": {
+        "count": 30,
+        "p50": 437.702,
+        "p95": 561.6097,
+        "max": 564.4076
+      },
+      "undoSqlTotalMs": {
+        "count": 30,
+        "p50": 177.3531,
+        "p95": 201.3514,
+        "max": 208.4417
+      },
+      "reviewGuardSqlMs": {
+        "count": 30,
+        "p50": 175.1499,
+        "p95": 201.644,
+        "max": 288.6175
+      },
+      "undoGuardSqlMs": {
+        "count": 30,
+        "p50": 174.2204,
+        "p95": 197.9607,
+        "max": 205.1383
+      },
+      "reviewWriteBatchWallMs": {
+        "count": 30,
+        "p50": 382,
+        "p95": 498,
+        "max": 508
+      },
+      "undoWriteBatchWallMs": {
+        "count": 30,
+        "p50": 361,
+        "p95": 496,
+        "max": 567
+      },
+      "reviewAllRowsFetchWallMs": {
+        "count": 30,
+        "p50": 1184,
+        "p95": 1757,
+        "max": 2159
+      },
+      "reviewAllRowsFetchSqlMs": {
+        "count": 30,
+        "p50": 255.7996,
+        "p95": 359.7075,
+        "max": 370.0828
+      },
+      "reviewGuardRowsRead": {
+        "count": 30,
+        "p50": 250743,
+        "p95": 250743,
+        "max": 250743
+      },
+      "undoGuardRowsRead": {
+        "count": 30,
+        "p50": 250743,
+        "p95": 250743,
+        "max": 250743
+      },
+      "reviewAllRowsFetchRowsRead": {
+        "count": 30,
+        "p50": 71640,
+        "p95": 71640,
+        "max": 71640
+      },
+      "reviewAllRowsFetchWallFraction": {
+        "count": 30,
+        "p50": 0.5064935064935064,
+        "p95": 0.6046111493461803,
+        "max": 0.6576302162656107
+      },
+      "combinedGuardSqlMs": {
+        "count": 60,
+        "p50": 175.1499,
+        "p95": 198.906,
+        "max": 288.6175
+      }
+    },
+    "placementProof": {
+      "at": "2026-09-22T04:52:56.947Z",
+      "status": 200,
+      "placement": "remote-IAD",
+      "ray": "a3eeb3ff595b5a8d-CWB",
+      "body": {
+        "diagnostic": true,
+        "secretEpoch": "before-restore",
+        "sourceId": "612d1030-6539-4b08-ad4c-b010b42f2ee6",
+        "now": 1790052776914
+      }
+    },
+    "placementCaveat": "The 30 timing responses did not preserve response placement headers. Later health proof shows remote-IAD; the before/after timing comparison is not randomized and does not establish a sole cause."
+  },
+  "isolated1000ObjectPageProbe": {
+    "copyWorkers": 6,
+    "objectsPerPage": 1000,
+    "leaseMilliseconds": 180000,
+    "cold": [
+      {
+        "wallMilliseconds": 63359,
+        "sqlMilliseconds": 32.1642,
+        "rowsRead": 7008,
+        "rowsWritten": 7009,
+        "counts": {
+          "sourceImages.get": 1000,
+          "backups.get": 2001,
+          "backups.put": 1001
+        },
+        "objects": 1000
+      }
+    ],
+    "warm": [
+      {
+        "wallMilliseconds": 707,
+        "sqlMilliseconds": 19.577900000000003,
+        "rowsRead": 6008,
+        "rowsWritten": 9,
+        "counts": {
+          "backups.put": 1,
+          "backups.get": 1
+        },
+        "objects": 1000
+      },
+      {
+        "wallMilliseconds": 534,
+        "sqlMilliseconds": 18.2229,
+        "rowsRead": 6008,
+        "rowsWritten": 9,
+        "counts": {
+          "backups.put": 1,
+          "backups.get": 1
+        },
+        "objects": 1000
+      },
+      {
+        "wallMilliseconds": 384,
+        "sqlMilliseconds": 17.226,
+        "rowsRead": 6008,
+        "rowsWritten": 9,
+        "counts": {
+          "backups.put": 1,
+          "backups.get": 1
+        },
+        "objects": 1000
+      },
+      {
+        "wallMilliseconds": 663,
+        "sqlMilliseconds": 18.877900000000004,
+        "rowsRead": 6008,
+        "rowsWritten": 9,
+        "counts": {
+          "backups.put": 1,
+          "backups.get": 1
+        },
+        "objects": 1000
+      },
+      {
+        "wallMilliseconds": 501,
+        "sqlMilliseconds": 20.340799999999998,
+        "rowsRead": 6008,
+        "rowsWritten": 9,
+        "counts": {
+          "backups.put": 1,
+          "backups.get": 1
+        },
+        "objects": 1000
+      }
+    ],
+    "limitations": [
+      "One cold target-copy page, historical replicated source bytes; not a cold-source-cache guarantee",
+      "Warm samples reset only the isolated ready-cache copying stage; no second complete daily backup claimed",
+      "Warm SQL totals exclude the four fixture reset statements; wallMilliseconds starts after reset",
+      "Probe never imports/exports a SQL backup and never writes a completion marker",
+      "Main250-object page backup remains separate and ongoing"
+    ]
+  },
+  "copyOnlyWorkerCpu": {
+    "worker": "ariviso-e08-drill-20260922",
+    "periodStart": "2026-09-22T08:01:12Z",
+    "periodEnd": "2026-09-22T08:12:33Z",
+    "kind": "Cloudflare adaptive aggregate; may lag live controller; does not measure peak memory",
+    "result": {
+      "data": {
+        "viewer": {
+          "accounts": [
+            {
+              "workersInvocationsAdaptive": [
+                {
+                  "dimensions": {
+                    "scriptName": "ariviso-e08-drill-20260922"
+                  },
+                  "quantiles": {
+                    "cpuTimeP50": 983837,
+                    "cpuTimeP95": 1273127,
+                    "wallTimeP50": 25005848,
+                    "wallTimeP95": 27316168
+                  },
+                  "sum": {
+                    "cpuTimeUs": 22788748,
+                    "requests": 24
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "errors": null
+    }
+  },
+  "tamperRedControl": {
+    "at": "2026-09-22T08:58:52.918Z",
+    "kind": "Restore inventory tamper red control; digest check precedes target writes",
+    "status": 500,
+    "body": {
+      "error": "Inventory checksum differs",
+      "milliseconds": 44
+    }
+  },
+  "limitations": [
+    "Image bytes come from a replicated historical corpus; not 35,820 fresh browser captures.",
+    "SQL supplies synthetic profiles, GitHub-shaped provenance, successful shard metadata, and all-changed review outcomes. No ingestion authorization, comparator, capture-noise, or GitHub evidence is claimed.",
+    "Two attempts share inherited original byte ownership. There are no thumbnail or mask objects.",
+    "V2 full object inventory and registry were frozen before profile normalization, archive lifecycle, historical recomparison, and v3 grouped backups. The final implementation needs its separate v3 evidence.",
+    "RPO is the measured snapshot-age interval at simulated restore start, not a production daily schedule guarantee.",
+    "RTO includes local controller transport, SQL import, sequential 250-object page steps with six copy workers, all reference rehashes, sanitization, and actual fixture rotation. No live traffic or concurrent application writes were present.",
+    "Backup R2/D1 totals exclude pin establishment, local staging, seeding, and independent inventory verification; restore-copy R2 counts exclude final reference rehash and SQL operations.",
+    "Worker CPU is an adaptive 24-request aggregate for a copy-only interval, not a peak memory measurement or complete-run CPU total.",
+    "Cold1000-object page has one sample; five reuse samples are not a complete second daily backup.",
+    "The target remains inactive; existing application, GitHub, and Cloudflare credentials were not rotated."
+  ],
+  "frozenSourceFingerprints": [
+    {
+      "path": "drill-worker.mjs",
+      "bytes": 26119,
+      "sha256": "8dc0367dc3a74ae432a5c23ff85eafe3aa3137328344487517aa8c4e9d55c255"
+    },
+    {
+      "path": "run-drill.mjs",
+      "bytes": 20742,
+      "sha256": "a410b120cdacd7e2a0160f406a31a44f1b3dc939d902c282a0dc203beaeef4a7"
+    },
+    {
+      "path": "continue-recovery.mjs",
+      "bytes": 1932,
+      "sha256": "45fdcefba0ec838c9e3cea91d2e7040dd4a1b3e33a9a15c5bd99d0dbd8fdb3ae"
+    },
+    {
+      "path": "implementation-snapshot/backup-objects.ts",
+      "bytes": 1837,
+      "sha256": "9dada28c2e095351a63ba261aa542161322d4b84f667099ed29d83e582972b65"
+    },
+    {
+      "path": "implementation-snapshot/backups.ts",
+      "bytes": 20885,
+      "sha256": "2e00002a11e42ee156034537b214a3078393944cea3ac5a52059465f118b3ba7"
+    },
+    {
+      "path": "implementation-snapshot/checks.ts",
+      "bytes": 10689,
+      "sha256": "6ed938fe2309f8e757eaa96a558ead8b8a6a8e3af227e8919f68a214cb799bd3"
+    },
+    {
+      "path": "implementation-snapshot/cloudflare-export.ts",
+      "bytes": 3894,
+      "sha256": "e88b63cc9a8d946827b2ce8850a58e987a54cf7bb33f2de69b641f3fc20338c5"
+    },
+    {
+      "path": "implementation-snapshot/common.ts",
+      "bytes": 6918,
+      "sha256": "72ac86892b8b9afb5e97357174e371a069db6c391c2aa5d6cfadb9af0e0dc92e"
+    },
+    {
+      "path": "implementation-snapshot/export-study.ts",
+      "bytes": 2756,
+      "sha256": "5b3aed23053f2a1b144f3675a0fd463bcad7a11382772b519dedfcdbb5fc2ed0"
+    },
+    {
+      "path": "implementation-snapshot/exports.ts",
+      "bytes": 16888,
+      "sha256": "2f46c84ba016ab8f8594bfca433ab7c1643534145581ca6c530329c4ba5342a7"
+    },
+    {
+      "path": "implementation-snapshot/index.ts",
+      "bytes": 3161,
+      "sha256": "968c803f09376afb3449d4abaa519ae4c2f41166129c4e47aec41a3f899ec093"
+    },
+    {
+      "path": "implementation-snapshot/object-stream.ts",
+      "bytes": 2934,
+      "sha256": "b8076a9cd7826551b4367451a1ed115801a14b744f61d06c7073b174a7d6c02a"
+    },
+    {
+      "path": "implementation-snapshot/promotions.ts",
+      "bytes": 7378,
+      "sha256": "185a6a2a5ce568a9a6a1c6115ffe135825c6490c647e36ed90a07881d8f70267"
+    },
+    {
+      "path": "implementation-snapshot/recovery.ts",
+      "bytes": 2448,
+      "sha256": "f508e5fe9ba6f8bb1d4b51caf882803598697463dea0757eabf50e9561ea5178"
+    },
+    {
+      "path": "implementation-snapshot/retention.ts",
+      "bytes": 4270,
+      "sha256": "bd16347b7fdc03bdd216bb45ad0022d4a7d75e611cf2b80f775f4221d2d304e2"
+    },
+    {
+      "path": "implementation-snapshot/types.ts",
+      "bytes": 2191,
+      "sha256": "005881951394ff4ce382bca430a2c7396d88b7a2f2683fb45d30edeb223e32ac"
+    },
+    {
+      "path": "packages/service/src/database.ts",
+      "bytes": 1814,
+      "sha256": "96eedc6d9e2fbe381417edb487a1a607cce7e888e15b62731924088242e08955"
+    },
+    {
+      "path": "packages/service/src/index.ts",
+      "bytes": 116,
+      "sha256": "abb93eea75faf1a06e40e5a3ccba5d1640414130dd76941e74eb3661752b8b9d"
+    },
+    {
+      "path": "packages/service/src/service.ts",
+      "bytes": 82878,
+      "sha256": "c1b4b25ee4061ab26cfe8cc5017786dc85bc51776bc9baa13d6424aaa4a69413"
+    },
+    {
+      "path": "packages/service/src/types.ts",
+      "bytes": 5303,
+      "sha256": "cec95ef23970cbd1d2377319770ae64b4cee456d732d692f92b9694590918d68"
+    },
+    {
+      "path": "packages/service/src/work.ts",
+      "bytes": 21961,
+      "sha256": "9b1ecbac9e75ba128638754f9d73d8e8c8843cd1e77f85311463f2aa484c5119"
+    }
+  ],
+  "recordedArtifacts": {
+    "recorded-events.jsonl.gz": {
+      "bytes": 78223,
+      "sha256": "01cfc97604c3482b0c0a43057479ae11ce76da1b5dedb5ef4a80a448c3d4e226",
+      "decompressedSha256": "208a65da0bafbf18063cb95a937d58a381e63b7ab73af3441af4cebe91e5093a"
+    },
+    "recorded-d1-timing-placed.json.gz": {
+      "bytes": 30457,
+      "sha256": "566a390fa6a4138a8e7ab2cb05b737aa628059f26415df363c961aef7d4bb4a4",
+      "decompressedSha256": "6baddfaf53b14b9cca1930343e111bd9cd917bbf4cd0d788f1f4635704149de9"
+    },
+    "recorded-d1-timing-unplaced.json.gz": {
+      "bytes": 30546,
+      "sha256": "cc62e216c0da47cfe2c81b0c6f08d3715869bd923e5ade9562f6daacefeee792",
+      "decompressedSha256": "db279663d755f1982c1dec17075121d281db19ad344612f0a8638b0883d6b405"
+    },
+    "recorded-backup-worker.js.gz": {
+      "bytes": 35831,
+      "sha256": "e6e3862c46d851964a84597227c6e4e86433d042c309489f85da1aad09b3e812",
+      "decompressedSha256": "b85c02f9bf4d8335b2cbe709ddd93427d54cef7ea25f7b83d58987f7134d4aba"
+    },
+    "recorded-worker.js.gz": {
+      "bytes": 35976,
+      "sha256": "44a49672e3f93bed96750b84f8017de52ca0407cd27bc88d1a35ebde4477fe32",
+      "decompressedSha256": "b57bdcdf5c275c8c31356d8d4e323584c4dd9533d494c890ca43ee42993704a7"
+    }
+  },
+  "portableHarness": "apps/web/tooling/backup-v2-recorded",
+  "portableValidation": [
+    "Wrangler4.136.1 dry-run with the frozen bundle and placeholder resource template passed.",
+    "Path-adapted fixture generator produced a 24-capture/two-attempt SQLite fixture, with zero foreign-key violations and integrity ok.",
+    "Controller syntax checks passed. No second remote deployment or new full-scale restore is claimed."
+  ]
+}

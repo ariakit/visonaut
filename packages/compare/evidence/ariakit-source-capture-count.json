@@ -1,0 +1,5720 @@
+{
+  "totals": {
+    "chrome": {
+      "total": 1230,
+      "section": 984,
+      "state": 230,
+      "preview": 16,
+      "tests": 106
+    },
+    "firefox": {
+      "total": 1230,
+      "section": 984,
+      "state": 230,
+      "preview": 16,
+      "tests": 106
+    },
+    "safari": {
+      "total": 1122,
+      "section": 926,
+      "state": 180,
+      "preview": 16,
+      "tests": 95
+    }
+  },
+  "total": 3582,
+  "rows": [
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Applied joins edges through hover (light, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-applied",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (light, more) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, more) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Ring 2 joins edges through hover (light, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-ring-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Fractional ring joins edges through hover (dark, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-fractional-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Vertical ring joins edges through hover (light, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-vertical-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "RTL joins edges through hover (light, no-preference) @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/joined-hover-rtl",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 142,
+      "title": "later active items own boundaries shared by two active items @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/later-active-items-own-boundaries-shared-by-two-active-items",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 162,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 215,
+      "title": "allows explicit focus stacking above an active neighbor @visual",
+      "project": "chrome",
+      "item": "tailwind/7466/allows-explicit-focus-stacking-above-an-active-neighbor",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 233,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Applied joins edges through hover (light, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-applied",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (light, more) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, more) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Ring 2 joins edges through hover (light, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-ring-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Fractional ring joins edges through hover (dark, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-fractional-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Vertical ring joins edges through hover (light, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-vertical-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "RTL joins edges through hover (light, no-preference) @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/joined-hover-rtl",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 142,
+      "title": "later active items own boundaries shared by two active items @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/later-active-items-own-boundaries-shared-by-two-active-items",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 162,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 215,
+      "title": "allows explicit focus stacking above an active neighbor @visual",
+      "project": "firefox",
+      "item": "tailwind/7466/allows-explicit-focus-stacking-above-an-active-neighbor",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 233,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Applied joins edges through hover (light, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-applied",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (light, more) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Border 2 joins edges through hover (dark, more) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-border-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Ring 2 joins edges through hover (light, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-ring-2",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Fractional ring joins edges through hover (dark, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-fractional-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "Vertical ring joins edges through hover (light, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-vertical-ring",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 67,
+      "title": "RTL joins edges through hover (light, no-preference) @visual",
+      "project": "safari",
+      "item": "tailwind/7466/joined-hover-rtl",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 142,
+      "title": "later active items own boundaries shared by two active items @visual",
+      "project": "safari",
+      "item": "tailwind/7466/later-active-items-own-boundaries-shared-by-two-active-items",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 162,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-tailwind-7466/test-browser.ts",
+      "line": 215,
+      "title": "allows explicit focus stacking above an active neighbor @visual",
+      "project": "safari",
+      "item": "tailwind/7466/allows-explicit-focus-stacking-above-an-active-neighbor",
+      "count": 1,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 233,
+          "local": 1,
+          "multiplier": 1,
+          "factors": []
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/badge/page",
+      "count": 48,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 24,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/badge/page",
+      "count": 48,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 24,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/badge/page",
+      "count": 48,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 24,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps badge boundaries in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/badge/keeps-badge-boundaries-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 26,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps badge boundaries in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/badge/keeps-badge-boundaries-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 26,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 36,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/button/page",
+      "count": 164,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 41,
+          "local": 82,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 46,
+      "title": "shows the thick focus ring on keyboard focus @visual",
+      "project": "chrome",
+      "item": "ui/button/shows-the-thick-focus-ring-on-keyboard-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 60,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 65,
+      "title": "moves the segmented control glider to the clicked radio @visual",
+      "project": "chrome",
+      "item": "ui/button/moves-the-segmented-control-glider-to-the-clicked-radio",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 80,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 85,
+      "title": "moves the hover glider over a hovered link @visual",
+      "project": "chrome",
+      "item": "ui/button/moves-the-hover-glider-over-a-hovered-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 103,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Horizontal @visual",
+      "project": "chrome",
+      "item": "ui/button/joined-hover-horizontal",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Joined vertical @visual",
+      "project": "chrome",
+      "item": "ui/button/joined-hover-joined-vertical",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 36,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/button/page",
+      "count": 164,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 41,
+          "local": 82,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 46,
+      "title": "shows the thick focus ring on keyboard focus @visual",
+      "project": "firefox",
+      "item": "ui/button/shows-the-thick-focus-ring-on-keyboard-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 60,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 65,
+      "title": "moves the segmented control glider to the clicked radio @visual",
+      "project": "firefox",
+      "item": "ui/button/moves-the-segmented-control-glider-to-the-clicked-radio",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 80,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 85,
+      "title": "moves the hover glider over a hovered link @visual",
+      "project": "firefox",
+      "item": "ui/button/moves-the-hover-glider-over-a-hovered-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 103,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Horizontal @visual",
+      "project": "firefox",
+      "item": "ui/button/joined-hover-horizontal",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Joined vertical @visual",
+      "project": "firefox",
+      "item": "ui/button/joined-hover-joined-vertical",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 36,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/button/page",
+      "count": 164,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 41,
+          "local": 82,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 46,
+      "title": "shows the thick focus ring on keyboard focus @visual",
+      "project": "safari",
+      "item": "ui/button/shows-the-thick-focus-ring-on-keyboard-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 60,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 65,
+      "title": "moves the segmented control glider to the clicked radio @visual",
+      "project": "safari",
+      "item": "ui/button/moves-the-segmented-control-glider-to-the-clicked-radio",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 80,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 85,
+      "title": "moves the hover glider over a hovered link @visual",
+      "project": "safari",
+      "item": "ui/button/moves-the-hover-glider-over-a-hovered-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 103,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Horizontal @visual",
+      "project": "safari",
+      "item": "ui/button/joined-hover-horizontal",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "line": 164,
+      "title": "tints both shared edges of the hovered middle control in Joined vertical @visual",
+      "project": "safari",
+      "item": "ui/button/joined-hover-joined-vertical",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 176,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 13,
+      "title": "keeps a filled control boundary in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/button/keeps-a-filled-control-boundary-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 25,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 31,
+      "title": "keeps glider boundaries and inherited widths in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/button/keeps-glider-boundaries-and-inherited-widths-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 43,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 52,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 62,
+      "title": "keeps disabled layers borderless and preserves bevels in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/button/keeps-disabled-layers-borderless-and-preserves-bevels-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 75,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 81,
+      "title": "keeps filled and bevel button boundaries in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/button/keeps-filled-and-bevel-button-boundaries-in-forced-colors",
+      "count": 18,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 104,
+          "local": 1,
+          "multiplier": 16,
+          "factors": ["loop:8", "schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 113,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 123,
+      "title": "preserves explicit ring and inset button edges in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/button/preserves-explicit-ring-and-inset-button-edges-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 135,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 13,
+      "title": "keeps a filled control boundary in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/button/keeps-a-filled-control-boundary-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 25,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 31,
+      "title": "keeps glider boundaries and inherited widths in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/button/keeps-glider-boundaries-and-inherited-widths-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 43,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 52,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 62,
+      "title": "keeps disabled layers borderless and preserves bevels in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/button/keeps-disabled-layers-borderless-and-preserves-bevels-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 75,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 81,
+      "title": "keeps filled and bevel button boundaries in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/button/keeps-filled-and-bevel-button-boundaries-in-forced-colors",
+      "count": 18,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 104,
+          "local": 1,
+          "multiplier": 16,
+          "factors": ["loop:8", "schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 113,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-chrome-firefox.ts",
+      "line": 123,
+      "title": "preserves explicit ring and inset button edges in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/button/preserves-explicit-ring-and-inset-button-edges-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 135,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/checkbox/page",
+      "count": 52,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 26,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 21,
+      "title": "draws the ring of a focused field on its box @visual",
+      "project": "chrome",
+      "item": "ui/checkbox/draws-the-ring-of-a-focused-field-on-its-box",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/checkbox/page",
+      "count": 52,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 26,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 21,
+      "title": "draws the ring of a focused field on its box @visual",
+      "project": "firefox",
+      "item": "ui/checkbox/draws-the-ring-of-a-focused-field-on-its-box",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/checkbox/page",
+      "count": 52,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 26,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "line": 21,
+      "title": "draws the ring of a focused field on its box @visual",
+      "project": "safari",
+      "item": "ui/checkbox/draws-the-ring-of-a-focused-field-on-its-box",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/code/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/code/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/code/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 23,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/combobox/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 28,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 34,
+      "title": "keeps long options inside a narrow viewport @visual",
+      "project": "chrome",
+      "item": "ui/combobox/keeps-long-options-inside-a-narrow-viewport",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 53,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 69,
+      "title": "aligns custom icons and selected options @visual",
+      "project": "chrome",
+      "item": "ui/combobox/aligns-custom-icons-and-selected-options",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 90,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 101,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 111,
+      "title": "colors the status select with the chosen status @visual",
+      "project": "chrome",
+      "item": "ui/combobox/colors-the-status-select-with-the-chosen-status",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 127,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 157,
+      "title": "keeps the combobox list spacing with optional position props @visual",
+      "project": "chrome",
+      "item": "ui/combobox/keeps-the-combobox-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 180,
+      "title": "keeps the select list spacing with optional position props @visual",
+      "project": "chrome",
+      "item": "ui/combobox/keeps-the-select-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 195,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 23,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/combobox/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 28,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 34,
+      "title": "keeps long options inside a narrow viewport @visual",
+      "project": "firefox",
+      "item": "ui/combobox/keeps-long-options-inside-a-narrow-viewport",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 53,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 69,
+      "title": "aligns custom icons and selected options @visual",
+      "project": "firefox",
+      "item": "ui/combobox/aligns-custom-icons-and-selected-options",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 90,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 101,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 111,
+      "title": "colors the status select with the chosen status @visual",
+      "project": "firefox",
+      "item": "ui/combobox/colors-the-status-select-with-the-chosen-status",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 127,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 157,
+      "title": "keeps the combobox list spacing with optional position props @visual",
+      "project": "firefox",
+      "item": "ui/combobox/keeps-the-combobox-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 180,
+      "title": "keeps the select list spacing with optional position props @visual",
+      "project": "firefox",
+      "item": "ui/combobox/keeps-the-select-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 195,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 23,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/combobox/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 28,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 34,
+      "title": "keeps long options inside a narrow viewport @visual",
+      "project": "safari",
+      "item": "ui/combobox/keeps-long-options-inside-a-narrow-viewport",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 53,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 69,
+      "title": "aligns custom icons and selected options @visual",
+      "project": "safari",
+      "item": "ui/combobox/aligns-custom-icons-and-selected-options",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 90,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 101,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 111,
+      "title": "colors the status select with the chosen status @visual",
+      "project": "safari",
+      "item": "ui/combobox/colors-the-status-select-with-the-chosen-status",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 127,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 157,
+      "title": "keeps the combobox list spacing with optional position props @visual",
+      "project": "safari",
+      "item": "ui/combobox/keeps-the-combobox-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "line": 180,
+      "title": "keeps the select list spacing with optional position props @visual",
+      "project": "safari",
+      "item": "ui/combobox/keeps-the-select-list-spacing-with-optional-position-props",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 195,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-chrome-firefox.ts",
+      "line": 52,
+      "title": "keeps the empty message borderless in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/combobox/keeps-the-empty-message-borderless-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 65,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-chrome-firefox.ts",
+      "line": 52,
+      "title": "keeps the empty message borderless in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/combobox/keeps-the-empty-message-borderless-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 65,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 30,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/dialog/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 35,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Success dialog @visual",
+      "project": "chrome",
+      "item": "ui/dialog/open-success",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Release notes dialog @visual",
+      "project": "chrome",
+      "item": "ui/dialog/open-release-notes",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Upgrade to Pro dialog @visual",
+      "project": "chrome",
+      "item": "ui/dialog/open-upgrade",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 61,
+      "title": "opens a nested dialog over the dialog that opened it @visual",
+      "project": "chrome",
+      "item": "ui/dialog/opens-a-nested-dialog-over-the-dialog-that-opened-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 77,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 30,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/dialog/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 35,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Success dialog @visual",
+      "project": "firefox",
+      "item": "ui/dialog/open-success",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Release notes dialog @visual",
+      "project": "firefox",
+      "item": "ui/dialog/open-release-notes",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Upgrade to Pro dialog @visual",
+      "project": "firefox",
+      "item": "ui/dialog/open-upgrade",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 61,
+      "title": "opens a nested dialog over the dialog that opened it @visual",
+      "project": "firefox",
+      "item": "ui/dialog/opens-a-nested-dialog-over-the-dialog-that-opened-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 77,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 30,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/dialog/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 35,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Success dialog @visual",
+      "project": "safari",
+      "item": "ui/dialog/open-success",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Release notes dialog @visual",
+      "project": "safari",
+      "item": "ui/dialog/open-release-notes",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 43,
+      "title": "opens the Upgrade to Pro dialog @visual",
+      "project": "safari",
+      "item": "ui/dialog/open-upgrade",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "line": 61,
+      "title": "opens a nested dialog over the dialog that opened it @visual",
+      "project": "safari",
+      "item": "ui/dialog/opens-a-nested-dialog-over-the-dialog-that-opened-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 77,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/disclosure/page",
+      "count": 54,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 27,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 21,
+      "title": "default shape on hover @visual",
+      "project": "chrome",
+      "item": "ui/disclosure/default-shape-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 40,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/disclosure/page",
+      "count": 54,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 27,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 21,
+      "title": "default shape on hover @visual",
+      "project": "firefox",
+      "item": "ui/disclosure/default-shape-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 40,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/disclosure/page",
+      "count": 54,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 27,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "line": 21,
+      "title": "default shape on hover @visual",
+      "project": "safari",
+      "item": "ui/disclosure/default-shape-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 40,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/heading/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 20,
+      "title": "underlines a permalink on hover @visual",
+      "project": "chrome",
+      "item": "ui/heading/underlines-a-permalink-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 32,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/heading/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 20,
+      "title": "underlines a permalink on hover @visual",
+      "project": "firefox",
+      "item": "ui/heading/underlines-a-permalink-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 32,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/heading/page",
+      "count": 18,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 9,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "line": 20,
+      "title": "underlines a permalink on hover @visual",
+      "project": "safari",
+      "item": "ui/heading/underlines-a-permalink-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 32,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 106,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/input/page",
+      "count": 42,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 111,
+          "local": 21,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 118,
+      "title": "rings grouped fields and their leading actions on keyboard focus @visual",
+      "project": "chrome",
+      "item": "ui/input/rings-grouped-fields-and-their-leading-actions-on-keyboard-focus",
+      "count": 10,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 138,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 149,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 157,
+      "title": "rings the wrapper when the input inside takes focus @visual",
+      "project": "chrome",
+      "item": "ui/input/rings-the-wrapper-when-the-input-inside-takes-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 180,
+      "title": "dims the wrapper of a disabled input and keeps it unlit on hover @visual",
+      "project": "chrome",
+      "item": "ui/input/dims-the-wrapper-of-a-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 196,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 203,
+      "title": "dims the wrapper of an aria-disabled input and keeps it unlit on hover @visual",
+      "project": "chrome",
+      "item": "ui/input/dims-the-wrapper-of-an-aria-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 219,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 226,
+      "title": "keeps a wrapper enabled and lit on hover when only its button is disabled @visual",
+      "project": "chrome",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-button-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 242,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 249,
+      "title": "keeps a wrapper enabled and lit on hover when only its submit input is disabled @visual",
+      "project": "chrome",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-submit-input-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 279,
+      "title": "keeps a wrapper enabled and lit on hover when only its select is disabled @visual",
+      "project": "chrome",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-select-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 302,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 106,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/input/page",
+      "count": 42,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 111,
+          "local": 21,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 118,
+      "title": "rings grouped fields and their leading actions on keyboard focus @visual",
+      "project": "firefox",
+      "item": "ui/input/rings-grouped-fields-and-their-leading-actions-on-keyboard-focus",
+      "count": 10,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 138,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 149,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 157,
+      "title": "rings the wrapper when the input inside takes focus @visual",
+      "project": "firefox",
+      "item": "ui/input/rings-the-wrapper-when-the-input-inside-takes-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 180,
+      "title": "dims the wrapper of a disabled input and keeps it unlit on hover @visual",
+      "project": "firefox",
+      "item": "ui/input/dims-the-wrapper-of-a-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 196,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 203,
+      "title": "dims the wrapper of an aria-disabled input and keeps it unlit on hover @visual",
+      "project": "firefox",
+      "item": "ui/input/dims-the-wrapper-of-an-aria-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 219,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 226,
+      "title": "keeps a wrapper enabled and lit on hover when only its button is disabled @visual",
+      "project": "firefox",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-button-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 242,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 249,
+      "title": "keeps a wrapper enabled and lit on hover when only its submit input is disabled @visual",
+      "project": "firefox",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-submit-input-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 279,
+      "title": "keeps a wrapper enabled and lit on hover when only its select is disabled @visual",
+      "project": "firefox",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-select-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 302,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 106,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/input/page",
+      "count": 42,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 111,
+          "local": 21,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 118,
+      "title": "rings grouped fields and their leading actions on keyboard focus @visual",
+      "project": "safari",
+      "item": "ui/input/rings-grouped-fields-and-their-leading-actions-on-keyboard-focus",
+      "count": 10,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 138,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 149,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 157,
+      "title": "rings the wrapper when the input inside takes focus @visual",
+      "project": "safari",
+      "item": "ui/input/rings-the-wrapper-when-the-input-inside-takes-focus",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 172,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 180,
+      "title": "dims the wrapper of a disabled input and keeps it unlit on hover @visual",
+      "project": "safari",
+      "item": "ui/input/dims-the-wrapper-of-a-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 196,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 203,
+      "title": "dims the wrapper of an aria-disabled input and keeps it unlit on hover @visual",
+      "project": "safari",
+      "item": "ui/input/dims-the-wrapper-of-an-aria-disabled-input-and-keeps-it-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 219,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 226,
+      "title": "keeps a wrapper enabled and lit on hover when only its button is disabled @visual",
+      "project": "safari",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-button-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 242,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 249,
+      "title": "keeps a wrapper enabled and lit on hover when only its submit input is disabled @visual",
+      "project": "safari",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-submit-input-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "line": 279,
+      "title": "keeps a wrapper enabled and lit on hover when only its select is disabled @visual",
+      "project": "safari",
+      "item": "ui/input/keeps-a-wrapper-enabled-and-lit-on-hover-when-only-its-select-is-disabled",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 302,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/kbd/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/kbd/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/kbd/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/layer/page",
+      "count": 2,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/layer/page",
+      "count": 2,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/layer/page",
+      "count": 2,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/link/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 22,
+      "title": "keeps the focus ring against an inline link @visual",
+      "project": "chrome",
+      "item": "ui/link/keeps-the-focus-ring-against-an-inline-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 36,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 41,
+      "title": "offsets the focus ring of a standalone link @visual",
+      "project": "chrome",
+      "item": "ui/link/offsets-the-focus-ring-of-a-standalone-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/link/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 22,
+      "title": "keeps the focus ring against an inline link @visual",
+      "project": "firefox",
+      "item": "ui/link/keeps-the-focus-ring-against-an-inline-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 36,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 41,
+      "title": "offsets the focus ring of a standalone link @visual",
+      "project": "firefox",
+      "item": "ui/link/offsets-the-focus-ring-of-a-standalone-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/link/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 22,
+      "title": "keeps the focus ring against an inline link @visual",
+      "project": "safari",
+      "item": "ui/link/keeps-the-focus-ring-against-an-inline-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 36,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "line": 41,
+      "title": "offsets the focus ring of a standalone link @visual",
+      "project": "safari",
+      "item": "ui/link/offsets-the-focus-ring-of-a-standalone-link",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 55,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/list/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/list/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/list/page",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps marker shapes and guides in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 22,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps marker shapes and guides in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+      "count": 58,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 22,
+          "local": 29,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 16,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/nav/page",
+      "count": 60,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 21,
+          "local": 30,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 28,
+      "title": "shows the hover cover on a row of a nested section @visual",
+      "project": "chrome",
+      "item": "ui/nav/shows-the-hover-cover-on-a-row-of-a-nested-section",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 41,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 46,
+      "title": "moves the sidebar current cover on click and the focus ring with the keyboard @visual",
+      "project": "chrome",
+      "item": "ui/nav/moves-the-sidebar-current-cover-on-click-and-the-focus-ring-with-the-keyboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 64,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 16,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/nav/page",
+      "count": 60,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 21,
+          "local": 30,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 28,
+      "title": "shows the hover cover on a row of a nested section @visual",
+      "project": "firefox",
+      "item": "ui/nav/shows-the-hover-cover-on-a-row-of-a-nested-section",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 41,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 46,
+      "title": "moves the sidebar current cover on click and the focus ring with the keyboard @visual",
+      "project": "firefox",
+      "item": "ui/nav/moves-the-sidebar-current-cover-on-click-and-the-focus-ring-with-the-keyboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 64,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 16,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/nav/page",
+      "count": 60,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 21,
+          "local": 30,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 28,
+      "title": "shows the hover cover on a row of a nested section @visual",
+      "project": "safari",
+      "item": "ui/nav/shows-the-hover-cover-on-a-row-of-a-nested-section",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 41,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "line": 46,
+      "title": "moves the sidebar current cover on click and the focus ring with the keyboard @visual",
+      "project": "safari",
+      "item": "ui/nav/moves-the-sidebar-current-cover-on-click-and-the-focus-ring-with-the-keyboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 64,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/popover/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 20,
+      "title": "floats the live popover away from its disclosure @visual",
+      "project": "chrome",
+      "item": "ui/popover/floats-the-live-popover-away-from-its-disclosure",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 34,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/popover/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 20,
+      "title": "floats the live popover away from its disclosure @visual",
+      "project": "firefox",
+      "item": "ui/popover/floats-the-live-popover-away-from-its-disclosure",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 34,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/popover/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "line": 20,
+      "title": "floats the live popover away from its disclosure @visual",
+      "project": "safari",
+      "item": "ui/popover/floats-the-live-popover-away-from-its-disclosure",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 34,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps the frame and popover boundaries in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/popover/keeps-the-frame-and-popover-boundaries-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 23,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-chrome-firefox.ts",
+      "line": 10,
+      "title": "keeps the frame and popover boundaries in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/popover/keeps-the-frame-and-popover-boundaries-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 23,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 78,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/progress/page",
+      "count": 36,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 83,
+          "local": 18,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 90,
+      "title": "keeps bars and rings visible in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/progress/keeps-bars-and-rings-visible-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 104,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 108,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 119,
+      "title": "draws the track edge only on a bordered track in high contrast @visual",
+      "project": "chrome",
+      "item": "ui/progress/draws-the-track-edge-only-on-a-bordered-track-in-high-contrast",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 136,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 151,
+      "title": "moves the bar and the ring to a new value @visual",
+      "project": "chrome",
+      "item": "ui/progress/moves-the-bar-and-the-ring-to-a-new-value",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 167,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 78,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/progress/page",
+      "count": 36,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 83,
+          "local": 18,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 90,
+      "title": "keeps bars and rings visible in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/progress/keeps-bars-and-rings-visible-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 104,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 108,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 119,
+      "title": "draws the track edge only on a bordered track in high contrast @visual",
+      "project": "firefox",
+      "item": "ui/progress/draws-the-track-edge-only-on-a-bordered-track-in-high-contrast",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 136,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 151,
+      "title": "moves the bar and the ring to a new value @visual",
+      "project": "firefox",
+      "item": "ui/progress/moves-the-bar-and-the-ring-to-a-new-value",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 167,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 78,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/progress/page",
+      "count": 36,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 83,
+          "local": 18,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 90,
+      "title": "keeps bars and rings visible in forced colors @visual",
+      "project": "safari",
+      "item": "ui/progress/keeps-bars-and-rings-visible-in-forced-colors",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 104,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 108,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 119,
+      "title": "draws the track edge only on a bordered track in high contrast @visual",
+      "project": "safari",
+      "item": "ui/progress/draws-the-track-edge-only-on-a-bordered-track-in-high-contrast",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 132,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "captureInView",
+          "line": 136,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "line": 151,
+      "title": "moves the bar and the ring to a new value @visual",
+      "project": "safari",
+      "item": "ui/progress/moves-the-bar-and-the-ring-to-a-new-value",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 167,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/prose/page",
+      "count": 10,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 5,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/prose/page",
+      "count": 10,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 5,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/prose/page",
+      "count": 10,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 5,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/radio/page",
+      "count": 30,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 15,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 20,
+      "title": "lights an enabled card on hover @visual",
+      "project": "chrome",
+      "item": "ui/radio/lights-an-enabled-card-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 37,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 42,
+      "title": "keeps a card of a disabled grid unlit on hover @visual",
+      "project": "chrome",
+      "item": "ui/radio/keeps-a-card-of-a-disabled-grid-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 58,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/radio/page",
+      "count": 30,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 15,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 20,
+      "title": "lights an enabled card on hover @visual",
+      "project": "firefox",
+      "item": "ui/radio/lights-an-enabled-card-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 37,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 42,
+      "title": "keeps a card of a disabled grid unlit on hover @visual",
+      "project": "firefox",
+      "item": "ui/radio/keeps-a-card-of-a-disabled-grid-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 58,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 10,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/radio/page",
+      "count": 30,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 15,
+          "local": 15,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 20,
+      "title": "lights an enabled card on hover @visual",
+      "project": "safari",
+      "item": "ui/radio/lights-an-enabled-card-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 37,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "line": 42,
+      "title": "keeps a card of a disabled grid unlit on hover @visual",
+      "project": "safari",
+      "item": "ui/radio/keeps-a-card-of-a-disabled-grid-unlit-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 58,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/separator/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/separator/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "line": 8,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/separator/page",
+      "count": 24,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 13,
+          "local": 12,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "docs at wide and narrow widths @visual",
+      "project": "chrome",
+      "item": "ui/shell/docs-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "dashboard at wide and narrow widths @visual",
+      "project": "chrome",
+      "item": "ui/shell/dashboard-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 268,
+      "title": "flush band at the shell radius @visual",
+      "project": "chrome",
+      "item": "ui/shell/flush-band-at-the-shell-radius",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 281,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 292,
+      "title": "docs site @visual",
+      "project": "chrome",
+      "item": "ui/shell/docs-site",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 303,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 311,
+      "title": "sidebar combinations and right-to-left layout @visual",
+      "project": "chrome",
+      "item": "ui/shell/sidebar-combinations-and-right-to-left-layout",
+      "count": 16,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 332,
+          "local": 1,
+          "multiplier": 16,
+          "factors": ["loop:4", "loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 344,
+      "title": "sticky sidebar above the footer @visual",
+      "project": "chrome",
+      "item": "ui/shell/sticky-sidebar-above-the-footer",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 359,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 364,
+      "title": "bar sizing at a narrow width @visual",
+      "project": "chrome",
+      "item": "ui/shell/bar-sizing-at-a-narrow-width",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 382,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 390,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 400,
+      "title": "docs site scrolled under the blurred header @visual",
+      "project": "chrome",
+      "item": "ui/shell/docs-site-scrolled-under-the-blurred-header",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 415,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "dashboard @visual",
+      "project": "chrome",
+      "item": "ui/shell/scenario-dashboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "chat @visual",
+      "project": "chrome",
+      "item": "ui/shell/scenario-chat",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "marketing @visual",
+      "project": "chrome",
+      "item": "ui/shell/scenario-marketing",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "settings @visual",
+      "project": "chrome",
+      "item": "ui/shell/scenario-settings",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "bar @visual",
+      "project": "chrome",
+      "item": "ui/shell/scenario-bar",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "docs at wide and narrow widths @visual",
+      "project": "firefox",
+      "item": "ui/shell/docs-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "dashboard at wide and narrow widths @visual",
+      "project": "firefox",
+      "item": "ui/shell/dashboard-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 268,
+      "title": "flush band at the shell radius @visual",
+      "project": "firefox",
+      "item": "ui/shell/flush-band-at-the-shell-radius",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 281,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 292,
+      "title": "docs site @visual",
+      "project": "firefox",
+      "item": "ui/shell/docs-site",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 303,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 311,
+      "title": "sidebar combinations and right-to-left layout @visual",
+      "project": "firefox",
+      "item": "ui/shell/sidebar-combinations-and-right-to-left-layout",
+      "count": 16,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 332,
+          "local": 1,
+          "multiplier": 16,
+          "factors": ["loop:4", "loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 344,
+      "title": "sticky sidebar above the footer @visual",
+      "project": "firefox",
+      "item": "ui/shell/sticky-sidebar-above-the-footer",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 359,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 364,
+      "title": "bar sizing at a narrow width @visual",
+      "project": "firefox",
+      "item": "ui/shell/bar-sizing-at-a-narrow-width",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 382,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 390,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 400,
+      "title": "docs site scrolled under the blurred header @visual",
+      "project": "firefox",
+      "item": "ui/shell/docs-site-scrolled-under-the-blurred-header",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 415,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "dashboard @visual",
+      "project": "firefox",
+      "item": "ui/shell/scenario-dashboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "chat @visual",
+      "project": "firefox",
+      "item": "ui/shell/scenario-chat",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "marketing @visual",
+      "project": "firefox",
+      "item": "ui/shell/scenario-marketing",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "settings @visual",
+      "project": "firefox",
+      "item": "ui/shell/scenario-settings",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "bar @visual",
+      "project": "firefox",
+      "item": "ui/shell/scenario-bar",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "docs at wide and narrow widths @visual",
+      "project": "safari",
+      "item": "ui/shell/docs-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 244,
+      "title": "dashboard at wide and narrow widths @visual",
+      "project": "safari",
+      "item": "ui/shell/dashboard-responsive",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 255,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 268,
+      "title": "flush band at the shell radius @visual",
+      "project": "safari",
+      "item": "ui/shell/flush-band-at-the-shell-radius",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 281,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 292,
+      "title": "docs site @visual",
+      "project": "safari",
+      "item": "ui/shell/docs-site",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 303,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 311,
+      "title": "sidebar combinations and right-to-left layout @visual",
+      "project": "safari",
+      "item": "ui/shell/sidebar-combinations-and-right-to-left-layout",
+      "count": 16,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 332,
+          "local": 1,
+          "multiplier": 16,
+          "factors": ["loop:4", "loop:2", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 344,
+      "title": "sticky sidebar above the footer @visual",
+      "project": "safari",
+      "item": "ui/shell/sticky-sidebar-above-the-footer",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 359,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 364,
+      "title": "bar sizing at a narrow width @visual",
+      "project": "safari",
+      "item": "ui/shell/bar-sizing-at-a-narrow-width",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 382,
+          "local": 1,
+          "multiplier": 4,
+          "factors": ["loop:2", "schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 390,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 400,
+      "title": "docs site scrolled under the blurred header @visual",
+      "project": "safari",
+      "item": "ui/shell/docs-site-scrolled-under-the-blurred-header",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 415,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "dashboard @visual",
+      "project": "safari",
+      "item": "ui/shell/scenario-dashboard",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "chat @visual",
+      "project": "safari",
+      "item": "ui/shell/scenario-chat",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "marketing @visual",
+      "project": "safari",
+      "item": "ui/shell/scenario-marketing",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "settings @visual",
+      "project": "safari",
+      "item": "ui/shell/scenario-settings",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-browser.ts",
+      "line": 427,
+      "title": "bar @visual",
+      "project": "safari",
+      "item": "ui/shell/scenario-bar",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 440,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-chrome-firefox.ts",
+      "line": 65,
+      "title": "blurred header in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/shell/blurred-header-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-shell/test-chrome-firefox.ts",
+      "line": 65,
+      "title": "blurred header in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/shell/blurred-header-in-forced-colors",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 81,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 13,
+      "title": "shares cell border geometry with focus without adding hover edges @visual",
+      "project": "chrome",
+      "item": "ui/table/shares-cell-border-geometry-with-focus-without-adding-hover-edges",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 31,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 46,
+      "title": "shares row borders with focus across hover, selection, and pinned cells @visual",
+      "project": "chrome",
+      "item": "ui/table/shares-row-borders-with-focus-across-hover-selection-and-pinned-cells",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 65,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 73,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 81,
+      "title": "paints row borders above pinned cells while scrolling @visual",
+      "project": "chrome",
+      "item": "ui/table/paints-row-borders-above-pinned-cells-while-scrolling",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 134,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 162,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/table/page",
+      "count": 64,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 167,
+          "local": 32,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 172,
+      "title": "draws a focused cell's ring inside the cell @visual",
+      "project": "chrome",
+      "item": "ui/table/draws-a-focused-cell-s-ring-inside-the-cell",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 189,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 196,
+      "title": "rounds the ring of the focused last row @visual",
+      "project": "chrome",
+      "item": "ui/table/rounds-the-ring-of-the-focused-last-row",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 212,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 218,
+      "title": "paints the pinned cell over the cells scrolled under it @visual",
+      "project": "chrome",
+      "item": "ui/table/paints-the-pinned-cell-over-the-cells-scrolled-under-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 231,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 237,
+      "title": "shows the hovered row through ordinary cells @visual",
+      "project": "chrome",
+      "item": "ui/table/shows-the-hovered-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 250,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 256,
+      "title": "shows the selected row through ordinary cells @visual",
+      "project": "chrome",
+      "item": "ui/table/shows-the-selected-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 280,
+      "title": "keeps the names pinned over the scrolled columns @visual",
+      "project": "chrome",
+      "item": "ui/table/keeps-the-names-pinned-over-the-scrolled-columns",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 293,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 299,
+      "title": "scrolls the names with the columns when they are unpinned @visual",
+      "project": "chrome",
+      "item": "ui/table/scrolls-the-names-with-the-columns-when-they-are-unpinned",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 315,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 321,
+      "title": "keeps missing hours under their header after adding a contributor @visual",
+      "project": "chrome",
+      "item": "ui/table/keeps-missing-hours-under-their-header-after-adding-a-contributor",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 335,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 13,
+      "title": "shares cell border geometry with focus without adding hover edges @visual",
+      "project": "firefox",
+      "item": "ui/table/shares-cell-border-geometry-with-focus-without-adding-hover-edges",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 31,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 46,
+      "title": "shares row borders with focus across hover, selection, and pinned cells @visual",
+      "project": "firefox",
+      "item": "ui/table/shares-row-borders-with-focus-across-hover-selection-and-pinned-cells",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 65,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 73,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 81,
+      "title": "paints row borders above pinned cells while scrolling @visual",
+      "project": "firefox",
+      "item": "ui/table/paints-row-borders-above-pinned-cells-while-scrolling",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 134,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 162,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/table/page",
+      "count": 64,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 167,
+          "local": 32,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 172,
+      "title": "draws a focused cell's ring inside the cell @visual",
+      "project": "firefox",
+      "item": "ui/table/draws-a-focused-cell-s-ring-inside-the-cell",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 189,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 196,
+      "title": "rounds the ring of the focused last row @visual",
+      "project": "firefox",
+      "item": "ui/table/rounds-the-ring-of-the-focused-last-row",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 212,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 218,
+      "title": "paints the pinned cell over the cells scrolled under it @visual",
+      "project": "firefox",
+      "item": "ui/table/paints-the-pinned-cell-over-the-cells-scrolled-under-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 231,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 237,
+      "title": "shows the hovered row through ordinary cells @visual",
+      "project": "firefox",
+      "item": "ui/table/shows-the-hovered-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 250,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 256,
+      "title": "shows the selected row through ordinary cells @visual",
+      "project": "firefox",
+      "item": "ui/table/shows-the-selected-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 280,
+      "title": "keeps the names pinned over the scrolled columns @visual",
+      "project": "firefox",
+      "item": "ui/table/keeps-the-names-pinned-over-the-scrolled-columns",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 293,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 299,
+      "title": "scrolls the names with the columns when they are unpinned @visual",
+      "project": "firefox",
+      "item": "ui/table/scrolls-the-names-with-the-columns-when-they-are-unpinned",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 315,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 321,
+      "title": "keeps missing hours under their header after adding a contributor @visual",
+      "project": "firefox",
+      "item": "ui/table/keeps-missing-hours-under-their-header-after-adding-a-contributor",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 335,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 13,
+      "title": "shares cell border geometry with focus without adding hover edges @visual",
+      "project": "safari",
+      "item": "ui/table/shares-cell-border-geometry-with-focus-without-adding-hover-edges",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 31,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 46,
+      "title": "shares row borders with focus across hover, selection, and pinned cells @visual",
+      "project": "safari",
+      "item": "ui/table/shares-row-borders-with-focus-across-hover-selection-and-pinned-cells",
+      "count": 4,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 65,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        },
+        {
+          "name": "visual",
+          "line": 73,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 81,
+      "title": "paints row borders above pinned cells while scrolling @visual",
+      "project": "safari",
+      "item": "ui/table/paints-row-borders-above-pinned-cells-while-scrolling",
+      "count": 6,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 134,
+          "local": 1,
+          "multiplier": 6,
+          "factors": ["loop:3", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 162,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/table/page",
+      "count": 64,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 167,
+          "local": 32,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 172,
+      "title": "draws a focused cell's ring inside the cell @visual",
+      "project": "safari",
+      "item": "ui/table/draws-a-focused-cell-s-ring-inside-the-cell",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 189,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 196,
+      "title": "rounds the ring of the focused last row @visual",
+      "project": "safari",
+      "item": "ui/table/rounds-the-ring-of-the-focused-last-row",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 212,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 218,
+      "title": "paints the pinned cell over the cells scrolled under it @visual",
+      "project": "safari",
+      "item": "ui/table/paints-the-pinned-cell-over-the-cells-scrolled-under-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 231,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 237,
+      "title": "shows the hovered row through ordinary cells @visual",
+      "project": "safari",
+      "item": "ui/table/shows-the-hovered-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 250,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 256,
+      "title": "shows the selected row through ordinary cells @visual",
+      "project": "safari",
+      "item": "ui/table/shows-the-selected-row-through-ordinary-cells",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 272,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 280,
+      "title": "keeps the names pinned over the scrolled columns @visual",
+      "project": "safari",
+      "item": "ui/table/keeps-the-names-pinned-over-the-scrolled-columns",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 293,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 299,
+      "title": "scrolls the names with the columns when they are unpinned @visual",
+      "project": "safari",
+      "item": "ui/table/scrolls-the-names-with-the-columns-when-they-are-unpinned",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 315,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "line": 321,
+      "title": "keeps missing hours under their header after adding a contributor @visual",
+      "project": "safari",
+      "item": "ui/table/keeps-missing-hours-under-their-header-after-adding-a-contributor",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 335,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/tabs/page",
+      "count": 68,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 34,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 23,
+      "title": "moves the hover glider over a hovered tab @visual",
+      "project": "chrome",
+      "item": "ui/tabs/moves-the-hover-glider-over-a-hovered-tab",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 44,
+      "title": "moves the focus glider to a tab without selecting it @visual",
+      "project": "chrome",
+      "item": "ui/tabs/moves-the-focus-glider-to-a-tab-without-selecting-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 63,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/tabs/page",
+      "count": 68,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 34,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 23,
+      "title": "moves the hover glider over a hovered tab @visual",
+      "project": "firefox",
+      "item": "ui/tabs/moves-the-hover-glider-over-a-hovered-tab",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 44,
+      "title": "moves the focus glider to a tab without selecting it @visual",
+      "project": "firefox",
+      "item": "ui/tabs/moves-the-focus-glider-to-a-tab-without-selecting-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 63,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 13,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/tabs/page",
+      "count": 68,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 18,
+          "local": 34,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 23,
+      "title": "moves the hover glider over a hovered tab @visual",
+      "project": "safari",
+      "item": "ui/tabs/moves-the-hover-glider-over-a-hovered-tab",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 39,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "line": 44,
+      "title": "moves the focus glider to a tab without selecting it @visual",
+      "project": "safari",
+      "item": "ui/tabs/moves-the-focus-glider-to-a-tab-without-selecting-it",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 63,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-chrome-firefox.ts",
+      "line": 11,
+      "title": "keeps unselected tabs borderless in forced colors @visual",
+      "project": "chrome",
+      "item": "ui/tabs/keeps-unselected-tabs-borderless-in-forced-colors",
+      "count": 12,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 36,
+          "local": 1,
+          "multiplier": 12,
+          "factors": ["loop:6", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-chrome-firefox.ts",
+      "line": 11,
+      "title": "keeps unselected tabs borderless in forced colors @visual",
+      "project": "firefox",
+      "item": "ui/tabs/keeps-unselected-tabs-borderless-in-forced-colors",
+      "count": 12,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "captureInView",
+          "line": 36,
+          "local": 1,
+          "multiplier": 12,
+          "factors": ["loop:6", "schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "line": 17,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/text-frame/page",
+      "count": 4,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 22,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "line": 17,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/text-frame/page",
+      "count": 4,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 22,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "line": 17,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/text-frame/page",
+      "count": 4,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 22,
+          "local": 2,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "chrome",
+      "item": "ui/tooltip/page",
+      "count": 20,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 10,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 21,
+      "title": "shows the live tooltip over its anchor on hover @visual",
+      "project": "chrome",
+      "item": "ui/tooltip/shows-the-live-tooltip-over-its-anchor-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "firefox",
+      "item": "ui/tooltip/page",
+      "count": 20,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 10,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 21,
+      "title": "shows the live tooltip over its anchor on hover @visual",
+      "project": "firefox",
+      "item": "ui/tooltip/shows-the-live-tooltip-over-its-anchor-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 11,
+      "title": "page @visual",
+      "project": "safari",
+      "item": "ui/tooltip/page",
+      "count": 20,
+      "kind": "section",
+      "calls": [
+        {
+          "name": "capturePage",
+          "line": 16,
+          "local": 10,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "line": 21,
+      "title": "shows the live tooltip over its anchor on hover @visual",
+      "project": "safari",
+      "item": "ui/tooltip/shows-the-live-tooltip-over-its-anchor-on-hover",
+      "count": 2,
+      "kind": "state",
+      "calls": [
+        {
+          "name": "visual",
+          "line": 35,
+          "local": 1,
+          "multiplier": 2,
+          "factors": ["schemes:2"]
+        }
+      ]
+    },
+    {
+      "file": "tests/previews-browser.ts",
+      "line": 16,
+      "title": "previews @visual",
+      "project": "chrome",
+      "count": 16,
+      "kind": "preview"
+    },
+    {
+      "file": "tests/previews-browser.ts",
+      "line": 16,
+      "title": "previews @visual",
+      "project": "firefox",
+      "count": 16,
+      "kind": "preview"
+    },
+    {
+      "file": "tests/previews-browser.ts",
+      "line": 16,
+      "title": "previews @visual",
+      "project": "safari",
+      "count": 16,
+      "kind": "preview"
+    }
+  ]
+}

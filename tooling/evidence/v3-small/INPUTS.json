@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "sourceManifestSha256": "73ba27994d9d96bc5a6e2931cf6f9a76fcaf3ce262dc5851e28de5c1a72fa42f",
+  "files": [
+    {
+      "path": "inputs/prepared.sql.gz",
+      "kind": "sql-gzip",
+      "bytes": 2530578,
+      "sha256": "9bfec6991f52b316a165471100dc2623f143423fecb06abbcd640d378ac01455",
+      "originalBytes": 25190422,
+      "originalSha256": "78d6063f58381cde397017f3d7c372a1ad90a79363aef3d73a061dba70357e93"
+    },
+    {
+      "path": "inputs/seed-objects.portable.json.gz",
+      "kind": "manifest-gzip",
+      "bytes": 427922,
+      "sha256": "819ecd020d30a572bbc07e3408a102f4a83d92124790c92cd84ad7add77ef43c",
+      "originalBytes": 4830649,
+      "originalSha256": "504e5fbe03a4f874c24cb6edc1561faab1d54d8f4084c983c62b4a85283c9c35"
+    },
+    {
+      "path": "inputs/metadata.tar.gz",
+      "kind": "tar-gzip",
+      "bytes": 215265,
+      "sha256": "946286fc77f494e889cc4102ab8f6dbb4346f29a21044ceac449b99866d98622",
+      "originalBytes": 2078720,
+      "originalSha256": "dba115e1f67b4eb32b7e65088dff30b1447a131f1019e20967a05a7d814e3f55"
+    },
+    {
+      "path": "inputs/frozen-replay.tar.gz",
+      "kind": "tar-gzip",
+      "bytes": 235580,
+      "sha256": "d738b8df294359ae035ca32a1b604fca090049b50cc83fcda4b802b39365dfc4",
+      "originalBytes": 1187840,
+      "originalSha256": "d6b930c65b887f3e9b66bb08a2b708d2c3473f159d1fb385570ae4cf36f6cec1"
+    }
+  ]
+}

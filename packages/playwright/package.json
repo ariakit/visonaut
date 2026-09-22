@@ -1,0 +1,55 @@
+{
+  "name": "@ariviso/playwright",
+  "version": "0.1.0",
+  "description": "Prepared visual capture and final-successful-attempt reporting for Ariviso",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ariakit/ariviso",
+    "directory": "packages/playwright"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./reporter": {
+      "types": "./dist/reporter.d.ts",
+      "import": "./dist/reporter.js",
+      "default": "./dist/reporter.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc6 --noEmit",
+    "test": "vitest run test"
+  },
+  "dependencies": {
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@ariviso/protocol": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.6",
+    "@types/pngjs": "6.0.5",
+    "tsup": "8.5.1",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "5.0.1"
+  },
+  "peerDependencies": {
+    "@playwright/test": "1.63.0"
+  },
+  "engines": {
+    "node": "24.18.0"
+  }
+}

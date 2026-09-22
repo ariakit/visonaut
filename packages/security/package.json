@@ -1,0 +1,26 @@
+{
+  "name": "@ariviso/security",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc6 --noEmit"
+  },
+  "dependencies": {
+    "better-auth": "1.7.5",
+    "jose": "6.2.12"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260922.1",
+    "@types/node": "24.13.6",
+    "miniflare": "5.20260921.0-alpha",
+    "rolldown": "1.2.9",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "5.0.1"
+  }
+}

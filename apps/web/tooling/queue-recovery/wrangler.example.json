@@ -1,0 +1,48 @@
+{
+  "name": "replace-with-disposable-worker",
+  "account_id": "00000000000000000000000000000000",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "DEAD_LETTER_QUEUE_NAME": "replace-with-disposable-dead-queue"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "replace-with-disposable-database",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "../../migrations"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "WORK",
+        "queue": "replace-with-disposable-work-queue"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "replace-with-disposable-work-queue",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 2,
+        "max_concurrency": 3,
+        "retry_delay": 1,
+        "dead_letter_queue": "replace-with-disposable-dead-queue"
+      },
+      {
+        "queue": "replace-with-disposable-dead-queue",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 2
+      }
+    ]
+  }
+}

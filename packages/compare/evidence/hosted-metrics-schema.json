@@ -1,0 +1,2241 @@
+{
+  "collectedAt": "2026-09-22T04:11:05.569Z",
+  "status": 200,
+  "query": "{t0:__type(name:\"AccountWorkersInvocationsAdaptive\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}\nt1:__type(name:\"AccountWorkersInvocationsAdaptiveQuantiles\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}\nt2:__type(name:\"AccountWorkersInvocationsAdaptiveMax\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}\nt3:__type(name:\"AccountWorkersInvocationsAdaptiveAvg\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}\nt4:__type(name:\"AccountWorkersInvocationsAdaptiveDimensions\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}\nt5:__type(name:\"AccountWorkersInvocationsAdaptiveFilter_InputObject\"){name description fields{name description type{name kind ofType{name}}} inputFields{name description type{name}}}}",
+  "response": {
+    "data": {
+      "t0": {
+        "description": "Beta. Workers invocations with adaptive sampling",
+        "fields": [
+          {
+            "description": "The average value used for sample interval",
+            "name": "avg",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveAvg",
+              "ofType": null
+            }
+          },
+          {
+            "description": "ALPHA - DO NOT USE",
+            "name": "confidence",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "AccountWorkersInvocationsAdaptiveConfidence"
+              }
+            }
+          },
+          {
+            "description": "List of dimensions to group by",
+            "name": "dimensions",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveDimensions",
+              "ofType": null
+            }
+          },
+          {
+            "description": "The max value for a metric",
+            "name": "max",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveMax",
+              "ofType": null
+            }
+          },
+          {
+            "description": "The min value for a metric",
+            "name": "min",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveMin",
+              "ofType": null
+            }
+          },
+          {
+            "description": "Quantiles of a metric per dimension",
+            "name": "quantiles",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveQuantiles",
+              "ofType": null
+            }
+          },
+          {
+            "description": "The sum of values for a metric per dimension",
+            "name": "sum",
+            "type": {
+              "kind": "OBJECT",
+              "name": "AccountWorkersInvocationsAdaptiveSum",
+              "ofType": null
+            }
+          }
+        ],
+        "inputFields": [],
+        "name": "AccountWorkersInvocationsAdaptive"
+      },
+      "t1": {
+        "description": "",
+        "fields": [
+          {
+            "description": "CPU time 25th percentile - microseconds",
+            "name": "cpuTimeP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 50th percentile - microseconds",
+            "name": "cpuTimeP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 75th percentile - microseconds",
+            "name": "cpuTimeP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 90th percentile - microseconds",
+            "name": "cpuTimeP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 95th percentile - microseconds",
+            "name": "cpuTimeP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 99th percentile - microseconds",
+            "name": "cpuTimeP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "CPU time 99.9th percentile - microseconds",
+            "name": "cpuTimeP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 25th percentile - GB*s",
+            "name": "durationP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 50th percentile - GB*s",
+            "name": "durationP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 75th percentile - GB*s",
+            "name": "durationP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 90th percentile - GB*s",
+            "name": "durationP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 95th percentile - GB*s",
+            "name": "durationP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 99th percentile - GB*s",
+            "name": "durationP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Duration 99.9th percentile - GB*s",
+            "name": "durationP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 25th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 50th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 75th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 90th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 95th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 99th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "V8 isolate memory usage 99.9th percentile across Worker invocations - bytes",
+            "name": "memoryUsageBytesP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 25th percentile - microseconds",
+            "name": "requestDurationP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 50th percentile - microseconds",
+            "name": "requestDurationP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 75th percentile - microseconds",
+            "name": "requestDurationP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 90th percentile - microseconds",
+            "name": "requestDurationP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 95th percentile - microseconds",
+            "name": "requestDurationP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 99th percentile - microseconds",
+            "name": "requestDurationP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Request duration 99.9th percentile - microseconds",
+            "name": "requestDurationP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 25th percentile - bytes",
+            "name": "responseBodySizeP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 50th percentile - bytes",
+            "name": "responseBodySizeP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 75th percentile - bytes",
+            "name": "responseBodySizeP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 90th percentile - bytes",
+            "name": "responseBodySizeP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 95th percentile - bytes",
+            "name": "responseBodySizeP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 99th percentile - bytes",
+            "name": "responseBodySizeP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Response body size 99.9th percentile - bytes",
+            "name": "responseBodySizeP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 25th percentile - microseconds",
+            "name": "wallTimeP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 50th percentile - microseconds",
+            "name": "wallTimeP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 75th percentile - microseconds",
+            "name": "wallTimeP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 90th percentile - microseconds",
+            "name": "wallTimeP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 95th percentile - microseconds",
+            "name": "wallTimeP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 99th percentile - microseconds",
+            "name": "wallTimeP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "Wall time 99.9th percentile - microseconds",
+            "name": "wallTimeP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 25th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP25",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 50th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP50",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 75th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP75",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 90th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP90",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 95th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP95",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 99th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP99",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          },
+          {
+            "description": "WebAssembly linear memory usage 99.9th percentile across Worker invocations - bytes",
+            "name": "wasmMemoryBytesP999",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float32"
+              }
+            }
+          }
+        ],
+        "inputFields": [],
+        "name": "AccountWorkersInvocationsAdaptiveQuantiles"
+      },
+      "t2": {
+        "description": "",
+        "fields": [
+          {
+            "description": "Maximum CPU time for one request - microseconds",
+            "name": "cpuTime",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum duration of one request - GB*s",
+            "name": "duration",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum V8 isolate memory usage across Worker invocations - bytes",
+            "name": "memoryUsageBytes",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum Request Duration in microseconds",
+            "name": "requestDuration",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum response body size for one request - bytes",
+            "name": "responseBodySize",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum wall time for one request - microseconds",
+            "name": "wallTime",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          },
+          {
+            "description": "Maximum WebAssembly linear memory usage across Worker invocations - bytes",
+            "name": "wasmMemoryBytes",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          }
+        ],
+        "inputFields": [],
+        "name": "AccountWorkersInvocationsAdaptiveMax"
+      },
+      "t3": {
+        "description": "",
+        "fields": [
+          {
+            "description": "",
+            "name": "sampleInterval",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "float64"
+              }
+            }
+          }
+        ],
+        "inputFields": [],
+        "name": "AccountWorkersInvocationsAdaptiveAvg"
+      },
+      "t4": {
+        "description": "",
+        "fields": [
+          {
+            "description": "Cache status for cache-enabled Worker invocation, if applicable",
+            "name": "cacheStatus",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "IATA airport code for the Cloudflare datacenter where the script ran.",
+            "name": "coloCode",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "Request datetime, truncated to start of a day",
+            "name": "date",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Date"
+              }
+            }
+          },
+          {
+            "description": "Request datetime",
+            "name": "datetime",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "The date and time of the event truncated to fifteen minutes",
+            "name": "datetimeFifteenMinutes",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "The date and time of the event truncated to five minutes",
+            "name": "datetimeFiveMinutes",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "Request datetime, truncated to start of an hour",
+            "name": "datetimeHour",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "Request datetime, truncated to start of an minute",
+            "name": "datetimeMinute",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "Request datetime, truncated to start of six hour window",
+            "name": "datetimeSixHours",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "Time"
+              }
+            }
+          },
+          {
+            "description": "The name of the script's dispatch namespace",
+            "name": "dispatchNamespaceName",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "The name of the script environment",
+            "name": "environmentName",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "Whether the request is from a Dispatch Worker. Non-zero if true",
+            "name": "isDispatcher",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "uint8"
+              }
+            }
+          },
+          {
+            "description": "Whether this invocation is for a preview. 1 if preview, 0 if not.",
+            "name": "isPreview",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "uint8"
+              }
+            }
+          },
+          {
+            "description": "The name (slug) of the preview script. Requires an exact scriptName filter.",
+            "name": "previewSlug",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "The name of the script",
+            "name": "scriptName",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "The unique tag of the script",
+            "name": "scriptTag",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "The version of the Worker",
+            "name": "scriptVersion",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "Status of the worker invocation",
+            "name": "status",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          },
+          {
+            "description": "Usage model of the worker invocation",
+            "name": "usageModel",
+            "type": {
+              "kind": "NON_NULL",
+              "name": "",
+              "ofType": {
+                "name": "string"
+              }
+            }
+          }
+        ],
+        "inputFields": [],
+        "name": "AccountWorkersInvocationsAdaptiveDimensions"
+      },
+      "t5": {
+        "description": "",
+        "fields": [],
+        "inputFields": [
+          {
+            "description": "",
+            "name": "AND",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "OR",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "cacheStatus_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "coloCode_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "date",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_geq",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_gt",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "date_leq",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_lt",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_neq",
+            "type": {
+              "name": "Date"
+            }
+          },
+          {
+            "description": "",
+            "name": "date_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFifteenMinutes_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeFiveMinutes_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeHour_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeMinute_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetimeSixHours_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_geq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_gt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_leq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_lt",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_neq",
+            "type": {
+              "name": "Time"
+            }
+          },
+          {
+            "description": "",
+            "name": "datetime_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "dispatchNamespaceName_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "environmentName_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_geq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_gt",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_in",
+            "type": {
+              "name": "bytes"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_leq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_lt",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_neq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isDispatcher_notin",
+            "type": {
+              "name": "bytes"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_geq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_gt",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_in",
+            "type": {
+              "name": "bytes"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_leq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_lt",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_neq",
+            "type": {
+              "name": "uint8"
+            }
+          },
+          {
+            "description": "",
+            "name": "isPreview_notin",
+            "type": {
+              "name": "bytes"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "previewSlug_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptName_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptTag_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "scriptVersion_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "status_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "status_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "status_notlike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_geq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_gt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_ilike",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_in",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_leq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_like",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_lt",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_neq",
+            "type": {
+              "name": "string"
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_notin",
+            "type": {
+              "name": ""
+            }
+          },
+          {
+            "description": "",
+            "name": "usageModel_notlike",
+            "type": {
+              "name": "string"
+            }
+          }
+        ],
+        "name": "AccountWorkersInvocationsAdaptiveFilter_InputObject"
+      }
+    },
+    "errors": null
+  }
+}

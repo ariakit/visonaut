@@ -1,0 +1,1752 @@
+{
+  "run": {
+    "source": {
+      "section": "run",
+      "rows": 1,
+      "digest": "c43effa39ca08f8eba7c2be3cd15a13fb846c7c5dd970ca54fb5eb74c0841f63",
+      "milliseconds": 101,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2468
+            },
+            "duration": 0.2468,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "run",
+      "rows": 1,
+      "digest": "c43effa39ca08f8eba7c2be3cd15a13fb846c7c5dd970ca54fb5eb74c0841f63",
+      "milliseconds": 165,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1635
+            },
+            "duration": 0.1635,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "project": {
+    "source": {
+      "section": "project",
+      "rows": 1,
+      "digest": "5a19aac92fed75902d72e86207c5ddd886f4445b0fd356092966b199b5bbb868",
+      "milliseconds": 138,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.171
+            },
+            "duration": 0.171,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "project",
+      "rows": 1,
+      "digest": "5a19aac92fed75902d72e86207c5ddd886f4445b0fd356092966b199b5bbb868",
+      "milliseconds": 179,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1689
+            },
+            "duration": 0.1689,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "shards": {
+    "source": {
+      "section": "shards",
+      "rows": 8,
+      "digest": "474cfd585799b783d52d59969162b32761d5ad471289333512761b3fd8df86d3",
+      "milliseconds": 94,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1461
+            },
+            "duration": 0.1461,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "shards",
+      "rows": 8,
+      "digest": "474cfd585799b783d52d59969162b32761d5ad471289333512761b3fd8df86d3",
+      "milliseconds": 145,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2192
+            },
+            "duration": 0.2192,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "images": {
+    "source": {
+      "section": "images",
+      "rows": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 1319,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2007
+            },
+            "duration": 0.2007,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "images",
+      "rows": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 2673,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1504
+            },
+            "duration": 0.1504,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "captures": {
+    "source": {
+      "section": "captures",
+      "rows": 3582,
+      "digest": "22606e7dd6cbc42573ab13d5f4c0e0f0bdc66ad9739e267a9dec2a4b7fa75381",
+      "milliseconds": 1735,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2199
+            },
+            "duration": 0.2199,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "captures",
+      "rows": 3582,
+      "digest": "22606e7dd6cbc42573ab13d5f4c0e0f0bdc66ad9739e267a9dec2a4b7fa75381",
+      "milliseconds": 2917,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2014
+            },
+            "duration": 0.2014,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "comparisons": {
+    "source": {
+      "section": "comparisons",
+      "rows": 1,
+      "digest": "28fb3f94b62f7b53edfd877821623fe1b78deb89b13e8b417ad65386d5168272",
+      "milliseconds": 124,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2445
+            },
+            "duration": 0.2445,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "comparisons",
+      "rows": 1,
+      "digest": "28fb3f94b62f7b53edfd877821623fe1b78deb89b13e8b417ad65386d5168272",
+      "milliseconds": 148,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1891
+            },
+            "duration": 0.1891,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "comparisonRows": {
+    "source": {
+      "section": "comparisonRows",
+      "rows": 3582,
+      "digest": "96cabf57e37c49340fefee6158b43cd8b2c81aa794659700d94e0b844df4371e",
+      "milliseconds": 2374,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2248
+            },
+            "duration": 0.2248,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "comparisonRows",
+      "rows": 3582,
+      "digest": "96cabf57e37c49340fefee6158b43cd8b2c81aa794659700d94e0b844df4371e",
+      "milliseconds": 2750,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2558
+            },
+            "duration": 0.2558,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "decisions": {
+    "source": {
+      "section": "decisions",
+      "rows": 36,
+      "digest": "f04c1feb4873b04148157312e626b0e1c990c82f9dd2e9450cafe5a06d26e753",
+      "milliseconds": 85,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1391
+            },
+            "duration": 0.1391,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "decisions",
+      "rows": 36,
+      "digest": "f04c1feb4873b04148157312e626b0e1c990c82f9dd2e9450cafe5a06d26e753",
+      "milliseconds": 183,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.202
+            },
+            "duration": 0.202,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "commands": {
+    "source": {
+      "section": "commands",
+      "rows": 36,
+      "digest": "cd17d614aa71ab7fddf098a9e5321dd5af2cf8860626670d94715f2bfd61b0ed",
+      "milliseconds": 102,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1908
+            },
+            "duration": 0.1908,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "commands",
+      "rows": 36,
+      "digest": "cd17d614aa71ab7fddf098a9e5321dd5af2cf8860626670d94715f2bfd61b0ed",
+      "milliseconds": 158,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1971
+            },
+            "duration": 0.1971,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "audit": {
+    "source": {
+      "section": "audit",
+      "rows": 37,
+      "digest": "ac29861a9ef5a7be9c05204ea6090e7a53ad8a7f0fee9fdb24772c5fb81b153f",
+      "milliseconds": 79,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1693
+            },
+            "duration": 0.1693,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "audit",
+      "rows": 37,
+      "digest": "ac29861a9ef5a7be9c05204ea6090e7a53ad8a7f0fee9fdb24772c5fb81b153f",
+      "milliseconds": 178,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2151
+            },
+            "duration": 0.2151,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "referenceSnapshots": {
+    "source": {
+      "section": "referenceSnapshots",
+      "rows": 1,
+      "digest": "c093a19c2b160739fb341311b3ff18ac479b6583ffafbd7705b02f84ce2e4ae3",
+      "milliseconds": 90,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2207
+            },
+            "duration": 0.2207,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "referenceSnapshots",
+      "rows": 1,
+      "digest": "c093a19c2b160739fb341311b3ff18ac479b6583ffafbd7705b02f84ce2e4ae3",
+      "milliseconds": 150,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2216
+            },
+            "duration": 0.2216,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "referenceCaptures": {
+    "source": {
+      "section": "referenceCaptures",
+      "rows": 3582,
+      "digest": "b2435a195f2e63b985b9ad526a1ba6e3f6ebb678caafa796b137f6c7282bedc9",
+      "milliseconds": 1473,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1918
+            },
+            "duration": 0.1918,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "referenceCaptures",
+      "rows": 3582,
+      "digest": "b2435a195f2e63b985b9ad526a1ba6e3f6ebb678caafa796b137f6c7282bedc9",
+      "milliseconds": 2531,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.8029
+            },
+            "duration": 0.8029,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "referenceImages": {
+    "source": {
+      "section": "referenceImages",
+      "rows": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 2162,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1973
+            },
+            "duration": 0.1973,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "referenceImages",
+      "rows": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 3120,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1862
+            },
+            "duration": 0.1862,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "referenceSnapshotImages": {
+    "source": {
+      "section": "referenceSnapshotImages",
+      "rows": 3582,
+      "digest": "9f91a1c4c7e70f55b18a3abfa89396d86e4a650a5f757340c047a4ebef9253cf",
+      "milliseconds": 1601,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1712
+            },
+            "duration": 0.1712,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "referenceSnapshotImages",
+      "rows": 3582,
+      "digest": "9f91a1c4c7e70f55b18a3abfa89396d86e4a650a5f757340c047a4ebef9253cf",
+      "milliseconds": 2617,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1843
+            },
+            "duration": 0.1843,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "provenance": {
+    "source": {
+      "section": "provenance",
+      "rows": 2,
+      "digest": "610cf7d5a854d7b35ce51d9507efcd15172feda52ed023505c61bdfa012a6e91",
+      "milliseconds": 110,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1935
+            },
+            "duration": 0.1935,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "provenance",
+      "rows": 2,
+      "digest": "610cf7d5a854d7b35ce51d9507efcd15172feda52ed023505c61bdfa012a6e91",
+      "milliseconds": 157,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2378
+            },
+            "duration": 0.2378,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "manifests": {
+    "source": {
+      "section": "manifests",
+      "rows": 16,
+      "digest": "ebb0f74fa4bcfb73ce7b14a809de6181d8ff4377b6c34f1be7f00ce1d8579aa5",
+      "milliseconds": 77,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1623
+            },
+            "duration": 0.1623,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "manifests",
+      "rows": 16,
+      "digest": "ebb0f74fa4bcfb73ce7b14a809de6181d8ff4377b6c34f1be7f00ce1d8579aa5",
+      "milliseconds": 188,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1922
+            },
+            "duration": 0.1922,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "profiles": {
+    "source": {
+      "section": "profiles",
+      "rows": 1,
+      "digest": "b54a8669d1179c43a6a065dc33c016ccf2377555ee29641d3ffdc3a74446bfc4",
+      "milliseconds": 82,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2155
+            },
+            "duration": 0.2155,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "profiles",
+      "rows": 1,
+      "digest": "b54a8669d1179c43a6a065dc33c016ccf2377555ee29641d3ffdc3a74446bfc4",
+      "milliseconds": 181,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2501
+            },
+            "duration": 0.2501,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "policies": {
+    "source": {
+      "section": "policies",
+      "rows": 1,
+      "digest": "a2cd3def2d4fc7c97e4e081b7186130fad02a91a3357e99ad902e3d236b17012",
+      "milliseconds": 110,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1753
+            },
+            "duration": 0.1753,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "policies",
+      "rows": 1,
+      "digest": "a2cd3def2d4fc7c97e4e081b7186130fad02a91a3357e99ad902e3d236b17012",
+      "milliseconds": 138,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2217
+            },
+            "duration": 0.2217,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "lineage": {
+    "source": {
+      "section": "lineage",
+      "rows": 1,
+      "digest": "2859aa49aaad1e5ff898e15788ded0b4b396490567ae16e44e1ff48630053deb",
+      "milliseconds": 91,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1953
+            },
+            "duration": 0.1953,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "lineage",
+      "rows": 1,
+      "digest": "2859aa49aaad1e5ff898e15788ded0b4b396490567ae16e44e1ff48630053deb",
+      "milliseconds": 167,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.191
+            },
+            "duration": 0.191,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "ancestry": {
+    "source": {
+      "section": "ancestry",
+      "rows": 1,
+      "digest": "508f8f2352ffaf1223e1de7e943fda3870f3e16ec2dcadb1868a650f3d75b1d9",
+      "milliseconds": 100,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.5172
+            },
+            "duration": 0.5172,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "ancestry",
+      "rows": 1,
+      "digest": "508f8f2352ffaf1223e1de7e943fda3870f3e16ec2dcadb1868a650f3d75b1d9",
+      "milliseconds": 136,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1927
+            },
+            "duration": 0.1927,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "reservations": {
+    "source": {
+      "section": "reservations",
+      "rows": 3582,
+      "digest": "0bef75c7ed16df3efb0e50135e7e69205b7d9ccf4a4afee5cbfe1b686f80e628",
+      "milliseconds": 1348,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.267
+            },
+            "duration": 0.267,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "reservations",
+      "rows": 3582,
+      "digest": "0bef75c7ed16df3efb0e50135e7e69205b7d9ccf4a4afee5cbfe1b686f80e628",
+      "milliseconds": 2839,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2184
+            },
+            "duration": 0.2184,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "identityHistory": {
+    "source": {
+      "section": "identityHistory",
+      "rows": 3582,
+      "digest": "ffaa3557fdb05c5e6cb040676e7835ddc6ebcfcea93f5bb26374bc913a0e541b",
+      "milliseconds": 1657,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1603
+            },
+            "duration": 0.1603,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "identityHistory",
+      "rows": 3582,
+      "digest": "ffaa3557fdb05c5e6cb040676e7835ddc6ebcfcea93f5bb26374bc913a0e541b",
+      "milliseconds": 3102,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2562
+            },
+            "duration": 0.2562,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  },
+  "acceptance": {
+    "source": {
+      "section": "acceptance",
+      "rows": 36,
+      "digest": "d87a25a9e5c73295c68262032b594953497fd90add2550c2bfd826c101b86724",
+      "milliseconds": 94,
+      "counts": {
+        "overlay.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2147
+            },
+            "duration": 0.2147,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "acceptance",
+      "rows": 36,
+      "digest": "d87a25a9e5c73295c68262032b594953497fd90add2550c2bfd826c101b86724",
+      "milliseconds": 170,
+      "counts": {
+        "targetImages.get": 2
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2291
+            },
+            "duration": 0.2291,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "documents": {
+    "source": {
+      "section": "documents",
+      "rows": 46,
+      "digest": "c5d9569888b7f2d30f4f3a64e6aec40264c661299290891945542ff97fedd4f1",
+      "milliseconds": 779,
+      "counts": {
+        "overlay.get": 19
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1649
+            },
+            "duration": 0.1649,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "target": {
+      "section": "documents",
+      "rows": 46,
+      "digest": "c5d9569888b7f2d30f4f3a64e6aec40264c661299290891945542ff97fedd4f1",
+      "milliseconds": 1298,
+      "counts": {
+        "targetImages.get": 19
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1708
+            },
+            "duration": 0.1708,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "tasks": {
+    "source": {
+      "section": "tasks",
+      "rows": 3582,
+      "digest": "ba1a620b5938a66642537e97e423f82799b65ff48c9bdc083d57ea29c4fc0d1f",
+      "milliseconds": 1297,
+      "counts": {
+        "overlay.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.202
+            },
+            "duration": 0.202,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "target": {
+      "section": "tasks",
+      "rows": 3582,
+      "digest": "ba1a620b5938a66642537e97e423f82799b65ff48c9bdc083d57ea29c4fc0d1f",
+      "milliseconds": 2516,
+      "counts": {
+        "targetImages.get": 37
+      },
+      "queries": [
+        {
+          "sql": "SELECT * FROM operations_run_archives WHERE run_id=? AND state='ready'",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1582
+            },
+            "duration": 0.1582,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "day": "2026-09-23",
+  "attempt": "e9addddf-445c-4deb-811d-8c7904a6b939",
+  "stagedAt": 1790075430804,
+  "parts": 3,
+  "digest": "12a0ed91b01e19a0044a57e9d8d6535690f62911307f2d30b8cce0a52e6162ce",
+  "bytes": 20496666,
+  "milliseconds": 459,
+  "counts": {
+    "backups.multipart.complete": 1,
+    "backups.get": 1
+  },
+  "queries": [],
+  "colo": "CWB",
+  "placement": "remote-IAD"
+}

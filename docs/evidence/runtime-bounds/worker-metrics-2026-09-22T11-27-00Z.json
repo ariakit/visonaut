@@ -1,0 +1,50 @@
+{
+  "source": "https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-workers-metrics/",
+  "start": "2026-09-22T11:27:00Z",
+  "end": "2026-09-22T11:33:00Z",
+  "status": 200,
+  "result": {
+    "data": {
+      "viewer": {
+        "accounts": [
+          {
+            "workersInvocationsAdaptive": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:28:27Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 40195446,
+                  "memoryUsageBytes": 30660684,
+                  "wallTime": 79766063,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 40195450,
+                  "cpuTimeP95": 40195450,
+                  "cpuTimeP99": 40195450,
+                  "memoryUsageBytesP50": 30660684,
+                  "memoryUsageBytesP99": 30660684,
+                  "wallTimeP50": 79766060,
+                  "wallTimeP95": 79766060
+                },
+                "sum": {
+                  "cpuTimeUs": 40195446,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "errors": null
+  }
+}

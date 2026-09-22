@@ -1,0 +1,230 @@
+{
+  "collectedAt": "2026-09-22T04:17:57.133Z",
+  "status": 200,
+  "query": "{ viewer { accounts(filter:{accountTag:\"b04f3af3f0f10a6b9481bc23ba974eca\"}) {webp0: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",datetime_geq:\"2026-09-22T04:13:14.000Z\",datetime_lt:\"2026-09-22T04:13:20.000Z\"}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status coloCode }}\npng0: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",datetime_geq:\"2026-09-22T04:13:21.000Z\",datetime_lt:\"2026-09-22T04:13:29.000Z\"}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status coloCode }}\nwebp1: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",datetime_geq:\"2026-09-22T04:14:45.000Z\",datetime_lt:\"2026-09-22T04:14:47.000Z\"}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status coloCode }}\npng1: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",datetime_geq:\"2026-09-22T04:14:48.000Z\",datetime_lt:\"2026-09-22T04:14:52.000Z\"}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status coloCode }}\nwebpCombined: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",OR:[{datetime_geq:\"2026-09-22T04:13:14.000Z\",datetime_lt:\"2026-09-22T04:13:20.000Z\"},{datetime_geq:\"2026-09-22T04:14:45.000Z\",datetime_lt:\"2026-09-22T04:14:47.000Z\"}]}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status }}\npngCombined: workersInvocationsAdaptive(limit:100,filter:{scriptName:\"ariviso-codec-probe\",OR:[{datetime_geq:\"2026-09-22T04:13:21.000Z\",datetime_lt:\"2026-09-22T04:13:29.000Z\"},{datetime_geq:\"2026-09-22T04:14:48.000Z\",datetime_lt:\"2026-09-22T04:14:52.000Z\"}]}) {sum { requests errors } avg { sampleInterval } max { cpuTime memoryUsageBytes wasmMemoryBytes wallTime } quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 memoryUsageBytesP50 memoryUsageBytesP90 memoryUsageBytesP99 wasmMemoryBytesP50 wasmMemoryBytesP90 wasmMemoryBytesP99 wallTimeP50 wallTimeP90 wallTimeP99 } dimensions { scriptVersion status }}} } }",
+  "response": {
+    "data": {
+      "viewer": {
+        "accounts": [
+          {
+            "png0": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "coloCode": "CWB",
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 345472,
+                  "memoryUsageBytes": 101049668,
+                  "wallTime": 365826,
+                  "wasmMemoryBytes": 38076416
+                },
+                "quantiles": {
+                  "cpuTimeP50": 281555,
+                  "cpuTimeP90": 315990,
+                  "cpuTimeP99": 345472,
+                  "memoryUsageBytesP50": 101049660,
+                  "memoryUsageBytesP90": 101049660,
+                  "memoryUsageBytesP99": 101049660,
+                  "wallTimeP50": 299050,
+                  "wallTimeP90": 336702,
+                  "wallTimeP99": 365826,
+                  "wasmMemoryBytesP50": 38076416,
+                  "wasmMemoryBytesP90": 38076416,
+                  "wasmMemoryBytesP99": 38076416
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 18
+                }
+              }
+            ],
+            "png1": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "coloCode": "EZE",
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 417173,
+                  "memoryUsageBytes": 96077124,
+                  "wallTime": 469970,
+                  "wasmMemoryBytes": 38076416
+                },
+                "quantiles": {
+                  "cpuTimeP50": 376666,
+                  "cpuTimeP90": 417173,
+                  "cpuTimeP99": 417173,
+                  "memoryUsageBytesP50": 95814980,
+                  "memoryUsageBytesP90": 96077120,
+                  "memoryUsageBytesP99": 96077120,
+                  "wallTimeP50": 423329,
+                  "wallTimeP90": 469970,
+                  "wallTimeP99": 469970,
+                  "wasmMemoryBytesP50": 38076416,
+                  "wasmMemoryBytesP90": 38076416,
+                  "wasmMemoryBytesP99": 38076416
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 2
+                }
+              }
+            ],
+            "pngCombined": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 431753,
+                  "memoryUsageBytes": 101049668,
+                  "wallTime": 507027,
+                  "wasmMemoryBytes": 38076416
+                },
+                "quantiles": {
+                  "cpuTimeP50": 291906,
+                  "cpuTimeP90": 398906,
+                  "cpuTimeP99": 431753,
+                  "memoryUsageBytesP50": 101049660,
+                  "memoryUsageBytesP90": 101049660,
+                  "memoryUsageBytesP99": 101049660,
+                  "wallTimeP50": 312014,
+                  "wallTimeP90": 441502,
+                  "wallTimeP99": 507027,
+                  "wasmMemoryBytesP50": 38076416,
+                  "wasmMemoryBytesP90": 38076416,
+                  "wasmMemoryBytesP99": 38076416
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 23
+                }
+              }
+            ],
+            "webp0": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "coloCode": "CWB",
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 247488,
+                  "memoryUsageBytes": 67025430,
+                  "wallTime": 248188,
+                  "wasmMemoryBytes": 29818880
+                },
+                "quantiles": {
+                  "cpuTimeP50": 202460,
+                  "cpuTimeP90": 243028,
+                  "cpuTimeP99": 247488,
+                  "memoryUsageBytesP50": 67025430,
+                  "memoryUsageBytesP90": 67025430,
+                  "memoryUsageBytesP99": 67025430,
+                  "wallTimeP50": 206095,
+                  "wallTimeP90": 244361,
+                  "wallTimeP99": 248188,
+                  "wasmMemoryBytesP50": 29818880,
+                  "wasmMemoryBytesP90": 29818880,
+                  "wasmMemoryBytesP99": 29818880
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 20
+                }
+              }
+            ],
+            "webp1": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "coloCode": "EZE",
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 183375,
+                  "memoryUsageBytes": 67033622,
+                  "wallTime": 184980,
+                  "wasmMemoryBytes": 29818880
+                },
+                "quantiles": {
+                  "cpuTimeP50": 168325,
+                  "cpuTimeP90": 183375,
+                  "cpuTimeP99": 183375,
+                  "memoryUsageBytesP50": 67033624,
+                  "memoryUsageBytesP90": 67033624,
+                  "memoryUsageBytesP99": 67033624,
+                  "wallTimeP50": 169240,
+                  "wallTimeP90": 184980,
+                  "wallTimeP99": 184980,
+                  "wasmMemoryBytesP50": 29818880,
+                  "wasmMemoryBytesP90": 29818880,
+                  "wasmMemoryBytesP99": 29818880
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 3
+                }
+              }
+            ],
+            "webpCombined": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "scriptVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 301310,
+                  "memoryUsageBytes": 67033622,
+                  "wallTime": 303641,
+                  "wasmMemoryBytes": 29818880
+                },
+                "quantiles": {
+                  "cpuTimeP50": 199335,
+                  "cpuTimeP90": 245758,
+                  "cpuTimeP99": 301310,
+                  "memoryUsageBytesP50": 67025430,
+                  "memoryUsageBytesP90": 67033624,
+                  "memoryUsageBytesP99": 67033624,
+                  "wallTimeP50": 202360,
+                  "wallTimeP90": 247680,
+                  "wallTimeP99": 303641,
+                  "wasmMemoryBytesP50": 29818880,
+                  "wasmMemoryBytesP90": 29818880,
+                  "wasmMemoryBytesP99": 29818880
+                },
+                "sum": {
+                  "errors": 0,
+                  "requests": 25
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "errors": null
+  }
+}

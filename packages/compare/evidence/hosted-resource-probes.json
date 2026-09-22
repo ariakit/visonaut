@@ -1,0 +1,1235 @@
+{
+  "startedAt": "2026-09-22T04:13:06.175Z",
+  "sequential": true,
+  "fixture": {
+    "width": 1248,
+    "height": 1650,
+    "pngBytes": 368370,
+    "webpBytes": 35796,
+    "pngDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+    "webpDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+    "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b"
+  },
+  "requests": [
+    {
+      "format": "webp",
+      "index": 0,
+      "startedAt": "2026-09-22T04:13:14.177Z",
+      "finishedAt": "2026-09-22T04:13:14.655Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 1,
+      "startedAt": "2026-09-22T04:13:14.656Z",
+      "finishedAt": "2026-09-22T04:13:14.931Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 2,
+      "startedAt": "2026-09-22T04:13:14.932Z",
+      "finishedAt": "2026-09-22T04:13:15.233Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 3,
+      "startedAt": "2026-09-22T04:13:15.234Z",
+      "finishedAt": "2026-09-22T04:13:15.523Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 4,
+      "startedAt": "2026-09-22T04:13:15.524Z",
+      "finishedAt": "2026-09-22T04:13:15.898Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 5,
+      "startedAt": "2026-09-22T04:13:15.899Z",
+      "finishedAt": "2026-09-22T04:13:16.144Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 6,
+      "startedAt": "2026-09-22T04:13:16.145Z",
+      "finishedAt": "2026-09-22T04:13:16.291Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 7,
+      "startedAt": "2026-09-22T04:13:16.292Z",
+      "finishedAt": "2026-09-22T04:13:16.455Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 8,
+      "startedAt": "2026-09-22T04:13:16.456Z",
+      "finishedAt": "2026-09-22T04:13:16.605Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 9,
+      "startedAt": "2026-09-22T04:13:16.605Z",
+      "finishedAt": "2026-09-22T04:13:16.766Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 10,
+      "startedAt": "2026-09-22T04:13:16.767Z",
+      "finishedAt": "2026-09-22T04:13:17.032Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 11,
+      "startedAt": "2026-09-22T04:13:17.033Z",
+      "finishedAt": "2026-09-22T04:13:17.277Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 12,
+      "startedAt": "2026-09-22T04:13:17.278Z",
+      "finishedAt": "2026-09-22T04:13:17.538Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 13,
+      "startedAt": "2026-09-22T04:13:17.539Z",
+      "finishedAt": "2026-09-22T04:13:17.763Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 14,
+      "startedAt": "2026-09-22T04:13:17.764Z",
+      "finishedAt": "2026-09-22T04:13:18.039Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 15,
+      "startedAt": "2026-09-22T04:13:18.040Z",
+      "finishedAt": "2026-09-22T04:13:18.271Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 16,
+      "startedAt": "2026-09-22T04:13:18.272Z",
+      "finishedAt": "2026-09-22T04:13:18.518Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 17,
+      "startedAt": "2026-09-22T04:13:18.519Z",
+      "finishedAt": "2026-09-22T04:13:18.741Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 18,
+      "startedAt": "2026-09-22T04:13:18.742Z",
+      "finishedAt": "2026-09-22T04:13:19.041Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "webp",
+      "index": 19,
+      "startedAt": "2026-09-22T04:13:19.042Z",
+      "finishedAt": "2026-09-22T04:13:19.281Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 0,
+      "startedAt": "2026-09-22T04:13:21.283Z",
+      "finishedAt": "2026-09-22T04:13:21.665Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 1,
+      "startedAt": "2026-09-22T04:13:21.665Z",
+      "finishedAt": "2026-09-22T04:13:21.976Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 2,
+      "startedAt": "2026-09-22T04:13:21.976Z",
+      "finishedAt": "2026-09-22T04:13:22.263Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 3,
+      "startedAt": "2026-09-22T04:13:22.264Z",
+      "finishedAt": "2026-09-22T04:13:22.537Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 4,
+      "startedAt": "2026-09-22T04:13:22.537Z",
+      "finishedAt": "2026-09-22T04:13:22.822Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 5,
+      "startedAt": "2026-09-22T04:13:22.823Z",
+      "finishedAt": "2026-09-22T04:13:23.137Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 6,
+      "startedAt": "2026-09-22T04:13:23.138Z",
+      "finishedAt": "2026-09-22T04:13:23.555Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 7,
+      "startedAt": "2026-09-22T04:13:23.556Z",
+      "finishedAt": "2026-09-22T04:13:23.998Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 8,
+      "startedAt": "2026-09-22T04:13:23.999Z",
+      "finishedAt": "2026-09-22T04:13:24.344Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 4,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 9,
+      "startedAt": "2026-09-22T04:13:24.347Z",
+      "finishedAt": "2026-09-22T04:13:24.814Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 10,
+      "startedAt": "2026-09-22T04:13:24.815Z",
+      "finishedAt": "2026-09-22T04:13:25.217Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 11,
+      "startedAt": "2026-09-22T04:13:25.218Z",
+      "finishedAt": "2026-09-22T04:13:25.614Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 12,
+      "startedAt": "2026-09-22T04:13:25.615Z",
+      "finishedAt": "2026-09-22T04:13:26.011Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 13,
+      "startedAt": "2026-09-22T04:13:26.012Z",
+      "finishedAt": "2026-09-22T04:13:26.394Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 7,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 14,
+      "startedAt": "2026-09-22T04:13:26.395Z",
+      "finishedAt": "2026-09-22T04:13:26.757Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 15,
+      "startedAt": "2026-09-22T04:13:26.758Z",
+      "finishedAt": "2026-09-22T04:13:27.121Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 16,
+      "startedAt": "2026-09-22T04:13:27.123Z",
+      "finishedAt": "2026-09-22T04:13:27.537Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 17,
+      "startedAt": "2026-09-22T04:13:27.539Z",
+      "finishedAt": "2026-09-22T04:13:27.953Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 18,
+      "startedAt": "2026-09-22T04:13:27.953Z",
+      "finishedAt": "2026-09-22T04:13:28.308Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "format": "png",
+      "index": 19,
+      "startedAt": "2026-09-22T04:13:28.308Z",
+      "finishedAt": "2026-09-22T04:13:28.657Z",
+      "status": 200,
+      "parity": true,
+      "result": {
+        "format": "png",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 38076416,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 5,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    }
+  ],
+  "cohorts": [
+    {
+      "format": "webp",
+      "startedAt": "2026-09-22T04:13:14.177Z",
+      "expectedRequests": 20,
+      "finishedAt": "2026-09-22T04:13:19.282Z"
+    },
+    {
+      "format": "png",
+      "startedAt": "2026-09-22T04:13:21.283Z",
+      "expectedRequests": 20,
+      "finishedAt": "2026-09-22T04:13:28.659Z"
+    }
+  ],
+  "tail": [],
+  "tailState": {
+    "exitCode": 1,
+    "stderrSeen": true
+  },
+  "finishedAt": "2026-09-22T04:13:35.662Z"
+}

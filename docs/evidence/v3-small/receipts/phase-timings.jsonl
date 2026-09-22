@@ -1,0 +1,7 @@
+{"scenario":"small","phase":"verify-source","startedAt":1790074662784,"completedAt":1790074721473,"exitCode":0}
+{"scenario":"small","phase":"archive","startedAt":1790074721474,"completedAt":1790074890128,"exitCode":0}
+{"scenario":"small","phase":"cold","startedAt":1790074890128,"completedAt":1790075416000,"exitCode":0}
+{"scenario":"small","phase":"warm","startedAt":1790075416000,"completedAt":1790075438877,"exitCode":0}
+{"scenario":"small","phase":"restore","startedAt":1790075438877,"completedAt":1790076320757,"exitCode":0}
+{"scenario":"small","phase":"rotate","startedAt":1790076320758,"completedAt":1790076323408,"exitCode":1}
+{"scenario":"small","phase":"rotate","startedAt":1790076490714,"completedAt":1790076492085,"exitCode":0}

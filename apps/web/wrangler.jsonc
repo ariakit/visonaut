@@ -1,0 +1,285 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ariviso-preview",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true,
+    },
+  },
+  "vars": {
+    "ARIVISO_ENVIRONMENT": "preview",
+    "ARIVISO_REPOSITORY": "ariakit/ariakit",
+    "ARIVISO_LAUNCH_ENABLED": "false",
+    "ARIVISO_ORIGIN": "https://ariviso-preview.ariakit.workers.dev",
+    "GITHUB_CLIENT_ID": "Iv23lihLxwLZeW7tlh5u",
+    "GITHUB_APP_ID": "5028451",
+    "GITHUB_INSTALLATION_ID": "163661534",
+    "GITHUB_REPOSITORY_ID": "104133653",
+    "GITHUB_OWNER_ID": "40200111",
+    "ARIVISO_PROJECT_ID": "ariakit",
+    "ARIVISO_OIDC_AUDIENCE": "https://ariviso-preview.ariakit.workers.dev",
+    "ARIVISO_TRUSTED_PLAN_PATH": ".github/ariviso-plan.json",
+    "ARIVISO_REUSABLE_WORKFLOW_REF": "ariakit/ariakit/.github/workflows/ariviso-capture.yml@0000000000000000000000000000000000000000",
+    "ARIVISO_REUSABLE_WORKFLOW_SHA": "0000000000000000000000000000000000000000",
+    "ARIVISO_TRUSTED_EXECUTOR_DIGEST": "0000000000000000000000000000000000000000000000000000000000000000",
+    "ARIVISO_ALLOW_MAIN_DISPATCH": "true",
+    "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
+    "D1_DATABASE_ID": "bc1093fa-c1d8-4da8-9224-dc40f988fe12",
+    "ARIVISO_DATABASE_EXPORT_TIMEOUT_MS": "420000",
+    "ARIVISO_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5}",
+    "ARIVISO_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ariviso-preview",
+      "database_id": "bc1093fa-c1d8-4da8-9224-dc40f988fe12",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "bucket_name": "ariviso-preview-images",
+      "binding": "IMAGES",
+    },
+    {
+      "bucket_name": "ariviso-preview-quarantine",
+      "binding": "QUARANTINE",
+    },
+    {
+      "bucket_name": "ariviso-preview-backups",
+      "binding": "BACKUPS",
+    },
+  ],
+  "services": [
+    {
+      "binding": "COMPARATOR",
+      "service": "ariviso-preview-compare",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "COMPARISONS",
+        "queue": "ariviso-preview-comparisons",
+      },
+      {
+        "binding": "OPERATIONS",
+        "queue": "ariviso-preview-operations",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "ariviso-preview-operations",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_concurrency": 1,
+        "max_retries": 5,
+        "dead_letter_queue": "ariviso-preview-dead-letter",
+      },
+    ],
+  },
+  "preview_urls": false,
+  "limits": {
+    "cpu_ms": 240000,
+    "subrequests": 250000,
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"],
+  },
+  "env": {
+    "production": {
+      "vars": {
+        "ARIVISO_ENVIRONMENT": "production",
+        "ARIVISO_REPOSITORY": "ariakit/ariakit",
+        "ARIVISO_LAUNCH_ENABLED": "false",
+        "ARIVISO_ORIGIN": "https://ariviso.ariakit.workers.dev",
+        "GITHUB_CLIENT_ID": "Iv23lihLxwLZeW7tlh5u",
+        "GITHUB_APP_ID": "5028451",
+        "GITHUB_INSTALLATION_ID": "163661534",
+        "GITHUB_REPOSITORY_ID": "104133653",
+        "GITHUB_OWNER_ID": "40200111",
+        "ARIVISO_PROJECT_ID": "ariakit",
+        "ARIVISO_OIDC_AUDIENCE": "https://ariviso.ariakit.workers.dev",
+        "ARIVISO_TRUSTED_PLAN_PATH": ".github/ariviso-plan.json",
+        "ARIVISO_REUSABLE_WORKFLOW_REF": "ariakit/ariakit/.github/workflows/ariviso-capture.yml@0000000000000000000000000000000000000000",
+        "ARIVISO_REUSABLE_WORKFLOW_SHA": "0000000000000000000000000000000000000000",
+        "ARIVISO_TRUSTED_EXECUTOR_DIGEST": "0000000000000000000000000000000000000000000000000000000000000000",
+        "ARIVISO_ALLOW_MAIN_DISPATCH": "false",
+        "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
+        "D1_DATABASE_ID": "d874fc64-82a9-4bd5-afc3-aefaba882802",
+        "ARIVISO_DATABASE_EXPORT_TIMEOUT_MS": "420000",
+        "ARIVISO_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5}",
+        "ARIVISO_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ariviso-production",
+          "database_id": "d874fc64-82a9-4bd5-afc3-aefaba882802",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "bucket_name": "ariviso-production-images",
+          "binding": "IMAGES",
+        },
+        {
+          "bucket_name": "ariviso-production-quarantine",
+          "binding": "QUARANTINE",
+        },
+        {
+          "bucket_name": "ariviso-production-backups",
+          "binding": "BACKUPS",
+        },
+      ],
+      "services": [
+        {
+          "binding": "COMPARATOR",
+          "service": "ariviso-compare",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "ariviso-production-comparisons",
+          },
+          {
+            "binding": "OPERATIONS",
+            "queue": "ariviso-production-operations",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "ariviso-production-operations",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "ariviso-production-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "ariviso",
+      "secrets": {
+        "required": [
+          "BETTER_AUTH_SECRET",
+          "CAPABILITY_SECRET",
+          "GITHUB_CLIENT_SECRET",
+          "GITHUB_APP_PRIVATE_KEY",
+          "GITHUB_WEBHOOK_SECRET",
+          "D1_BACKUP_API_TOKEN",
+        ],
+      },
+    },
+    "diagnostics": {
+      "vars": {
+        "ARIVISO_ENVIRONMENT": "preview",
+        "ARIVISO_REPOSITORY": "ariakit/ariviso-diagnostics",
+        "ARIVISO_LAUNCH_ENABLED": "false",
+        "ARIVISO_ORIGIN": "https://ariviso-diagnostics.ariakit.workers.dev",
+        "GITHUB_CLIENT_ID": "Iv23lihLxwLZeW7tlh5u",
+        "GITHUB_APP_ID": "5028451",
+        "GITHUB_INSTALLATION_ID": "163661534",
+        "GITHUB_REPOSITORY_ID": "1380792062",
+        "GITHUB_OWNER_ID": "40200111",
+        "ARIVISO_PROJECT_ID": "diagnostics",
+        "ARIVISO_OIDC_AUDIENCE": "https://ariviso-diagnostics.ariakit.workers.dev",
+        "ARIVISO_TRUSTED_PLAN_PATH": ".github/ariviso-plan.json",
+        "ARIVISO_REUSABLE_WORKFLOW_REF": "ariakit/ariviso-diagnostics/.github/workflows/ariviso-capture.yml@dcf42788b6c284a1affb4d2df65954672b04bae0",
+        "ARIVISO_REUSABLE_WORKFLOW_SHA": "dcf42788b6c284a1affb4d2df65954672b04bae0",
+        "ARIVISO_TRUSTED_EXECUTOR_DIGEST": "e5d849dda669748070d46f693cd54d1ef3266427e4c5a236404388c31ad8cd47",
+        "ARIVISO_ALLOW_MAIN_DISPATCH": "true",
+        "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
+        "D1_DATABASE_ID": "f7030b0b-7697-49db-a7f8-63f92dea5b5d",
+        "ARIVISO_DATABASE_EXPORT_TIMEOUT_MS": "420000",
+        "ARIVISO_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":64,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":335544320,\"databaseAdmissionBytes\":402653184,\"sqlWarningBytes\":268435456,\"sqlAdmissionBytes\":402653184,\"maximumActiveRuns\":4}",
+        "ARIVISO_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ariviso-diagnostics",
+          "database_id": "f7030b0b-7697-49db-a7f8-63f92dea5b5d",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "bucket_name": "ariviso-diagnostics-images",
+          "binding": "IMAGES",
+        },
+        {
+          "bucket_name": "ariviso-diagnostics-quarantine",
+          "binding": "QUARANTINE",
+        },
+        {
+          "bucket_name": "ariviso-diagnostics-backups",
+          "binding": "BACKUPS",
+        },
+      ],
+      "services": [
+        {
+          "binding": "COMPARATOR",
+          "service": "ariviso-diagnostics-compare",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "ariviso-diagnostics-comparisons",
+          },
+          {
+            "binding": "OPERATIONS",
+            "queue": "ariviso-diagnostics-operations",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "ariviso-diagnostics-operations",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "ariviso-diagnostics-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "ariviso-diagnostics",
+      "secrets": {
+        "required": [
+          "BETTER_AUTH_SECRET",
+          "CAPABILITY_SECRET",
+          "GITHUB_CLIENT_SECRET",
+          "GITHUB_APP_PRIVATE_KEY",
+          "GITHUB_WEBHOOK_SECRET",
+          "D1_BACKUP_API_TOKEN",
+        ],
+      },
+    },
+  },
+  "secrets": {
+    "required": [
+      "BETTER_AUTH_SECRET",
+      "CAPABILITY_SECRET",
+      "GITHUB_CLIENT_SECRET",
+      "GITHUB_APP_PRIVATE_KEY",
+      "GITHUB_WEBHOOK_SECRET",
+      "D1_BACKUP_API_TOKEN",
+    ],
+  },
+}

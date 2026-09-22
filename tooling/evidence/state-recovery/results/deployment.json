@@ -1,0 +1,11 @@
+{
+  "worker": "ariviso-e03-state-20260922",
+  "origin": "https://ariviso-e03-state-20260922.ariakit.workers.dev",
+  "accountId": "b04f3af3f0f10a6b9481bc23ba974eca",
+  "databaseId": "05c51b8e-ac9b-4586-b93e-bc9c10e9ecd9",
+  "bucket": "ariviso-e03-state-20260922-images",
+  "versionId": "5073224a-6204-461a-b768-178ec22339f6",
+  "bundleSha256": "675edc6b735823821ee7893fa5fb99d34be35b23b875b3dd3c50b49a902b3e13",
+  "createdAt": "2026-09-22T14:01:58.540Z",
+  "githubCredentialUploaded": false
+}

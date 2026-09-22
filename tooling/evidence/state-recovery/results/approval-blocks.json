@@ -1,0 +1,41 @@
+{
+  "installationTokenPayloadReadByRejectedCommands": false,
+  "installationTokenUploaded": false,
+  "githubRequestsIssuedByThisAgent": 0,
+  "blocks": [
+    {
+      "action": "Upload temporary GitHub installation token as a secret to the isolated diagnostic Worker",
+      "result": "Automatic approval review rejected before process execution",
+      "reason": "The reviewer found no explicit user authorization for this credential payload and hosted destination."
+    },
+    {
+      "action": "Use the temporary token from local Node to create and update one new non-required diagnostic GitHub check",
+      "result": "Automatic approval review rejected before process execution",
+      "reason": "The reviewer found no explicit user authorization for this credential, check payload, and GitHub destination."
+    }
+  ],
+  "unaffectedWork": "Hosted state-only Worker deployment and native D1/R2 scenarios continued with PROBE_TOKEN only.",
+  "handoff": "Resolved for the exact local command by root authorization proof. The hosted token upload was not retried. The temporary installation token was revoked and its protected file was removed.",
+  "rejectedActionsExecuted": false,
+  "resolution": {
+    "owner": "root task",
+    "authorizationProof": "The root task supplied the original user approval for App Checks write access and public synthetic fixtures in ariakit/ariviso-diagnostics, plus the exact fixed-target safeguards. Automatic approval review then approved the same local live controller command.",
+    "approvedAction": "Local Node token use only; no token upload to a Worker; native local Miniflare D1 plus genuine GitHub HTTPS",
+    "executedCommand": "node --experimental-transform-types run-github-local-state.mjs --live",
+    "startedAt": "2026-09-22T14:13:39.544Z",
+    "completedAt": "2026-09-22T14:13:48.511Z",
+    "checkId": 106782938500,
+    "requests": {
+      "GET": 8,
+      "POST": 1,
+      "PATCH": 5
+    },
+    "tokenCleanup": {
+      "status": 204,
+      "revoked": true,
+      "at": "2026-09-22T14:13:48.509Z",
+      "valueRecorded": false,
+      "protectedFileRemoved": true
+    }
+  }
+}

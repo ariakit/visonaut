@@ -1,0 +1,5 @@
+glob_matcher: doublestar
+pre-commit:
+  jobs:
+    - name: lint
+      run: pnpm lint

@@ -1,0 +1,25 @@
+{
+  "before": {
+    "authSecretDigest": "e87f5169f5eb28afd472fc91a17b97dd661430ce104217967242c52a0b17ec13",
+    "ingestSecretDigest": "29c825b46dea05914a62dff847bee9191b29cea6b211db43ac82ea56a4ff658f",
+    "milliseconds": 0,
+    "counts": {},
+    "queries": [],
+    "colo": "CWB",
+    "placement": "remote-IAD"
+  },
+  "after": {
+    "authSecretDigest": "54b8e1719caf3b893838006f456ed9d58ba5fcdf385efe3036554ae4326e4222",
+    "ingestSecretDigest": "b32130bbb65286ac544854a56c5eb2ebcec7445e83ba10a12b2836ac90e91c78",
+    "milliseconds": 0,
+    "counts": {},
+    "queries": [],
+    "colo": "CWB",
+    "placement": "remote-IAD"
+  },
+  "oldUnexpired": true,
+  "oldAccess": 401,
+  "oldIngest": 401,
+  "freshValid": true,
+  "rotatedAt": 1790076492073
+}

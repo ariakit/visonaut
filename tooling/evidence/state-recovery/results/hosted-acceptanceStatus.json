@@ -1,0 +1,162 @@
+{
+  "scenario": "acceptanceStatus",
+  "prefix": "hosted1-acceptancestatus",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "deployment": {
+    "id": "5073224a-6204-461a-b768-178ec22339f6",
+    "tag": "",
+    "timestamp": "2026-09-22T14:01:29.591747Z"
+  },
+  "startedAt": "2026-09-22T14:05:05.617Z",
+  "completedAt": "2026-09-22T14:05:51.773Z",
+  "durationMs": 46156,
+  "passed": true,
+  "result": {
+    "oldRevision": 14,
+    "invalidatedRevision": 15,
+    "newRevision": 15,
+    "transport": "synthetic send recorder; no GitHub request",
+    "sent": ["failure"],
+    "guards": [
+      "exact source reference",
+      "source invalidation",
+      "source Undo",
+      "unrelated-lineage refusal",
+      "delayed status freshness"
+    ]
+  },
+  "events": [
+    {
+      "name": "injected source rejection after status claim and before delivery",
+      "wallTime": "2026-09-22T14:05:35.376Z",
+      "queuedRevision": 14
+    },
+    {
+      "name": "source rejection prevents baseline promotion",
+      "wallTime": "2026-09-22T14:05:38.392Z",
+      "code": "CONFLICT",
+      "message": "State changed. Refresh the comparison before trying again."
+    }
+  ],
+  "assertions": [
+    {
+      "message": "exact verified-related acceptance is reused",
+      "actual": "passed",
+      "expected": "passed",
+      "passed": true
+    },
+    {
+      "message": "reuse references specific original source decision",
+      "actual": "d3e51e60-6239-4798-a275-5b439961f0cf",
+      "expected": "d3e51e60-6239-4798-a275-5b439961f0cf",
+      "passed": true
+    },
+    {
+      "message": "reuse creates no detached decision",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "exact acceptance initially queues success",
+      "actual": "success",
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "message": "old success has native outbox lease",
+      "passed": true
+    },
+    {
+      "message": "source rejection invalidates dependent acceptance",
+      "actual": "needs-review",
+      "expected": "needs-review",
+      "passed": true
+    },
+    {
+      "message": "source rejection atomically advances native desired status revision",
+      "passed": true
+    },
+    {
+      "message": "delayed success is refused before mock sender",
+      "actual": "stale",
+      "expected": "stale",
+      "passed": true
+    },
+    {
+      "message": "no stale transport invocation",
+      "actual": ["failure"],
+      "expected": [],
+      "passed": true
+    },
+    {
+      "message": "fresh domain status is failure",
+      "actual": "failure",
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "message": "fresh failure claim",
+      "passed": true
+    },
+    {
+      "message": "fresh failure reaches mock sender",
+      "actual": "delivered",
+      "expected": "delivered",
+      "passed": true
+    },
+    {
+      "message": "only current failure was recorded",
+      "actual": ["failure"],
+      "expected": ["failure"],
+      "passed": true
+    },
+    {
+      "message": "source rejection Undo restores exact acceptance eligibility",
+      "actual": "passed",
+      "expected": "passed",
+      "passed": true
+    },
+    {
+      "message": "unrelated equal bytes cannot borrow acceptance",
+      "actual": "needs-review",
+      "expected": "needs-review",
+      "passed": true
+    },
+    {
+      "message": "fixture leaves baseline at seed",
+      "actual": "hosted1-acceptancestatus-snapshot-seed",
+      "expected": "hosted1-acceptancestatus-snapshot-seed",
+      "passed": true
+    }
+  ],
+  "d1": {
+    "calls": 281,
+    "attemptedStatements": 719,
+    "statements": 709,
+    "rowsRead": 1411,
+    "rowsWritten": 775,
+    "nativeDurationMs": 121.25679999999994
+  },
+  "r2": {
+    "puts": 5,
+    "gets": 12,
+    "deletes": 0,
+    "bytesWritten": 350
+  },
+  "boundaries": {
+    "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+    "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+    "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+    "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+    "clock": "explicit injected logical clocks; wall time measured separately",
+    "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+    "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+  },
+  "controller": {
+    "durationMs": 46362.377125,
+    "httpStatus": 200,
+    "ray": "a3f1dcce0e27625e-GRU",
+    "date": "Tue, 22 Sep 2026 14:05:51 GMT"
+  }
+}

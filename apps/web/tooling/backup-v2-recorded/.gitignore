@@ -1,0 +1,9 @@
+drill-token
+auth-secret
+ingest-secret
+secrets-*.json
+rotation-checkpoint.json
+wrangler.drill.json
+recorded-worker.js
+results/
+.wrangler/

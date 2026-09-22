@@ -1,0 +1,103 @@
+{
+  "evidence": "E08 isolated native Queue/D1 recovery controls",
+  "date": "2026-09-22",
+  "worker": "ariviso-e08-queue-20260922",
+  "workerVersion": "09a1cd1c-afc1-43aa-a035-6538f21bb428",
+  "database": {
+    "name": "ariviso-e08-queue-20260922",
+    "id": "2db89245-d128-4e68-90a4-0d2ce9deea50"
+  },
+  "queues": ["ariviso-e08-work-20260922", "ariviso-e08-dead-20260922"],
+  "postPublicationStartedAt": "2026-09-22T10:19:41.877000+00:00",
+  "completedAt": "2026-09-22T10:20:05.858000+00:00",
+  "postPublicationMilliseconds": 23981,
+  "tasks": [
+    {
+      "id": "bounded-replacement:row",
+      "state": "complete",
+      "attempts": 1,
+      "max_attempts": 3
+    },
+    {
+      "id": "bounded:row",
+      "state": "dead",
+      "attempts": 3,
+      "max_attempts": 3
+    },
+    {
+      "id": "duplicate:row",
+      "state": "complete",
+      "attempts": 1,
+      "max_attempts": 3
+    },
+    {
+      "id": "expired:row",
+      "state": "complete",
+      "attempts": 2,
+      "max_attempts": 3
+    },
+    {
+      "id": "lost:row",
+      "state": "complete",
+      "attempts": 1,
+      "max_attempts": 3
+    }
+  ],
+  "deliveryActions": {
+    "committed": 4,
+    "durable-retry": 2,
+    "terminal-duplicate": 8,
+    "durable-dead": 1,
+    "transport-retry": 3
+  },
+  "transportRetryDeliveries": 3,
+  "deadLetterMessages": 1,
+  "staleCompletionAccepted": false,
+  "privateAlertKindsObserved": [
+    "comparison-finalization",
+    "comparison-publication",
+    "comparison-task"
+  ],
+  "alertsAfterRecovery": 0,
+  "unauthenticatedStatus": 401,
+  "foreignKeyViolations": [],
+  "limitations": [
+    "Controlled queue work and empty-inventory finalization fixture; no comparator/capture correctness claim.",
+    "Injected publisher and batch failures occur before external send/commit; durable state and real Queue/D1 delivery are measured.",
+    "Diagnostic Queue retries1s/max_retries2 and durableworkmaxAttempts3; production delay/lease policy differs.",
+    "Explicit fixture supersession creates new replacement work; no production task is silently reactivated.",
+    "Archive receipt alert resolution was added after this deployment; it has separate seven-test SQLite coverage and is not part of this native version."
+  ],
+  "files": {
+    "worker.mjs": "95607abe42a759e05263f3e8a7cff3388f9225b404137e3502e7531b778e7d36",
+    "run.mjs": "1b7fb24672fc91f3fc8ec7b56b07db00cf5d2ed53a9382ee0f70bc135b145240",
+    "wrangler.json": "43d6d64bceb1e5ac3be712ae367fcaeb11a742747a4f5bf6d841ef19f20994a1",
+    "implementation/service/work.ts": "9b1ecbac9e75ba128638754f9d73d8e8c8843cd1e77f85311463f2aa484c5119",
+    "implementation/service/database.ts": "d2bd8dbf9f7c7cf46711f408fc3f78d873efb8925abc330ef426fd180926c3ec",
+    "implementation/service/service.ts": "3007c59649f7b275003bba2567d08ac9f60109b689d44bf1ebca5683e182a0cb",
+    "implementation/operations/comparison-alerts.ts": "4cd52d660e1fb601fc7e0b9c9810b8dbad5ff02195d076f7baa02f55ca5a01ec",
+    "implementation/operations/common.ts": "ab45094f2699ba14134eb5a4db2bf59d75f191f79d64fd755d33ed72834e5908",
+    "implementation/operations-api.ts": "da49583439eed8176966f141fe8e9d60803977915dd88fbdc7b44acb44ff7eb2",
+    "results/deployed-bundle/worker.js": "01a21517058c00b581be5385cf1a532089c348e55c15b7fd26951dc58f570f3b"
+  },
+  "credentialCleanup": {
+    "worker": "ariviso-e08-queue-20260922",
+    "secret": "PROBE_TOKEN",
+    "removedAt": 1790072806394,
+    "previousAccessStatus": 503,
+    "unauthenticatedStatus": 503,
+    "localCredentialFilesRemoved": ["token", "secrets.json"],
+    "otherCredentialsChanged": false
+  },
+  "portableHarness": "apps/web/tooling/queue-recovery",
+  "recordedArtifacts": {
+    "recorded-worker.js.gz": {
+      "sha256": "764960d30393c2b1775bce5e429f190bac536bfbd5c9f6cac25043febb98a521",
+      "decompressedSha256": "01a21517058c00b581be5385cf1a532089c348e55c15b7fd26951dc58f570f3b"
+    },
+    "recorded-events.jsonl.gz": {
+      "sha256": "2f59525274b4297b4d76ba792504a5ff6ed3f2e0f733a8e018e16e6b76b2f84a",
+      "decompressedSha256": "f0c5872c625fbcc997ee6e8ee957ee3bade7a67e40794d6318c03cd7851e65f3"
+    }
+  }
+}

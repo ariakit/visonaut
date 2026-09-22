@@ -1,0 +1,81 @@
+{
+  "mode": "offline-frozen-replay",
+  "preparation": {
+    "mode": "offline-frozen-replay-preparation",
+    "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+    "harnessArchiveSha256": "618bda63013ae64b3b076c45c0177b4032dfb9a05f82486568b2dc743352030e",
+    "verifiedFiles": {
+      "evidence": 15,
+      "supplementary": 4,
+      "source": 37,
+      "build": 15,
+      "fixture": 12
+    },
+    "replayWorkspace": "/var/folders/c_/166fym8j0t71tpfh5s2757sr0000gn/T/ariviso-e03-replay-5uqm1_ke",
+    "originalResultsModified": false,
+    "networkRequests": 0
+  },
+  "native": {
+    "exitCode": 0,
+    "passed": true,
+    "scenarios": [
+      {
+        "scenario": "githubStatusLocal",
+        "passed": true,
+        "assertions": 48
+      },
+      {
+        "scenario": "atomicCommands",
+        "passed": true,
+        "assertions": 7
+      },
+      {
+        "scenario": "currentAndStaleUndo",
+        "passed": true,
+        "assertions": 6
+      },
+      {
+        "scenario": "rollbackHistory",
+        "passed": true,
+        "assertions": 14
+      },
+      {
+        "scenario": "acceptanceStatus",
+        "passed": true,
+        "assertions": 16
+      },
+      {
+        "scenario": "restoration",
+        "passed": true,
+        "assertions": 9
+      },
+      {
+        "scenario": "retentionRaces",
+        "passed": true,
+        "assertions": 16
+      },
+      {
+        "scenario": "statusScenarios",
+        "passed": true,
+        "assertions": 79
+      }
+    ],
+    "foreignKeyCheck": [],
+    "completedAt": "2026-09-22T14:24:46.141Z"
+  },
+  "controller": {
+    "exitCode": 0,
+    "passed": true,
+    "assertions": 48,
+    "foreignKeyCheck": [],
+    "completedAt": "2026-09-22T14:24:51.902Z"
+  },
+  "networkRequests": 0,
+  "recordedResultsModified": false,
+  "initialControllerAttempt": {
+    "exitCode": 1,
+    "reason": "Archived write-once local controller receipt already existed in the replay copy",
+    "fix": "Wrapper moves only that replay copy to recorded/ after all hash checks",
+    "followUp": "Both commands passed in a new workspace after the fix"
+  }
+}

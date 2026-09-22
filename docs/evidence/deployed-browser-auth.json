@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-22",
+  "environment": "Cloudflare preview, Better Auth 1.7.5, D1",
+  "procedure": "Real GitHub OAuth sign-in, dashboard access, sign-out, repeat sign-in, age session timestamps by two days, reload for renewal, expire current preview session, reload for denial, repeat sign-in. No production rows changed.",
+  "signedOut": [
+    [
+      {
+        "sessions": 0
+      }
+    ],
+    [
+      {
+        "sign_out_events": 1
+      }
+    ],
+    [
+      {
+        "private_email_records": 1
+      }
+    ]
+  ],
+  "renewed": [
+    {
+      "sessions": 1,
+      "updated_at": "2026-09-22T04:50:26.086Z",
+      "expires_at": "2026-09-29T04:50:26.086Z"
+    }
+  ],
+  "expired": [
+    {
+      "expired_sessions": 1
+    }
+  ],
+  "expiryUi": "Sign in with GitHub; no private run content",
+  "limitations": [
+    "Revocation receipt was tested separately with a synthetic signed payload.",
+    "Production/preview session isolation remains to be repeated after full production deployment.",
+    "OIDC upload and validated public image reads require hosted capture evidence."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "run": {
+    "url": "https://github.com/ariakit/ariviso-diagnostics/actions/runs/35720575311",
+    "headSha": "53734a585c2c35f732bcece8bb43099303f8a943",
+    "headBranch": "codex/oidc-negative-dispatch-probe",
+    "event": "workflow_dispatch",
+    "status": "completed",
+    "conclusion": "success"
+  },
+  "cases": [
+    {
+      "case": "wrong-audience",
+      "status": 401,
+      "code": "invalid_oidc",
+      "result": "PASS"
+    },
+    {
+      "case": "untrusted-workflow-job",
+      "status": 403,
+      "code": "untrusted_run",
+      "result": "PASS"
+    },
+    {
+      "case": "untrusted-workflow-wrong-repository",
+      "status": 403,
+      "code": "untrusted_run",
+      "result": "PASS"
+    },
+    {
+      "case": "untrusted-workflow-spoofed-tested-sha",
+      "status": 403,
+      "code": "untrusted_run",
+      "result": "PASS"
+    },
+    {
+      "case": "missing-bearer",
+      "status": 401,
+      "code": "credential_required",
+      "result": "PASS"
+    }
+  ],
+  "disposition": "Disposable test-only branch; never merge; not main-branch or cutover evidence.",
+  "privateD1": {
+    "databaseId": "f7030b0b-7697-49db-a7f8-63f92dea5b5d",
+    "externalRunId": "35720575311",
+    "runCount": 0,
+    "rowsWritten": 0
+  }
+}

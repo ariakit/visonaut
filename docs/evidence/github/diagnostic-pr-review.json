@@ -1,0 +1,154 @@
+{
+  "recordedAt": "2026-09-22T10:58:00Z",
+  "scope": "Synthetic diagnostic PR; temporary D1-seeded sessions with live GitHub repository permission checks. Not an OAuth login test.",
+  "pullRequest": "https://github.com/ariakit/ariviso-diagnostics/pull/7",
+  "workflowRunId": "35713469611",
+  "workflowAttempt": 3,
+  "runId": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+  "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+  "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+  "deployment": "a4892b15-7dbc-49aa-8511-6ccf08bd08c3",
+  "commandReplay": "Exact repeated payload returned the same command ID for each saved verdict.",
+  "operations": [
+    {
+      "at": "2026-09-22T10:50:43.637Z",
+      "mode": "command",
+      "state": "rejected",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": "rejected",
+          "revision": 1,
+          "source": "human"
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": null,
+          "revision": 0,
+          "source": null
+        }
+      ]
+    },
+    {
+      "at": "2026-09-22T10:51:45.976Z",
+      "mode": "undo",
+      "state": "needs-review",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": null,
+          "revision": 2,
+          "source": null
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": null,
+          "revision": 0,
+          "source": null
+        }
+      ]
+    },
+    {
+      "at": "2026-09-22T10:52:24.758Z",
+      "mode": "command",
+      "state": "needs-review",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": "approved",
+          "revision": 3,
+          "source": "human"
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": null,
+          "revision": 0,
+          "source": null
+        }
+      ]
+    },
+    {
+      "at": "2026-09-22T10:53:24.011Z",
+      "mode": "undo",
+      "state": "needs-review",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": null,
+          "revision": 4,
+          "source": null
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": null,
+          "revision": 0,
+          "source": null
+        }
+      ]
+    },
+    {
+      "at": "2026-09-22T10:54:06.976Z",
+      "mode": "command",
+      "state": "needs-review",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": "approved",
+          "revision": 5,
+          "source": "human"
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": null,
+          "revision": 0,
+          "source": null
+        }
+      ]
+    },
+    {
+      "at": "2026-09-22T10:56:21.043Z",
+      "mode": "command",
+      "state": "passed",
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "verdicts": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "verdict": "approved",
+          "revision": 5,
+          "source": "human"
+        },
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+          "verdict": "approved",
+          "revision": 1,
+          "source": "human"
+        }
+      ]
+    }
+  ],
+  "checkAfterRejection": {
+    "id": 106710086960,
+    "app": "ariviso",
+    "conclusion": "failure"
+  },
+  "checkAfterApproval": {
+    "checkedAt": "2026-09-22T11:01:00Z",
+    "commit": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+    "checkId": 106710086960,
+    "name": "Ariviso",
+    "app": "ariviso",
+    "status": "completed",
+    "conclusion": "success",
+    "source": "GitHub REST check-runs after both approved variants"
+  },
+  "limitations": [
+    "API-level deployed command checks; browser recording uses a separate local fixture.",
+    "Two synthetic Chromium variants; not the Ariakit capture matrix.",
+    "The first synthetic login expired after its approval/Undo checks; a fresh session approved the final second variant."
+  ]
+}

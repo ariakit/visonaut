@@ -1,0 +1,54 @@
+{
+  "artifacts": {
+    "recorded-worker.js.gz": {
+      "bytes": 396328,
+      "sha256": "7373fa03f7a3b545f038cf61ffb32e9eb361dd8b267241a27a8acfdfe98718ec",
+      "uncompressedBytes": 2262246,
+      "uncompressedSha256": "8b6a9fd706b7724803d0b3c44d7bc3986f99116d09e9f4ec9bcb3c1146e4e979"
+    },
+    "recorded-comparator.js.gz": {
+      "bytes": 20326,
+      "sha256": "7a5c57974ebc0538e9b5aa8bcf6b010f41a4348190fd63ca6e3d29646199a7f1",
+      "uncompressedBytes": 87401,
+      "uncompressedSha256": "997420d2736d52203eb8785d35deb093ab14f92cda72932829208fe534be1a07"
+    },
+    "fixture.json.gz": {
+      "bytes": 654158,
+      "sha256": "42bff3e6c0e6c018c0decce62bc5051e4dacd5529a855be07e082e9e0636a62b",
+      "uncompressedBytes": 5996646,
+      "uncompressedSha256": "876866ef81c7c5371145528d4537da92a28da4ce6f6da662e357da54b21a2ae5"
+    },
+    "frozen-source.tar.gz": {
+      "bytes": 328895,
+      "sha256": "68e25281a455bbfd6b0aadab886ba6f9c45f592516e53549242576164cf0a88d",
+      "uncompressedBytes": 1628160,
+      "uncompressedSha256": "674fc425ed6054a986d29e62067bba732d1f3c499e21839d519ede2d891c1952"
+    }
+  },
+  "wasm": {
+    "6d921a818cf134a4de07204744d66cb6b58631e7-squoosh_png_bg.wasm": {
+      "bytes": 181088,
+      "sha256": "263d6e658808a74b72a1a99c5cc1d619237e70c150db6e41d5d84d3d117ab9be"
+    },
+    "4dc5c0acee09eed6aba45c06f037442c15773664-webp_dec.wasm": {
+      "bytes": 137960,
+      "sha256": "30fb52fa2a80166d25ba7debf902218904ba1f05ccce9f959f722beff9e2f344"
+    }
+  },
+  "harness": {
+    "worker.mjs": "2176291fed0b27be2d322e69c46753520d99a9865bf8eb8502ea2a3902d3c3cf",
+    "comparator.mjs": "98fb4813964032710f0df590569ab42f45840427eb2387f3a04fdabdee1c038d",
+    "run.mjs": "58c848477c4762b0fbe0a371e7a23f95a7d179160c1874f993237b0db9c2b165",
+    "build.mjs": "e3553b76054e723756966bf10ceec901818687927377e9565b66daf5fab66feb",
+    "prepare.py": "72feca9165987efe74db8377ac9980409357b3397b508bcad8777d68c444e51f"
+  },
+  "measurementReceipt": {
+    "path": "docs/evidence/declaration-scale/measurements.json.gz",
+    "compressedSha256": "7df1ba1fe1650d7f08f40bcc411636b7a64d8aa89cde374765041d38b944add2",
+    "uncompressedSha256": "362577dfa4443ecc4d411c0502007a8cf069ba7d8885adc2a9a4312bc461fb65"
+  },
+  "portableBuild": {
+    "passed": true,
+    "exactWorkerBundleHashesReproduced": true
+  }
+}

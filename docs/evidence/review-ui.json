@@ -1,0 +1,198 @@
+{
+  "verifiedAt": "2026-09-22T12:47:31.945770+00:00",
+  "sourceDigest": "d89a6369b0083b68a9e34d566e55bafa7bbc0d1d406e837cea93aa83d5df2dcc",
+  "sourceDigestAlgorithm": "SHA-256 of the UTF-8 canonical source.files JSON map (sorted keys, compact separators).",
+  "sourceChangedDuringCapture": [],
+  "source": {
+    "fileCount": 62,
+    "scope": "The 62 UI, fixture, browser-test, style, route, dependency and configuration files listed below were read directly from the root working tree. This is UI evidence, not a complete backend/source snapshot.",
+    "gitHeadBefore": "c8c465cedd8318b1bbe4b99baec1757ec02347c6",
+    "gitHeadAfter": "c8c465cedd8318b1bbe4b99baec1757ec02347c6",
+    "gitHeadNote": "HEAD is contextual only. The source hashes identify the working-tree code used for these captures.",
+    "files": {
+      "apps/web/package.json": "8669869f493f384bc492d4353594ad9c428d90d4d968c6dedc582965b503e3c1",
+      "apps/web/src/components/ariakit/LICENSE": "593be4976c018fcd06599fc4c679b8f35c7cf055bc53726e991fd724d132732a",
+      "apps/web/src/components/ariakit/NOTICE": "797bb13df3827a02b3c2f6b7821c876a86bd3b38a5171a154a7afe787eee22fa",
+      "apps/web/src/components/ariakit/components/button.ariakit.react.tsx": "aec555482283ffb61c451919568a7288cf8a4b439eb7dda1dfff713e5e98c02c",
+      "apps/web/src/components/ariakit/components/frame.ariakit.react.tsx": "997c460253b84070378551ec5adfad2e919febe8967c193ba95a2cc543bdd5f2",
+      "apps/web/src/components/ariakit/components/kbd.ariakit.react.tsx": "89f6d638627d6edc6e23ef0447d31a7c3d7a1385283aa85f60f72a76335d29f1",
+      "apps/web/src/components/ariakit/components/layer.ariakit.react.tsx": "17aca904d4202cea0df549e3273abd37f107c848fc05d8d960a4b0514edb20dc",
+      "apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx": "6815715c919c4cda235501165024ac84a2837223c2f49bb04ed2ce1f0a004136",
+      "apps/web/src/components/ariakit/components/text-frame.ariakit.react.tsx": "de82031945206186d522f6fa20017952174eb89f56c500acfd118998d4f33d25",
+      "apps/web/src/components/ariakit/components/text.ariakit.react.tsx": "a4611a32d6899b7d8603d013675454261e4df8aece8723a932b3c9f3cb69e836",
+      "apps/web/src/components/ariakit/react-utils/create-render.react.ts": "350a1c4cdfa25f49bc8ee1e6361a9def942b3fb6c420c009d1180ddbc2025154",
+      "apps/web/src/components/ariakit/react-utils/is-iterable.ts": "85c97f3f0f7df80a3996734572d7f4378fac4c98742ff8663c1767b6b7ab42af",
+      "apps/web/src/components/ariakit/styles/active.ts": "18e1d15773b83f73825b6dcf2bdb211977e3e8a07528d5b35d1484ff022108fe",
+      "apps/web/src/components/ariakit/styles/button.ts": "1333f1a46c7f03bd1fb5b3604f1a8e1ed3b8dd86e702499174e2a7535f5cd6a2",
+      "apps/web/src/components/ariakit/styles/control.ts": "f68be81d73efd6da0ac736809d33db9e0d1f3ca5ff94eedf6e0c18446fc86315",
+      "apps/web/src/components/ariakit/styles/edge.ts": "7abf9a204793681c18862380c73af23f1cd0837ae4bf8a424e9e002520ddfc70",
+      "apps/web/src/components/ariakit/styles/focus.ts": "ea6ab490caaa391398b685d5279d4a88f523af36526d31984065a9c34b81ff8a",
+      "apps/web/src/components/ariakit/styles/frame.ts": "7385ec214bd15bf5c1559a449ac71913708259da1c214837be478b61cfb58d8f",
+      "apps/web/src/components/ariakit/styles/glider.ts": "f92dcd0b20fe53c5e0eed18639df6b3ac503e021be8ca860f1a438db159d2c4c",
+      "apps/web/src/components/ariakit/styles/hover.ts": "f71c723ae1c17a4a253b9fecfc01a73e21ab716fb9462fa8578f5aca829a64d6",
+      "apps/web/src/components/ariakit/styles/kbd.ts": "75c2a982b5414baa47f59a06a109c151053bed4f186fa22103a2d94b632897d0",
+      "apps/web/src/components/ariakit/styles/layer.ts": "5cbe4fe0f146b8d9e139d48d063047a98b33f475466e9ff4f2a8d18167a4e170",
+      "apps/web/src/components/ariakit/styles/selected.ts": "b6849988f4dae7c8e46c9c6e47203dbde640181753addc3cea24cda114d3903f",
+      "apps/web/src/components/ariakit/styles/tabs.ts": "688450a1044f67e84bd2947d0e821a635783f116711a400f574f3835472d4493",
+      "apps/web/src/components/ariakit/styles/text-frame.ts": "beb0390ee65a734893b1f0fc9593cc62266211a53cea8f13a227de8951b7b57c",
+      "apps/web/src/components/ariakit/styles/text.ts": "9ff5ef01849d734bafbec69e80de98a9a09d475df3f5f337dc208e6e73f61cac",
+      "apps/web/src/components/ariakit/styles/ui.css": "3baf02c8c4eddcc317c33ed9f420321177eb8c854c8ab66e099bed487e6b3bca",
+      "apps/web/src/components/ariakit/utils/includes.ts": "94abc31e4fb04ff47c2dc115703893fd6c886c24755ad50f4537fdea7f29994e",
+      "apps/web/src/components/ariakit/utils/styles.ts": "4f8d9cf069b4cf5b33888d3936f074207c26860d214fa1669df40c88cccf4110",
+      "apps/web/src/components/operations-attention/__tests__/fixture.tsx": "5deeb02e2f1fd2d9556fd4e7e2a500ef524cd1f545a2c9f1019e3c3bb8d8e33a",
+      "apps/web/src/components/operations-attention/__tests__/index.html": "95cb933a57ec636e84abfec0704d7e1d14c9ebf1108c3a676477398df8a9a4bd",
+      "apps/web/src/components/operations-attention/index.tsx": "45e37632e18958639daabbc250960f2aac760c95e6184d2d16382af4a4e84bdf",
+      "apps/web/src/components/screenshot-viewer.tsx": "87dd7f104a817fae4ad3ed0c06f99c74d47c6ab08a65a67bef4c08dcef4b57a0",
+      "apps/web/src/review.css": "aba58fe136aea6d0c390a53089cc2e49fc0ada4d6d2281016bd6ed6c9b360384",
+      "apps/web/src/review/__tests__/client.test.ts": "b6326a4d491c6f04ec34e24e59a155d1b56ad81b9b69b9c55717208882858bf0",
+      "apps/web/src/review/__tests__/fixture-api.ts": "2ed637c4c8283c569d0dc3dadab08ed2855920af54af09400d9533f5a034e273",
+      "apps/web/src/review/__tests__/fixture-model.ts": "46b45f882c5f3c847e870c467cb1df9d20de53eee2212ca5be17ee1de55aa66c",
+      "apps/web/src/review/__tests__/fixture.tsx": "22baa4fa81583c9773fea24bad29f37144159e2a1fc2e600703ff3d81b66f137",
+      "apps/web/src/review/__tests__/index.html": "b2359d759be31a09e977d217ddc0c21aa18177d7f9121cd7cd438f6c066e315a",
+      "apps/web/src/review/__tests__/operations.browser.test.ts": "5ba12cb87eba70fb5e65cc58ed28a1abb95551ffb96c95a00b4ee378bf4c89f9",
+      "apps/web/src/review/__tests__/playwright.config.ts": "210795e933ba39d9ad9de661af5e0364297407dd2c72bbfc9c908a9537992625",
+      "apps/web/src/review/__tests__/review.browser.test.ts": "464d00e99bb85f2a3761e755f97285e178e6977c61fd52935dfb4b7d789669e5",
+      "apps/web/src/review/__tests__/route-fixture.html": "3f2c5316ed8291c8c8d06b8daeb41bb71e48b223f20b3f2c2965a12430b23001",
+      "apps/web/src/review/__tests__/route-fixture.tsx": "acc8b44582a79528066576995683b6586d264034e120a9236da08e0410fcd773",
+      "apps/web/src/review/__tests__/route.browser.test.ts": "42d3b2d44518be59593ab439ef82a83ff7498cb6309946cc6445376a4c9056c4",
+      "apps/web/src/review/__tests__/scale.browser.test.ts": "4936b247b1629336300855ffd4994bed29d1d2b00c61b9561d0151c68f97033b",
+      "apps/web/src/review/__tests__/vite.config.ts": "4de8769abb27145a3a63c1e0c1d3bf74c70b32016137f211b53a98d472bd429b",
+      "apps/web/src/review/client.ts": "89ea2a93edac75ebd46dd5dc8cbb0d40a2a60d8edf2f525470d59d36e15d84a0",
+      "apps/web/src/review/item-list.tsx": "8c733914d823467e675a7894c9f7b0955b1a8b92a832f7e57c03722dcba2ff57",
+      "apps/web/src/review/model.ts": "855d8352c2edf8288207aa8e908d5073ab8c04217220c164995cc8fb01ebfe3b",
+      "apps/web/src/review/navigation.ts": "1d5daf2d62b50125c84ffbff42d7b444b55eeb21c05bec9b10fbcf6078f73e81",
+      "apps/web/src/review/review-workspace.tsx": "6e8da554f75a28cd6055d6b320bf689c73f9b637fee25c81144eb1a992bb686e",
+      "apps/web/src/review/use-evidence.ts": "5bce586adb39d46f5b73c92ba90410794013f6b28c2d071d2d74f9721f237390",
+      "apps/web/src/routeTree.gen.ts": "17ad37744882df00fb23744e43fc9bbe7ef9ba139d419d222ced37ea5841b557",
+      "apps/web/src/router.tsx": "e36e08c05078aeb0d192400ef9c9c360fb700a03b1d8aa8c07f100631f821c58",
+      "apps/web/src/routes/__root.tsx": "843627cf83175bdfd3fdba8d294f9665c5f75bd9379c631e69c1634c69cdff27",
+      "apps/web/src/routes/dashboard.css": "196d331169211ec87642281f0f7b79a2a8d0d81f6f2a3272b351ec92794e42d5",
+      "apps/web/src/routes/index.tsx": "d6f69ffb7689d881c03e8c46fee0526d398e0ca986a7f1358c7319abe964a405",
+      "apps/web/src/routes/runs.$runId.tsx": "dfee6f3335db5155a0f1a33c515ceb4dbdc2a0d90a91d9ef2fb250b59711a8ca",
+      "apps/web/src/styles.css": "ce9be490b85d3733803fe3530b385d8927b9298a206d7fd50888bd44ec64622d",
+      "package.json": "087fb8699537a1d148a6b2cb01fcf7a255a1176fc7a98c963b3a4c78979aaf68",
+      "pnpm-lock.yaml": "cec439b57ffba441dde5d3e546db7c2eaadd81a2564a7d0e60e65e8b0eb4b14a"
+    },
+    "capturedBefore": "2026-09-22T12:38:55.138210+00:00",
+    "capturedAfter": "2026-09-22T12:47:31.945770+00:00"
+  },
+  "artifacts": {
+    "review-current-source.png": {
+      "sha256": "55e9604a86af7b9b6431a9231ed0ff75016de0e0429b712beb4a128e62ea71b3",
+      "bytes": 109798,
+      "dimensions": [1280, 1090]
+    },
+    "history-current-source.png": {
+      "sha256": "c9eafad8a10a325aaa7974ccf0ae25e862db3bf6b6caab28f7279c7bebf815a2",
+      "bytes": 123706,
+      "dimensions": [1280, 1252]
+    },
+    "attention-current-source.png": {
+      "sha256": "5bfdecab28f9dc9e771ba411307ce918a11cdff2bcd9ac16627fbd39cde8b865",
+      "bytes": 79236,
+      "dimensions": [1224, 540]
+    },
+    "review-keyboard-history-current-source.webm": {
+      "sha256": "59c906b26ab89b5bd0c0f170bd7d356ab402028a8eaebf708ea0c29333bf50c9",
+      "bytes": 3084994
+    }
+  },
+  "video": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "vp8",
+        "width": 1280,
+        "height": 1280,
+        "r_frame_rate": "25/1",
+        "nb_read_frames": "735"
+      }
+    ],
+    "format": {
+      "duration": "29.400000",
+      "size": "3084994"
+    }
+  },
+  "recordResult": {
+    "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "viewport": {
+      "width": 1280,
+      "height": 1280
+    },
+    "requests": [
+      "/api/me",
+      "/api/review-sessions",
+      "/api/runs/run-42",
+      "/api/me",
+      "/api/review-sessions",
+      "/api/runs/run-42?comparison=comparison-3"
+    ],
+    "savedCommandCount": 2,
+    "toleratedNonzeroDifference": {
+      "changedPixels": 1,
+      "maskExpected": false,
+      "approvalEnabled": true
+    },
+    "errors": []
+  },
+  "testEvidence": {
+    "testsPassed": 52,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "durationMs": 10627.053,
+    "comparedFiles": 62,
+    "differences": [],
+    "explanation": "All 52 Chrome tests ran against the current root UI. External configuration files import root test configuration and override only server port, cache/output directories and server reuse. No root source or test files were changed. The capture server used the same external Vite configuration.",
+    "port": 4393,
+    "testLogArtifact": {
+      "name": "chrome-suite.log",
+      "bytes": 10820,
+      "sha256": "dc8d2e44b2463436d89b550150ef93a5e41a3a684a8ed66448d7a59aa78496ef"
+    },
+    "jsonReportArtifact": {
+      "name": "test-results.json",
+      "bytes": 58127,
+      "sha256": "a6cd2a068066d6848b5a9da863036cc41ef0a640fba3690e95d25b9990195784"
+    },
+    "configurationArtifacts": ["playwright.config.mts", "vite.config.mts"]
+  },
+  "visualInspection": {
+    "allFrames": 735,
+    "frameRange": [0, 734],
+    "contactSheets": 8,
+    "method": "Every numbered frame was inspected in eight sequential contact sheets, without frame sampling. Unused tiles after frame 734 on the final sheet are padding.",
+    "fullFramesAtSeconds": [8, 11, 15.5, 29],
+    "screenshots": 3,
+    "result": "Final screenshots and key full-size frames are legible. No credentials or unrelated content appear. Brief normal navigation/loading frames occur in the video; no persistent error state was observed.",
+    "contactSheetArtifacts": [
+      "frames/all-01.png",
+      "frames/all-02.png",
+      "frames/all-03.png",
+      "frames/all-04.png",
+      "frames/all-05.png",
+      "frames/all-06.png",
+      "frames/all-07.png",
+      "frames/all-08.png"
+    ]
+  },
+  "fixtureDisclosure": {
+    "data": "Synthetic local fixtures. Saved responses, access checks, alerts and capacity values are simulated. No hosted authentication, live ingestion, production capacity or deployed backend behavior is established by these images.",
+    "annotations": "Capture-only DOM labels identify synthetic data in all screenshots. Video chapter/action labels and target outlines were added during capture. No repository UI code was changed for annotation.",
+    "toleranceMoment": "The video sets a synthetic changedPixels=1, maskExpected=false result. The UI shows the tolerance explanation and permits approval without a diff mask.",
+    "errors": "No pageerror events were recorded. The local server has a benign missing /favicon.ico response."
+  },
+  "publication": {
+    "status": "pending",
+    "location": "Private pull request attachments; no media binaries are stored in the repository.",
+    "requiredCheck": "Verify that all three images render and the recording plays after publication.",
+    "attachmentUrls": {}
+  },
+  "captureRound": 3,
+  "captureBundle": {
+    "name": "ariviso-final-ui-evidence-r3",
+    "availability": "Local capture bundle. Media, contact sheets, capture scripts and raw test outputs are not stored in the repository. Artifact names below identify bundle members, not repository-relative links."
+  },
+  "captureScriptArtifacts": ["record.js", "capture-review.js", "capture-history.js", "attention.js"]
+}

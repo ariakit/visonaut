@@ -1,0 +1,18 @@
+{
+  "scope": "SQLite/memory-store entry cardinality only; 143,280 owned image entries stand in for the count of originals/derivatives/protected references, not their retention ownership or codec shape. 32-byte synthetic bodies are not image-size or hosted throughput evidence.",
+  "configuredEntryLimit": 200000,
+  "configuredMetadataBytes": 2147483648,
+  "rootBytes": 688475,
+  "storedPageCount": 3231,
+  "maximumStoredPageBytes": 130790,
+  "preparationMilliseconds": 66462.90620900001,
+  "totalMilliseconds": 70639.293084,
+  "bytes": 287655936,
+  "tarEntries": 146660,
+  "captures": 35820,
+  "images": 143280,
+  "capturePages": 359,
+  "indexPages": 1433,
+  "checksumPages": 147,
+  "sha256": "1151324f3b3dc3caa3ad583a4fd96a6c5dce7ba38fdee5029aa615d658dd3973"
+}

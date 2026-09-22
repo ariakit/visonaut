@@ -1,0 +1,330 @@
+import { prepareHistoricalCaptures } from "./operations/historical-captures.ts";
+import { readArchivedComparison } from "./operations/history-supplement.ts";
+import { readArchivedCommand, readRunHistory } from "./operations/history.ts";
+import {
+  createGitHubClient,
+  type AuthConfiguration,
+  type GitHubAppConfiguration,
+  type GitHubClient,
+} from "@ariviso/security";
+import {
+  apiContext,
+  reconcileIngest,
+  reconcileWebhooks,
+  type ApiBindings,
+  type ApiConfiguration,
+} from "./api/index.ts";
+import {
+  createCloudflareDatabaseExporter,
+  createRunExport,
+  runOperations,
+  streamRunExport,
+  type OperationsBudget,
+  type OperationsContext,
+} from "./operations/index.ts";
+import {
+  checkRunAdmission,
+  monitorDatabaseCapacity,
+  validateCapacityPolicy,
+  type CapacityPolicy,
+} from "./capacity.ts";
+import { recordEvent, validateBudget } from "./operations/common.ts";
+
+function required(value: unknown, name: string): string {
+  if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is not configured.`);
+  return value;
+}
+function enabled(value: string) {
+  return value === "true";
+}
+
+function positive(value: unknown, name: string): number {
+  const parsed = typeof value === "string" && /^\d+$/u.test(value) ? Number(value) : value;
+  if (typeof parsed !== "number" || !Number.isSafeInteger(parsed) || parsed < 1)
+    throw new Error(`${name} must be a positive safe integer.`);
+  return parsed;
+}
+function configurationObject(value: unknown, name: string): Record<string, unknown> {
+  const parsed: unknown = JSON.parse(required(value, name));
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    throw new Error(`${name} must be a JSON object.`);
+  return parsed as Record<string, unknown>;
+}
+
+export function authConfiguration(env: Env): AuthConfiguration {
+  return {
+    database: env.DB,
+    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
+    environment: env.ARIVISO_ENVIRONMENT,
+    secret: required(env.BETTER_AUTH_SECRET, "BETTER_AUTH_SECRET"),
+    githubClientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
+    githubClientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
+  };
+}
+
+export function githubConfiguration(env: Env): GitHubAppConfiguration {
+  return {
+    appId: required(env.GITHUB_APP_ID, "GITHUB_APP_ID"),
+    privateKey: required(env.GITHUB_APP_PRIVATE_KEY, "GITHUB_APP_PRIVATE_KEY"),
+    installationId: required(env.GITHUB_INSTALLATION_ID, "GITHUB_INSTALLATION_ID"),
+    repositoryId: required(env.GITHUB_REPOSITORY_ID, "GITHUB_REPOSITORY_ID"),
+    repository: required(env.ARIVISO_REPOSITORY, "ARIVISO_REPOSITORY"),
+  };
+}
+
+export function operationsBudget(env: Env): OperationsBudget {
+  const budget = configurationObject(env.ARIVISO_OPERATIONS_BUDGET, "ARIVISO_OPERATIONS_BUDGET");
+  const result: OperationsBudget = {
+    tasksPerStep: positive(budget.tasksPerStep, "tasksPerStep"),
+    objectsPerStep: positive(budget.objectsPerStep, "objectsPerStep"),
+    leaseMilliseconds: positive(budget.leaseMilliseconds, "leaseMilliseconds"),
+    maxAttempts: positive(budget.maxAttempts, "maxAttempts"),
+    maximumObjectBytes: positive(budget.maximumObjectBytes, "maximumObjectBytes"),
+    maximumDatabaseBytes: positive(budget.maximumDatabaseBytes, "maximumDatabaseBytes"),
+    maximumExportEntries: positive(budget.maximumExportEntries, "maximumExportEntries"),
+  };
+  validateBudget(result);
+  return result;
+}
+
+export function databaseCapacityPolicy(env: Env): CapacityPolicy {
+  const limits = configurationObject(env.ARIVISO_API_LIMITS, "ARIVISO_API_LIMITS");
+  const policy: CapacityPolicy = {
+    databaseWarningBytes: positive(limits.databaseWarningBytes, "databaseWarningBytes"),
+    databaseAdmissionBytes: positive(limits.databaseAdmissionBytes, "databaseAdmissionBytes"),
+    sqlWarningBytes: positive(limits.sqlWarningBytes, "sqlWarningBytes"),
+    sqlAdmissionBytes: positive(limits.sqlAdmissionBytes, "sqlAdmissionBytes"),
+    maximumActiveRuns: positive(limits.maximumActiveRuns, "maximumActiveRuns"),
+  };
+  validateCapacityPolicy(policy);
+  if (policy.sqlAdmissionBytes >= operationsBudget(env).maximumDatabaseBytes)
+    throw new Error("SQL admission must leave headroom below the backup byte limit.");
+  return policy;
+}
+
+/** All clients and binding references belong to the current request or event. */
+export function operationsContext(env: Env): OperationsContext {
+  const configuration = githubConfiguration(env);
+  let client: Promise<GitHubClient> | undefined;
+  const github: GitHubClient = {
+    appId: configuration.appId,
+    repository: configuration.repository,
+    repositoryId: configuration.repositoryId,
+    async request(path, init) {
+      client ??= createGitHubClient(configuration);
+      return (await client).request(path, init);
+    },
+  };
+  return {
+    database: env.DB,
+    images: env.IMAGES,
+    quarantine: env.QUARANTINE,
+    backups: env.BACKUPS,
+    comparisons: {
+      async send(message) {
+        await env.COMPARISONS.send(message);
+      },
+    },
+    github,
+    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
+    budget: operationsBudget(env),
+    now: Date.now,
+  };
+}
+
+export async function assertOperationsProject(env: Env) {
+  const expected = required(env.ARIVISO_PROJECT_ID, "ARIVISO_PROJECT_ID");
+  const projects = await env.DB.prepare(
+    "SELECT id,repository_id FROM ariviso_projects ORDER BY id LIMIT 2",
+  ).all<{ id: string; repository_id: string }>();
+  const project = projects.results[0];
+  if (
+    projects.results.length !== 1 ||
+    project?.id !== expected ||
+    project.repository_id !== env.GITHUB_REPOSITORY_ID
+  ) {
+    throw new Error("Operations require one matching configured project and repository.");
+  }
+}
+
+export function apiBindings(env: Env): ApiBindings {
+  const limits = configurationObject(env.ARIVISO_API_LIMITS, "ARIVISO_API_LIMITS");
+  const auth = authConfiguration(env);
+  const configuration: ApiConfiguration = {
+    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
+    projectId: required(env.ARIVISO_PROJECT_ID, "ARIVISO_PROJECT_ID"),
+    auth,
+    github: githubConfiguration(env),
+    capability: {
+      secret: required(env.CAPABILITY_SECRET, "CAPABILITY_SECRET"),
+      issuer: env.ARIVISO_ORIGIN,
+      environment: env.ARIVISO_ENVIRONMENT,
+    },
+    webhookSecret: required(env.GITHUB_WEBHOOK_SECRET, "GITHUB_WEBHOOK_SECRET"),
+    oidcAudience: required(env.ARIVISO_OIDC_AUDIENCE, "ARIVISO_OIDC_AUDIENCE"),
+    allowMainDispatch:
+      enabled(env.ARIVISO_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
+    repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
+    trustedPlanPath: required(env.ARIVISO_TRUSTED_PLAN_PATH, "ARIVISO_TRUSTED_PLAN_PATH"),
+    reusableWorkflowRef: required(
+      env.ARIVISO_REUSABLE_WORKFLOW_REF,
+      "ARIVISO_REUSABLE_WORKFLOW_REF",
+    ),
+    reusableWorkflowSha: required(
+      env.ARIVISO_REUSABLE_WORKFLOW_SHA,
+      "ARIVISO_REUSABLE_WORKFLOW_SHA",
+    ),
+    trustedExecutorDigest: required(
+      env.ARIVISO_TRUSTED_EXECUTOR_DIGEST,
+      "ARIVISO_TRUSTED_EXECUTOR_DIGEST",
+    ),
+    comparisonMaxAttempts: positive(limits.comparisonMaxAttempts, "comparisonMaxAttempts"),
+    limits: {
+      maximumImageBytes: positive(limits.maximumImageBytes, "maximumImageBytes"),
+      maximumShardBytes: positive(limits.maximumShardBytes, "maximumShardBytes"),
+      maximumManifestBytes: positive(limits.maximumManifestBytes, "maximumManifestBytes"),
+      maximumPlanBytes: positive(limits.maximumPlanBytes, "maximumPlanBytes"),
+      maximumCaptures: positive(limits.maximumCaptures, "maximumCaptures"),
+    },
+  };
+  return {
+    database: env.DB,
+    images: env.IMAGES,
+    quarantine: env.QUARANTINE,
+    comparator: { fetch: (request, init) => env.COMPARATOR.fetch(request, init) },
+    comparisons: {
+      async send(message) {
+        await env.COMPARISONS.send(message);
+      },
+    },
+    configuration,
+    admission: (identity) =>
+      checkRunAdmission(env.DB, databaseCapacityPolicy(env), identity, Date.now()),
+    history: {
+      async read(runId) {
+        await assertOperationsProject(env);
+        return readRunHistory(operationsContext(env), runId);
+      },
+      async readComparison(runId, comparisonId) {
+        await assertOperationsProject(env);
+        return readArchivedComparison(operationsContext(env), { runId, comparisonId });
+      },
+      async prepareComparison(input) {
+        await assertOperationsProject(env);
+        return prepareHistoricalCaptures(operationsContext(env), input);
+      },
+      async readCommand(runId, commandId) {
+        await assertOperationsProject(env);
+        return readArchivedCommand(operationsContext(env), runId, commandId);
+      },
+    },
+    exports: {
+      async create(runId, actorId) {
+        await assertOperationsProject(env);
+        return createRunExport(operationsContext(env), { runId, actorId });
+      },
+      async download(exportId) {
+        await assertOperationsProject(env);
+        return streamRunExport(operationsContext(env), exportId);
+      },
+    },
+  };
+}
+
+export interface OperationsMessage {
+  kind: "continue";
+}
+
+/** The continuation queue runs each bounded, repeat-safe step; cron only publishes. */
+export async function runScheduledOperations(env: Env) {
+  await assertOperationsProject(env);
+  const context = operationsContext(env);
+  try {
+    await monitorDatabaseCapacity(env.DB, databaseCapacityPolicy(env), Date.now());
+  } catch {
+    // Capacity is an admission safeguard. Existing work and cleanup must still run
+    // when this observation fails; new identities remain fail-closed at admission.
+    await recordEvent(env.DB, {
+      kind: "database-capacity",
+      subject: "database",
+      code: "measurement-unavailable",
+      now: Date.now(),
+    }).catch(() => {});
+  }
+  let reconcileMore = false;
+  for (const [kind, reconcile] of [
+    ["webhooks", reconcileWebhooks],
+    ["ingest", reconcileIngest],
+  ] as const) {
+    try {
+      const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
+      const failed = "pending" in result ? result.pending.length : result.errors.length;
+      const progressed =
+        kind === "ingest"
+          ? "progressed" in result && typeof result.progressed === "number" && result.progressed > 0
+          : failed < result.checked;
+      if (result.checked >= context.budget.tasksPerStep && progressed) reconcileMore = true;
+      if (failed === 0) {
+        await resolveSchedulerFailure(env, kind, "reconciliation-failed");
+      } else {
+        await recordEvent(env.DB, {
+          kind,
+          subject: "scheduler",
+          code: "reconciliation-failed",
+          now: Date.now(),
+        });
+      }
+    } catch {
+      await recordEvent(env.DB, {
+        kind,
+        subject: "scheduler",
+        code: "reconciliation-failed",
+        now: Date.now(),
+      });
+    }
+  }
+  const exporter = {
+    async export() {
+      const maximumMilliseconds = positive(
+        env.ARIVISO_DATABASE_EXPORT_TIMEOUT_MS,
+        "ARIVISO_DATABASE_EXPORT_TIMEOUT_MS",
+      );
+      if (maximumMilliseconds >= context.budget.leaseMilliseconds)
+        throw new Error("Database export deadline must be shorter than the operations lease.");
+      return createCloudflareDatabaseExporter({
+        accountId: required(env.CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID"),
+        databaseId: required(env.D1_DATABASE_ID, "D1_DATABASE_ID"),
+        apiToken: required(env.D1_BACKUP_API_TOKEN, "D1_BACKUP_API_TOKEN"),
+        maximumMilliseconds,
+      }).export();
+    },
+  };
+  const result = await runOperations(context, exporter);
+  if (result.hasMore || reconcileMore)
+    await env.OPERATIONS.send({ kind: "continue" } satisfies OperationsMessage, {
+      delaySeconds: 1,
+    });
+  await resolveSchedulerFailure(env, "runtime", "configuration-or-step-failed");
+  return result;
+}
+
+async function resolveSchedulerFailure(env: Env, kind: string, code: string) {
+  await env.DB.prepare(
+    "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id='scheduler' AND code=? AND resolved_at IS NULL",
+  )
+    .bind(Date.now(), kind, code)
+    .run();
+}
+
+export async function reportSchedulerFailure(env: Env) {
+  try {
+    await recordEvent(env.DB, {
+      kind: "runtime",
+      subject: "scheduler",
+      code: "configuration-or-step-failed",
+      now: Date.now(),
+    });
+  } catch {
+    console.error(JSON.stringify({ event: "operations-failed" }));
+  }
+}

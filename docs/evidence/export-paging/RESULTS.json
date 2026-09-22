@@ -1,0 +1,74 @@
+{
+  "status": "RED/GREEN AND LOCAL NATIVE VERIFICATION PASSED; FORMAL REVIEW AND LAUNCH READINESS ARE SEPARATE",
+  "memory": [
+    {
+      "study": "SQLite and memory stores; no hosted latency or CLI admission claim",
+      "subject": "working",
+      "preparationMilliseconds": 9780.616041000001,
+      "totalMilliseconds": 10347.088291,
+      "profileBytes": 646,
+      "bytes": 70951424,
+      "tarEntries": 11171,
+      "captures": 35820,
+      "images": 10580,
+      "capturePages": 359,
+      "indexPages": 106,
+      "checksumPages": 12,
+      "sha256": "6bfff101d9bed5a6f1e464c3c49d134f6614dde1eb4f53fc4154837d11f2a46e"
+    },
+    {
+      "study": "archived SQLite and memory-store export; no hosted capacity claim",
+      "totalMilliseconds": 916.6978339999987,
+      "archivedCaptures": 35820,
+      "sharedProfiles": 1,
+      "bytes": 71311360,
+      "tarEntries": 11131,
+      "captures": 0,
+      "images": 11005,
+      "capturePages": 0,
+      "indexPages": 111,
+      "checksumPages": 12,
+      "sha256": "f70ee4713483663807497759809db242ae505dea29fa6e530b2fc46ef287b3a6"
+    }
+  ],
+  "native": {
+    "scope": "Native local Miniflare D1/R2; export orchestration in Node; no hosted latency, Worker CPU/memory, or sustained capacity claim",
+    "seededMilliseconds": 14683.366833,
+    "preparationMilliseconds": 20492.101041999995,
+    "totalMilliseconds": 83290.112083,
+    "bytes": 70951424,
+    "tarEntries": 11171,
+    "captures": 35820,
+    "images": 10580,
+    "capturePages": 359,
+    "indexPages": 106,
+    "checksumPages": 12,
+    "sha256": "d85d3c8725295eec2356b3384f4c68019027dc096cbf20b465582f8725030e04"
+  },
+  "cardinality": {
+    "scope": "SQLite/memory-store entry cardinality only; 143,280 owned image entries stand in for the count of originals/derivatives/protected references, not their retention ownership or codec shape. 32-byte synthetic bodies are not image-size or hosted throughput evidence.",
+    "configuredEntryLimit": 200000,
+    "configuredMetadataBytes": 2147483648,
+    "rootBytes": 688475,
+    "storedPageCount": 3231,
+    "maximumStoredPageBytes": 130790,
+    "preparationMilliseconds": 66462.90620900001,
+    "totalMilliseconds": 70639.293084,
+    "bytes": 287655936,
+    "tarEntries": 146660,
+    "captures": 35820,
+    "images": 143280,
+    "capturePages": 359,
+    "indexPages": 1433,
+    "checksumPages": 147,
+    "sha256": "1151324f3b3dc3caa3ad583a4fd96a6c5dce7ba38fdee5029aa615d658dd3973"
+  },
+  "stable_source_hashes": {
+    "apps/web/src/operations/exports.ts": "30df0cd35b8334e30174187716c5fd08dba4ccd2b289a389811ad50bb219d0fb",
+    "apps/web/src/operations/export-pages.ts": "8c5781b0d93c8ef5012216c4d27c1d815c087f2c085659d6c138bf98f374f59b",
+    "apps/web/src/operations/history-export.ts": "333efbfed224b694b9ffbc9c4cd3ff95a1326ab6e828852410e8d101d1d28688",
+    "apps/web/src/profiles.ts": "fa095e66a0845af62d502ff9898a585b110d85cbd42ac812f8affac1a21ed395",
+    "apps/web/src/operations/test-fixtures.ts": "89745c85e77153014974ad2d343318947377838b2f5e12e0d639a62892281330"
+  },
+  "fixture_scope": "Synthetic retained storage shape. One real captured/ready run is expanded by SQL for the measured counts; this is not full ingestion/comparison or a codec/hosted throughput study."
+}

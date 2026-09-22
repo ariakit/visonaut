@@ -1,0 +1,2680 @@
+{
+  "source": "/tmp/ariakit-ariviso-integration",
+  "collection": "/tmp/ariakit-ariviso-collection-after-fixes.json",
+  "projects": {
+    "chrome": {
+      "selectedTests": 106,
+      "currentSnapshots": 372,
+      "catalogTests": 24,
+      "previousCatalogSnapshots": 126,
+      "newCatalogCaptures": 984,
+      "unchangedOtherSnapshots": 246,
+      "predictedCaptures": 1230
+    },
+    "firefox": {
+      "selectedTests": 106,
+      "currentSnapshots": 372,
+      "catalogTests": 24,
+      "previousCatalogSnapshots": 126,
+      "newCatalogCaptures": 984,
+      "unchangedOtherSnapshots": 246,
+      "predictedCaptures": 1230
+    },
+    "safari": {
+      "selectedTests": 95,
+      "currentSnapshots": 314,
+      "catalogTests": 23,
+      "previousCatalogSnapshots": 118,
+      "newCatalogCaptures": 926,
+      "unchangedOtherSnapshots": 196,
+      "predictedCaptures": 1122
+    }
+  },
+  "catalogCases": [
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/badge/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-badge/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/badge/page",
+      "sections": 24,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 48
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/badge/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-badge/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/badge/page",
+      "sections": 24,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 48
+    },
+    {
+      "file": "sandbox/ariakit-ui-badge/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/badge/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-badge/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/badge/page",
+      "sections": 24,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-badge/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 48
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "title": "page @visual",
+      "line": 36,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/button/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-button/test-browser.ts",
+            "line": 36,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/button/page",
+      "sections": 82,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 164
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "title": "page @visual",
+      "line": 36,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/button/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-button/test-browser.ts",
+            "line": 36,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/button/page",
+      "sections": 82,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 164
+    },
+    {
+      "file": "sandbox/ariakit-ui-button/test-browser.ts",
+      "title": "page @visual",
+      "line": 36,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/button/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-button/test-browser.ts",
+            "line": 36,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/button/page",
+      "sections": 82,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-10-12-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-13-15-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-16-18-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-19-21-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-22-24-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-25-27-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-28-28-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-button/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 164
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/checkbox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-checkbox/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/checkbox/page",
+      "sections": 26,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 52
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/checkbox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-checkbox/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/checkbox/page",
+      "sections": 26,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 52
+    },
+    {
+      "file": "sandbox/ariakit-ui-checkbox/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/checkbox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-checkbox/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/checkbox/page",
+      "sections": 26,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-10-10-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-checkbox/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 52
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/code/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-code/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/code/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/code/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-code/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/code/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-code/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/code/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-code/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/code/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-code/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "title": "page @visual",
+      "line": 23,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/combobox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-combobox/test-browser.ts",
+            "line": 23,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/combobox/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "title": "page @visual",
+      "line": 23,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/combobox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-combobox/test-browser.ts",
+            "line": 23,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/combobox/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-combobox/test-browser.ts",
+      "title": "page @visual",
+      "line": 23,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/combobox/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-combobox/test-browser.ts",
+            "line": 23,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/combobox/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-10-11-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-combobox/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "title": "page @visual",
+      "line": 30,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/dialog/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-dialog/test-browser.ts",
+            "line": 30,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/dialog/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "title": "page @visual",
+      "line": 30,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/dialog/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-dialog/test-browser.ts",
+            "line": 30,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/dialog/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-dialog/test-browser.ts",
+      "title": "page @visual",
+      "line": 30,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/dialog/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-dialog/test-browser.ts",
+            "line": 30,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/dialog/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-dialog/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/disclosure/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-disclosure/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/disclosure/page",
+      "sections": 27,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 54
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/disclosure/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-disclosure/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/disclosure/page",
+      "sections": 27,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 54
+    },
+    {
+      "file": "sandbox/ariakit-ui-disclosure/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/disclosure/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-disclosure/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/disclosure/page",
+      "sections": 27,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-disclosure/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 54
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/heading/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-heading/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/heading/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/heading/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-heading/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/heading/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-heading/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/heading/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-heading/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/heading/page",
+      "sections": 9,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-heading/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 18
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "title": "page @visual",
+      "line": 106,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/input/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-input/test-browser.ts",
+            "line": 106,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/input/page",
+      "sections": 21,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-light-chrome.webp"
+      ],
+      "captures": 42
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "title": "page @visual",
+      "line": 106,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/input/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-input/test-browser.ts",
+            "line": 106,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/input/page",
+      "sections": 21,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-light-firefox.webp"
+      ],
+      "captures": 42
+    },
+    {
+      "file": "sandbox/ariakit-ui-input/test-browser.ts",
+      "title": "page @visual",
+      "line": 106,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/input/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-input/test-browser.ts",
+            "line": 106,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/input/page",
+      "sections": 21,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-input/__screenshots__/react-page-rows-7-7-desktop-light-safari.webp"
+      ],
+      "captures": 42
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/kbd/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-kbd/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/kbd/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/kbd/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-kbd/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/kbd/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-kbd/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/kbd/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-kbd/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/kbd/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-kbd/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/layer/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-layer/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/layer/page",
+      "sections": 1,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 2
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/layer/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-layer/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/layer/page",
+      "sections": 1,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 2
+    },
+    {
+      "file": "sandbox/ariakit-ui-layer/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/layer/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-layer/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/layer/page",
+      "sections": 1,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-layer/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 2
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/link/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-link/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/link/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/link/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-link/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/link/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-link/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/link/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-link/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/link/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-link/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/list/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-list/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/list/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/list/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-list/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/list/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/list/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-list/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/list/page",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-10-10-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+      "title": "keeps marker shapes and guides in forced colors @visual",
+      "line": 10,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-10-10-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-10-10-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+      "title": "keeps marker shapes and guides in forced colors @visual",
+      "line": 10,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-list/test-chrome-firefox.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/list/keeps-marker-shapes-and-guides-in-forced-colors",
+      "sections": 29,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-10-10-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-10-10-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-list/__screenshots__/react-keeps-marker-shapes-and-guides-in-forced-colors-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 58
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "title": "page @visual",
+      "line": 16,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/nav/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-nav/test-browser.ts",
+            "line": 16,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/nav/page",
+      "sections": 30,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 60
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "title": "page @visual",
+      "line": 16,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/nav/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-nav/test-browser.ts",
+            "line": 16,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/nav/page",
+      "sections": 30,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 60
+    },
+    {
+      "file": "sandbox/ariakit-ui-nav/test-browser.ts",
+      "title": "page @visual",
+      "line": 16,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/nav/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-nav/test-browser.ts",
+            "line": 16,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/nav/page",
+      "sections": 30,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-10-10-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-nav/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 60
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/popover/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-popover/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/popover/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-light-chrome.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/popover/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-popover/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/popover/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-light-firefox.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-popover/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/popover/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-popover/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/popover/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-popover/__screenshots__/react-page-rows-4-4-desktop-light-safari.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "title": "page @visual",
+      "line": 78,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/progress/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-progress/test-browser.ts",
+            "line": 78,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/progress/page",
+      "sections": 18,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 36
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "title": "page @visual",
+      "line": 78,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/progress/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-progress/test-browser.ts",
+            "line": 78,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/progress/page",
+      "sections": 18,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 36
+    },
+    {
+      "file": "sandbox/ariakit-ui-progress/test-browser.ts",
+      "title": "page @visual",
+      "line": 78,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/progress/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-progress/test-browser.ts",
+            "line": 78,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/progress/page",
+      "sections": 18,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-progress/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 36
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/prose/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-prose/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/prose/page",
+      "sections": 5,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 10
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/prose/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-prose/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/prose/page",
+      "sections": 5,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 10
+    },
+    {
+      "file": "sandbox/ariakit-ui-prose/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/prose/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-prose/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/prose/page",
+      "sections": 5,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-prose/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 10
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/radio/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-radio/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/radio/page",
+      "sections": 15,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 30
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/radio/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-radio/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/radio/page",
+      "sections": 15,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 30
+    },
+    {
+      "file": "sandbox/ariakit-ui-radio/test-browser.ts",
+      "title": "page @visual",
+      "line": 10,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/radio/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-radio/test-browser.ts",
+            "line": 10,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/radio/page",
+      "sections": 15,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-radio/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 30
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/separator/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-separator/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/separator/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/separator/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-separator/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/separator/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-separator/test-browser.ts",
+      "title": "page @visual",
+      "line": 8,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/separator/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-separator/test-browser.ts",
+            "line": 8,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/separator/page",
+      "sections": 12,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-separator/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 24
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "title": "page @visual",
+      "line": 162,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/table/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-table/test-browser.ts",
+            "line": 162,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/table/page",
+      "sections": 32,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 64
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "title": "page @visual",
+      "line": 162,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/table/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-table/test-browser.ts",
+            "line": 162,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/table/page",
+      "sections": 32,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 64
+    },
+    {
+      "file": "sandbox/ariakit-ui-table/test-browser.ts",
+      "title": "page @visual",
+      "line": 162,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/table/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-table/test-browser.ts",
+            "line": 162,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/table/page",
+      "sections": 32,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-10-12-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-13-15-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-16-16-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-table/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 64
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tabs/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tabs/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tabs/page",
+      "sections": 34,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-light-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-light-chrome.webp"
+      ],
+      "captures": 68
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tabs/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tabs/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tabs/page",
+      "sections": 34,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-light-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-light-firefox.webp"
+      ],
+      "captures": 68
+    },
+    {
+      "file": "sandbox/ariakit-ui-tabs/test-browser.ts",
+      "title": "page @visual",
+      "line": 13,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tabs/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tabs/test-browser.ts",
+            "line": 13,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tabs/page",
+      "sections": 34,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-1-3-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-10-12-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-4-6-desktop-light-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-tabs/__screenshots__/react-page-rows-7-9-desktop-light-safari.webp"
+      ],
+      "captures": 68
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "title": "page @visual",
+      "line": 17,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/text-frame/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-text-frame/test-browser.ts",
+            "line": 17,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/text-frame/page",
+      "sections": 2,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 4
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "title": "page @visual",
+      "line": 17,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/text-frame/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-text-frame/test-browser.ts",
+            "line": 17,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/text-frame/page",
+      "sections": 2,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 4
+    },
+    {
+      "file": "sandbox/ariakit-ui-text-frame/test-browser.ts",
+      "title": "page @visual",
+      "line": 17,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/text-frame/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-text-frame/test-browser.ts",
+            "line": 17,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/text-frame/page",
+      "sections": 2,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-text-frame/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 4
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "chrome",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tooltip/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tooltip/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tooltip/page",
+      "sections": 10,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-dark-chrome.webp",
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-light-chrome.webp"
+      ],
+      "captures": 20
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "firefox",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tooltip/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tooltip/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tooltip/page",
+      "sections": 10,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-dark-firefox.webp",
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-light-firefox.webp"
+      ],
+      "captures": 20
+    },
+    {
+      "file": "sandbox/ariakit-ui-tooltip/test-browser.ts",
+      "title": "page @visual",
+      "line": 11,
+      "project": "safari",
+      "annotations": [
+        {
+          "type": "ariviso:framework",
+          "description": "react",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/test-utils/preview.ts",
+            "line": 93,
+            "column": 10
+          }
+        },
+        {
+          "type": "ariviso:item",
+          "description": "ui/tooltip/page",
+          "location": {
+            "file": "/private/tmp/ariakit-ariviso-integration/app/src/sandbox/ariakit-ui-tooltip/test-browser.ts",
+            "line": 11,
+            "column": 3
+          }
+        }
+      ],
+      "expectedStatus": "passed",
+      "item": "ui/tooltip/page",
+      "sections": 10,
+      "previousSnapshots": [
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-dark-safari.webp",
+        "app/src/sandbox/ariakit-ui-tooltip/__screenshots__/react-page-desktop-light-safari.webp"
+      ],
+      "captures": 20
+    }
+  ],
+  "total": 3582,
+  "method": "Exact declared catalog sections times two color schemes per collected browser/framework test, with unchanged captures reconciled to tracked baselines. Independently confirmed from all 307 collected callback source bodies, loop cardinalities, capture options, and actual preview discovery in ariakit-source-capture-count.json; no runtime screenshots were taken.",
+  "independentSourceAudit": "ariakit-source-capture-count.json"
+}

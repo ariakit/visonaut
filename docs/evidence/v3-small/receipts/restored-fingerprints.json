@@ -1,0 +1,2936 @@
+{
+  "before": {
+    "ariviso_decisions": {
+      "table": "ariviso_decisions",
+      "count": 7200,
+      "digest": "fffff1e27bc03b7bb7bbff615ac967a9492628f858b89f68b193c9e9527e749c",
+      "milliseconds": 504,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_decisions)",
+          "milliseconds": 53,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1186
+            },
+            "duration": 0.1186,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 35,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 7.2512
+            },
+            "duration": 7.2512,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 31,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.7274
+            },
+            "duration": 4.7274,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 38,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 6.3813
+            },
+            "duration": 6.3813,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 32,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 5.7441
+            },
+            "duration": 5.7441,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 35,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 7.2669
+            },
+            "duration": 7.2669,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 30,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 6.0999
+            },
+            "duration": 6.0999,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 28,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 5.2898
+            },
+            "duration": 5.2898,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 25,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.0111
+            },
+            "duration": 4.0111,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 4000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 39,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.5809
+            },
+            "duration": 3.5809,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 4500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 24,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0749
+            },
+            "duration": 2.0749,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 5000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 37,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.4947
+            },
+            "duration": 2.4947,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 5500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 26,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.0316
+            },
+            "duration": 4.0316,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 6000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 23,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.1478
+            },
+            "duration": 2.1478,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 6500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 25,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.3233
+            },
+            "duration": 2.3233,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 7000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 23,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5281
+            },
+            "duration": 1.5281,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 7200,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_decision_replacements": {
+      "table": "ariviso_decision_replacements",
+      "count": 0,
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "milliseconds": 29,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_decision_replacements)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1367
+            },
+            "duration": 0.1367,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decision_replacements ORDER BY \"source_decision_id\",\"replacement_decision_id\",\"scope_run_id\" LIMIT",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.255
+            },
+            "duration": 0.255,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "ariviso_identity_history": {
+      "table": "ariviso_identity_history",
+      "count": 3582,
+      "digest": "ffaa3557fdb05c5e6cb040676e7835ddc6ebcfcea93f5bb26374bc913a0e541b",
+      "milliseconds": 154,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_identity_history)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.093
+            },
+            "duration": 0.093,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5728
+            },
+            "duration": 1.5728,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.8469
+            },
+            "duration": 1.8469,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.2199
+            },
+            "duration": 3.2199,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0243
+            },
+            "duration": 1.0243,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.3111
+            },
+            "duration": 1.3111,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.9399
+            },
+            "duration": 0.9399,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.2187
+            },
+            "duration": 1.2187,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.4238
+            },
+            "duration": 0.4238,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_reservations": {
+      "table": "ariviso_reservations",
+      "count": 3582,
+      "digest": "0bef75c7ed16df3efb0e50135e7e69205b7d9ccf4a4afee5cbfe1b686f80e628",
+      "milliseconds": 164,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_reservations)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1638
+            },
+            "duration": 0.1638,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 19,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.3069
+            },
+            "duration": 1.3069,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.2137
+            },
+            "duration": 1.2137,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 19,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.3411
+            },
+            "duration": 1.3411,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.8895
+            },
+            "duration": 0.8895,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0898
+            },
+            "duration": 1.0898,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5159
+            },
+            "duration": 1.5159,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.9675
+            },
+            "duration": 0.9675,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.8515
+            },
+            "duration": 0.8515,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "ariviso_lineage_edges": {
+      "table": "ariviso_lineage_edges",
+      "count": 1,
+      "digest": "2859aa49aaad1e5ff898e15788ded0b4b396490567ae16e44e1ff48630053deb",
+      "milliseconds": 30,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_lineage_edges)",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.0914
+            },
+            "duration": 0.0914,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_lineage_edges ORDER BY \"source_run_id\",\"target_run_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.3774
+            },
+            "duration": 0.3774,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_snapshots": {
+      "table": "ariviso_snapshots",
+      "count": 1,
+      "digest": "c093a19c2b160739fb341311b3ff18ac479b6583ffafbd7705b02f84ce2e4ae3",
+      "milliseconds": 28,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_snapshots)",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1214
+            },
+            "duration": 0.1214,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshots ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.3951
+            },
+            "duration": 0.3951,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_images": {
+      "table": "ariviso_images",
+      "count": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 177,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_images)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1636
+            },
+            "duration": 0.1636,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 19,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.3488
+            },
+            "duration": 2.3488,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.1993
+            },
+            "duration": 3.1993,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.4596
+            },
+            "duration": 1.4596,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 20,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.8656
+            },
+            "duration": 1.8656,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5834
+            },
+            "duration": 1.5834,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 24,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.4797
+            },
+            "duration": 1.4797,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 25,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.2083
+            },
+            "duration": 2.2083,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.5558
+            },
+            "duration": 0.5558,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_snapshot_images": {
+      "table": "ariviso_snapshot_images",
+      "count": 3582,
+      "digest": "9f91a1c4c7e70f55b18a3abfa89396d86e4a650a5f757340c047a4ebef9253cf",
+      "milliseconds": 220,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_snapshot_images)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1158
+            },
+            "duration": 0.1158,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 44,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 27.411
+            },
+            "duration": 27.411,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 28,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 9.9891
+            },
+            "duration": 9.9891,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 20,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.765
+            },
+            "duration": 2.765,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 22,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.4626
+            },
+            "duration": 3.4626,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 20,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.9465
+            },
+            "duration": 2.9465,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 31,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.5051
+            },
+            "duration": 3.5051,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.7952
+            },
+            "duration": 4.7952,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.9579
+            },
+            "duration": 0.9579,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_capture_profiles": {
+      "table": "ariviso_capture_profiles",
+      "count": 1,
+      "digest": "b54a8669d1179c43a6a065dc33c016ccf2377555ee29641d3ffdc3a74446bfc4",
+      "milliseconds": 31,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_capture_profiles)",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.0881
+            },
+            "duration": 0.0881,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_capture_profiles ORDER BY \"digest\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.3785
+            },
+            "duration": 0.3785,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "operations_run_archives": {
+      "table": "operations_run_archives",
+      "count": 1,
+      "digest": "98ef7c22d3233b42997c82fc167f1806a8fd67184300fc2a69fb1c2bae8797a2",
+      "milliseconds": 27,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(operations_run_archives)",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1631
+            },
+            "duration": 0.1631,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM operations_run_archives ORDER BY \"run_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 12,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.3626
+            },
+            "duration": 0.3626,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "operations_comparison_archives": {
+      "table": "operations_comparison_archives",
+      "count": 0,
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "milliseconds": 35,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(operations_comparison_archives)",
+          "milliseconds": 20,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1565
+            },
+            "duration": 0.1565,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM operations_comparison_archives ORDER BY \"comparison_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.3042
+            },
+            "duration": 0.3042,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 27164672,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    }
+  },
+  "after": {
+    "ariviso_decisions": {
+      "table": "ariviso_decisions",
+      "count": 7200,
+      "digest": "fffff1e27bc03b7bb7bbff615ac967a9492628f858b89f68b193c9e9527e749c",
+      "milliseconds": 1666,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_decisions)",
+          "milliseconds": 63,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1654
+            },
+            "duration": 0.1654,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 234,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.9291
+            },
+            "duration": 4.9291,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 233,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.7404
+            },
+            "duration": 3.7404,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 238,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 5.972
+            },
+            "duration": 5.972,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 238,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.9872
+            },
+            "duration": 2.9872,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 38,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.6931
+            },
+            "duration": 2.6931,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 28,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.9438
+            },
+            "duration": 3.9438,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 235,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.9523
+            },
+            "duration": 2.9523,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 28,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.0389
+            },
+            "duration": 3.0389,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 4000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 29,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 4.1775
+            },
+            "duration": 4.1775,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 4500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 36,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.6275
+            },
+            "duration": 2.6275,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 5000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 36,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.5321
+            },
+            "duration": 2.5321,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 5500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 38,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 3.4955
+            },
+            "duration": 3.4955,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 6000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.5756
+            },
+            "duration": 2.5756,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 6500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 34,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.8018
+            },
+            "duration": 2.8018,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 7000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decisions ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 137,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5867
+            },
+            "duration": 1.5867,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 7200,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_decision_replacements": {
+      "table": "ariviso_decision_replacements",
+      "count": 0,
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "milliseconds": 29,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_decision_replacements)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1231
+            },
+            "duration": 0.1231,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_decision_replacements ORDER BY \"source_decision_id\",\"replacement_decision_id\",\"scope_run_id\" LIMIT",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1197
+            },
+            "duration": 0.1197,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_identity_history": {
+      "table": "ariviso_identity_history",
+      "count": 3582,
+      "digest": "ffaa3557fdb05c5e6cb040676e7835ddc6ebcfcea93f5bb26374bc913a0e541b",
+      "milliseconds": 139,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_identity_history)",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1234
+            },
+            "duration": 0.1234,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.3991
+            },
+            "duration": 1.3991,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5975
+            },
+            "duration": 1.5975,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.5739
+            },
+            "duration": 2.5739,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0649
+            },
+            "duration": 1.0649,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0693
+            },
+            "duration": 1.0693,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.6064
+            },
+            "duration": 0.6064,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.6641
+            },
+            "duration": 0.6641,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_identity_history ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\" LIMIT 500 OFFSET ?",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2495
+            },
+            "duration": 0.2495,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_reservations": {
+      "table": "ariviso_reservations",
+      "count": 3582,
+      "digest": "0bef75c7ed16df3efb0e50135e7e69205b7d9ccf4a4afee5cbfe1b686f80e628",
+      "milliseconds": 244,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_reservations)",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.13
+            },
+            "duration": 0.13,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 22,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.2749
+            },
+            "duration": 2.2749,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 19,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0064
+            },
+            "duration": 1.0064,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 28,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.7696
+            },
+            "duration": 2.7696,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.0609
+            },
+            "duration": 1.0609,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.1003
+            },
+            "duration": 1.1003,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 20,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.1212
+            },
+            "duration": 1.1212,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 81,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.8537
+            },
+            "duration": 0.8537,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_reservations ORDER BY \"project_id\",\"lineage_key\",\"item_key\",\"variant_key\",\"kind\" LIMIT 500 OFFSET ",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.5132
+            },
+            "duration": 0.5132,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "ariviso_lineage_edges": {
+      "table": "ariviso_lineage_edges",
+      "count": 1,
+      "digest": "2859aa49aaad1e5ff898e15788ded0b4b396490567ae16e44e1ff48630053deb",
+      "milliseconds": 29,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_lineage_edges)",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1048
+            },
+            "duration": 0.1048,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_lineage_edges ORDER BY \"source_run_id\",\"target_run_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1833
+            },
+            "duration": 0.1833,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_snapshots": {
+      "table": "ariviso_snapshots",
+      "count": 1,
+      "digest": "c093a19c2b160739fb341311b3ff18ac479b6583ffafbd7705b02f84ce2e4ae3",
+      "milliseconds": 29,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_snapshots)",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1156
+            },
+            "duration": 0.1156,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshots ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 14,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1481
+            },
+            "duration": 0.1481,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "ariviso_images": {
+      "table": "ariviso_images",
+      "count": 3582,
+      "digest": "787615281ed9e36726f21c4bc6796d27240e734a357883913b41c18343878208",
+      "milliseconds": 508,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_images)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1268
+            },
+            "duration": 0.1268,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 182,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.114
+            },
+            "duration": 1.114,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 24,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.526
+            },
+            "duration": 2.526,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 22,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.1618
+            },
+            "duration": 1.1618,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 22,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.7404
+            },
+            "duration": 1.7404,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 105,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0513
+            },
+            "duration": 2.0513,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 29,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0086
+            },
+            "duration": 2.0086,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 91,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.9729
+            },
+            "duration": 2.9729,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_images ORDER BY \"id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.4332
+            },
+            "duration": 0.4332,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "ariviso_snapshot_images": {
+      "table": "ariviso_snapshot_images",
+      "count": 3582,
+      "digest": "9f91a1c4c7e70f55b18a3abfa89396d86e4a650a5f757340c047a4ebef9253cf",
+      "milliseconds": 386,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_snapshot_images)",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1613
+            },
+            "duration": 0.1613,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 29,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0812
+            },
+            "duration": 2.0812,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 25,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0563
+            },
+            "duration": 2.0563,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 223,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.0367
+            },
+            "duration": 2.0367,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 18,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.8976
+            },
+            "duration": 1.8976,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 22,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 2.6749
+            },
+            "duration": 2.6749,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 2500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 21,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.5678
+            },
+            "duration": 1.5678,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3000,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 1.9689
+            },
+            "duration": 1.9689,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3500,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_snapshot_images ORDER BY \"snapshot_id\",\"capture_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 19,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.9938
+            },
+            "duration": 0.9938,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 3582,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    },
+    "ariviso_capture_profiles": {
+      "table": "ariviso_capture_profiles",
+      "count": 1,
+      "digest": "b54a8669d1179c43a6a065dc33c016ccf2377555ee29641d3ffdc3a74446bfc4",
+      "milliseconds": 30,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(ariviso_capture_profiles)",
+          "milliseconds": 13,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.0895
+            },
+            "duration": 0.0895,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM ariviso_capture_profiles ORDER BY \"digest\" LIMIT 500 OFFSET ?",
+          "milliseconds": 17,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.2164
+            },
+            "duration": 0.2164,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "operations_run_archives": {
+      "table": "operations_run_archives",
+      "count": 1,
+      "digest": "98ef7c22d3233b42997c82fc167f1806a8fd67184300fc2a69fb1c2bae8797a2",
+      "milliseconds": 27,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(operations_run_archives)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1237
+            },
+            "duration": 0.1237,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM operations_run_archives ORDER BY \"run_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 11,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.134
+            },
+            "duration": 0.134,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-IAD"
+    },
+    "operations_comparison_archives": {
+      "table": "operations_comparison_archives",
+      "count": 0,
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "milliseconds": 31,
+      "counts": {},
+      "queries": [
+        {
+          "sql": "PRAGMA table_info(operations_comparison_archives)",
+          "milliseconds": 16,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1129
+            },
+            "duration": 0.1129,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 0,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        },
+        {
+          "sql": "SELECT * FROM operations_comparison_archives ORDER BY \"comparison_id\" LIMIT 500 OFFSET ?",
+          "milliseconds": 15,
+          "meta": {
+            "served_by": "v3-prod",
+            "served_by_region": "ENAM",
+            "served_by_colo": "EWR",
+            "served_by_primary": true,
+            "timings": {
+              "sql_duration_ms": 0.1715
+            },
+            "duration": 0.1715,
+            "changes": 0,
+            "last_row_id": 0,
+            "changed_db": false,
+            "size_after": 26914816,
+            "rows_read": 1,
+            "rows_written": 0,
+            "total_attempts": 1
+          }
+        }
+      ],
+      "colo": "CWB",
+      "placement": "remote-"
+    }
+  }
+}

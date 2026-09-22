@@ -1,0 +1,134 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ariviso-preview-compare",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-22",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true,
+    },
+  },
+  "limits": {
+    "cpu_ms": 30000,
+  },
+  "rules": [
+    {
+      "type": "CompiledWasm",
+      "globs": ["**/*.wasm"],
+      "fallthrough": true,
+    },
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ariviso-preview",
+      "database_id": "bc1093fa-c1d8-4da8-9224-dc40f988fe12",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "ariviso-preview-images",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "COMPARISONS",
+        "queue": "ariviso-preview-comparisons",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "ariviso-preview-comparisons",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_concurrency": 1,
+        "max_retries": 5,
+        "dead_letter_queue": "ariviso-preview-dead-letter",
+      },
+    ],
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"],
+  },
+  "preview_urls": false,
+  "env": {
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ariviso-production",
+          "database_id": "d874fc64-82a9-4bd5-afc3-aefaba882802",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "IMAGES",
+          "bucket_name": "ariviso-production-images",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "ariviso-production-comparisons",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "ariviso-production-comparisons",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "ariviso-production-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "ariviso-compare",
+    },
+    "diagnostics": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ariviso-diagnostics",
+          "database_id": "f7030b0b-7697-49db-a7f8-63f92dea5b5d",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "IMAGES",
+          "bucket_name": "ariviso-diagnostics-images",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "ariviso-diagnostics-comparisons",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "ariviso-diagnostics-comparisons",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "ariviso-diagnostics-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "ariviso-diagnostics-compare",
+    },
+  },
+}

@@ -1,0 +1,240 @@
+.dashboard,
+.dashboard-run-page,
+.dashboard-sign-in {
+  color: #23272e;
+  font:
+    14px/1.5 ui-sans-serif,
+    system-ui,
+    sans-serif;
+}
+.dashboard,
+.dashboard-run-page {
+  min-height: 100dvh;
+  background: #fff;
+}
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-height: 62px;
+  padding: 14px 28px;
+  border-bottom: 1px solid #dcdfe4;
+  background: #fafbfc;
+}
+.dashboard-header > .review-control {
+  margin-left: auto;
+}
+.dashboard-header > span,
+.dashboard-header > a:not(.dashboard-brand) {
+  color: #626a75;
+  font-size: 12px;
+}
+.dashboard-brand {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: #23272e;
+  text-decoration: none;
+}
+.dashboard-main {
+  max-width: 1280px;
+  margin: auto;
+  padding: 34px 28px;
+}
+.dashboard-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.dashboard h1,
+.dashboard-run-page h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+.dashboard-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #626a75;
+}
+.dashboard-heading-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.dashboard-heading-actions > span {
+  color: #626a75;
+  font-size: 12px;
+}
+.dashboard-table-scroll {
+  overflow: auto;
+  border: 1px solid #dcdfe4;
+  border-radius: 6px;
+}
+.dashboard-runs {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+.dashboard-runs th {
+  font-size: 11px;
+  color: #626a75;
+  font-weight: 600;
+  background: #f6f7f9;
+}
+.dashboard-runs th,
+.dashboard-runs td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e7e9ed;
+  white-space: nowrap;
+}
+.dashboard-runs tr:last-child td {
+  border-bottom: 0;
+}
+.dashboard-runs a {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: #273448;
+  text-decoration: none;
+}
+.dashboard-runs a:hover strong {
+  text-decoration: underline;
+}
+.dashboard-runs a small {
+  font-size: 10px;
+  color: #626a75;
+}
+.dashboard-runs a:focus-visible,
+.dashboard-header a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.dashboard-run-state {
+  text-transform: capitalize;
+  font-size: 12px;
+}
+.dashboard-empty {
+  border: 1px solid #dcdfe4;
+  border-radius: 6px;
+  padding: 36px;
+  background: #fafbfc;
+}
+.dashboard-empty h1,
+.dashboard-empty h2 {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.dashboard-empty p {
+  color: #626a75;
+  margin: 10px 0 18px;
+}
+.dashboard-sign-in {
+  max-width: 540px;
+  margin: 16vh auto;
+  padding: 32px;
+}
+.dashboard-sign-in h1 {
+  margin: 32px 0 18px;
+  font-size: 36px;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.dashboard-sign-in p {
+  color: #626a75;
+  margin-block: 16px 22px;
+}
+.dashboard-access-note {
+  font-size: 12px;
+  border-top: 1px solid #dcdfe4;
+  padding-top: 22px;
+  margin-top: 32px !important;
+}
+.dashboard-error {
+  margin: 0;
+  padding: 14px 28px;
+  color: #8b321f;
+  background: #fff3ef;
+}
+.dashboard-attention {
+  margin-bottom: 32px;
+  padding: 20px;
+  border: 1px solid #dcdfe4;
+  border-radius: 6px;
+  background: #fafbfc;
+}
+.dashboard-attention-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dashboard-attention h2,
+.dashboard-attention h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.dashboard-attention h3 {
+  font-size: 14px;
+}
+.dashboard-attention p {
+  margin: 6px 0 12px;
+}
+.dashboard-attention-heading p,
+.dashboard-attention-meta,
+.dashboard-attention-summary {
+  color: #626a75;
+  font-size: 12px;
+}
+.dashboard-attention-list {
+  list-style: none;
+  margin: 16px 0;
+  padding: 0;
+  border-top: 1px solid #dcdfe4;
+}
+.dashboard-attention-list li {
+  padding-block: 16px 4px;
+  border-bottom: 1px solid #dcdfe4;
+  overflow-wrap: anywhere;
+}
+.dashboard-attention-error {
+  color: #8b321f;
+}
+.dashboard-attention a {
+  color: #273448;
+  text-underline-offset: 3px;
+}
+.dashboard-attention a:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 4px;
+}
+@media (max-width: 700px) {
+  .dashboard-header {
+    padding-inline: 16px;
+    gap: 16px;
+  }
+  .dashboard-main {
+    padding: 24px 16px;
+  }
+  .dashboard-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .dashboard-attention-heading {
+    flex-direction: column;
+  }
+  .dashboard-empty {
+    padding: 24px;
+  }
+  .dashboard-sign-in {
+    margin-top: 10vh;
+    padding: 24px;
+  }
+}

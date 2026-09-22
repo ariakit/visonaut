@@ -1,0 +1,92 @@
+[
+  {
+    "results": [
+      {
+        "id": "f308fcb5-145e-4019-b192-721b32b2afc1",
+        "state": "accepted",
+        "sealed_at": 1790070312799,
+        "comparison_id": "38ad3243-b985-432c-8aa6-63f7af8f97de",
+        "last_checked_at": 1790070314592
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ATL",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1579
+      },
+      "duration": 0.1579,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 581632,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "run_id": "f308fcb5-145e-4019-b192-721b32b2afc1",
+        "key": "chromium-1",
+        "state": "complete"
+      },
+      {
+        "run_id": "f308fcb5-145e-4019-b192-721b32b2afc1",
+        "key": "chromium-2",
+        "state": "complete"
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ATL",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0952
+      },
+      "duration": 0.0952,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 581632,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "kind": "backup",
+        "code": "rpo-exceeded",
+        "subject_id": "freshness",
+        "occurrences": 5,
+        "resolved_at": 1790053283768
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ATL",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0872
+      },
+      "duration": 0.0872,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 581632,
+      "rows_read": 1,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

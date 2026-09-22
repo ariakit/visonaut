@@ -1,0 +1,22 @@
+{
+  "version": 3,
+  "id": "2026-09-23",
+  "createdAt": 1790161816391,
+  "completedAt": 1790161837055,
+  "database": {
+    "key": "backups/2026-09-23/database-cd3b4dd0-4831-46ed-bef0-ecc652132148.sql",
+    "digest": "12a0ed91b01e19a0044a57e9d8d6535690f62911307f2d30b8cce0a52e6162ce",
+    "bytes": 20496666
+  },
+  "pages": [
+    {
+      "key": "backups/2026-09-23/groups/000000-8182ca497aacdd0b9c14705232b623bfaecf1b6529d5117f0de0225f53bba672.json",
+      "digest": "8182ca497aacdd0b9c14705232b623bfaecf1b6529d5117f0de0225f53bba672",
+      "bytes": 2080,
+      "objects": 7
+    }
+  ],
+  "groups": 7,
+  "objects": 7540,
+  "bytes": 232185001
+}

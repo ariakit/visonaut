@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-09-22T09:48:27.095262+00:00",
+  "origin": "https://ariviso-diagnostics.ariakit.workers.dev",
+  "cookieSent": false,
+  "results": [
+    {
+      "path": "/images/d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+      "status": 200,
+      "headers": {
+        "Content-Type": "image/png",
+        "Content-Length": "752",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": "\"cb22e7356d3ac660546cac07209af5ac2f8224002555b40794738319506f045c\"",
+        "Set-Cookie": null
+      },
+      "bytes": 752,
+      "sha256": "cb22e7356d3ac660546cac07209af5ac2f8224002555b40794738319506f045c"
+    },
+    {
+      "path": "/images/1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+      "status": 200,
+      "headers": {
+        "Content-Type": "image/png",
+        "Content-Length": "755",
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": "\"80f8915861c7e8ce84484ac87e16da486886660b04a0749c64276118f18ea832\"",
+        "Set-Cookie": null
+      },
+      "bytes": 755,
+      "sha256": "80f8915861c7e8ce84484ac87e16da486886660b04a0749c64276118f18ea832"
+    },
+    {
+      "path": "/api/runs/f308fcb5-145e-4019-b192-721b32b2afc1",
+      "status": 401,
+      "headers": {
+        "Content-Type": "application/json",
+        "Content-Length": "92",
+        "Cache-Control": "no-store, private",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": null,
+        "Set-Cookie": null
+      },
+      "bytes": 92,
+      "sha256": "289dedbfe0684927b98d9203e2e7a5a2ee95bfcf640f6bd01a8d5bbfc36e2a2e"
+    },
+    {
+      "path": "/api/operations",
+      "status": 401,
+      "headers": {
+        "Content-Type": "application/json",
+        "Content-Length": "92",
+        "Cache-Control": "no-store, private",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": null,
+        "Set-Cookie": null
+      },
+      "bytes": 92,
+      "sha256": "289dedbfe0684927b98d9203e2e7a5a2ee95bfcf640f6bd01a8d5bbfc36e2a2e"
+    },
+    {
+      "path": "/images/history/private.json",
+      "status": 404,
+      "headers": {
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Content-Length": "9",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": null,
+        "Set-Cookie": null
+      },
+      "bytes": 9,
+      "sha256": "e3ebaa16dd9d9b9fc107c42183fb6cf9d22927e1af03dbbdfa0ccc38e4e4ac31"
+    },
+    {
+      "path": "/images/00000000-0000-4000-8000-000000000000",
+      "status": 404,
+      "headers": {
+        "Content-Type": "text/plain;charset=UTF-8",
+        "Content-Length": "9",
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "ETag": null,
+        "Set-Cookie": null
+      },
+      "bytes": 9,
+      "sha256": "e3ebaa16dd9d9b9fc107c42183fb6cf9d22927e1af03dbbdfa0ccc38e4e4ac31"
+    }
+  ]
+}

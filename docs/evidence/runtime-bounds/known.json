@@ -1,0 +1,12 @@
+{
+  "startedAt": 1790076506925,
+  "completedAt": 1790076586933,
+  "mode": "known",
+  "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+  "bytes": 1182101421,
+  "milliseconds": 79170,
+  "counts": {
+    "get": 2,
+    "put": 1
+  }
+}

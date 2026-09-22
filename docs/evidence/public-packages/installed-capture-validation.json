@@ -1,0 +1,43 @@
+{
+  "scope": "Installed adapter and reporter, synthetic local page and provenance fields, no upload.",
+  "captures": 1,
+  "testRetry": 1,
+  "selectedPixels": [0, 128, 0, 255],
+  "dimensions": [32, 32],
+  "imageDigest": "740de9a9ad8cc8da944a4311d2a8aa5f436796d565971c3271fbdcc377b43ff8",
+  "producer": {
+    "name": "@ariviso/playwright",
+    "version": "0.1.0",
+    "nodeVersion": "24.18.0",
+    "playwrightVersion": "1.63.0"
+  },
+  "profile": {
+    "osImageDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "fontsDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "comparisonPolicyDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "comparisonEngineVersion": "1",
+    "browser": "chromium",
+    "browserVersion": "154.0.8037.44",
+    "viewport": {
+      "width": 32,
+      "height": 32
+    },
+    "deviceScaleFactor": 1,
+    "locale": "en-US",
+    "timezone": "UTC",
+    "reducedMotion": "reduce",
+    "colorScheme": "light",
+    "contrast": "no-preference",
+    "forcedColors": "none",
+    "animationPolicy": "disabled",
+    "captureOptions": {
+      "type": "png",
+      "animations": "disabled",
+      "caret": "hide",
+      "scale": "css",
+      "fullPage": false,
+      "omitBackground": false
+    }
+  },
+  "browserTestClassification": "One intentional first-attempt failure followed by success; Playwright reports one flaky test by design."
+}
