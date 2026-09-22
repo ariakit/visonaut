@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc6 -p tsconfig.json",
+    "typecheck": "wrangler types && tsc6 -p tsconfig.json",
     "test": "vitest run",
     "build": "wrangler deploy --dry-run --outdir dist",
     "probe": "wrangler dev --config wrangler.probe.jsonc",
