@@ -5,6 +5,7 @@ import { routeWebhook } from "./index.ts";
 const secret = "visonaut-webhook-test-secret-over-32-characters";
 const ariakitRepositoryId = "104133653";
 const diagnosticsRepositoryId = "1380792062";
+const serviceRepositoryId = "1380751023";
 
 function signedRequest(event: string, payload: Record<string, unknown>) {
   const body = JSON.stringify(payload);
@@ -39,6 +40,7 @@ function destinations(status = 202) {
       secret,
       ariakitRepositoryId,
       diagnosticsRepositoryId,
+      serviceRepositoryId,
       production: destination("production"),
       preview: destination("preview"),
       diagnostics: destination("diagnostics"),
@@ -70,6 +72,30 @@ describe("signed App webhook routing", () => {
     expect(response.status).toBe(202);
     expect(received).toHaveLength(1);
     expect(received[0]?.startsWith("diagnostics:")).toBe(true);
+  });
+
+  it("acknowledges source repository events without sending them to a review environment", async () => {
+    const { received, bindings } = destinations();
+    const response = await routeWebhook(
+      signedRequest("pull_request", { repository: { id: 1380751023 } }),
+      bindings,
+    );
+    expect(response.status).toBe(202);
+    expect(received).toEqual([]);
+  });
+
+  it("does not forward source-only installation changes", async () => {
+    const { received, bindings } = destinations();
+    const response = await routeWebhook(
+      signedRequest("installation_repositories", {
+        action: "added",
+        repositories_added: [{ id: 1380751023 }],
+        repositories_removed: [],
+      }),
+      bindings,
+    );
+    expect(response.status).toBe(202);
+    expect(received).toEqual([]);
   });
 
   it("delivers App-wide revocation to all three deployments", async () => {

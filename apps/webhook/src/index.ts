@@ -15,6 +15,7 @@ interface WebhookBindings {
   secret: string;
   ariakitRepositoryId: string;
   diagnosticsRepositoryId: string;
+  serviceRepositoryId: string;
   production: Destination;
   preview: Destination;
   diagnostics: Destination;
@@ -67,10 +68,19 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
   const webhook = await verifyGitHubWebhook({
     request: forward(new URL(request.url).origin),
     secret: bindings.secret,
-    repositoryId: [bindings.ariakitRepositoryId, bindings.diagnosticsRepositoryId],
+    repositoryId: [
+      bindings.ariakitRepositoryId,
+      bindings.diagnosticsRepositoryId,
+      bindings.serviceRepositoryId,
+    ],
   });
   const changed =
     webhook.event === "installation_repositories" ? changedRepositoryIds(webhook.payload) : null;
+  const repositoryId =
+    !appEvents.has(webhook.event) && !changed
+      ? numericId(record(webhook.payload.repository).id)
+      : null;
+  // The App receives its own source-repository events, but no review Worker owns them.
   const destinations = appEvents.has(webhook.event)
     ? [bindings.production, bindings.preview, bindings.diagnostics]
     : changed
@@ -80,9 +90,11 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
             : []),
           ...(changed.has(bindings.diagnosticsRepositoryId) ? [bindings.diagnostics] : []),
         ]
-      : numericId(record(webhook.payload.repository).id) === bindings.ariakitRepositoryId
+      : repositoryId === bindings.ariakitRepositoryId
         ? [bindings.production, bindings.preview]
-        : [bindings.diagnostics];
+        : repositoryId === bindings.diagnosticsRepositoryId
+          ? [bindings.diagnostics]
+          : [];
   const statuses = await Promise.all(
     destinations.map(async (destination) => {
       try {
@@ -115,6 +127,7 @@ export default {
         secret: env.GITHUB_WEBHOOK_SECRET,
         ariakitRepositoryId: env.VISONAUT_ARIAKIT_REPOSITORY_ID,
         diagnosticsRepositoryId: env.VISONAUT_DIAGNOSTICS_REPOSITORY_ID,
+        serviceRepositoryId: env.VISONAUT_SERVICE_REPOSITORY_ID,
         production: {
           origin: env.VISONAUT_PRODUCTION_ORIGIN,
           fetch: env.PRODUCTION.fetch.bind(env.PRODUCTION),

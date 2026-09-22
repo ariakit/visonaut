@@ -12,6 +12,7 @@
   "vars": {
     "VISONAUT_ARIAKIT_REPOSITORY_ID": "104133653",
     "VISONAUT_DIAGNOSTICS_REPOSITORY_ID": "1380792062",
+    "VISONAUT_SERVICE_REPOSITORY_ID": "1380751023",
     "VISONAUT_PRODUCTION_ORIGIN": "https://visonaut.com",
     "VISONAUT_PREVIEW_ORIGIN": "https://preview.visonaut.com",
     "VISONAUT_DIAGNOSTICS_ORIGIN": "https://diagnostics.visonaut.com",
