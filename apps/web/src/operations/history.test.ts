@@ -2,14 +2,28 @@ import { readFile } from "node:fs/promises";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { retentionPinStatement } from "@ariviso/service";
-import { captured, context, digest, MemoryStore, TestDatabase } from "./test-fixtures.ts";
+import {
+  captured,
+  context,
+  digest,
+  ingestRecords,
+  MemoryStore,
+  TestDatabase,
+} from "./test-fixtures.ts";
 import {
   archiveClosedRuns,
   readHistoryManifest,
+  readVerifiedHistoryObject,
   readRunHistory,
   type HistoryProgress,
 } from "./history.ts";
-import { historyPrefix, historySections } from "./history-format.ts";
+import {
+  historyPrefix,
+  historySections,
+  parseHistoryPage,
+  type HistorySection,
+  type HistoryRow,
+} from "./history-format.ts";
 import { createRunExport, streamRunExport } from "./exports.ts";
 import { expireRunImages } from "./retention.ts";
 import {
@@ -18,7 +32,9 @@ import {
   readComparisonHistoryManifest,
 } from "./history-supplement.ts";
 import { publicImage } from "../api/images.ts";
-import type { ApiContext } from "../api/context.ts";
+import { apiContext, type ApiContext } from "../api/context.ts";
+import { declareShard, finalize, uploadImage } from "../api/ingest.ts";
+import { issueIngestCapability } from "@ariviso/security";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 
 let runtime: Miniflare;
@@ -95,6 +111,31 @@ async function detailCount(runId = "run") {
     .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id=?")
     .bind(runId)
     .first<{ count: number }>();
+}
+
+async function uploads(runId = "run") {
+  return (
+    await operations.database
+      .prepare("SELECT * FROM ingest_uploads WHERE run_id=?")
+      .bind(runId)
+      .all()
+  ).results;
+}
+
+async function archivedRows(runId: string, section: HistorySection) {
+  const root = await readHistoryManifest(operations, runId);
+  if (!root) throw new Error("Missing verified archive.");
+  const rows: HistoryRow[] = [];
+  for (const reference of root.manifest.pages) {
+    if (reference.section !== section) continue;
+    const page = parseHistoryPage(
+      await readVerifiedHistoryObject(operations, reference),
+      root.manifest,
+      reference,
+    );
+    rows.push(...page.rows);
+  }
+  return rows;
 }
 
 async function historical(archiveSource = true) {
@@ -482,12 +523,29 @@ describe("verified closed history with native D1 and R2", () => {
 
   it("archives in bounded steps and keeps exact capture/result history plus available original bytes", async () => {
     await closed();
+    const records = await ingestRecords(operations, "run");
     const first = await archiveClosedRuns(operations);
     expect(first.hasMore).toBe(true);
     expect(await detailCount()).toEqual({ count: 1 });
+    expect(await uploads()).toEqual([records.upload]);
     await finish();
     expect(await detailCount()).toEqual({ count: 0 });
+    expect(await uploads()).toEqual([]);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ingest_run_provenance WHERE run_id='run'")
+        .first(),
+    ).toEqual(records.provenance);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ingest_manifests WHERE run_id='run'")
+        .first(),
+    ).toEqual(records.manifest);
     const history = await readRunHistory(operations, "run");
+    expect(await archivedRows("run", "uploads")).toEqual([records.upload]);
+    expect(await archivedRows("run", "provenance")).toEqual([records.provenance]);
+    expect(await archivedRows("run", "manifests")).toEqual([records.manifest]);
+    expect(await archivedRows("run", "documents")).toHaveLength(2);
     expect(history?.sections.captures?.[0]).toMatchObject({
       id: "capture-run",
       metadata_json: expect.stringContaining("private.test.ts"),
@@ -499,23 +557,190 @@ describe("verified closed history with native D1 and R2", () => {
     const response = await streamRunExport(operations, exported.exportId);
     const body = await response.text();
     expect(body).toContain("history/manifest.json");
+    expect(body).toContain(JSON.stringify(records.upload));
     expect(body).toContain("original-image-bytes");
     expect(body).toContain("complete.json");
   });
-  it("does not prune when saved page bytes are corrupt", async () => {
+  it("does not prune when saved upload archive bytes are corrupt", async () => {
     await closed();
+    const records = await ingestRecords(operations, "run");
     const store = new MemoryStore();
     const put = store.put.bind(store);
     store.put = async (key, value, options) => {
       const saved = await put(key, value, options);
-      if (key.startsWith("history/")) await put(key, "corrupt");
+      const bytes = store.objects.get(key)?.bytes;
+      if (bytes && new TextDecoder().decode(bytes).includes('"section":"uploads"'))
+        await put(key, "corrupt");
       return saved;
     };
     operations.images = store;
-    expect((await archiveClosedRuns(operations)).attention).toEqual(["run"]);
+    await expect(finish()).rejects.toThrow("Archive failed");
     expect(await detailCount()).toEqual({ count: 1 });
+    expect(await uploads()).toEqual([records.upload]);
     expect(await readHistoryManifest(operations, "run")).toBeNull();
   });
+  it("rolls back every detail change if retiring upload rows fails", async () => {
+    await closed();
+    const records = await ingestRecords(operations, "run");
+    await operations.database
+      .prepare(
+        "CREATE TRIGGER reject_upload_retirement BEFORE DELETE ON ingest_uploads BEGIN SELECT RAISE(ABORT,'injected upload retirement failure'); END",
+      )
+      .run();
+    await expect(finish()).rejects.toThrow("Archive failed");
+    expect(await detailCount()).toEqual({ count: 1 });
+    expect(await uploads()).toEqual([records.upload]);
+    expect(
+      await operations.database
+        .prepare("SELECT detail_archived FROM ariviso_runs WHERE id='run'")
+        .first(),
+    ).toEqual({ detail_archived: 0 });
+    expect(
+      await operations.database
+        .prepare("SELECT state FROM operations_run_archives WHERE run_id='run'")
+        .first(),
+    ).toEqual({ state: "building" });
+    expect(await readHistoryManifest(operations, "run")).toBeNull();
+    await operations.database.prepare("DROP TRIGGER reject_upload_retirement").run();
+    await operations.database
+      .prepare("UPDATE operations_run_archives SET retry_at=0 WHERE run_id='run'")
+      .run();
+    await finish();
+    expect(await uploads()).toEqual([]);
+    expect(await archivedRows("run", "uploads")).toEqual([records.upload]);
+  });
+
+  it("keeps the source shard and ingest proof while an active attempt inherits it", async () => {
+    await closed("source");
+    const records = await ingestRecords(operations, "source");
+    const shard = await operations.database
+      .prepare("SELECT * FROM ariviso_shards WHERE run_id='source'")
+      .first();
+    const dependent = await captured(operations, "dependent");
+    await retentionPinStatement(operations.database, {
+      runId: "source",
+      owner: "inherited-by:dependent",
+      reason: "comparison",
+    }).run();
+    expect((await archiveClosedRuns(operations)).completed).toEqual([]);
+    expect(await uploads("source")).toEqual([records.upload]);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ariviso_shards WHERE run_id='source'")
+        .first(),
+    ).toEqual(shard);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ingest_run_provenance WHERE run_id='source'")
+        .first(),
+    ).toEqual(records.provenance);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ingest_manifests WHERE run_id='source'")
+        .first(),
+    ).toEqual(records.manifest);
+    await dependent.retireRun({ runId: "dependent", now: operations.now() });
+    await finish("source");
+    expect(await uploads("source")).toEqual([]);
+  });
+
+  it("rejects stale declaration, upload, and finalization requests after compaction", async () => {
+    const runId = "26e29ef3-cac4-4c4f-8f65-1e219a89f526";
+    const service = await closed(runId);
+    await operations.database
+      .prepare("UPDATE ariviso_runs SET external_run_id='456' WHERE id=?")
+      .bind(runId)
+      .run();
+    const records = await ingestRecords(operations, runId);
+    await finish(runId);
+    const capability = {
+      secret: "test-secret-at-least-32-characters-long",
+      issuer: operations.origin,
+      environment: "local" as const,
+    };
+    const token = await issueIngestCapability(capability, {
+      runId,
+      repositoryId: "123",
+      workflowRunId: "456",
+      workflowAttempt: 1,
+      testedSha: "a".repeat(40),
+      planDigest: "plan",
+      shardKey: "chromium",
+      jobId: "789",
+      maximumBytes: 1024,
+      maximumImages: 1,
+    });
+    const api = apiContext({
+      database: await runtime.getD1Database("DB"),
+      images: await runtime.getR2Bucket("IMAGES"),
+      quarantine: await runtime.getR2Bucket("QUARANTINE"),
+      comparisons: {
+        async send() {
+          throw new Error("Unexpected comparison enqueue");
+        },
+      },
+      comparator: {
+        async fetch() {
+          throw new Error("Unexpected image decode");
+        },
+      },
+      configuration: {
+        origin: operations.origin,
+        projectId: "project",
+        capability,
+        auth: {
+          origin: operations.origin,
+          environment: "local",
+          secret: "test-auth-secret-at-least-32-characters",
+          githubClientId: "id",
+          githubClientSecret: "secret",
+        },
+        github: {
+          appId: "12",
+          installationId: "1",
+          repositoryId: "123",
+          repository: "owner/repo",
+          privateKey: "unused",
+        },
+        webhookSecret: "unused",
+        oidcAudience: operations.origin,
+        repositoryOwnerId: "1",
+        trustedPlanPath: ".github/ariviso-plan.json",
+        reusableWorkflowRef: "unused",
+        reusableWorkflowSha: "b".repeat(40),
+        comparisonMaxAttempts: 2,
+        limits: {
+          maximumImageBytes: 1024,
+          maximumShardBytes: 1024,
+          maximumManifestBytes: 1024,
+          maximumPlanBytes: 1024,
+          maximumCaptures: 1,
+        },
+      },
+    });
+    const before = await service.run(runId);
+    const request = () =>
+      new Request(operations.origin, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: "{}",
+      });
+    for (const invoke of [
+      () => declareShard(request(), api, runId, "chromium"),
+      () => uploadImage(request(), api, "unused-ticket"),
+      () => finalize(request(), api, runId),
+    ])
+      await expect(invoke()).rejects.toMatchObject({ code: "stale_capability", status: 409 });
+    expect(await service.run(runId)).toEqual(before);
+    expect(await uploads(runId)).toEqual([]);
+    expect(
+      await operations.database
+        .prepare("SELECT * FROM ingest_manifests WHERE run_id=?")
+        .bind(runId)
+        .first(),
+    ).toEqual(records.manifest);
+  });
+
   it("rechecks a new recovery pin after object verification and leaves every detail row intact", async () => {
     await closed();
     const store = new MemoryStore();

@@ -186,6 +186,7 @@ export async function compactRunHistory(database: Database, input: CompactRunHis
       `UPDATE ariviso_commands SET request_json='{}',previous_json='{}',result_json='{}' WHERE comparison_id IN (SELECT id FROM ariviso_comparisons WHERE run_id=?)`,
       [input.runId],
     ),
+    statement(database, "DELETE FROM ingest_uploads WHERE run_id=?", [input.runId]),
     statement(database, "DELETE FROM ariviso_audit WHERE run_id=?", [input.runId]),
     statement(database, "DELETE FROM ariviso_lineage WHERE target_run_id=?", [input.runId]),
     statement(

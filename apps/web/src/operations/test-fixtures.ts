@@ -326,3 +326,73 @@ export async function captured(
   await service.finalizeComparison({ comparisonId: `comparison-${id}`, now: context.now() });
   return service;
 }
+
+export async function ingestRecords(context: OperationsContext, runId: string) {
+  const image = await context.database
+    .prepare("SELECT * FROM ariviso_images WHERE run_id=? AND role='original' LIMIT 1")
+    .bind(runId)
+    .first<{
+      id: string;
+      digest: string;
+      object_key: string;
+      bytes: number;
+      width: number;
+      height: number;
+    }>();
+  if (!image) throw new Error("Missing original image for the ingest fixture.");
+  const manifest = JSON.stringify({ runId, captures: [{ imageDigest: image.digest }] });
+  const manifestDigest = digest(manifest);
+  const planKey = `plans/${runId}.json`;
+  const manifestKey = `manifests/${runId}.json`;
+  await context.quarantine.put(planKey, JSON.stringify({ runId, shards: ["chromium"] }));
+  await context.quarantine.put(manifestKey, manifest);
+  await context.database
+    .prepare(
+      "INSERT INTO ingest_run_provenance(run_id,verified_json,plan_object_key,created_at) VALUES(?,?,?,?)",
+    )
+    .bind(
+      runId,
+      JSON.stringify({ workflowRunId: "456", workflowAttempt: 1 }),
+      planKey,
+      context.now(),
+    )
+    .run();
+  await context.database
+    .prepare(
+      "INSERT INTO ingest_manifests(run_id,shard_key,digest,object_key,job_id,capture_count,finalized,created_at) VALUES(?,'chromium',?,?,'789',1,1,?)",
+    )
+    .bind(runId, manifestDigest, manifestKey, context.now())
+    .run();
+  const id = crypto.randomUUID();
+  await context.database
+    .prepare(
+      "INSERT INTO ingest_uploads(id,run_id,shard_key,manifest_digest,digest,media_type,expected_bytes,width,height,quarantine_key,image_id,image_key,complete) VALUES(?,?,'chromium',?,?,'image/png',?,?,?,?,?,?,1)",
+    )
+    .bind(
+      id,
+      runId,
+      manifestDigest,
+      image.digest,
+      image.bytes,
+      image.width,
+      image.height,
+      `quarantine/${runId}/${id}`,
+      image.id,
+      image.object_key,
+    )
+    .run();
+  return {
+    upload: await context.database
+      .prepare("SELECT * FROM ingest_uploads WHERE id=?")
+      .bind(id)
+      .first(),
+    provenance: await context.database
+      .prepare("SELECT * FROM ingest_run_provenance WHERE run_id=?")
+      .bind(runId)
+      .first(),
+    manifest: await context.database
+      .prepare("SELECT * FROM ingest_manifests WHERE run_id=?")
+      .bind(runId)
+      .first(),
+  };
+}

@@ -69,6 +69,8 @@ class TestDatabase implements Database {
       ),
     );
     for (const name of [
+      "0003_auth.sql",
+      "0004_ingest.sql",
       "0005_operations.sql",
       "0009_retention_history.sql",
       "0010_run_history.sql",

@@ -18,7 +18,6 @@ import {
 } from "./backup-groups.ts";
 import {
   maximumBackupMetadataBytes,
-  parseBackupObjects,
   parseGroupedBackup,
   parseGroupManifest,
   parseGroupReference,
@@ -27,8 +26,9 @@ import {
   type BackupPage,
   type GroupedBackupManifest,
 } from "./backup-format.ts";
-import { copyVerifiedObject, digestStream, mapConcurrent, resolveEvents } from "./common.ts";
+import { digestStream, resolveEvents } from "./common.ts";
 import { putBoundedStream } from "./object-stream.ts";
+import { restoreGroupPage } from "./restore.ts";
 import type { OperationReport, OperationsContext, ObjectStore } from "./types.ts";
 
 export type { DatabaseExporter, RestoreTarget } from "./backups-v2.ts";
@@ -373,26 +373,17 @@ export async function restoreBackup(
       seen.add(reference.id);
       const group = parseGroupManifest(await readBackupJson(store, reference), reference);
       let groupBytes = 0;
-      for (const inventory of group.pages) {
-        const objects = parseBackupObjects(
-          await readBackupJson(store, inventory),
-          group.id,
-          inventory.objects,
-        );
-        await mapConcurrent(objects, 6, async (object) => {
-          await copyVerifiedObject({
-            source: store,
-            destination: object.source === "images" ? target.images : target.quarantine,
-            sourceKey: object.backupKey,
-            destinationKey: object.key,
-            maximum: limits.maximumObjectBytes,
-            expectedDigest: object.digest,
-            expectedBytes: object.bytes,
-          });
-          count += 1;
-          bytes += object.bytes;
-          groupBytes += object.bytes;
+      for (let page = 0; page < group.pages.length; page++) {
+        const restored = await restoreGroupPage({
+          store,
+          reference,
+          page,
+          target,
+          maximumObjectBytes: limits.maximumObjectBytes,
         });
+        count += restored.objects;
+        bytes += restored.bytes;
+        groupBytes += restored.bytes;
       }
       if (groupBytes !== group.bytes) throw new Error("Restored group bytes differ.");
       groups += 1;
