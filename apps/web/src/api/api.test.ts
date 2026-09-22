@@ -15,6 +15,7 @@ import {
   createGitHubClient,
   issueIngestCapability,
   SecurityError,
+  type VerifiedRun,
 } from "@ariviso/security";
 import { Service } from "@ariviso/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
@@ -22,8 +23,9 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
-import { comparisonReference } from "./ingest.js";
-import { inheritedShards } from "./jobs.js";
+import { comparisonReference, trySealRun } from "./ingest.js";
+import { inheritedShards, workflowJobs } from "./jobs.js";
+import carriedJobs from "./fixtures/failed-job-rerun.json";
 import { discoveryEvidence } from "./receipts.js";
 import { handleApi, apiContext, reconcileIngest, type ApiBindings } from "./index.js";
 
@@ -115,7 +117,7 @@ beforeAll(async () => {
 });
 afterAll(async () => runtime.dispose());
 
-async function fixture(secondShard = false) {
+async function fixture(secondShard = false, discovery = false) {
   repositoryId += 1;
   const id = String(repositoryId);
   const projectId = crypto.randomUUID();
@@ -125,6 +127,17 @@ async function fixture(secondShard = false) {
   let workflowStatus = "in_progress";
   let workflowConclusion: string | null = null;
   let workflowAttempt = 1;
+  const githubResponses = new Map<string, unknown>();
+  const githubRequests: string[] = [];
+  const sourceJob = () => ({
+    ...carriedJobs.original,
+    id: 789,
+    run_id: 456,
+    name: "chrome",
+    head_sha: "d".repeat(40),
+    status: jobStatus,
+    conclusion: jobStatus === "completed" ? "success" : null,
+  });
   const profile: CaptureProfile = {
     browser: "chromium",
     browserVersion: "149.0",
@@ -169,6 +182,22 @@ async function fixture(secondShard = false) {
         { id: "test-2", captures: [{ itemKey: "dialog/open", variantKey: "firefox-light" }] },
       ],
     });
+  if (discovery) {
+    plan.discovery = { executorDigest: "f".repeat(64) };
+    for (const shard of plan.shards) {
+      delete shard.tests;
+      shard.collection = {
+        projectName: shard.key,
+        testDir: "tests",
+        testMatch: ["**/*.test.ts"],
+        testIgnore: [],
+        grep: [{ source: ".*", flags: "" }],
+        grepInvert: [],
+        shard: null,
+        repeatEach: 1,
+      };
+    }
+  }
   const planDigest = await digestJson(plan);
   const manifest: Manifest = {
     schemaVersion: "1.0",
@@ -222,6 +251,15 @@ async function fixture(secondShard = false) {
       },
     ],
   };
+  if (plan.discovery) {
+    manifest.discovery = {
+      executorDigest: plan.discovery.executorDigest,
+      configurationDigest: await digestJson(plan.shards[0]?.collection),
+      inventoryDigest: await digestJson(
+        manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
+      ),
+    };
+  }
   const bindings: ApiBindings = {
     database,
     images,
@@ -263,9 +301,15 @@ async function fixture(secondShard = false) {
         repositoryId: id,
         repository: "ariakit/ariakit",
         async fetch(input) {
-          const path = new URL(
+          const url = new URL(
             typeof input === "string" || input instanceof URL ? input : input.url,
-          ).pathname;
+          );
+          const path = url.pathname;
+          githubRequests.push(path + url.search);
+          const override = githubResponses.get(path + url.search) ?? githubResponses.get(path);
+          if (override !== undefined) {
+            return Response.json(override);
+          }
           if (path.endsWith("/access_tokens"))
             return Response.json({
               token: "installation-token",
@@ -275,15 +319,38 @@ async function fixture(secondShard = false) {
           if (path === "/user/42") return Response.json({ id: 42, login: "maintainer" });
           if (path.endsWith("/permission"))
             return Response.json({ permission, role_name: permission, user: { id: 42 } });
+          if (path.endsWith("/artifacts")) {
+            return Response.json({
+              artifacts: [
+                {
+                  name: `ariviso-discovery-1-789-chrome-1-${await digestJson(manifest)}`,
+                  expired: false,
+                  workflow_run: {
+                    id: 456,
+                    repository_id: Number(id),
+                    head_repository_id: Number(id),
+                    head_sha: manifest.run.testedSha,
+                  },
+                },
+              ],
+            });
+          }
+          if (path.endsWith("/jobs/789")) {
+            return Response.json(sourceJob());
+          }
           if (path.endsWith("/jobs"))
             return Response.json({
               jobs: [
                 {
-                  id: 789,
-                  name: "chrome",
-                  run_attempt: 1,
-                  status: jobStatus,
-                  conclusion: jobStatus === "completed" ? "success" : null,
+                  ...sourceJob(),
+                  ...(workflowAttempt === 2
+                    ? {
+                        id: 793,
+                        run_attempt: 2,
+                        created_at: carriedJobs.alias.created_at,
+                        runner_group_id: null,
+                      }
+                    : {}),
                 },
                 ...(secondShard
                   ? [
@@ -302,6 +369,8 @@ async function fixture(secondShard = false) {
             id: 456,
             run_attempt: workflowAttempt,
             head_sha: "d".repeat(40),
+            run_started_at:
+              workflowAttempt === 2 ? carriedJobs.attempt.run_started_at : "2026-09-22T14:56:30Z",
             status: workflowStatus,
             conclusion: workflowConclusion,
           });
@@ -336,6 +405,14 @@ async function fixture(secondShard = false) {
         key: shard.key,
         profileDigest: await digestJson(shard.environmentProfileDigests),
         environmentProfileDigests: shard.environmentProfileDigests,
+        ...(plan.discovery
+          ? {
+              discovery: {
+                executorDigest: plan.discovery.executorDigest,
+                configurationDigest: await digestJson(shard.collection),
+              },
+            }
+          : {}),
         tests: (shard.tests ?? []).map((test) => test.id),
         captures: (shard.tests ?? []).flatMap((test) =>
           test.captures.map((capture) => ({ ...capture, testId: test.id })),
@@ -429,7 +506,7 @@ async function fixture(secondShard = false) {
   const declare = () => send(`/v1/runs/${runId}/shards/chrome-1`, json(manifest));
   const upload = async () => {
     const declaration = await declare();
-    expect(declaration.status).toBe(200);
+    expect(declaration.status, await declaration.clone().text()).toBe(200);
     const body = await declarationResponse(declaration);
     expect(body.uploads).toHaveLength(1);
     const ticket = string(body.uploads[0]?.ticket, 8192);
@@ -444,6 +521,13 @@ async function fixture(secondShard = false) {
   return {
     bindings,
     service,
+    githubRequests,
+    setGitHubResponse(path: string, value: unknown) {
+      githubResponses.set(path, value);
+    },
+    clearGitHubResponses() {
+      githubResponses.clear();
+    },
     runId,
     manifest,
     plan,
@@ -475,6 +559,85 @@ async function fixture(secondShard = false) {
       workflowConclusion = null;
     },
   };
+}
+
+async function rerunFixture(discovery = false) {
+  const test = await fixture(true, discovery);
+  const digest = await test.upload();
+  test.succeedShard();
+  expect(
+    (
+      await test.send(
+        `/v1/runs/${test.runId}/finalize`,
+        test.json({
+          schemaVersion: "1.0",
+          shardKey: "chrome-1",
+          manifestDigest: digest,
+        }),
+      )
+    ).status,
+  ).toBe(202);
+  test.startRerun();
+  const github = await createGitHubClient(test.bindings.configuration.github);
+  const verified: VerifiedRun = {
+    ...test.manifest.run,
+    workflowAttempt: 2,
+    shardKey: "firefox-1",
+    jobId: "792",
+    checkRunId: "1",
+    event: "push",
+    ref: "refs/heads/main",
+    sourceHead: test.manifest.run.testedSha,
+    targetHead: test.manifest.run.testedSha,
+  };
+  const original = {
+    ...carriedJobs.original,
+    id: 789,
+    run_id: 456,
+    name: "chrome",
+    head_sha: verified.sourceHead,
+  };
+  const alias = {
+    ...carriedJobs.alias,
+    id: 793,
+    run_id: 456,
+    name: "chrome",
+    head_sha: verified.sourceHead,
+  };
+  const current = {
+    id: 792,
+    name: "firefox",
+    run_attempt: 2,
+    status: "in_progress",
+    conclusion: null,
+  };
+  const inherit = () => inheritedShards(apiContext(test.bindings), github, verified, test.plan);
+  const reserve = async () => {
+    const inheritance = await inherit();
+    const next = await test.service.reserveRun({
+      id: crypto.randomUUID(),
+      projectId: test.bindings.configuration.projectId,
+      externalRunId: "456",
+      attempt: 2,
+      kind: "main",
+      testedSha: verified.testedSha,
+      lineageKey: "main",
+      plan: test.servicePlan,
+      verifiedRelatedRunIds: [test.runId],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified-rerun",
+      ...inheritance,
+      now: Date.now(),
+    });
+    await database
+      .prepare(
+        "INSERT INTO ingest_run_provenance (run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
+      )
+      .bind(next.id, test.runId)
+      .run();
+    return next;
+  };
+  return { ...test, digest, github, verified, original, alias, current, inherit, reserve };
 }
 
 describe("HTTP boundary with real local D1, R2, and image codecs", () => {
@@ -713,8 +876,8 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     ).toEqual({ state: "complete" });
     expect((await test.service.run(test.runId)).sealed_at).toBeNull();
   });
-  it("retains successful sibling shards and verifies failed-job rerun inheritance", async () => {
-    const test = await fixture(true);
+  it("inherits GitHub carried-success aliases using the original job execution", async () => {
+    const test = await fixture(true, true);
     const digest = await test.upload();
     test.succeedShard();
     const response = await test.send(
@@ -772,6 +935,158 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       .bind(next.id)
       .first<{ state: string; source_attempt: number }>();
     expect(inherited).toMatchObject({ state: "complete", source_attempt: 1 });
+    expect(test.githubRequests).toContain("/repos/ariakit/ariakit/actions/jobs/789");
+    expect(test.githubRequests).toContain("/repos/ariakit/ariakit/actions/runs/456/attempts/2");
+    await database
+      .prepare(
+        "INSERT INTO ingest_run_provenance (run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
+      )
+      .bind(next.id, test.runId)
+      .run();
+    const nextManifest: Manifest = {
+      ...test.manifest,
+      run: { ...test.manifest.run, workflowAttempt: 2 },
+      shard: { key: "firefox-1", jobId: "792", sourceAttempt: 2 },
+      tests: test.manifest.tests.map((entry) => ({ ...entry, id: "test-2" })),
+      captures: test.manifest.captures.map((capture) => ({
+        ...capture,
+        testId: "test-2",
+        variant: { ...capture.variant, key: "firefox-light" },
+      })),
+    };
+    if (test.plan.discovery) {
+      nextManifest.discovery = {
+        executorDigest: test.plan.discovery.executorDigest,
+        configurationDigest: await digestJson(test.plan.shards[1]?.collection),
+        inventoryDigest: await digestJson(
+          nextManifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
+        ),
+      };
+    }
+    const nextCapability = await issueIngestCapability(test.bindings.configuration.capability, {
+      runId: next.id,
+      repositoryId: test.manifest.run.repositoryId,
+      workflowRunId: "456",
+      workflowAttempt: 2,
+      testedSha: next.tested_sha,
+      planDigest: next.plan_digest,
+      shardKey: "firefox-1",
+      jobId: "792",
+      maximumBytes: 16 * 1024 * 1024,
+      maximumImages: 1,
+    });
+    const declaration = await test.send(
+      `/v1/runs/${next.id}/shards/firefox-1`,
+      test.json(nextManifest, nextCapability),
+    );
+    expect(declaration.status, await declaration.clone().text()).toBe(200);
+    const declared = await declarationResponse(declaration);
+    expect(
+      (
+        await test.send(`/v1/uploads/${string(declared.uploads[0]?.ticket, 8192)}`, {
+          method: "PUT",
+          headers: { authorization: `Bearer ${nextCapability}`, "content-type": "image/png" },
+          body: bytes,
+        })
+      ).status,
+    ).toBe(204);
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", {
+      artifacts: [
+        {
+          name: `ariviso-discovery-1-789-chrome-1-${digest}`,
+          expired: false,
+          workflow_run: {
+            id: 456,
+            repository_id: Number(test.manifest.run.repositoryId),
+            head_repository_id: Number(test.manifest.run.repositoryId),
+            head_sha: next.tested_sha,
+          },
+        },
+        {
+          name: `ariviso-discovery-2-792-firefox-1-${declared.manifestDigest}`,
+          expired: false,
+          workflow_run: {
+            id: 456,
+            repository_id: Number(test.manifest.run.repositoryId),
+            head_repository_id: Number(test.manifest.run.repositoryId),
+            head_sha: next.tested_sha,
+          },
+        },
+      ],
+    });
+    test.succeedJob();
+    const latest = {
+      ...carriedJobs.alias,
+      id: 793,
+      run_id: 456,
+      name: "chrome",
+      head_sha: next.tested_sha,
+    };
+    const successfulRerun = {
+      id: 792,
+      name: "firefox",
+      run_attempt: 2,
+      status: "completed",
+      conclusion: "success",
+    };
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+      jobs: [latest, successfulRerun],
+    });
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2/jobs", {
+      jobs: [latest, successfulRerun],
+    });
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${next.id}/finalize`,
+          test.json(
+            {
+              schemaVersion: "1.0",
+              shardKey: "firefox-1",
+              manifestDigest: declared.manifestDigest,
+            },
+            nextCapability,
+          ),
+        )
+      ).status,
+    ).toBe(202);
+    const sealed = await test.service.run(next.id);
+    expect(sealed.sealed_at).not.toBeNull();
+    expect(sealed.comparison_id).not.toBeNull();
+    expect(
+      await database
+        .prepare(
+          "SELECT s.source_attempt,s.manifest_digest,m.job_id FROM ariviso_shards s JOIN ingest_manifests m ON m.run_id=? AND m.shard_key=s.key WHERE s.run_id=? AND s.key='chrome-1'",
+        )
+        .bind(test.runId, next.id)
+        .first(),
+    ).toEqual({ source_attempt: 1, manifest_digest: digest, job_id: "789" });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id=?")
+        .bind(next.id)
+        .first(),
+    ).toEqual({ count: 2 });
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(*) AS count FROM ingest_manifests WHERE run_id=? AND shard_key='chrome-1'",
+        )
+        .bind(next.id)
+        .first(),
+    ).toEqual({ count: 0 });
+
+    expect(
+      await database
+        .prepare("SELECT image_id FROM ariviso_captures WHERE run_id=? AND shard_key='chrome-1'")
+        .bind(next.id)
+        .first(),
+    ).toEqual(
+      await database
+        .prepare("SELECT image_id FROM ariviso_captures WHERE run_id=? AND shard_key='chrome-1'")
+        .bind(test.runId)
+        .first(),
+    );
     expect((await test.service.run(test.runId)).active).toBe(0);
     expect(
       (
@@ -781,6 +1096,378 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         )
       ).status,
     ).toBe(409);
+  });
+  it("rejects changed, malformed, and ambiguous carried execution evidence", async () => {
+    const test = await rerunFixture();
+    const changedStep = test.alias.steps.map((step, index) =>
+      index === 0 ? { ...step, conclusion: "failure" } : step,
+    );
+    const invalidSteps = test.alias.steps.map((step, index) =>
+      index === 0 ? { ...step, started_at: "2026-09-22T14:56:20Z" } : step,
+    );
+    const cases: Array<{
+      name: string;
+      alias?: Record<string, unknown>;
+      original?: Record<string, unknown>;
+    }> = [
+      { name: "runner ID", alias: { runner_id: 1000308620 } },
+      { name: "runner name", alias: { runner_name: "another runner" } },
+      { name: "runner labels", alias: { labels: ["another-image"] } },
+      { name: "step outcome", alias: { steps: changedStep } },
+      { name: "missing steps", alias: { steps: [] } },
+      { name: "missing runner", alias: { runner_id: null } },
+      { name: "invalid date", alias: { completed_at: "2026-02-30T14:57:26Z" } },
+      { name: "reversed interval", alias: { completed_at: "2026-09-22T14:56:20Z" } },
+      { name: "wrong source head", original: { head_sha: "a".repeat(40) } },
+      { name: "wrong run", original: { run_id: 999 } },
+      { name: "wrong original ID", original: { id: 794 } },
+      { name: "wrong original attempt", original: { run_attempt: 2 } },
+      { name: "failed original", original: { conclusion: "failure" } },
+      { name: "cancelled original", original: { conclusion: "cancelled" } },
+      { name: "another ID in the original attempt", alias: { run_attempt: 1 } },
+      { name: "incomplete original", original: { status: "in_progress" } },
+      { name: "missing direct original", original: { id: null } },
+      { name: "failed alias", alias: { conclusion: "failure" } },
+      {
+        name: "step outside job",
+        alias: { steps: invalidSteps },
+        original: { steps: invalidSteps },
+      },
+      {
+        name: "ambiguous attempt boundary",
+        alias: { completed_at: carriedJobs.attempt.run_started_at },
+        original: { completed_at: carriedJobs.attempt.run_started_at },
+      },
+    ];
+    for (const entry of cases) {
+      test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
+        ...test.original,
+        ...entry.original,
+      });
+      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+        jobs: [{ ...test.alias, ...entry.alias }, test.current],
+      });
+      await expect(test.inherit(), entry.name).rejects.toThrow();
+    }
+    test.clearGitHubResponses();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+      jobs: [test.alias, test.alias, test.current],
+    });
+    await expect(test.inherit()).rejects.toThrow("complete rerun job matrix");
+    test.clearGitHubResponses();
+    for (const conclusion of ["failure", "cancelled"]) {
+      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
+        ...carriedJobs.attempt,
+        id: 456,
+        head_sha: test.verified.sourceHead,
+        conclusion,
+      });
+      await expect(test.inherit()).rejects.toThrow("current workflow attempt did not succeed");
+    }
+    test.clearGitHubResponses();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2", {
+      ...carriedJobs.attempt,
+      id: 456,
+      head_sha: test.verified.sourceHead,
+      run_started_at: null,
+    });
+    await expect(test.inherit()).rejects.toThrow("workflow attempt start is unavailable");
+    test.clearGitHubResponses();
+    test.verified.jobId = "793";
+    await expect(test.inherit()).rejects.toThrow("signed job");
+    expect((await test.service.run(test.runId)).active).toBe(1);
+  });
+
+  it("requires each real rerun to submit its own manifest regardless of its outcome", async () => {
+    const test = await rerunFixture();
+    for (const state of [
+      { status: "completed", conclusion: "success" },
+      { status: "completed", conclusion: "failure" },
+      { status: "completed", conclusion: "cancelled" },
+      { status: "queued", conclusion: null },
+      { status: "in_progress", conclusion: null },
+    ]) {
+      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+        jobs: [
+          {
+            ...test.alias,
+            ...state,
+            started_at: "2026-09-22T15:01:08Z",
+            completed_at: "2026-09-22T15:02:21Z",
+            runner_id: 1000308621,
+          },
+          test.current,
+        ],
+      });
+      expect(await test.inherit()).toEqual({ rerunShardKeys: ["chrome-1", "firefox-1"] });
+    }
+  });
+
+  it("requires original finalized source, complete profile, and trusted identity", async () => {
+    const test = await rerunFixture(true);
+    const changes = [
+      {
+        sql: "UPDATE ingest_manifests SET finalized=0 WHERE run_id=?",
+        restore: "UPDATE ingest_manifests SET finalized=1 WHERE run_id=?",
+      },
+      {
+        sql: "UPDATE ariviso_shards SET state='pending' WHERE run_id=? AND key='chrome-1'",
+        restore: "UPDATE ariviso_shards SET state='complete' WHERE run_id=? AND key='chrome-1'",
+      },
+      {
+        sql: "UPDATE ariviso_shards SET source_attempt=2 WHERE run_id=? AND key='chrome-1'",
+        restore: "UPDATE ariviso_shards SET source_attempt=1 WHERE run_id=? AND key='chrome-1'",
+      },
+    ];
+    for (const change of changes) {
+      await database.prepare(change.sql).bind(test.runId).run();
+      await expect(test.inherit()).rejects.toThrow("original verified manifest");
+      await database.prepare(change.restore).bind(test.runId).run();
+    }
+    for (const key of ["testedSha", "planDigest"] as const) {
+      const value = test.verified[key];
+      test.verified[key] = "a".repeat(value.length);
+      await expect(test.inherit()).rejects.toThrow("earlier shard evidence");
+      test.verified[key] = value;
+    }
+    const proof = await database
+      .prepare("SELECT discovery_json FROM ariviso_shards WHERE run_id=? AND key='chrome-1'")
+      .bind(test.runId)
+      .first<{ discovery_json: string }>();
+    if (!proof) throw new Error("Expected a verified discovery source.");
+    for (const field of ["configurationDigest", "inventoryDigest"] as const) {
+      const altered = {
+        ...object(JSON.parse(proof.discovery_json)),
+        [field]: field === "configurationDigest" ? "a".repeat(64) : "",
+      };
+      await database
+        .prepare("UPDATE ariviso_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
+        .bind(JSON.stringify(altered), test.runId)
+        .run();
+      await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
+    }
+    await database
+      .prepare("UPDATE ariviso_shards SET discovery_json=NULL WHERE run_id=? AND key='chrome-1'")
+      .bind(test.runId)
+      .run();
+    await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
+    await database
+      .prepare("UPDATE ariviso_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
+      .bind(proof.discovery_json, test.runId)
+      .run();
+    const next = await test.reserve();
+    await database
+      .prepare("UPDATE ariviso_shards SET full_profile_digest=? WHERE run_id=? AND key='chrome-1'")
+      .bind("a".repeat(64), next.id)
+      .run();
+    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
+      "original verified manifest",
+    );
+    expect((await test.service.run(next.id)).comparison_id).toBeNull();
+  });
+
+  it("does not inherit discovery uploads without an independent successful receipt", async () => {
+    const test = await fixture(true, true);
+    const digest = await test.upload();
+    test.succeedShard();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", { artifacts: [] });
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${test.runId}/finalize`,
+          test.json({
+            schemaVersion: "1.0",
+            shardKey: "chrome-1",
+            manifestDigest: digest,
+          }),
+        )
+      ).status,
+    ).toBe(409);
+    test.startRerun();
+    const github = await createGitHubClient(test.bindings.configuration.github);
+    await expect(
+      inheritedShards(
+        apiContext(test.bindings),
+        github,
+        {
+          ...test.manifest.run,
+          workflowAttempt: 2,
+          shardKey: "firefox-1",
+          jobId: "792",
+          checkRunId: "1",
+          event: "push",
+          ref: "refs/heads/main",
+          sourceHead: test.manifest.run.testedSha,
+          targetHead: test.manifest.run.testedSha,
+        },
+        test.plan,
+      ),
+    ).rejects.toThrow("original verified manifest");
+    expect(
+      await database
+        .prepare("SELECT state FROM ariviso_shards WHERE run_id=? AND key='chrome-1'")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ state: "pending" });
+  });
+
+  it("binds carried jobs to the PR source head while retaining the tested merge SHA", async () => {
+    const test = await rerunFixture();
+    test.verified.sourceHead = carriedJobs.original.head_sha;
+    test.verified.event = "pull_request";
+    test.verified.ref = "refs/pull/9/merge";
+    test.verified.pullRequestNumber = 9;
+    await database
+      .prepare(
+        "UPDATE ingest_run_provenance SET verified_json=json_set(verified_json,'$.sourceHead',?) WHERE run_id=?",
+      )
+      .bind(test.verified.sourceHead, test.runId)
+      .run();
+    const metadata = { ...carriedJobs.attempt, id: 456, head_sha: test.verified.sourceHead };
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", metadata);
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2", metadata);
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
+      ...test.original,
+      head_sha: test.verified.sourceHead,
+    });
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+      jobs: [{ ...test.alias, head_sha: test.verified.sourceHead }, test.current],
+    });
+    expect(test.verified.sourceHead).not.toBe(test.verified.testedSha);
+    expect((await test.inherit()).verifiedInheritedShards?.[0]?.manifestDigest).toBe(test.digest);
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
+      ...test.original,
+      head_sha: test.verified.testedSha,
+    });
+    await expect(test.inherit()).rejects.toThrow("original workflow execution");
+  });
+
+  it("reads the complete paginated job matrix and supports the unchanged original job form", async () => {
+    const test = await rerunFixture();
+    const jobs = Array.from({ length: 99 }, (_, index) => ({
+      id: 1000 + index,
+      name: `other-${index}`,
+      run_attempt: 2,
+    }));
+    test.setGitHubResponse(
+      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=1",
+      { jobs: [...jobs, test.current] },
+    );
+    test.setGitHubResponse(
+      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=2",
+      { jobs: [test.original] },
+    );
+    expect((await test.inherit()).rerunShardKeys).toEqual(["firefox-1"]);
+    expect(test.githubRequests).toContain(
+      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=2",
+    );
+    const endless = {
+      ...test.github,
+      request: async () => ({ jobs: Array.from({ length: 100 }, () => test.current) }),
+    };
+    await expect(workflowJobs(endless, "456")).rejects.toThrow("exceeded its limit");
+  });
+
+  it("rejects attempt changes during reservation and rejects real reruns during sealing", async () => {
+    const test = await rerunFixture();
+    const request = test.github.request.bind(test.github);
+    test.github.request = async (path, ...options) => {
+      const response = await request(path, ...options);
+      if (path.endsWith("/jobs/789")) {
+        test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
+          ...carriedJobs.attempt,
+          id: 456,
+          head_sha: test.verified.sourceHead,
+          run_attempt: 3,
+        });
+      }
+      return response;
+    };
+    await expect(test.inherit()).rejects.toThrow("workflow attempt or source head changed");
+    test.github.request = request;
+    test.clearGitHubResponses();
+    const next = await test.reserve();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+      jobs: [
+        {
+          ...test.alias,
+          started_at: "2026-09-22T15:01:08Z",
+          completed_at: "2026-09-22T15:02:21Z",
+          runner_id: 1000308621,
+        },
+        test.current,
+      ],
+    });
+    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow();
+    expect((await test.service.run(next.id)).sealed_at).toBeNull();
+    expect((await test.service.run(next.id)).comparison_id).toBeNull();
+    test.clearGitHubResponses();
+    const originalFetch = test.bindings.configuration.github.fetch;
+    if (!originalFetch) throw new Error("Expected the diagnostic GitHub transport.");
+    test.bindings.configuration.github.fetch = async (input, init) => {
+      const response = await originalFetch(input, init);
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (url.pathname.endsWith("/jobs/789")) {
+        test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
+          ...carriedJobs.attempt,
+          id: 456,
+          head_sha: test.verified.sourceHead,
+          run_attempt: 3,
+        });
+      }
+      return response;
+    };
+    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
+      "workflow attempt or source head changed",
+    );
+    expect((await test.service.run(next.id)).comparison_id).toBeNull();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
+      ...carriedJobs.attempt,
+      id: 456,
+      head_sha: test.verified.sourceHead,
+      run_attempt: 3,
+    });
+    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
+      "workflow attempt or source head changed",
+    );
+  });
+
+  it("resolves later reruns directly to the original manifest and verifies historical aliases", async () => {
+    const test = await rerunFixture(true);
+    const next = await test.reserve();
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
+      ...carriedJobs.attempt,
+      id: 456,
+      head_sha: test.verified.sourceHead,
+      run_attempt: 3,
+      run_started_at: "2026-09-22T15:10:00Z",
+    });
+    const previousCalls = test.githubRequests.filter((path) => path.endsWith("/jobs/789")).length;
+    await trySealRun(apiContext(test.bindings), next.id, true);
+    expect(test.githubRequests.filter((path) => path.endsWith("/jobs/789")).length).toBe(
+      previousCalls + 1,
+    );
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/3", {
+      ...carriedJobs.attempt,
+      id: 456,
+      head_sha: test.verified.sourceHead,
+      run_attempt: 3,
+      run_started_at: "2026-09-22T15:10:00Z",
+    });
+    test.verified.workflowAttempt = 3;
+    test.verified.jobId = "794";
+    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
+      jobs: [
+        { ...test.alias, id: 795, run_attempt: 3 },
+        { ...test.current, id: 794, run_attempt: 3 },
+      ],
+    });
+    const inheritance = await test.inherit();
+    expect(inheritance.inheritFromRunId).toBe(next.id);
+    expect(inheritance.verifiedInheritedShards?.[0]?.manifestDigest).toBe(test.digest);
+    expect(
+      test.githubRequests.some((path) => path.endsWith("/jobs/793") || path.endsWith("/jobs/795")),
+    ).toBe(false);
   });
   it("requires one independent nonexpired discovery receipt with matching workflow identity", async () => {
     const test = await fixture();

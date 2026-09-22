@@ -36,7 +36,7 @@ jobs:
           cache: pnpm
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chrome
+      - run: pnpm exec playwright install --with-deps chrome chromium
       - run: pnpm check
       - name: Test release guards
         run: node --test .github/workflows/scripts/*.test.mjs

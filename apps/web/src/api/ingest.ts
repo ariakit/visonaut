@@ -40,7 +40,7 @@ import {
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { discoveryEvidence } from "./receipts.js";
-import { inheritedShards, workflowJobs } from "./jobs.js";
+import { inheritedShards, verifiedInheritedShard, workflowAttempt, workflowJobs } from "./jobs.js";
 import { relatedRunEvidence, refreshRunLineage } from "./lineage.js";
 import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 
@@ -855,14 +855,19 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
   }
   const { plan, verified } = await runPlan(context, run.id);
   const github = await createGitHubClient(context.configuration.github);
-  const metadata = object(
-    await github.request(
-      `/repos/${github.repository}/actions/runs/${run.external_run_id}${verifyHistorical ? `/attempts/${run.attempt}` : ""}`,
-    ),
-  );
-  if (metadata.run_attempt !== run.attempt) return;
+  const identity = {
+    workflowRunId: run.external_run_id,
+    workflowAttempt: run.attempt,
+    testedSha: run.tested_sha,
+    planDigest: run.plan_digest,
+    sourceHead: string(verified.sourceHead, 40),
+  };
+  const current = await workflowAttempt(github, identity, verifyHistorical);
+  const metadata =
+    run.attempt > 1 && !verifyHistorical ? await workflowAttempt(github, identity, true) : current;
   const jobs = await workflowJobs(github, run.external_run_id, run.attempt);
-  const latestJobs = run.attempt > 1 ? await workflowJobs(github, run.external_run_id) : jobs;
+  const latestJobs =
+    run.attempt > 1 && !verifyHistorical ? await workflowJobs(github, run.external_run_id) : jobs;
   let incomplete = false;
   for (const shard of plan.shards) {
     const completed = await context.database
@@ -872,24 +877,19 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
       .bind(run.id, shard.key)
       .first<{ state: string; source_attempt: number; manifest_digest: string }>();
     if (completed?.state === "complete" && completed.source_attempt < run.attempt) {
-      if (verifyHistorical) continue;
       const matching = latestJobs.filter((job) => job.name === shard.jobName);
       const job = matching[0];
-      const source = await context.database
-        .prepare(
-          "SELECT m.job_id FROM ingest_manifests m JOIN ariviso_runs r ON r.id = m.run_id WHERE r.external_run_id = ? AND r.project_id = ? AND m.shard_key = ? AND m.digest = ? LIMIT 1",
-        )
-        .bind(run.external_run_id, run.project_id, shard.key, completed.manifest_digest)
-        .first<{ job_id: string }>();
-      if (
-        matching.length !== 1 ||
-        !job ||
-        job.run_attempt === run.attempt ||
-        String(job.id) !== source?.job_id ||
-        job.conclusion !== "success"
-      ) {
-        throw new IncompleteError("An inherited job was rerun. Start a complete capture attempt.");
+      if (matching.length !== 1 || !job) {
+        throw new IncompleteError("The current inherited job is unavailable or ambiguous.");
       }
+      await verifiedInheritedShard(context, github, {
+        runId: run.id,
+        identity,
+        shard,
+        plan,
+        job,
+        attemptStartedAt: metadata.run_started_at,
+      });
       continue;
     }
     const manifest = await context.database
@@ -944,6 +944,15 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
       await digestJson({ job, verified }),
       evidence,
     );
+  }
+  if (!verifyHistorical) {
+    const latest = await workflowAttempt(github, identity);
+    if (
+      metadata.status === "completed" &&
+      (latest.status !== "completed" || latest.conclusion !== metadata.conclusion)
+    ) {
+      throw new IncompleteError("The workflow conclusion changed during shard verification.");
+    }
   }
   if (verifyHistorical || metadata.status !== "completed") return;
   if (metadata.conclusion !== "success") {
