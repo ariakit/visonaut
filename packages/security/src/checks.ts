@@ -1,7 +1,7 @@
 import { numericId, record, SecurityError } from "./errors.js";
 import type { GitHubClient } from "./github.js";
 
-export const CHECK_NAME = "Ariviso";
+export const CHECK_NAME = "Visonaut";
 
 /** Structural match for the service's durable outbox intent. */
 export interface StatusDelivery {
@@ -34,12 +34,15 @@ function reviewUrl(url: string, origin: string): string {
 
 export function genericCheckOutput(conclusion: StatusDelivery["conclusion"]) {
   if (conclusion === "pending") {
-    return { title: "Visual review is running", summary: "Sign in to Ariviso to view this run." };
+    return { title: "Visual review is running", summary: "Sign in to Visonaut to view this run." };
   }
   if (conclusion === "success") {
-    return { title: "Visual review passed", summary: "Sign in to Ariviso to view this run." };
+    return { title: "Visual review passed", summary: "Sign in to Visonaut to view this run." };
   }
-  return { title: "Visual review has not passed", summary: "Sign in to Ariviso to view this run." };
+  return {
+    title: "Visual review has not passed",
+    summary: "Sign in to Visonaut to view this run.",
+  };
 }
 
 interface EnsureCheckParams {
@@ -63,7 +66,7 @@ export async function findGitHubCheck({
   for (let page = 1; page <= 20; page += 1) {
     const result = record(
       await github.request(
-        `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=Ariviso&filter=all&per_page=100&page=${page}`,
+        `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=Visonaut&filter=all&per_page=100&page=${page}`,
       ),
     );
     if (!Array.isArray(result.check_runs)) {

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
-import { canonicalJson } from "@ariviso/protocol";
+import { canonicalJson } from "@visonaut/protocol";
 import { hydrateCaptureMetadata } from "../profiles.ts";
 import {
   archiveEligibilitySql,
@@ -14,7 +14,7 @@ import {
   type CommandResult,
   type Database,
   type SqlValue,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./common.ts";
 import {
   historyPrefix,
@@ -56,135 +56,135 @@ const sources: Record<
   Exclude<HistorySection, "acceptance" | "documents">,
   { table: string; scope: string }
 > = {
-  run: { table: "ariviso_runs", scope: "record.id=?" },
+  run: { table: "visonaut_runs", scope: "record.id=?" },
   project: {
-    table: "ariviso_projects",
-    scope: "record.id=(SELECT project_id FROM ariviso_runs WHERE id=?)",
+    table: "visonaut_projects",
+    scope: "record.id=(SELECT project_id FROM visonaut_runs WHERE id=?)",
   },
-  shards: { table: "ariviso_shards", scope: "record.run_id=?" },
+  shards: { table: "visonaut_shards", scope: "record.run_id=?" },
   images: {
-    table: "ariviso_images",
-    scope: "record.run_id=? OR record.id IN(SELECT image_id FROM ariviso_captures WHERE run_id=?)",
+    table: "visonaut_images",
+    scope: "record.run_id=? OR record.id IN(SELECT image_id FROM visonaut_captures WHERE run_id=?)",
   },
-  captures: { table: "ariviso_captures", scope: "record.run_id=?" },
-  comparisons: { table: "ariviso_comparisons", scope: "record.run_id=?" },
+  captures: { table: "visonaut_captures", scope: "record.run_id=?" },
+  comparisons: { table: "visonaut_comparisons", scope: "record.run_id=?" },
   comparisonRows: {
-    table: "ariviso_comparison_rows",
-    scope: "record.comparison_id IN(SELECT id FROM ariviso_comparisons WHERE run_id=?)",
+    table: "visonaut_comparison_rows",
+    scope: "record.comparison_id IN(SELECT id FROM visonaut_comparisons WHERE run_id=?)",
   },
   decisions: {
-    table: "ariviso_decisions",
+    table: "visonaut_decisions",
     scope:
-      "record.row_id IN(SELECT row.id FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?) OR record.id IN(SELECT source_decision_id FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
+      "record.row_id IN(SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?) OR record.id IN(SELECT source_decision_id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
   },
   commands: {
-    table: "ariviso_commands",
-    scope: "record.comparison_id IN(SELECT id FROM ariviso_comparisons WHERE run_id=?)",
+    table: "visonaut_commands",
+    scope: "record.comparison_id IN(SELECT id FROM visonaut_comparisons WHERE run_id=?)",
   },
-  audit: { table: "ariviso_audit", scope: "record.run_id=?" },
-  snapshots: { table: "ariviso_snapshots", scope: "record.run_id=?" },
+  audit: { table: "visonaut_audit", scope: "record.run_id=?" },
+  snapshots: { table: "visonaut_snapshots", scope: "record.run_id=?" },
   snapshotImages: {
-    table: "ariviso_snapshot_images",
-    scope: "record.snapshot_id IN(SELECT id FROM ariviso_snapshots WHERE run_id=?)",
+    table: "visonaut_snapshot_images",
+    scope: "record.snapshot_id IN(SELECT id FROM visonaut_snapshots WHERE run_id=?)",
   },
   referenceSnapshots: {
-    table: "ariviso_snapshots",
-    scope: "record.id IN(SELECT reference_snapshot_id FROM ariviso_comparisons WHERE run_id=?)",
+    table: "visonaut_snapshots",
+    scope: "record.id IN(SELECT reference_snapshot_id FROM visonaut_comparisons WHERE run_id=?)",
   },
   referenceCaptures: {
-    table: "ariviso_captures",
+    table: "visonaut_captures",
     scope:
-      "record.id IN(SELECT reference_capture_id FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
+      "record.id IN(SELECT reference_capture_id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
   },
   referenceImages: {
-    table: "ariviso_images",
+    table: "visonaut_images",
     scope:
-      "record.id IN(SELECT capture.image_id FROM ariviso_captures capture JOIN ariviso_comparison_rows row ON row.reference_capture_id=capture.id JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
+      "record.id IN(SELECT capture.image_id FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.reference_capture_id=capture.id JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
   },
   referenceSnapshotImages: {
-    table: "ariviso_snapshot_images",
+    table: "visonaut_snapshot_images",
     scope:
-      "record.snapshot_id IN(SELECT reference_snapshot_id FROM ariviso_comparisons WHERE run_id=?)",
+      "record.snapshot_id IN(SELECT reference_snapshot_id FROM visonaut_comparisons WHERE run_id=?)",
   },
   provenance: {
     table: "ingest_run_provenance",
     scope:
-      "record.run_id=? OR record.run_id IN(SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=?)",
+      "record.run_id=? OR record.run_id IN(SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?)",
   },
   manifests: {
     table: "ingest_manifests",
     scope:
-      "record.run_id=? OR record.run_id IN(SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=?)",
+      "record.run_id=? OR record.run_id IN(SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?)",
   },
   profiles: {
-    table: "ariviso_capture_profiles",
+    table: "visonaut_capture_profiles",
     scope:
-      "record.digest IN(SELECT profile_digest FROM ariviso_captures WHERE run_id=? OR id IN(SELECT reference_capture_id FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?))",
+      "record.digest IN(SELECT profile_digest FROM visonaut_captures WHERE run_id=? OR id IN(SELECT reference_capture_id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?))",
   },
   policies: {
-    table: "ariviso_policies",
-    scope: "record.digest IN(SELECT policy_digest FROM ariviso_comparisons WHERE run_id=?)",
+    table: "visonaut_policies",
+    scope: "record.digest IN(SELECT policy_digest FROM visonaut_comparisons WHERE run_id=?)",
   },
-  lineage: { table: "ariviso_lineage", scope: "record.source_run_id=? OR record.target_run_id=?" },
-  ancestry: { table: "ariviso_ancestry", scope: "record.run_id=?" },
+  lineage: { table: "visonaut_lineage", scope: "record.source_run_id=? OR record.target_run_id=?" },
+  ancestry: { table: "visonaut_ancestry", scope: "record.run_id=?" },
   reservations: {
-    table: "ariviso_reservations",
+    table: "visonaut_reservations",
     scope:
-      "record.project_id=(SELECT project_id FROM ariviso_runs WHERE id=?) AND record.lineage_key=(SELECT lineage_key FROM ariviso_runs WHERE id=?)",
+      "record.project_id=(SELECT project_id FROM visonaut_runs WHERE id=?) AND record.lineage_key=(SELECT lineage_key FROM visonaut_runs WHERE id=?)",
   },
   identityHistory: {
-    table: "ariviso_identity_history",
+    table: "visonaut_identity_history",
     scope:
-      "record.project_id=(SELECT project_id FROM ariviso_runs WHERE id=?) AND record.lineage_key=(SELECT lineage_key FROM ariviso_runs WHERE id=?)",
+      "record.project_id=(SELECT project_id FROM visonaut_runs WHERE id=?) AND record.lineage_key=(SELECT lineage_key FROM visonaut_runs WHERE id=?)",
   },
   decisionReplacements: {
-    table: "ariviso_decision_replacements",
+    table: "visonaut_decision_replacements",
     scope:
-      "record.source_decision_id IN(SELECT decision.id FROM ariviso_decisions decision JOIN ariviso_comparison_rows row ON row.id=decision.row_id JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?) OR record.replacement_decision_id IN(SELECT decision.id FROM ariviso_decisions decision JOIN ariviso_comparison_rows row ON row.id=decision.row_id JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
+      "record.source_decision_id IN(SELECT decision.id FROM visonaut_decisions decision JOIN visonaut_comparison_rows row ON row.id=decision.row_id JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?) OR record.replacement_decision_id IN(SELECT decision.id FROM visonaut_decisions decision JOIN visonaut_comparison_rows row ON row.id=decision.row_id JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
   },
   uploads: { table: "ingest_uploads", scope: "record.run_id=?" },
   tasks: {
     table: "work_tasks",
     scope:
-      "record.id IN(SELECT row.id FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
+      "record.id IN(SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
   },
 };
 
 const comparisonSources: Partial<Record<HistorySection, { table: string; scope: string }>> = {
-  comparisons: { table: "ariviso_comparisons", scope: "record.id=?" },
-  comparisonRows: { table: "ariviso_comparison_rows", scope: "record.comparison_id=?" },
+  comparisons: { table: "visonaut_comparisons", scope: "record.id=?" },
+  comparisonRows: { table: "visonaut_comparison_rows", scope: "record.comparison_id=?" },
   captures: {
-    table: "ariviso_captures",
+    table: "visonaut_captures",
     scope:
-      "record.id IN(SELECT candidate_capture_id FROM ariviso_comparison_rows WHERE comparison_id=?)",
+      "record.id IN(SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id=?)",
   },
   referenceCaptures: {
-    table: "ariviso_captures",
+    table: "visonaut_captures",
     scope:
-      "record.id IN(SELECT reference_capture_id FROM ariviso_comparison_rows WHERE comparison_id=?)",
+      "record.id IN(SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id=?)",
   },
   images: {
-    table: "ariviso_images",
+    table: "visonaut_images",
     scope:
-      "record.id IN(SELECT capture.image_id FROM ariviso_captures capture JOIN ariviso_comparison_rows row ON row.candidate_capture_id=capture.id WHERE row.comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.maskImageId') FROM ariviso_comparison_rows WHERE comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.thumbnailImageId') FROM ariviso_comparison_rows WHERE comparison_id=?)",
+      "record.id IN(SELECT capture.image_id FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.candidate_capture_id=capture.id WHERE row.comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.maskImageId') FROM visonaut_comparison_rows WHERE comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.thumbnailImageId') FROM visonaut_comparison_rows WHERE comparison_id=?)",
   },
   referenceImages: {
-    table: "ariviso_images",
+    table: "visonaut_images",
     scope:
-      "record.id IN(SELECT capture.image_id FROM ariviso_captures capture JOIN ariviso_comparison_rows row ON row.reference_capture_id=capture.id WHERE row.comparison_id=?)",
+      "record.id IN(SELECT capture.image_id FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.reference_capture_id=capture.id WHERE row.comparison_id=?)",
   },
   profiles: {
-    table: "ariviso_capture_profiles",
+    table: "visonaut_capture_profiles",
     scope:
-      "record.digest IN(SELECT capture.profile_digest FROM ariviso_captures capture JOIN ariviso_comparison_rows row ON row.candidate_capture_id=capture.id OR row.reference_capture_id=capture.id WHERE row.comparison_id=?)",
+      "record.digest IN(SELECT capture.profile_digest FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.candidate_capture_id=capture.id OR row.reference_capture_id=capture.id WHERE row.comparison_id=?)",
   },
   policies: {
-    table: "ariviso_policies",
-    scope: "record.digest IN(SELECT policy_digest FROM ariviso_comparisons WHERE id=?)",
+    table: "visonaut_policies",
+    scope: "record.digest IN(SELECT policy_digest FROM visonaut_comparisons WHERE id=?)",
   },
   tasks: {
     table: "work_tasks",
-    scope: "record.id IN(SELECT id FROM ariviso_comparison_rows WHERE comparison_id=?)",
+    scope: "record.id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id=?)",
   },
 };
 
@@ -522,7 +522,7 @@ async function sourcePage(
   if (section === "documents") {
     const documents = await context.database
       .prepare(
-        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=?) SELECT plan_object_key AS object_key,run_id FROM ingest_run_provenance WHERE run_id IN(SELECT id FROM owners) UNION SELECT object_key,run_id FROM ingest_manifests WHERE run_id IN(SELECT id FROM owners) ORDER BY object_key,run_id LIMIT 1001`,
+        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?) SELECT plan_object_key AS object_key,run_id FROM ingest_run_provenance WHERE run_id IN(SELECT id FROM owners) UNION SELECT object_key,run_id FROM ingest_manifests WHERE run_id IN(SELECT id FROM owners) ORDER BY object_key,run_id LIMIT 1001`,
       )
       .bind(runId, runId)
       .all<{ object_key: string; run_id: string }>();
@@ -681,7 +681,7 @@ async function claim(context: OperationsContext, runId: string, token: string) {
   const now = context.now();
   const run = await context.database
     .prepare(
-      `SELECT run.revision,project.revision AS project_revision FROM ariviso_runs run JOIN ariviso_projects project ON project.id=run.project_id WHERE run.id=? AND (${archiveEligibilitySql("run")})`,
+      `SELECT run.revision,project.revision AS project_revision FROM visonaut_runs run JOIN visonaut_projects project ON project.id=run.project_id WHERE run.id=? AND (${archiveEligibilitySql("run")})`,
     )
     .bind(runId)
     .first<{ revision: number; project_revision: number }>();
@@ -703,7 +703,7 @@ async function claim(context: OperationsContext, runId: string, token: string) {
   await atomic(context.database, [
     assertion(
       context.database,
-      `EXISTS(SELECT 1 FROM ariviso_runs run JOIN ariviso_projects project ON project.id=run.project_id WHERE run.id=? AND run.revision=? AND project.revision=? AND (${archiveEligibilitySql("run")}))`,
+      `EXISTS(SELECT 1 FROM visonaut_runs run JOIN visonaut_projects project ON project.id=run.project_id WHERE run.id=? AND run.revision=? AND project.revision=? AND (${archiveEligibilitySql("run")}))`,
       [runId, run.revision, run.project_revision],
     ),
     assertion(
@@ -869,7 +869,7 @@ export async function archiveClosedRuns(context: OperationsContext): Promise<Ope
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const candidates = await context.database
     .prepare(
-      `SELECT run.id FROM ariviso_runs run WHERE (${archiveEligibilitySql("run")}) AND NOT EXISTS(SELECT 1 FROM operations_run_archives archive WHERE archive.run_id=run.id AND (archive.state='ready' OR archive.lease_until>? OR archive.retry_at>?)) ORDER BY run.created_at,run.id LIMIT ?`,
+      `SELECT run.id FROM visonaut_runs run WHERE (${archiveEligibilitySql("run")}) AND NOT EXISTS(SELECT 1 FROM operations_run_archives archive WHERE archive.run_id=run.id AND (archive.state='ready' OR archive.lease_until>? OR archive.retry_at>?)) ORDER BY run.created_at,run.id LIMIT ?`,
     )
     .bind(context.now(), context.now(), context.budget.tasksPerStep)
     .all<{ id: string }>();

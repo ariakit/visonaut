@@ -1,11 +1,11 @@
 {
-  "name": "@ariviso/playwright",
+  "name": "@visonaut/playwright",
   "version": "0.1.0",
-  "description": "Prepared visual capture and final-successful-attempt reporting for Ariviso",
+  "description": "Prepared visual capture and final-successful-attempt reporting for Visonaut",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ariakit/ariviso",
+    "url": "https://github.com/ariakit/visonaut",
     "directory": "packages/playwright"
   },
   "files": [
@@ -38,10 +38,10 @@
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
-    "@ariviso/protocol": "workspace:*",
     "@playwright/test": "1.63.0",
     "@types/node": "24.13.6",
     "@types/pngjs": "6.0.5",
+    "@visonaut/protocol": "workspace:*",
     "tsup": "8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "5.0.1"

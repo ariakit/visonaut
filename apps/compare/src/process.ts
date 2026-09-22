@@ -11,8 +11,8 @@ import {
   validateImage,
   type ImageCodecs,
   type Pixels,
-} from "@ariviso/compare";
-import type { ComparisonTask, ValidatedImage } from "@ariviso/service";
+} from "@visonaut/compare";
+import type { ComparisonTask, ValidatedImage } from "@visonaut/service";
 
 export interface ArtifactStorage {
   get(key: string): Promise<{ size: number; body: ReadableStream<Uint8Array> } | null>;

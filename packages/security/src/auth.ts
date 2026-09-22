@@ -19,7 +19,7 @@ export function createAuth(configuration: AuthConfiguration) {
     throw new Error("The auth secret must contain at least 32 characters.");
   }
   return betterAuth({
-    appName: "Ariviso",
+    appName: "Visonaut",
     baseURL: origin,
     basePath: "/api/auth",
     secret: configuration.secret,
@@ -45,7 +45,7 @@ export function createAuth(configuration: AuthConfiguration) {
       cookieCache: { enabled: false },
     },
     advanced: {
-      cookiePrefix: `ariviso-${configuration.environment}`,
+      cookiePrefix: `visonaut-${configuration.environment}`,
       useSecureCookies: configuration.environment !== "local",
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", path: "/" },
     },
@@ -79,4 +79,4 @@ export function createAuth(configuration: AuthConfiguration) {
   });
 }
 
-export type ArivisoAuth = ReturnType<typeof createAuth>;
+export type VisonautAuth = ReturnType<typeof createAuth>;

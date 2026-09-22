@@ -160,20 +160,20 @@ export class Service {
   }
 
   async project(id: string) {
-    return this.one<ProjectRow>("SELECT * FROM ariviso_projects WHERE id = ?", [id]);
+    return this.one<ProjectRow>("SELECT * FROM visonaut_projects WHERE id = ?", [id]);
   }
 
   async run(id: string) {
-    return this.one<RunRow>("SELECT * FROM ariviso_runs WHERE id = ?", [id]);
+    return this.one<RunRow>("SELECT * FROM visonaut_runs WHERE id = ?", [id]);
   }
 
   async comparison(id: string) {
-    return this.one<ComparisonRow>("SELECT * FROM ariviso_comparisons WHERE id = ?", [id]);
+    return this.one<ComparisonRow>("SELECT * FROM visonaut_comparisons WHERE id = ?", [id]);
   }
 
   async comparisonRows(id: string) {
     return this.rows<ReviewRow>(
-      "SELECT * FROM ariviso_comparison_rows WHERE comparison_id = ? ORDER BY ordinal, id",
+      "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? ORDER BY ordinal, id",
       [id],
     );
   }
@@ -195,10 +195,10 @@ export class Service {
     }
     await atomic(this.database, [
       this.sql(
-        "INSERT INTO ariviso_policies (digest, policy_json) VALUES (?, ?) ON CONFLICT(digest) DO NOTHING",
+        "INSERT INTO visonaut_policies (digest, policy_json) VALUES (?, ?) ON CONFLICT(digest) DO NOTHING",
         [input.digest, JSON.stringify(policy)],
       ),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_policies WHERE digest = ? AND policy_json = ?)", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_policies WHERE digest = ? AND policy_json = ?)", [
         input.digest,
         JSON.stringify(policy),
       ]),
@@ -207,13 +207,13 @@ export class Service {
 
   async createProject(input: { id: string; repositoryId: string; policyDigest: string }) {
     await this.sql(
-      "INSERT INTO ariviso_projects (id, repository_id, policy_digest) VALUES (?, ?, ?)",
+      "INSERT INTO visonaut_projects (id, repository_id, policy_digest) VALUES (?, ?, ?)",
       [input.id, input.repositoryId, input.policyDigest],
     ).run();
   }
 
   private projectGuard(project: ProjectRow) {
-    return this.guard("EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND revision = ?)", [
+    return this.guard("EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND revision = ?)", [
       project.id,
       project.revision,
     ]);
@@ -221,30 +221,30 @@ export class Service {
 
   private activeGuard(run: RunRow) {
     return this.guard(
-      "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND active = 1 AND revision = ?)",
+      "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 1 AND revision = ?)",
       [run.id, run.revision],
     );
   }
 
   private reviewGuard(run: RunRow, comparisonId: string) {
     return this.guard(
-      "EXISTS (SELECT 1 FROM ariviso_runs run JOIN ariviso_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.revision = ? AND run.sealed_at IS NOT NULL AND comparison.id = ? AND comparison.state = 'ready')",
+      "EXISTS (SELECT 1 FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.revision = ? AND run.sealed_at IS NOT NULL AND comparison.id = ? AND comparison.state = 'ready')",
       [run.id, run.revision, comparisonId],
     );
   }
 
   private touch(run: RunRow, now: number): Statement[] {
     return [
-      this.sql("UPDATE ariviso_projects SET revision = revision + 1 WHERE id = ?", [
+      this.sql("UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?", [
         run.project_id,
       ]),
-      this.sql("UPDATE ariviso_runs SET revision = revision + 1 WHERE id = ?", [run.id]),
+      this.sql("UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?", [run.id]),
       this.sql(
-        "UPDATE work_checks SET desired_revision = (SELECT revision FROM ariviso_projects WHERE id = ?) WHERE id IN (SELECT id FROM ariviso_checks WHERE project_id = ?)",
+        "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ?)",
         [run.project_id, run.project_id],
       ),
       this.sql(
-        "INSERT INTO ariviso_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM ariviso_runs WHERE id = ?",
+        "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?",
         [crypto.randomUUID(), now, run.id],
       ),
     ];
@@ -258,7 +258,7 @@ export class Service {
     actorId: string | null = null,
   ) {
     return this.sql(
-      "INSERT INTO ariviso_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       [crypto.randomUUID(), run.project_id, run.id, actorId, action, JSON.stringify(detail), now],
     );
   }
@@ -268,7 +268,7 @@ export class Service {
       throw new IncompleteError("A verified full plan and lineage are required.");
     }
     const existing = await this.sql(
-      "SELECT * FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND attempt = ?",
+      "SELECT * FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND attempt = ?",
       [input.projectId, input.externalRunId, input.attempt],
     ).first<RunRow>();
     if (existing) {
@@ -319,23 +319,23 @@ export class Service {
     const statements = [
       this.projectGuard(project),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND attempt >= ?)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND attempt >= ?)",
         [input.projectId, input.externalRunId, input.attempt],
       ),
       this.sql(
-        "UPDATE ariviso_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
+        "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
         [input.now, input.projectId, input.externalRunId],
       ),
       this.sql(
-        "UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id IN (SELECT id FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND active = 0)",
+        "UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id IN (SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 0)",
         [input.now, input.projectId, input.externalRunId],
       ),
       this.sql(
-        "DELETE FROM work_retention_pins WHERE reason = 'review' AND owner IN (SELECT 'review:' || id FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND active = 0)",
+        "DELETE FROM work_retention_pins WHERE reason = 'review' AND owner IN (SELECT 'review:' || id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 0)",
         [input.projectId, input.externalRunId],
       ),
       this.sql(
-        "INSERT INTO ariviso_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           input.id,
           input.projectId,
@@ -363,21 +363,21 @@ export class Service {
         throw new IncompleteError("The active run admission limit is invalid.");
       statements.push(
         this.guard(
-          "(SELECT COUNT(*) FROM ariviso_runs WHERE active=1 AND state IN ('uploading','comparing')) <= ?",
+          "(SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) <= ?",
           [input.maximumActiveRuns],
         ),
       );
     }
     for (const sourceId of new Set(input.verifiedRelatedRunIds)) {
       statements.push(
-        this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND project_id = ?)", [
+        this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND project_id = ?)", [
           sourceId,
           input.projectId,
         ]),
       );
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_lineage_edges (source_run_id, target_run_id, proof_digest) VALUES (?, ?, ?)",
+          "INSERT INTO visonaut_lineage_edges (source_run_id, target_run_id, proof_digest) VALUES (?, ?, ?)",
           [sourceId, input.id, input.verificationDigest],
         ),
       );
@@ -388,7 +388,7 @@ export class Service {
     for (const sha of new Set(input.verifiedAncestorShas)) {
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)",
+          "INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)",
           [input.id, sha, input.verificationDigest],
         ),
       );
@@ -396,7 +396,7 @@ export class Service {
     for (const shard of input.plan.shards) {
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)",
+          "INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)",
           [input.id, shard.key, shard.profileDigest, JSON.stringify(shard)],
         ),
       );
@@ -404,7 +404,7 @@ export class Service {
     if (input.inheritFromRunId) {
       statements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND project_id = ? AND external_run_id = ? AND tested_sha = ? AND plan_digest = ? AND attempt < ?)",
+          "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND project_id = ? AND external_run_id = ? AND tested_sha = ? AND plan_digest = ? AND attempt < ?)",
           [
             input.inheritFromRunId,
             input.projectId,
@@ -425,7 +425,7 @@ export class Service {
         }
         statements.push(
           this.guard(
-            "EXISTS (SELECT 1 FROM ariviso_shards WHERE run_id = ? AND key = ? AND manifest_digest = ? AND full_profile_digest = ?)",
+            "EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND key = ? AND manifest_digest = ? AND full_profile_digest = ?)",
             [
               input.inheritFromRunId,
               shard.key,
@@ -436,13 +436,13 @@ export class Service {
         );
         statements.push(
           this.guard(
-            "EXISTS (SELECT 1 FROM ariviso_shards WHERE run_id = ? AND key = ? AND state = 'complete' AND profile_digest = ?)",
+            "EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND key = ? AND state = 'complete' AND profile_digest = ?)",
             [input.inheritFromRunId, shard.key, shard.profileDigest],
           ),
         );
         statements.push(
           this.sql(
-            "UPDATE ariviso_shards SET state = 'complete', manifest_digest = (SELECT manifest_digest FROM ariviso_shards WHERE run_id = ? AND key = ?), full_profile_digest = ?, expected_json = (SELECT expected_json FROM ariviso_shards WHERE run_id = ? AND key = ?), discovery_json = (SELECT discovery_json FROM ariviso_shards WHERE run_id = ? AND key = ?), source_run_id = ?, source_attempt = (SELECT COALESCE(shard.source_attempt, source.attempt) FROM ariviso_shards shard JOIN ariviso_runs source ON source.id = shard.run_id WHERE shard.run_id = ? AND shard.key = ?) WHERE run_id = ? AND key = ?",
+            "UPDATE visonaut_shards SET state = 'complete', manifest_digest = (SELECT manifest_digest FROM visonaut_shards WHERE run_id = ? AND key = ?), full_profile_digest = ?, expected_json = (SELECT expected_json FROM visonaut_shards WHERE run_id = ? AND key = ?), discovery_json = (SELECT discovery_json FROM visonaut_shards WHERE run_id = ? AND key = ?), source_run_id = ?, source_attempt = (SELECT COALESCE(shard.source_attempt, source.attempt) FROM visonaut_shards shard JOIN visonaut_runs source ON source.id = shard.run_id WHERE shard.run_id = ? AND shard.key = ?) WHERE run_id = ? AND key = ?",
             [
               input.inheritFromRunId,
               shard.key,
@@ -463,7 +463,7 @@ export class Service {
         // with each workflow rerun. The plan index separates different shards.
         statements.push(
           this.sql(
-            "INSERT INTO ariviso_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT ? || ':inherited:' || ? || ':' || ordinal, ?, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json FROM ariviso_captures WHERE run_id = ? AND shard_key = ?",
+            "INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT ? || ':inherited:' || ? || ':' || ordinal, ?, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json FROM visonaut_captures WHERE run_id = ? AND shard_key = ?",
             [input.id, shardIndex, input.id, input.inheritFromRunId, shard.key],
           ),
         );
@@ -471,16 +471,16 @@ export class Service {
     }
     statements.push(
       this.sql(
-        "INSERT INTO work_retention_pins (run_id, owner, reason) SELECT DISTINCT image.run_id, ?, 'comparison' FROM ariviso_captures capture JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND image.run_id != ? ON CONFLICT(run_id, owner) DO NOTHING",
+        "INSERT INTO work_retention_pins (run_id, owner, reason) SELECT DISTINCT image.run_id, ?, 'comparison' FROM visonaut_captures capture JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND image.run_id != ? ON CONFLICT(run_id, owner) DO NOTHING",
         [`inherited-by:${input.id}`, input.id, input.id],
       ),
     );
     statements.push(
-      this.sql("UPDATE ariviso_projects SET revision = revision + 1 WHERE id = ?", [project.id]),
+      this.sql("UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?", [project.id]),
     );
     statements.push(
       this.sql(
-        "UPDATE work_checks SET desired_revision = (SELECT revision FROM ariviso_projects WHERE id = ?) WHERE id IN (SELECT id FROM ariviso_checks WHERE project_id = ?)",
+        "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ?)",
         [project.id, project.id],
       ),
     );
@@ -494,14 +494,14 @@ export class Service {
     await atomic(this.database, [
       this.activeGuard(run),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND sealed_at IS NULL AND state = 'uploading')",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NULL AND state = 'uploading')",
         [run.id],
       ),
       this.guard("EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live')", [
         run.id,
       ]),
       this.sql(
-        "INSERT INTO ariviso_images (id, run_id, digest, object_key, content_type, bytes, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
+        "INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
         [
           image.id,
           image.runId,
@@ -514,7 +514,7 @@ export class Service {
         ],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND bytes = ? AND width = ? AND height = ? AND content_type = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND bytes = ? AND width = ? AND height = ? AND content_type = ?)",
         [
           image.id,
           image.runId,
@@ -535,7 +535,7 @@ export class Service {
       state: string;
       manifest_digest: string | null;
       expected_json: string;
-    }>("SELECT * FROM ariviso_shards WHERE run_id = ? AND key = ?", [run.id, input.key]);
+    }>("SELECT * FROM visonaut_shards WHERE run_id = ? AND key = ?", [run.id, input.key]);
     if (shard.state === "complete") {
       if (shard.manifest_digest !== input.manifestDigest) {
         throw new ConflictError("The sealed shard has a different manifest.");
@@ -628,7 +628,7 @@ export class Service {
       );
       await atomic(this.database, [
         this.activeGuard(run),
-        this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND sealed_at IS NULL)", [
+        this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NULL)", [
           run.id,
         ]),
         this.guard(
@@ -636,15 +636,15 @@ export class Service {
           [run.id],
         ),
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM ariviso_images image WHERE image.id = json_extract(staged.value, '$.imageId') AND image.run_id = ? AND image.bytes_present = 1))",
+          "NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM visonaut_images image WHERE image.id = json_extract(staged.value, '$.imageId') AND image.run_id = ? AND image.bytes_present = 1))",
           [captures, run.id],
         ),
         this.sql(
-          "INSERT INTO ariviso_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extract(value, '$.itemKey'), json_extract(value, '$.variantKey'), json_extract(value, '$.ordinal'), json_extract(value, '$.imageId'), json_extract(value, '$.profileDigest'), json_extract(value, '$.testId'), json_extract(value, '$.testRetry'), json_extract(value, '$.metadataJson') FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING",
+          "INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extract(value, '$.itemKey'), json_extract(value, '$.variantKey'), json_extract(value, '$.ordinal'), json_extract(value, '$.imageId'), json_extract(value, '$.profileDigest'), json_extract(value, '$.testId'), json_extract(value, '$.testRetry'), json_extract(value, '$.metadataJson') FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING",
           [run.id, input.key, captures],
         ),
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM ariviso_captures capture WHERE capture.id = json_extract(staged.value, '$.id') AND capture.run_id = ? AND capture.shard_key = ? AND capture.item_key = json_extract(staged.value, '$.itemKey') AND capture.variant_key = json_extract(staged.value, '$.variantKey') AND capture.ordinal = json_extract(staged.value, '$.ordinal') AND capture.image_id = json_extract(staged.value, '$.imageId') AND capture.profile_digest = json_extract(staged.value, '$.profileDigest') AND capture.test_id = json_extract(staged.value, '$.testId') AND capture.test_retry = json_extract(staged.value, '$.testRetry') AND capture.metadata_json = json_extract(staged.value, '$.metadataJson')))",
+          "NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM visonaut_captures capture WHERE capture.id = json_extract(staged.value, '$.id') AND capture.run_id = ? AND capture.shard_key = ? AND capture.item_key = json_extract(staged.value, '$.itemKey') AND capture.variant_key = json_extract(staged.value, '$.variantKey') AND capture.ordinal = json_extract(staged.value, '$.ordinal') AND capture.image_id = json_extract(staged.value, '$.imageId') AND capture.profile_digest = json_extract(staged.value, '$.profileDigest') AND capture.test_id = json_extract(staged.value, '$.testId') AND capture.test_retry = json_extract(staged.value, '$.testRetry') AND capture.metadata_json = json_extract(staged.value, '$.metadataJson')))",
           [captures, run.id, input.key],
         ),
       ]);
@@ -652,13 +652,12 @@ export class Service {
     const profileDigest = await captureProfilesDigest(input.captures);
     await atomic(this.database, [
       this.activeGuard(run),
-      this.guard("(SELECT count(*) FROM ariviso_captures WHERE run_id = ? AND shard_key = ?) = ?", [
-        run.id,
-        input.key,
-        input.captures.length,
-      ]),
+      this.guard(
+        "(SELECT count(*) FROM visonaut_captures WHERE run_id = ? AND shard_key = ?) = ?",
+        [run.id, input.key, input.captures.length],
+      ),
       this.sql(
-        "UPDATE ariviso_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? AND state = 'pending'",
+        "UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? AND state = 'pending'",
         [
           input.manifestDigest,
           profileDigest,
@@ -671,7 +670,7 @@ export class Service {
         ],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_shards WHERE run_id = ? AND key = ? AND manifest_digest = ? AND state = 'complete')",
+        "EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND key = ? AND manifest_digest = ? AND state = 'complete')",
         [run.id, input.key, input.manifestDigest],
       ),
     ]);
@@ -687,10 +686,10 @@ export class Service {
       this.projectGuard(project),
       this.activeGuard(run),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND sealed_at IS NULL AND state = 'uploading')",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NULL AND state = 'uploading')",
         [run.id],
       ),
-      this.sql("UPDATE ariviso_runs SET state = 'failed' WHERE id = ?", [run.id]),
+      this.sql("UPDATE visonaut_runs SET state = 'failed' WHERE id = ?", [run.id]),
       this.audit(run, "capture-failed", { reason: input.reason.slice(0, 4096) }, input.now),
       ...this.touch(run, input.now),
     ]);
@@ -704,15 +703,15 @@ export class Service {
     }
     await atomic(this.database, [
       this.activeGuard(run),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND state = 'uploading')", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND state = 'uploading')", [
         run.id,
       ]),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_shards WHERE run_id = ? AND state != 'complete') AND EXISTS (SELECT 1 FROM ariviso_captures WHERE run_id = ?)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND state != 'complete') AND EXISTS (SELECT 1 FROM visonaut_captures WHERE run_id = ?)",
         [run.id, run.id],
       ),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_captures c JOIN ariviso_images i ON i.id = c.image_id WHERE c.run_id = ? AND i.bytes_present != 1)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_captures c JOIN visonaut_images i ON i.id = c.image_id WHERE c.run_id = ? AND i.bytes_present != 1)",
         [run.id],
       ),
       // Shards arrive independently and keep manifest-local ordinals while staging.
@@ -721,17 +720,17 @@ export class Service {
       this.sql(
         `WITH shard_order AS MATERIALIZED (
           SELECT json_extract(value, '$.key') AS shard_key, CAST(key AS INTEGER) AS ordinal
-          FROM json_each((SELECT plan_json FROM ariviso_runs WHERE id = ?), '$.shards')
+          FROM json_each((SELECT plan_json FROM visonaut_runs WHERE id = ?), '$.shards')
         ), ranked AS MATERIALIZED (
           SELECT capture.id, ROW_NUMBER() OVER (ORDER BY shard.ordinal, capture.ordinal) - 1 AS ordinal
-          FROM ariviso_captures capture JOIN shard_order shard ON shard.shard_key = capture.shard_key
+          FROM visonaut_captures capture JOIN shard_order shard ON shard.shard_key = capture.shard_key
           WHERE capture.run_id = ?
         )
-        UPDATE ariviso_captures SET ordinal = ranked.ordinal FROM ranked
-        WHERE ariviso_captures.id = ranked.id AND ariviso_captures.ordinal != ranked.ordinal`,
+        UPDATE visonaut_captures SET ordinal = ranked.ordinal FROM ranked
+        WHERE visonaut_captures.id = ranked.id AND visonaut_captures.ordinal != ranked.ordinal`,
         [run.id, run.id],
       ),
-      this.sql("UPDATE ariviso_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?", [
+      this.sql("UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?", [
         input.now,
         run.id,
       ]),
@@ -743,7 +742,7 @@ export class Service {
 
   async referenceCandidates(projectId: string) {
     return this.rows<SnapshotRow>(
-      "SELECT snapshot.* FROM ariviso_snapshots snapshot WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY snapshot.created_at DESC, snapshot.id",
+      "SELECT snapshot.* FROM visonaut_snapshots snapshot WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY snapshot.created_at DESC, snapshot.id",
       [projectId],
     );
   }
@@ -753,7 +752,7 @@ export class Service {
     const project = await this.project(run.project_id);
     if (project.fresh_setup && project.snapshot_id === null) return null;
     const snapshot = await this.sql(
-      "SELECT snapshot.* FROM ariviso_snapshots snapshot JOIN ariviso_ancestry ancestry ON ancestry.ancestor_sha = snapshot.tested_sha AND ancestry.run_id = ? WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND (? != 'main' OR snapshot.id = ?) AND NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY (snapshot.id = ?) DESC, snapshot.created_at DESC, snapshot.id LIMIT 1",
+      "SELECT snapshot.* FROM visonaut_snapshots snapshot JOIN visonaut_ancestry ancestry ON ancestry.ancestor_sha = snapshot.tested_sha AND ancestry.run_id = ? WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND (? != 'main' OR snapshot.id = ?) AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY (snapshot.id = ?) DESC, snapshot.created_at DESC, snapshot.id LIMIT 1",
       [
         run.id,
         project.id,
@@ -791,42 +790,42 @@ export class Service {
     }
     const guards = [
       this.projectGuard(project),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND baseline_revision = ?)", [
-        project.id,
-        input.expectedBaselineRevision ?? project.baseline_revision,
-      ]),
+      this.guard(
+        "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND baseline_revision = ?)",
+        [project.id, input.expectedBaselineRevision ?? project.baseline_revision],
+      ),
       historical
         ? this.guard(
-            "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND active = 0 AND revision = ?)",
+            "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 0 AND revision = ?)",
             [run.id, run.revision],
           )
         : this.activeGuard(run),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND sealed_at IS NOT NULL)", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NOT NULL)", [
         run.id,
       ]),
     ];
     if (input.referenceSnapshotId) {
       guards.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_snapshots s JOIN ariviso_ancestry a ON a.ancestor_sha = s.tested_sha AND a.run_id = ? WHERE s.id = ? AND s.project_id = ? AND s.reference_eligible = 1)",
+          "EXISTS (SELECT 1 FROM visonaut_snapshots s JOIN visonaut_ancestry a ON a.ancestor_sha = s.tested_sha AND a.run_id = ? WHERE s.id = ? AND s.project_id = ? AND s.reference_eligible = 1)",
           [run.id, input.referenceSnapshotId, project.id],
         ),
       );
       guards.push(
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images WHERE snapshot_id = ? AND copied != 1)",
+          "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id = ? AND copied != 1)",
           [input.referenceSnapshotId],
         ),
       );
       guards.push(
         this.sql(
-          "INSERT OR IGNORE INTO ariviso_pins (snapshot_id, reason, owner_id) VALUES (?, ?, ?)",
+          "INSERT OR IGNORE INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, ?, ?)",
           [input.referenceSnapshotId, historical ? "historical" : "comparison", input.id],
         ),
       );
       guards.push(
         this.sql(
-          "INSERT OR IGNORE INTO work_retention_pins (run_id, owner, reason) SELECT run_id, ?, ? FROM ariviso_snapshots WHERE id = ?",
+          "INSERT OR IGNORE INTO work_retention_pins (run_id, owner, reason) SELECT run_id, ?, ? FROM visonaut_snapshots WHERE id = ?",
           [
             historical ? historicalOwner(input.id) : `comparison:${input.id}`,
             historical ? "manual" : "comparison",
@@ -837,7 +836,7 @@ export class Service {
     } else {
       guards.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND fresh_setup = 1 AND snapshot_id IS NULL)",
+          "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND fresh_setup = 1 AND snapshot_id IS NULL)",
           [project.id],
         ),
       );
@@ -846,7 +845,7 @@ export class Service {
     // verified accepted ancestor, but cannot use a missing ancestor as empty.
     if (run.kind === "main" && !historical) {
       guards.push(
-        this.guard("EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND snapshot_id IS ?)", [
+        this.guard("EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND snapshot_id IS ?)", [
           project.id,
           input.referenceSnapshotId,
         ]),
@@ -858,35 +857,37 @@ export class Service {
           "EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live')",
           [run.id],
         ),
-        this.guard("(SELECT COUNT(*) FROM ariviso_captures WHERE run_id = ?) = ?", [
+        this.guard("(SELECT COUNT(*) FROM visonaut_captures WHERE run_id = ?) = ?", [
           run.id,
           input.expectedCaptureCount ?? 0,
         ]),
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM ariviso_captures capture LEFT JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND (image.id IS NULL OR image.bytes_present != 1 OR image.validated != 1))",
+          "NOT EXISTS (SELECT 1 FROM visonaut_captures capture LEFT JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND (image.id IS NULL OR image.bytes_present != 1 OR image.validated != 1))",
           [run.id],
         ),
         this.sql(
-          "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT ?, ?, 'manual' UNION SELECT image.run_id, ?, 'manual' FROM ariviso_captures capture JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ?",
+          "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT ?, ?, 'manual' UNION SELECT image.run_id, ?, 'manual' FROM visonaut_captures capture JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ?",
           [run.id, historicalOwner(input.id), historicalOwner(input.id), run.id],
         ),
       );
       if (run.detail_archived) {
         guards.push(
           this.guard(
-            "EXISTS (SELECT 1 FROM ariviso_historical_preparations WHERE id = ? AND run_id = ? AND lease_until > ?)",
+            "EXISTS (SELECT 1 FROM visonaut_historical_preparations WHERE id = ? AND run_id = ? AND lease_until > ?)",
             [input.id, run.id, input.now],
           ),
         );
       }
-      guards.push(this.sql("DELETE FROM ariviso_historical_preparations WHERE id = ?", [input.id]));
+      guards.push(
+        this.sql("DELETE FROM visonaut_historical_preparations WHERE id = ?", [input.id]),
+      );
     }
     const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', ci.digest, 'referenceProfileDigest', r.profile_digest, 'candidateProfileDigest', c.profile_digest, 'comparisonPolicyDigest', ?)`;
     const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', r.profile_digest, 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?)`;
     await atomic(this.database, [
       ...guards,
       this.sql(
-        "INSERT INTO ariviso_comparisons (id, run_id, reference_snapshot_id, baseline_revision, policy_digest, ordinal, created_at, purpose) SELECT ?, ?, ?, ?, ?, COALESCE(MAX(ordinal), 0) + 1, ?, ? FROM ariviso_comparisons WHERE run_id = ?",
+        "INSERT INTO visonaut_comparisons (id, run_id, reference_snapshot_id, baseline_revision, policy_digest, ordinal, created_at, purpose) SELECT ?, ?, ?, ?, ?, COALESCE(MAX(ordinal), 0) + 1, ?, ? FROM visonaut_comparisons WHERE run_id = ?",
         [
           input.id,
           run.id,
@@ -899,11 +900,11 @@ export class Service {
         ],
       ),
       this.sql(
-        `INSERT INTO ariviso_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, CASE WHEN r.id IS NULL THEN 'changed' ELSE 'pending' END FROM ariviso_captures c JOIN ariviso_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM ariviso_snapshot_images si JOIN ariviso_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN ariviso_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
+        `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, CASE WHEN r.id IS NULL THEN 'changed' ELSE 'pending' END FROM visonaut_captures c JOIN visonaut_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM visonaut_snapshot_images si JOIN visonaut_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN visonaut_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
         [input.id, input.id, project.id, project.policy_digest, input.referenceSnapshotId, run.id],
       ),
       this.sql(
-        `INSERT INTO ariviso_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome) SELECT ? || ':removed:' || r.id, ?, r.item_key, r.variant_key, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM ariviso_captures WHERE run_id = ?) + r.ordinal, r.id, NULL, ${removalTuple}, 'changed' FROM ariviso_snapshot_images si JOIN ariviso_captures r ON r.id = si.capture_id JOIN ariviso_images ri ON ri.id = r.image_id WHERE si.snapshot_id = ? AND NOT EXISTS (SELECT 1 FROM ariviso_captures c WHERE c.run_id = ? AND c.item_key = r.item_key AND c.variant_key = r.variant_key)`,
+        `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome) SELECT ? || ':removed:' || r.id, ?, r.item_key, r.variant_key, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM visonaut_captures WHERE run_id = ?) + r.ordinal, r.id, NULL, ${removalTuple}, 'changed' FROM visonaut_snapshot_images si JOIN visonaut_captures r ON r.id = si.capture_id JOIN visonaut_images ri ON ri.id = r.image_id WHERE si.snapshot_id = ? AND NOT EXISTS (SELECT 1 FROM visonaut_captures c WHERE c.run_id = ? AND c.item_key = r.item_key AND c.variant_key = r.variant_key)`,
         [
           input.id,
           input.id,
@@ -915,14 +916,14 @@ export class Service {
         ],
       ),
       this.sql(
-        "INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) SELECT id, 'compare', json_object('taskId', id), ?, ?, ?, ? FROM ariviso_comparison_rows WHERE comparison_id = ? AND outcome = 'pending'",
+        "INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) SELECT id, 'compare', json_object('taskId', id), ?, ?, ?, ? FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome = 'pending'",
         [input.maxAttempts, input.now, input.now, input.now, input.id],
       ),
       ...(historical
         ? []
         : [
             this.sql(
-              "UPDATE ariviso_runs SET comparison_id = ?, state = 'comparing' WHERE id = ?",
+              "UPDATE visonaut_runs SET comparison_id = ?, state = 'comparing' WHERE id = ?",
               [input.id, run.id],
             ),
             this.audit(
@@ -938,7 +939,7 @@ export class Service {
   }
 
   async getComparisonTask(taskId: string): Promise<ComparisonTask> {
-    const row = await this.one<ReviewRow>("SELECT * FROM ariviso_comparison_rows WHERE id = ?", [
+    const row = await this.one<ReviewRow>("SELECT * FROM visonaut_comparison_rows WHERE id = ?", [
       taskId,
     ]);
     const comparison = await this.comparison(row.comparison_id);
@@ -946,11 +947,11 @@ export class Service {
       if (!captureId) return null;
       const image = reference
         ? await this.one<ImageRow>(
-            "SELECT i.id, si.object_key, i.digest, i.width, i.height, i.bytes, i.content_type FROM ariviso_snapshot_images si JOIN ariviso_images i ON i.id = si.image_id WHERE si.snapshot_id = ? AND si.capture_id = ? AND si.copied = 1",
+            "SELECT i.id, si.object_key, i.digest, i.width, i.height, i.bytes, i.content_type FROM visonaut_snapshot_images si JOIN visonaut_images i ON i.id = si.image_id WHERE si.snapshot_id = ? AND si.capture_id = ? AND si.copied = 1",
             [comparison.reference_snapshot_id, captureId],
           )
         : await this.one<ImageRow>(
-            "SELECT i.* FROM ariviso_images i JOIN ariviso_captures c ON c.image_id = i.id WHERE c.id = ? AND i.bytes_present = 1",
+            "SELECT i.* FROM visonaut_images i JOIN visonaut_captures c ON c.image_id = i.id WHERE c.id = ? AND i.bytes_present = 1",
             [captureId],
           );
       return {
@@ -964,7 +965,7 @@ export class Service {
       };
     };
     const policyRecord = await this.one<{ policy_json: string }>(
-      "SELECT policy_json FROM ariviso_policies WHERE digest = ?",
+      "SELECT policy_json FROM visonaut_policies WHERE digest = ?",
       [comparison.policy_digest],
     );
     const policy = JSON.parse(policyRecord.policy_json) as ComparisonPolicy;
@@ -981,7 +982,7 @@ export class Service {
 
   async getComparisonTaskState(taskId: string) {
     const state = await this.sql(
-      "SELECT run.active, run.comparison_id, row.comparison_id AS row_comparison_id, comparison.purpose, comparison.state AS comparison_state FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id = row.comparison_id JOIN ariviso_runs run ON run.id = comparison.run_id WHERE row.id = ?",
+      "SELECT run.active, run.comparison_id, row.comparison_id AS row_comparison_id, comparison.purpose, comparison.state AS comparison_state FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id JOIN visonaut_runs run ON run.id = comparison.run_id WHERE row.id = ?",
       [taskId],
     ).first<{
       active: number;
@@ -992,7 +993,7 @@ export class Service {
     }>();
     if (!state) {
       const archived = await this.sql(
-        "SELECT 1 FROM ariviso_comparisons comparison JOIN ariviso_runs run ON run.id=comparison.run_id WHERE (run.detail_archived=1 OR EXISTS (SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND substr(?,1,length(comparison.id)+1)=comparison.id || ':' LIMIT 1",
+        "SELECT 1 FROM visonaut_comparisons comparison JOIN visonaut_runs run ON run.id=comparison.run_id WHERE (run.detail_archived=1 OR EXISTS (SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND substr(?,1,length(comparison.id)+1)=comparison.id || ':' LIMIT 1",
         [taskId],
       ).first();
       if (archived) return { state: "superseded" as const };
@@ -1056,7 +1057,7 @@ export class Service {
     now: number;
     artifacts?: Array<ValidatedImage & { role: "thumbnail" | "mask" }>;
   }) {
-    const row = await this.one<ReviewRow>("SELECT * FROM ariviso_comparison_rows WHERE id = ?", [
+    const row = await this.one<ReviewRow>("SELECT * FROM visonaut_comparison_rows WHERE id = ?", [
       input.taskId,
     ]);
     const tuple = JSON.parse(row.tuple_json) as {
@@ -1091,7 +1092,7 @@ export class Service {
       }
       artifactStatements.push(
         this.sql(
-          "INSERT INTO ariviso_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
+          "INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
           [
             artifact.id,
             artifact.runId,
@@ -1107,7 +1108,7 @@ export class Service {
       );
       artifactStatements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND content_type = ? AND bytes = ? AND width = ? AND height = ? AND role = ? AND bytes_present = 1)",
+          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND content_type = ? AND bytes = ? AND width = ? AND height = ? AND role = ? AND bytes_present = 1)",
           [
             artifact.id,
             artifact.runId,
@@ -1125,7 +1126,7 @@ export class Service {
     if (input.result.maskImageId) {
       artifactStatements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_images WHERE id = ? AND run_id = ? AND role = 'mask' AND bytes_present = 1)",
+          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND role = 'mask' AND bytes_present = 1)",
           [input.result.maskImageId, run.id],
         ),
       );
@@ -1133,7 +1134,7 @@ export class Service {
     if (input.result.thumbnailImageId) {
       artifactStatements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_images WHERE id = ? AND run_id = ? AND role = 'thumbnail' AND bytes_present = 1)",
+          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND role = 'thumbnail' AND bytes_present = 1)",
           [input.result.thumbnailImageId, run.id],
         ),
       );
@@ -1148,21 +1149,21 @@ export class Service {
         ? [historicalGuard(this.database, comparison.id)]
         : [
             this.activeGuard(run),
-            this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND comparison_id = ?)", [
+            this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND comparison_id = ?)", [
               run.id,
               comparison.id,
             ]),
           ]),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_comparisons WHERE id = ? AND state = 'comparing')",
+        "EXISTS (SELECT 1 FROM visonaut_comparisons WHERE id = ? AND state = 'comparing')",
         [comparison.id],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_comparison_rows WHERE id = ? AND result_json IS NULL)",
+        "EXISTS (SELECT 1 FROM visonaut_comparison_rows WHERE id = ? AND result_json IS NULL)",
         [row.id],
       ),
       ...artifactStatements,
-      this.sql("UPDATE ariviso_comparison_rows SET outcome = ?, result_json = ? WHERE id = ?", [
+      this.sql("UPDATE visonaut_comparison_rows SET outcome = ?, result_json = ? WHERE id = ?", [
         result.outcome,
         JSON.stringify(result),
         row.id,
@@ -1183,32 +1184,32 @@ export class Service {
       AND json_extract(decision.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
       AND json_extract(decision.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
       AND decision.tuple_json = row.tuple_json
-      AND EXISTS (SELECT 1 FROM ariviso_comparison_rows source_row
-        JOIN ariviso_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
-        JOIN ariviso_runs source_run ON source_run.id = source_comparison.run_id
-        JOIN ariviso_comparisons target_comparison ON target_comparison.id = row.comparison_id
-        JOIN ariviso_runs target_run ON target_run.id = target_comparison.run_id
+      AND EXISTS (SELECT 1 FROM visonaut_comparison_rows source_row
+        JOIN visonaut_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
+        JOIN visonaut_runs source_run ON source_run.id = source_comparison.run_id
+        JOIN visonaut_comparisons target_comparison ON target_comparison.id = row.comparison_id
+        JOIN visonaut_runs target_run ON target_run.id = target_comparison.run_id
         WHERE source_row.id = decision.row_id AND source_row.decision_id = decision.id
         AND source_run.project_id = target_run.project_id
-        AND (source_run.id = target_run.id OR EXISTS (SELECT 1 FROM ariviso_lineage lineage
+        AND (source_run.id = target_run.id OR EXISTS (SELECT 1 FROM visonaut_lineage lineage
           WHERE lineage.source_run_id = source_run.id AND lineage.target_run_id = target_run.id))
-        AND NOT EXISTS (SELECT 1 FROM ariviso_decision_replacements replacement
-          JOIN ariviso_decisions successor ON successor.id = replacement.replacement_decision_id
+        AND NOT EXISTS (SELECT 1 FROM visonaut_decision_replacements replacement
+          JOIN visonaut_decisions successor ON successor.id = replacement.replacement_decision_id
           WHERE replacement.source_decision_id = decision.id AND successor.revoked = 0
           AND (replacement.scope = 'shared' OR replacement.scope_run_id = target_run.id
-            OR EXISTS (SELECT 1 FROM ariviso_lineage lineage
+            OR EXISTS (SELECT 1 FROM visonaut_lineage lineage
               WHERE lineage.source_run_id = replacement.scope_run_id AND lineage.target_run_id = target_run.id))))`;
   }
 
   private eligibleAcceptanceSql() {
-    return `EXISTS (SELECT 1 FROM ariviso_decisions decision
+    return `EXISTS (SELECT 1 FROM visonaut_decisions decision
       WHERE decision.id = COALESCE(row.source_decision_id, row.decision_id)
       AND ${this.acceptanceValiditySql()})`;
   }
 
   async eligibleApprovalRowIds(comparisonId: string) {
     const rows = await this.rows<{ id: string }>(
-      `SELECT row.id FROM ariviso_comparison_rows row WHERE row.comparison_id = ? AND row.outcome = 'changed' AND ${this.eligibleAcceptanceSql()} ORDER BY row.ordinal, row.id`,
+      `SELECT row.id FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND row.outcome = 'changed' AND ${this.eligibleAcceptanceSql()} ORDER BY row.ordinal, row.id`,
       [comparisonId],
     );
     return rows.map((row) => row.id);
@@ -1216,7 +1217,7 @@ export class Service {
 
   private readyGuard(comparisonId: string) {
     return this.guard(
-      `NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.comparison_id = ? AND (row.outcome NOT IN ('unchanged', 'changed') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()})))`,
+      `NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND (row.outcome NOT IN ('unchanged', 'changed') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()})))`,
       [comparisonId],
     );
   }
@@ -1225,9 +1226,9 @@ export class Service {
     // Rollback can restore a baseline without a current promotion record.
     // Check the final transaction state, including indirect source changes.
     return this.guard(
-      `NOT EXISTS (SELECT 1 FROM ariviso_projects project
-        JOIN ariviso_snapshots snapshot ON snapshot.id = project.snapshot_id
-        JOIN ariviso_comparison_rows row ON row.comparison_id = snapshot.comparison_id
+      `NOT EXISTS (SELECT 1 FROM visonaut_projects project
+        JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id
+        JOIN visonaut_comparison_rows row ON row.comparison_id = snapshot.comparison_id
         WHERE project.id = ? AND row.outcome = 'changed'
         AND NOT ${this.eligibleAcceptanceSql()})`,
       [projectId],
@@ -1251,37 +1252,37 @@ export class Service {
       return this.status(run.id);
     }
     const pending = await this.sql(
-      "SELECT 1 AS found FROM ariviso_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error') LIMIT 1",
+      "SELECT 1 AS found FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error') LIMIT 1",
       [comparison.id],
     ).first();
     if (pending) {
       throw new IncompleteError("Required comparisons have not completed.");
     }
     // Set-based statements keep a 10,580-image run bounded in request size.
-    const reuse = `SELECT decision.id FROM ariviso_decisions decision WHERE ${this.acceptanceValiditySql()} ORDER BY decision.created_at, decision.id LIMIT 1`;
+    const reuse = `SELECT decision.id FROM visonaut_decisions decision WHERE ${this.acceptanceValiditySql()} ORDER BY decision.created_at, decision.id LIMIT 1`;
     const automaticKind = `CASE WHEN row.reference_capture_id IS NULL THEN 'introduction' ELSE 'removal' END`;
-    const eligibleAutomatic = `row.comparison_id = ? AND row.outcome = 'changed' AND row.source_decision_id IS NULL AND row.decision_id IS NULL AND (row.reference_capture_id IS NULL OR row.candidate_capture_id IS NULL) AND NOT EXISTS (SELECT 1 FROM ariviso_reservations reservation JOIN ariviso_decisions decision ON decision.id = reservation.decision_id JOIN ariviso_comparison_rows reserved_row ON reserved_row.id = decision.row_id JOIN ariviso_comparisons reserved_comparison ON reserved_comparison.id = reserved_row.comparison_id WHERE reservation.project_id = ? AND reservation.item_key = row.item_key AND reservation.variant_key = row.variant_key AND reservation.kind = ${automaticKind} AND (reservation.lineage_key = ? OR EXISTS (SELECT 1 FROM ariviso_lineage l WHERE l.source_run_id = reserved_comparison.run_id AND l.target_run_id = ?))) AND (row.reference_capture_id IS NOT NULL OR NOT EXISTS (SELECT 1 FROM ariviso_identity_history h WHERE h.project_id = ? AND h.item_key = row.item_key AND h.variant_key = row.variant_key AND (h.lineage_key = ? OR h.lineage_key = 'main')))`;
+    const eligibleAutomatic = `row.comparison_id = ? AND row.outcome = 'changed' AND row.source_decision_id IS NULL AND row.decision_id IS NULL AND (row.reference_capture_id IS NULL OR row.candidate_capture_id IS NULL) AND NOT EXISTS (SELECT 1 FROM visonaut_reservations reservation JOIN visonaut_decisions decision ON decision.id = reservation.decision_id JOIN visonaut_comparison_rows reserved_row ON reserved_row.id = decision.row_id JOIN visonaut_comparisons reserved_comparison ON reserved_comparison.id = reserved_row.comparison_id WHERE reservation.project_id = ? AND reservation.item_key = row.item_key AND reservation.variant_key = row.variant_key AND reservation.kind = ${automaticKind} AND (reservation.lineage_key = ? OR EXISTS (SELECT 1 FROM visonaut_lineage l WHERE l.source_run_id = reserved_comparison.run_id AND l.target_run_id = ?))) AND (row.reference_capture_id IS NOT NULL OR NOT EXISTS (SELECT 1 FROM visonaut_identity_history h WHERE h.project_id = ? AND h.item_key = row.item_key AND h.variant_key = row.variant_key AND (h.lineage_key = ? OR h.lineage_key = 'main')))`;
     const statements = [
       this.projectGuard(project),
       this.activeGuard(run),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND comparison_id = ?)", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND comparison_id = ?)", [
         run.id,
         comparison.id,
       ]),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_comparisons WHERE id = ? AND state = 'comparing')",
+        "EXISTS (SELECT 1 FROM visonaut_comparisons WHERE id = ? AND state = 'comparing')",
         [comparison.id],
       ),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error'))",
+        "NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error'))",
         [comparison.id],
       ),
       this.sql(
-        `UPDATE ariviso_comparison_rows AS row SET source_decision_id = (${reuse}) WHERE row.comparison_id = ? AND row.outcome = 'changed'`,
+        `UPDATE visonaut_comparison_rows AS row SET source_decision_id = (${reuse}) WHERE row.comparison_id = ? AND row.outcome = 'changed'`,
         [comparison.id],
       ),
       this.sql(
-        `INSERT INTO ariviso_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM ariviso_comparison_rows row WHERE ${eligibleAutomatic}`,
+        `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM visonaut_comparison_rows row WHERE ${eligibleAutomatic}`,
         [
           input.now,
           comparison.id,
@@ -1293,24 +1294,26 @@ export class Service {
         ],
       ),
       this.sql(
-        "UPDATE ariviso_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM ariviso_decisions WHERE id = 'automatic:' || ariviso_comparison_rows.id)",
+        "UPDATE visonaut_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = 'automatic:' || visonaut_comparison_rows.id)",
         [comparison.id],
       ),
       this.sql(
-        `INSERT INTO ariviso_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, ${automaticKind}, row.decision_id FROM ariviso_comparison_rows row WHERE row.comparison_id = ? AND row.decision_id IS NOT NULL`,
+        `INSERT INTO visonaut_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, ${automaticKind}, row.decision_id FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND row.decision_id IS NOT NULL`,
         [project.id, run.lineage_key, comparison.id],
       ),
     ];
     statements.push(
       this.sql(
-        "INSERT OR IGNORE INTO ariviso_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM ariviso_captures WHERE run_id = ?",
+        "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ?",
         [project.id, run.lineage_key, run.id],
       ),
     );
     statements.push(
-      this.sql("UPDATE ariviso_comparisons SET state = 'ready' WHERE id = ?", [comparison.id]),
+      this.sql("UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?", [comparison.id]),
     );
-    statements.push(this.sql("UPDATE ariviso_runs SET state = 'reviewing' WHERE id = ?", [run.id]));
+    statements.push(
+      this.sql("UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?", [run.id]),
+    );
     statements.push(
       this.audit(run, "comparison-ready", { comparisonId: comparison.id }, input.now),
     );
@@ -1322,7 +1325,7 @@ export class Service {
   async reconcileComparisons(input: { now: number; limit: number }) {
     await expireHistoricalPreparations(this.database, input.now);
     const candidates = await this.rows<{ id: string }>(
-      "SELECT c.id FROM ariviso_comparisons c JOIN ariviso_runs r ON r.id = c.run_id WHERE c.state = 'comparing' AND ((c.purpose = 'review' AND r.active = 1 AND r.comparison_id = c.id AND NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome IN ('pending', 'error'))) OR (c.purpose = 'historical' AND (NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome = 'pending') OR EXISTS (SELECT 1 FROM ariviso_comparison_rows row JOIN work_tasks task ON task.id = row.id WHERE row.comparison_id = c.id AND task.state = 'dead') OR EXISTS (SELECT 1 FROM ariviso_snapshots snapshot WHERE snapshot.id = c.reference_snapshot_id AND snapshot.reference_eligible = 0)))) ORDER BY c.created_at, c.id LIMIT ?",
+      "SELECT c.id FROM visonaut_comparisons c JOIN visonaut_runs r ON r.id = c.run_id WHERE c.state = 'comparing' AND ((c.purpose = 'review' AND r.active = 1 AND r.comparison_id = c.id AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome IN ('pending', 'error'))) OR (c.purpose = 'historical' AND (NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome = 'pending') OR EXISTS (SELECT 1 FROM visonaut_comparison_rows row JOIN work_tasks task ON task.id = row.id WHERE row.comparison_id = c.id AND task.state = 'dead') OR EXISTS (SELECT 1 FROM visonaut_snapshots snapshot WHERE snapshot.id = c.reference_snapshot_id AND snapshot.reference_eligible = 0)))) ORDER BY c.created_at, c.id LIMIT ?",
       [input.limit],
     );
     const completed: string[] = [];
@@ -1348,7 +1351,7 @@ export class Service {
     }
     if (run.state === "failed") {
       const failures = await this.rows<{ id: string; last_error: string | null }>(
-        "SELECT id, json_extract(detail_json, '$.reason') AS last_error FROM ariviso_audit WHERE run_id = ? AND action = 'capture-failed' ORDER BY created_at DESC, id LIMIT 1",
+        "SELECT id, json_extract(detail_json, '$.reason') AS last_error FROM visonaut_audit WHERE run_id = ? AND action = 'capture-failed' ORDER BY created_at DESC, id LIMIT 1",
         [run.id],
       );
       return { run, status: "failed" as const, pending: 0, rejected: 0, failures };
@@ -1361,7 +1364,7 @@ export class Service {
       return { run, comparison, status: "needs-recompare" as const, pending: 0, rejected: 0 };
     }
     const failures = await this.rows<{ id: string; last_error: string | null }>(
-      "SELECT task.id, task.last_error FROM work_tasks task JOIN ariviso_comparison_rows row ON row.id = task.id WHERE row.comparison_id = ? AND task.state = 'dead' ORDER BY task.id LIMIT 20",
+      "SELECT task.id, task.last_error FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id = task.id WHERE row.comparison_id = ? AND task.state = 'dead' ORDER BY task.id LIMIT 20",
       [comparison.id],
     );
     if (failures.length > 0) {
@@ -1371,13 +1374,13 @@ export class Service {
       return { run, comparison, status: "comparing" as const, pending: 0, rejected: 0 };
     }
     const counts = await this.one<{ pending: number; rejected: number }>(
-      `SELECT COALESCE(SUM(CASE WHEN row.outcome NOT IN ('changed', 'unchanged') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()}) THEN 1 ELSE 0 END), 0) AS pending, COALESCE(SUM(CASE WHEN decision.verdict = 'rejected' AND decision.revoked = 0 THEN 1 ELSE 0 END), 0) AS rejected FROM ariviso_comparison_rows row LEFT JOIN ariviso_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
+      `SELECT COALESCE(SUM(CASE WHEN row.outcome NOT IN ('changed', 'unchanged') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()}) THEN 1 ELSE 0 END), 0) AS pending, COALESCE(SUM(CASE WHEN decision.verdict = 'rejected' AND decision.revoked = 0 THEN 1 ELSE 0 END), 0) AS rejected FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
       [comparison.id],
     );
     const project = await this.project(run.project_id);
     const currentPromotion = project.promotion_id
       ? await this.sql(
-          "SELECT 1 AS found FROM ariviso_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
+          "SELECT 1 AS found FROM visonaut_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
           [project.promotion_id, comparison.id],
         ).first()
       : null;
@@ -1427,11 +1430,11 @@ export class Service {
       this.projectGuard(project),
       this.activeGuard(run),
       this.sql(
-        "INSERT INTO ariviso_checks (id, project_id, external_run_id) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING",
+        "INSERT INTO visonaut_checks (id, project_id, external_run_id) VALUES (?, ?, ?) ON CONFLICT(id) DO NOTHING",
         [input.checkId, project.id, run.external_run_id],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_checks WHERE id = ? AND project_id = ? AND external_run_id = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_checks WHERE id = ? AND project_id = ? AND external_run_id = ?)",
         [input.checkId, project.id, run.external_run_id],
       ),
       ...statusIntentStatements(this.database, {
@@ -1447,7 +1450,7 @@ export class Service {
         now: input.now,
       }),
       this.sql(
-        "UPDATE ariviso_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ?",
+        "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ?",
         [input.now, run.id, run.revision],
       ),
     ]);
@@ -1457,7 +1460,7 @@ export class Service {
   /** Use alongside the delivery lease check immediately before sending to GitHub. */
   async isStatusIntentCurrent(intent: StatusDelivery) {
     const current = await this.sql(
-      "SELECT 1 AS found FROM ariviso_runs run JOIN ariviso_projects project ON project.id = run.project_id LEFT JOIN ariviso_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.attempt = ? AND project.revision = ? AND COALESCE(comparison.ordinal, 0) = ?",
+      "SELECT 1 AS found FROM visonaut_runs run JOIN visonaut_projects project ON project.id = run.project_id LEFT JOIN visonaut_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.attempt = ? AND project.revision = ? AND COALESCE(comparison.ordinal, 0) = ?",
       [intent.run_id, intent.attempt, intent.source_revision, intent.comparison_revision],
     ).first();
     return current !== null;
@@ -1470,11 +1473,11 @@ export class Service {
     await atomic(this.database, [
       this.projectGuard(project),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_projects project JOIN ariviso_snapshots snapshot ON snapshot.id = project.snapshot_id WHERE snapshot.run_id = ?)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id WHERE snapshot.run_id = ?)",
         [run.id],
       ),
       this.sql(
-        "UPDATE ariviso_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
+        "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
         [input.now, run.id],
       ),
       this.sql("UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id = ?", [
@@ -1491,13 +1494,13 @@ export class Service {
   }
 
   private async commandReplay(commandId: string, request: string) {
-    const command = await this.sql("SELECT * FROM ariviso_commands WHERE id = ?", [
+    const command = await this.sql("SELECT * FROM visonaut_commands WHERE id = ?", [
       commandId,
     ]).first<CommandRow>();
     if (!command) return null;
     if (command.request_digest) {
       const archive = await this.sql(
-        "SELECT archive.run_id FROM operations_run_archives archive JOIN ariviso_comparisons comparison ON comparison.run_id=archive.run_id WHERE comparison.id=? AND archive.state='ready'",
+        "SELECT archive.run_id FROM operations_run_archives archive JOIN visonaut_comparisons comparison ON comparison.run_id=archive.run_id WHERE comparison.id=? AND archive.state='ready'",
         [command.comparison_id],
       ).first<{ run_id: string }>();
       if (archive) {
@@ -1516,11 +1519,11 @@ export class Service {
   private invalidateDependents(project: ProjectRow, now: number): Statement[] {
     return [
       this.sql(
-        "UPDATE ariviso_runs SET revision = revision + 1 WHERE project_id = ? AND active = 1",
+        "UPDATE visonaut_runs SET revision = revision + 1 WHERE project_id = ? AND active = 1",
         [project.id],
       ),
       this.sql(
-        "INSERT INTO ariviso_status_outbox (id, run_id, run_revision, created_at) SELECT ? || ':' || id, id, revision, ? FROM ariviso_runs WHERE project_id = ? AND active = 1",
+        "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ? || ':' || id, id, revision, ? FROM visonaut_runs WHERE project_id = ? AND active = 1",
         [crypto.randomUUID(), now, project.id],
       ),
     ];
@@ -1529,31 +1532,31 @@ export class Service {
   private rollbackStatements(project: ProjectRow, promotion: PromotionRow, now: number) {
     return [
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND promotion_id = ? AND baseline_revision = ? AND snapshot_id = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND promotion_id = ? AND baseline_revision = ? AND snapshot_id = ?)",
         [project.id, promotion.id, project.baseline_revision, promotion.snapshot_id],
       ),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images WHERE snapshot_id IN (?, ?) AND copied != 1)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id IN (?, ?) AND copied != 1)",
         [promotion.snapshot_id, promotion.previous_snapshot_id],
       ),
       this.sql(
-        "UPDATE ariviso_projects SET snapshot_id = ?, promotion_id = NULL, baseline_revision = baseline_revision + 1, fresh_setup = CASE WHEN ? IS NULL THEN 1 ELSE 0 END WHERE id = ?",
+        "UPDATE visonaut_projects SET snapshot_id = ?, promotion_id = NULL, baseline_revision = baseline_revision + 1, fresh_setup = CASE WHEN ? IS NULL THEN 1 ELSE 0 END WHERE id = ?",
         [promotion.previous_snapshot_id, promotion.previous_snapshot_id, project.id],
       ),
       this.sql(
-        "UPDATE ariviso_snapshots SET reference_eligible = 0, state = 'revoked' WHERE id = ?",
+        "UPDATE visonaut_snapshots SET reference_eligible = 0, state = 'revoked' WHERE id = ?",
         [promotion.snapshot_id],
       ),
-      this.sql("UPDATE ariviso_promotions SET revoked = 1 WHERE id = ?", [promotion.id]),
+      this.sql("UPDATE visonaut_promotions SET revoked = 1 WHERE id = ?", [promotion.id]),
       this.sql(
-        "UPDATE ariviso_comparisons SET state = 'invalidated' WHERE reference_snapshot_id = ? AND id != ? AND purpose = 'review'",
+        "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE reference_snapshot_id = ? AND id != ? AND purpose = 'review'",
         [promotion.snapshot_id, promotion.comparison_id],
       ),
-      this.sql("UPDATE ariviso_runs SET state = 'reviewing' WHERE comparison_id = ?", [
+      this.sql("UPDATE visonaut_runs SET state = 'reviewing' WHERE comparison_id = ?", [
         promotion.comparison_id,
       ]),
       this.sql(
-        "INSERT INTO ariviso_status_outbox (id, run_id, run_revision, created_at) SELECT ? || ':' || id, id, revision, ? FROM ariviso_runs WHERE project_id = ? AND active = 1",
+        "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ? || ':' || id, id, revision, ? FROM visonaut_runs WHERE project_id = ? AND active = 1",
         [crypto.randomUUID(), now, project.id],
       ),
     ];
@@ -1601,7 +1604,7 @@ export class Service {
       }
     }
     const acceptedHistory = await this.sql(
-      "SELECT * FROM ariviso_promotions WHERE comparison_id = ? ORDER BY created_at DESC LIMIT 1",
+      "SELECT * FROM visonaut_promotions WHERE comparison_id = ? ORDER BY created_at DESC LIMIT 1",
       [comparison.id],
     ).first<PromotionRow>();
     if (acceptedHistory && !acceptedHistory.revoked && input.verdict === "approved") {
@@ -1643,7 +1646,9 @@ export class Service {
     for (const row of selected) {
       const effectiveId = row.source_decision_id ?? row.decision_id;
       const effective = effectiveId
-        ? await this.one<DecisionRow>("SELECT * FROM ariviso_decisions WHERE id = ?", [effectiveId])
+        ? await this.one<DecisionRow>("SELECT * FROM visonaut_decisions WHERE id = ?", [
+            effectiveId,
+          ])
         : null;
       if (rollback && effective?.kind === "automatic") {
         throw new ConflictError(
@@ -1653,7 +1658,7 @@ export class Service {
       }
       statements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_comparison_rows WHERE id = ? AND comparison_id = ? AND decision_revision = ?)",
+          "EXISTS (SELECT 1 FROM visonaut_comparison_rows WHERE id = ? AND comparison_id = ? AND decision_revision = ?)",
           [row.id, comparison.id, row.decision_revision],
         ),
       );
@@ -1665,11 +1670,11 @@ export class Service {
       });
       const decisionId = crypto.randomUUID();
       statements.push(
-        this.sql("UPDATE ariviso_decisions SET revoked = 1 WHERE id = ?", [row.decision_id]),
+        this.sql("UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?", [row.decision_id]),
       );
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)",
+          "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)",
           [
             decisionId,
             row.id,
@@ -1685,7 +1690,7 @@ export class Service {
       if (row.source_decision_id) {
         statements.push(
           this.sql(
-            "INSERT INTO ariviso_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) VALUES (?, ?, ?, ?)",
+            "INSERT INTO visonaut_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) VALUES (?, ?, ?, ?)",
             [
               row.source_decision_id,
               decisionId,
@@ -1699,13 +1704,13 @@ export class Service {
       // Undo restores the old decision, so its original edges become active.
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) SELECT source_decision_id, ?, scope, scope_run_id FROM ariviso_decision_replacements WHERE replacement_decision_id = ?",
+          "INSERT INTO visonaut_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) SELECT source_decision_id, ?, scope, scope_run_id FROM visonaut_decision_replacements WHERE replacement_decision_id = ?",
           [decisionId, effectiveId],
         ),
       );
       statements.push(
         this.sql(
-          "UPDATE ariviso_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?",
+          "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?",
           [decisionId, row.id],
         ),
       );
@@ -1716,7 +1721,7 @@ export class Service {
     }
     statements.push(
       this.sql(
-        "INSERT INTO ariviso_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           input.commandId,
           request,
@@ -1769,7 +1774,7 @@ export class Service {
     if (replay) {
       return replay;
     }
-    const command = await this.one<CommandRow>("SELECT * FROM ariviso_commands WHERE id = ?", [
+    const command = await this.one<CommandRow>("SELECT * FROM visonaut_commands WHERE id = ?", [
       input.commandId,
     ]);
     if (
@@ -1792,12 +1797,12 @@ export class Service {
       throw new ConflictError("The command no longer targets the active comparison.");
     }
     const promotion = project.promotion_id
-      ? await this.one<PromotionRow>("SELECT * FROM ariviso_promotions WHERE id = ?", [
+      ? await this.one<PromotionRow>("SELECT * FROM visonaut_promotions WHERE id = ?", [
           project.promotion_id,
         ])
       : null;
     const historical = await this.sql(
-      "SELECT 1 AS found FROM ariviso_promotions WHERE comparison_id = ? LIMIT 1",
+      "SELECT 1 AS found FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1",
       [comparison.id],
     ).first();
     if (historical && !previous.rollback && promotion?.comparison_id !== comparison.id) {
@@ -1817,7 +1822,7 @@ export class Service {
     const statements = [
       this.projectGuard(project),
       this.reviewGuard(run, comparison.id),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_commands WHERE id = ? AND undone_by IS NULL)", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_commands WHERE id = ? AND undone_by IS NULL)", [
         command.id,
       ]),
     ];
@@ -1835,22 +1840,22 @@ export class Service {
       }
       statements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_comparison_rows WHERE id = ? AND decision_revision = ?)",
+          "EXISTS (SELECT 1 FROM visonaut_comparison_rows WHERE id = ? AND decision_revision = ?)",
           [target.id, target.expectedRevision],
         ),
       );
       statements.push(
         this.sql(
-          "UPDATE ariviso_decisions SET revoked = 1 WHERE id = (SELECT decision_id FROM ariviso_comparison_rows WHERE id = ?)",
+          "UPDATE visonaut_decisions SET revoked = 1 WHERE id = (SELECT decision_id FROM visonaut_comparison_rows WHERE id = ?)",
           [target.id],
         ),
       );
       statements.push(
-        this.sql("UPDATE ariviso_decisions SET revoked = 0 WHERE id = ?", [prior.decisionId]),
+        this.sql("UPDATE visonaut_decisions SET revoked = 0 WHERE id = ?", [prior.decisionId]),
       );
       statements.push(
         this.sql(
-          "UPDATE ariviso_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = ? WHERE id = ?",
+          "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = ? WHERE id = ?",
           [prior.decisionId, prior.sourceDecisionId, target.id],
         ),
       );
@@ -1863,19 +1868,19 @@ export class Service {
       statements.push(this.readyGuard(comparison.id));
       statements.push(
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images WHERE snapshot_id IN (?, ?) AND copied != 1)",
+          "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id IN (?, ?) AND copied != 1)",
           [restoring.snapshot_id, restoring.previous_snapshot_id],
         ),
       );
       statements.push(
         this.sql(
-          "UPDATE ariviso_snapshots SET reference_eligible = 1, state = 'accepted' WHERE id = ?",
+          "UPDATE visonaut_snapshots SET reference_eligible = 1, state = 'accepted' WHERE id = ?",
           [restoring.snapshot_id],
         ),
       );
       statements.push(
         this.sql(
-          "INSERT INTO ariviso_promotions (id, project_id, snapshot_id, previous_snapshot_id, comparison_id, baseline_revision, command_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+          "INSERT INTO visonaut_promotions (id, project_id, snapshot_id, previous_snapshot_id, comparison_id, baseline_revision, command_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
           [
             result.promotionId,
             project.id,
@@ -1890,23 +1895,23 @@ export class Service {
       );
       statements.push(
         this.sql(
-          "UPDATE ariviso_projects SET snapshot_id = ?, promotion_id = ?, baseline_revision = baseline_revision + 1, fresh_setup = 0 WHERE id = ?",
+          "UPDATE visonaut_projects SET snapshot_id = ?, promotion_id = ?, baseline_revision = baseline_revision + 1, fresh_setup = 0 WHERE id = ?",
           [restoring.snapshot_id, result.promotionId, project.id],
         ),
       );
       statements.push(
-        this.sql("UPDATE ariviso_runs SET state = 'accepted' WHERE id = ?", [run.id]),
+        this.sql("UPDATE visonaut_runs SET state = 'accepted' WHERE id = ?", [run.id]),
       );
     }
     statements.push(
-      this.sql("UPDATE ariviso_commands SET undone_by = ? WHERE id = ?", [
+      this.sql("UPDATE visonaut_commands SET undone_by = ? WHERE id = ?", [
         input.undoCommandId,
         command.id,
       ]),
     );
     statements.push(
       this.sql(
-        "INSERT INTO ariviso_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)",
+        "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)",
         [
           input.undoCommandId,
           request,
@@ -1952,7 +1957,7 @@ export class Service {
     now: number;
     copyLimit?: number;
   }) {
-    const existing = await this.sql("SELECT * FROM ariviso_snapshots WHERE id = ?", [
+    const existing = await this.sql("SELECT * FROM visonaut_snapshots WHERE id = ?", [
       input.snapshotId,
     ]).first<SnapshotRow>();
     if (existing) {
@@ -1976,15 +1981,15 @@ export class Service {
       this.activeGuard(run),
       this.readyGuard(comparison.id),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_comparisons WHERE id = ? AND state = 'ready' AND baseline_revision = ? AND reference_snapshot_id IS ?)",
+        "EXISTS (SELECT 1 FROM visonaut_comparisons WHERE id = ? AND state = 'ready' AND baseline_revision = ? AND reference_snapshot_id IS ?)",
         [comparison.id, project.baseline_revision, project.snapshot_id],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND comparison_id = ? AND sealed_at IS NOT NULL)",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND comparison_id = ? AND sealed_at IS NOT NULL)",
         [run.id, comparison.id],
       ),
       this.sql(
-        "INSERT INTO ariviso_snapshots (id, project_id, run_id, comparison_id, tested_sha, prefix, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, prefix, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         [
           input.snapshotId,
           project.id,
@@ -1996,11 +2001,11 @@ export class Service {
         ],
       ),
       this.sql(
-        "INSERT INTO ariviso_snapshot_images (snapshot_id, capture_id, image_id, object_key, digest) SELECT ?, c.id, i.id, ? || '/' || i.id, i.digest FROM ariviso_captures c JOIN ariviso_images i ON i.id = c.image_id WHERE c.run_id = ?",
+        "INSERT INTO visonaut_snapshot_images (snapshot_id, capture_id, image_id, object_key, digest) SELECT ?, c.id, i.id, ? || '/' || i.id, i.digest FROM visonaut_captures c JOIN visonaut_images i ON i.id = c.image_id WHERE c.run_id = ?",
         [input.snapshotId, input.prefix, run.id],
       ),
       this.sql(
-        "INSERT INTO ariviso_pins (snapshot_id, reason, owner_id) VALUES (?, 'promotion', ?)",
+        "INSERT INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, 'promotion', ?)",
         [input.snapshotId, input.snapshotId],
       ),
       this.sql(
@@ -2012,7 +2017,7 @@ export class Service {
   }
 
   async cancelPreparedPromotion(input: { snapshotId: string; now: number }) {
-    const snapshot = await this.one<SnapshotRow>("SELECT * FROM ariviso_snapshots WHERE id = ?", [
+    const snapshot = await this.one<SnapshotRow>("SELECT * FROM visonaut_snapshots WHERE id = ?", [
       input.snapshotId,
     ]);
     if (snapshot.state === "revoked") return;
@@ -2021,15 +2026,15 @@ export class Service {
     await atomic(this.database, [
       this.projectGuard(project),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_snapshots WHERE id = ? AND state = 'copying' AND reference_eligible = 0)",
+        "EXISTS (SELECT 1 FROM visonaut_snapshots WHERE id = ? AND state = 'copying' AND reference_eligible = 0)",
         [snapshot.id],
       ),
-      this.guard("NOT EXISTS (SELECT 1 FROM ariviso_promotions WHERE snapshot_id = ?)", [
+      this.guard("NOT EXISTS (SELECT 1 FROM visonaut_promotions WHERE snapshot_id = ?)", [
         snapshot.id,
       ]),
-      this.sql("UPDATE ariviso_snapshots SET state = 'revoked' WHERE id = ?", [snapshot.id]),
+      this.sql("UPDATE visonaut_snapshots SET state = 'revoked' WHERE id = ?", [snapshot.id]),
       this.sql(
-        "DELETE FROM ariviso_pins WHERE snapshot_id = ? AND reason = 'promotion' AND owner_id = ?",
+        "DELETE FROM visonaut_pins WHERE snapshot_id = ? AND reason = 'promotion' AND owner_id = ?",
         [snapshot.id, snapshot.id],
       ),
       this.sql(
@@ -2055,7 +2060,7 @@ export class Service {
       bytes: number;
       content_type: "image/png" | "image/webp";
     }>(
-      "SELECT si.*, i.object_key AS source_object_key, i.bytes, i.content_type FROM ariviso_snapshot_images si JOIN ariviso_images i ON i.id = si.image_id WHERE si.snapshot_id = ? AND si.copied = 0 ORDER BY si.capture_id LIMIT ?",
+      "SELECT si.*, i.object_key AS source_object_key, i.bytes, i.content_type FROM visonaut_snapshot_images si JOIN visonaut_images i ON i.id = si.image_id WHERE si.snapshot_id = ? AND si.copied = 0 ORDER BY si.capture_id LIMIT ?",
       [snapshotId, limit],
     );
   }
@@ -2069,7 +2074,7 @@ export class Service {
       source_object_key: string;
       copied: number;
     }>(
-      "SELECT si.*, i.object_key AS source_object_key FROM ariviso_snapshot_images si JOIN ariviso_images i ON i.id = si.image_id WHERE si.snapshot_id = ?",
+      "SELECT si.*, i.object_key AS source_object_key FROM visonaut_snapshot_images si JOIN visonaut_images i ON i.id = si.image_id WHERE si.snapshot_id = ?",
       [snapshotId],
     );
   }
@@ -2082,15 +2087,15 @@ export class Service {
     digest: string;
   }) {
     await atomic(this.database, [
-      this.guard("EXISTS (SELECT 1 FROM ariviso_snapshots WHERE id = ? AND state = 'copying')", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_snapshots WHERE id = ? AND state = 'copying')", [
         input.snapshotId,
       ]),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_snapshot_images WHERE snapshot_id = ? AND capture_id = ? AND object_key = ? AND digest = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id = ? AND capture_id = ? AND object_key = ? AND digest = ?)",
         [input.snapshotId, input.captureId, input.objectKey, input.digest],
       ),
       this.sql(
-        "UPDATE ariviso_snapshot_images SET copied = 1 WHERE snapshot_id = ? AND capture_id = ?",
+        "UPDATE visonaut_snapshot_images SET copied = 1 WHERE snapshot_id = ? AND capture_id = ?",
         [input.snapshotId, input.captureId],
       ),
     ]);
@@ -2103,7 +2108,7 @@ export class Service {
     commandId?: string;
     now: number;
   }) {
-    const snapshot = await this.one<SnapshotRow>("SELECT * FROM ariviso_snapshots WHERE id = ?", [
+    const snapshot = await this.one<SnapshotRow>("SELECT * FROM visonaut_snapshots WHERE id = ?", [
       input.snapshotId,
     ]);
     const comparison = await this.comparison(snapshot.comparison_id);
@@ -2117,42 +2122,42 @@ export class Service {
       this.activeGuard(run),
       this.readyGuard(comparison.id),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_projects WHERE id = ? AND baseline_revision = ? AND snapshot_id IS ?)",
+        "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND baseline_revision = ? AND snapshot_id IS ?)",
         [project.id, input.expectedBaselineRevision, comparison.reference_snapshot_id],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND kind = 'main' AND comparison_id = ? AND sealed_at IS NOT NULL)",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND kind = 'main' AND comparison_id = ? AND sealed_at IS NOT NULL)",
         [run.id, comparison.id],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM ariviso_comparisons WHERE id = ? AND state = 'ready' AND baseline_revision = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_comparisons WHERE id = ? AND state = 'ready' AND baseline_revision = ?)",
         [comparison.id, project.baseline_revision],
       ),
-      this.guard("EXISTS (SELECT 1 FROM ariviso_snapshots WHERE id = ? AND state = 'copying')", [
+      this.guard("EXISTS (SELECT 1 FROM visonaut_snapshots WHERE id = ? AND state = 'copying')", [
         snapshot.id,
       ]),
       this.guard(
-        "NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images WHERE snapshot_id = ? AND copied != 1) AND (SELECT count(*) FROM ariviso_snapshot_images WHERE snapshot_id = ?) = (SELECT count(*) FROM ariviso_captures WHERE run_id = ?)",
+        "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id = ? AND copied != 1) AND (SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id = ?) = (SELECT count(*) FROM visonaut_captures WHERE run_id = ?)",
         [snapshot.id, snapshot.id, run.id],
       ),
     ];
     if (project.snapshot_id) {
       statements.push(
         this.guard(
-          "EXISTS (SELECT 1 FROM ariviso_snapshots s JOIN ariviso_ancestry a ON a.ancestor_sha = s.tested_sha AND a.run_id = ? WHERE s.id = ? AND s.reference_eligible = 1)",
+          "EXISTS (SELECT 1 FROM visonaut_snapshots s JOIN visonaut_ancestry a ON a.ancestor_sha = s.tested_sha AND a.run_id = ? WHERE s.id = ? AND s.reference_eligible = 1)",
           [run.id, project.snapshot_id],
         ),
       );
       statements.push(
         this.sql(
-          "INSERT OR IGNORE INTO ariviso_pins (snapshot_id, reason, owner_id) VALUES (?, 'rollback', ?)",
+          "INSERT OR IGNORE INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, 'rollback', ?)",
           [project.snapshot_id, input.promotionId],
         ),
       );
     }
     statements.push(
       this.sql(
-        "INSERT INTO ariviso_promotions (id, project_id, snapshot_id, previous_snapshot_id, comparison_id, baseline_revision, command_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO visonaut_promotions (id, project_id, snapshot_id, previous_snapshot_id, comparison_id, baseline_revision, command_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         [
           input.promotionId,
           project.id,
@@ -2167,19 +2172,19 @@ export class Service {
     );
     statements.push(
       this.sql(
-        "UPDATE ariviso_runs SET active=0,closed_at=COALESCE(closed_at,?),revision=revision+1 WHERE id IN (SELECT run_id FROM ariviso_snapshots WHERE id=?) AND id!=? AND state='accepted'",
+        "UPDATE visonaut_runs SET active=0,closed_at=COALESCE(closed_at,?),revision=revision+1 WHERE id IN (SELECT run_id FROM visonaut_snapshots WHERE id=?) AND id!=? AND state='accepted'",
         [input.now, project.snapshot_id, run.id],
       ),
       this.sql(
-        "UPDATE work_retained_runs SET closed_at=COALESCE(closed_at,?) WHERE id IN (SELECT run_id FROM ariviso_snapshots WHERE id=?) AND id!=?",
+        "UPDATE work_retained_runs SET closed_at=COALESCE(closed_at,?) WHERE id IN (SELECT run_id FROM visonaut_snapshots WHERE id=?) AND id!=?",
         [input.now, project.snapshot_id, run.id],
       ),
       this.sql(
-        "DELETE FROM work_retention_pins WHERE reason='review' AND owner IN (SELECT 'review:' || run_id FROM ariviso_snapshots WHERE id=? AND run_id!=?)",
+        "DELETE FROM work_retention_pins WHERE reason='review' AND owner IN (SELECT 'review:' || run_id FROM visonaut_snapshots WHERE id=? AND run_id!=?)",
         [project.snapshot_id, run.id],
       ),
       this.sql(
-        "UPDATE ariviso_snapshots SET state = 'accepted', reference_eligible = 1 WHERE id = ?",
+        "UPDATE visonaut_snapshots SET state = 'accepted', reference_eligible = 1 WHERE id = ?",
         [snapshot.id],
       ),
     );
@@ -2191,20 +2196,20 @@ export class Service {
     );
     statements.push(
       this.sql(
-        "UPDATE ariviso_projects SET snapshot_id = ?, promotion_id = ?, baseline_revision = baseline_revision + 1, fresh_setup = 0 WHERE id = ?",
+        "UPDATE visonaut_projects SET snapshot_id = ?, promotion_id = ?, baseline_revision = baseline_revision + 1, fresh_setup = 0 WHERE id = ?",
         [snapshot.id, input.promotionId, project.id],
       ),
     );
-    statements.push(this.sql("UPDATE ariviso_runs SET state = 'accepted' WHERE id = ?", [run.id]));
+    statements.push(this.sql("UPDATE visonaut_runs SET state = 'accepted' WHERE id = ?", [run.id]));
     statements.push(
       this.sql(
-        "INSERT OR IGNORE INTO ariviso_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, 'main', item_key, variant_key FROM ariviso_captures WHERE run_id = ?",
+        "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, 'main', item_key, variant_key FROM visonaut_captures WHERE run_id = ?",
         [project.id, run.id],
       ),
     );
     statements.push(
       this.sql(
-        "UPDATE ariviso_comparisons SET state = 'invalidated' WHERE id != ? AND run_id IN (SELECT id FROM ariviso_runs WHERE project_id = ? AND active = 1 AND state != 'accepted')",
+        "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE id != ? AND run_id IN (SELECT id FROM visonaut_runs WHERE project_id = ? AND active = 1 AND state != 'accepted')",
         [comparison.id, project.id],
       ),
     );

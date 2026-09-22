@@ -1,4 +1,4 @@
-import { assertion, atomic, ConflictError, retentionPinStatement } from "@ariviso/service";
+import { assertion, atomic, ConflictError, retentionPinStatement } from "@visonaut/service";
 import { parseHistoryPage, type HistoryManifest, type HistoryPointer } from "./history-format.ts";
 import { readComparisonHistoryManifest } from "./history-supplement.ts";
 import { readHistoryManifest, readVerifiedHistoryObject } from "./history.ts";
@@ -8,7 +8,7 @@ import type { OperationsContext } from "./types.ts";
 export async function getHistoricalExportRoots(context: OperationsContext, runId: string) {
   const pending = await context.database
     .prepare(
-      "SELECT comparison.id FROM ariviso_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready') LIMIT 1",
+      "SELECT comparison.id FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready') LIMIT 1",
     )
     .bind(runId)
     .first();
@@ -63,7 +63,7 @@ export function historicalExportAssertion(
 ) {
   return assertion(
     context.database,
-    "NOT EXISTS(SELECT 1 FROM ariviso_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND (SELECT COUNT(*) FROM operations_comparison_archives WHERE run_id=? AND state='ready')=?",
+    "NOT EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND (SELECT COUNT(*) FROM operations_comparison_archives WHERE run_id=? AND state='ready')=?",
     [runId, runId, rootCount],
   );
 }
@@ -122,7 +122,7 @@ export async function createArchivedRunExport(
         if (!ids.length) continue;
         const images = await context.database
           .prepare(
-            `SELECT id,run_id,object_key,digest,bytes,content_type FROM ariviso_images WHERE bytes_present=1 AND id IN(SELECT value FROM json_each(?))`,
+            `SELECT id,run_id,object_key,digest,bytes,content_type FROM visonaut_images WHERE bytes_present=1 AND id IN(SELECT value FROM json_each(?))`,
           )
           .bind(JSON.stringify(ids))
           .all<{
@@ -148,7 +148,7 @@ export async function createArchivedRunExport(
         }
         const copies = await context.database
           .prepare(
-            `SELECT copy.snapshot_id,copy.object_key,copy.digest,image.bytes,image.content_type FROM ariviso_snapshot_images copy JOIN ariviso_images image ON image.id=copy.image_id JOIN ariviso_snapshot_retention retention ON retention.snapshot_id=copy.snapshot_id WHERE copy.copied=1 AND retention.byte_state='live' AND copy.image_id IN(SELECT value FROM json_each(?))`,
+            `SELECT copy.snapshot_id,copy.object_key,copy.digest,image.bytes,image.content_type FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=copy.snapshot_id WHERE copy.copied=1 AND retention.byte_state='live' AND copy.image_id IN(SELECT value FROM json_each(?))`,
           )
           .bind(JSON.stringify(ids))
           .all<{
@@ -186,11 +186,11 @@ export async function createArchivedRunExport(
       ...[...snapshotIds].flatMap((snapshotId) => [
         assertion(
           context.database,
-          "EXISTS(SELECT 1 FROM ariviso_snapshot_retention WHERE snapshot_id=? AND byte_state='live')",
+          "EXISTS(SELECT 1 FROM visonaut_snapshot_retention WHERE snapshot_id=? AND byte_state='live')",
           [snapshotId],
         ),
         context.database
-          .prepare("INSERT INTO ariviso_pins(snapshot_id,reason,owner_id) VALUES(?,'export',?)")
+          .prepare("INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'export',?)")
           .bind(snapshotId, owner),
       ]),
       assertion(
@@ -220,7 +220,7 @@ export async function createArchivedRunExport(
     await atomic(context.database, [
       context.database.prepare("UPDATE operations_exports SET state='failed' WHERE id=?").bind(id),
       context.database
-        .prepare("DELETE FROM ariviso_pins WHERE owner_id=? AND reason='export'")
+        .prepare("DELETE FROM visonaut_pins WHERE owner_id=? AND reason='export'")
         .bind(owner),
       context.database
         .prepare("DELETE FROM work_retention_pins WHERE owner=? AND reason='recovery'")

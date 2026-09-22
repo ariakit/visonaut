@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 
 assert.equal(process.env.GITHUB_REPOSITORY_ID, "1380751023");
 assert.equal(process.env.GITHUB_REF, "refs/heads/main");
-const response = await fetch("https://api.github.com/repos/ariakit/ariviso/git/ref/heads/main", {
+const response = await fetch("https://api.github.com/repos/ariakit/visonaut/git/ref/heads/main", {
   headers: {
     Authorization: `Bearer ${process.env.GH_TOKEN}`,
     Accept: "application/vnd.github+json",
@@ -20,6 +20,6 @@ assert.equal(
   "A newer main commit supersedes this deployment",
 );
 const configuration = JSON.parse(await readFile("apps/web/dist/server/wrangler.json", "utf8"));
-assert.equal(configuration.name, "ariviso", "Web build targets the wrong Worker");
-assert.equal(configuration.vars?.ARIVISO_ENVIRONMENT, "production");
-assert.equal(configuration.vars?.ARIVISO_ALLOW_MAIN_DISPATCH, "false");
+assert.equal(configuration.name, "visonaut", "Web build targets the wrong Worker");
+assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, "production");
+assert.equal(configuration.vars?.VISONAUT_ALLOW_MAIN_DISPATCH, "false");

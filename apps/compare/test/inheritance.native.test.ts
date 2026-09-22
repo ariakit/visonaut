@@ -7,8 +7,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { expect, it } from "vitest";
-import { Service, captureProfilesDigest } from "@ariviso/service";
-import { validateImage } from "@ariviso/compare";
+import { Service, captureProfilesDigest } from "@visonaut/service";
+import { validateImage } from "@visonaut/compare";
 import { TestDatabase } from "../../web/src/operations/test-fixtures.ts";
 
 function databaseStatements(database: TestDatabase) {
@@ -207,7 +207,7 @@ it("compares inherited captures through the native queue consumer after fifty fa
   expect(tasks).toHaveLength(3);
   expect(tasks.map((row) => row.outcome)).toEqual(["pending", "pending", "pending"]);
 
-  const directory = await mkdtemp(resolve(tmpdir(), "ariviso-inherited-queue-"));
+  const directory = await mkdtemp(resolve(tmpdir(), "visonaut-inherited-queue-"));
   let runtime: Miniflare | undefined;
   try {
     const worker = fileURLToPath(new URL("../src/index.ts", import.meta.url));
@@ -222,8 +222,8 @@ it("compares inherited captures through the native queue consumer after fifty fa
         const acknowledgements=[];
         const retries=[];
         await consumer.queue({queue:'comparisons',messages:input.tasks.map(taskId=>({id:taskId,body:{taskId},timestamp:new Date(),attempts:1,ack(){acknowledgements.push(taskId)},retry(options){retries.push({taskId,...options})}})),ackAll(){throw new Error('Unexpected batch acknowledgement')},retryAll(){throw new Error('Unexpected batch retry')}},env);
-        const tasks=await env.DB.prepare("SELECT task.state,task.attempts FROM work_tasks task JOIN ariviso_comparison_rows row ON row.id=task.id WHERE row.comparison_id=? AND task.kind='compare' ORDER BY task.id").bind(input.comparisonId).all();
-        const rows=await env.DB.prepare('SELECT outcome FROM ariviso_comparison_rows WHERE comparison_id=? ORDER BY ordinal').bind(input.comparisonId).all();
+        const tasks=await env.DB.prepare("SELECT task.state,task.attempts FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id=task.id WHERE row.comparison_id=? AND task.kind='compare' ORDER BY task.id").bind(input.comparisonId).all();
+        const rows=await env.DB.prepare('SELECT outcome FROM visonaut_comparison_rows WHERE comparison_id=? ORDER BY ordinal').bind(input.comparisonId).all();
         const violations=await env.DB.prepare('PRAGMA foreign_key_check').all();
         return Response.json({acknowledgements,retries,tasks:tasks.results,rows:rows.results,violations:violations.results});
       }};
@@ -232,7 +232,7 @@ it("compares inherited captures through the native queue consumer after fifty fa
     await writeFile(
       resolve(directory, "wrangler.json"),
       JSON.stringify({
-        name: "ariviso-inherited-queue-test",
+        name: "visonaut-inherited-queue-test",
         main: "worker.mjs",
         compatibility_date: "2026-09-22",
         compatibility_flags: ["nodejs_compat"],

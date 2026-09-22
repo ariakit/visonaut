@@ -7,7 +7,7 @@ import {
   IncompleteError,
   releasePromotionLeaseStatement,
   Service,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { copyVerifiedObject, digestStream, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
@@ -109,8 +109,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
   >(context, {
     cursorId: "promotion-copy-cleanup",
     query: `SELECT snapshot.id,snapshot.created_at,snapshot.run_id,snapshot.comparison_id,
-      run.comparison_id AS current_comparison,run.active FROM ariviso_snapshots snapshot
-      JOIN ariviso_runs run ON run.id=snapshot.run_id WHERE snapshot.state='copying'`,
+      run.comparison_id AS current_comparison,run.active FROM visonaut_snapshots snapshot
+      JOIN visonaut_runs run ON run.id=snapshot.run_id WHERE snapshot.state='copying'`,
   });
   let cleanupAfter = interrupted.after;
   let cancelled = 0;
@@ -143,8 +143,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
   report.hasMore = cleanupRemaining && cancelled > 0;
   const candidates = await promotionPage<PromotionPosition & { comparison_id: string }>(context, {
     cursorId: "baseline-promotion",
-    query: `SELECT run.id,run.created_at,run.comparison_id FROM ariviso_runs run
-      JOIN ariviso_comparisons comparison ON comparison.id=run.comparison_id
+    query: `SELECT run.id,run.created_at,run.comparison_id FROM visonaut_runs run
+      JOIN visonaut_comparisons comparison ON comparison.id=run.comparison_id
       WHERE run.active=1 AND run.kind='main' AND run.state!='accepted' AND comparison.state='ready'`,
   });
   let candidateAfter = candidates.after;
@@ -158,7 +158,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     const state = await service.status(candidate.id);
     if (state.status !== "passed") continue;
     const existing = await database
-      .prepare("SELECT id,prefix FROM ariviso_snapshots WHERE comparison_id=? AND state='copying'")
+      .prepare("SELECT id,prefix FROM visonaut_snapshots WHERE comparison_id=? AND state='copying'")
       .bind(candidate.comparison_id)
       .first<{ id: string; prefix: string }>();
     const digest = createHash("sha256")
@@ -218,8 +218,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
           .bind(snapshotId)
           .run();
         const verification = await database
-          .prepare(`SELECT copy.capture_id,copy.object_key,copy.digest,image.bytes FROM ariviso_snapshot_images copy
-          JOIN ariviso_images image ON image.id=copy.image_id JOIN operations_promotions progress ON progress.snapshot_id=copy.snapshot_id
+          .prepare(`SELECT copy.capture_id,copy.object_key,copy.digest,image.bytes FROM visonaut_snapshot_images copy
+          JOIN visonaut_images image ON image.id=copy.image_id JOIN operations_promotions progress ON progress.snapshot_id=copy.snapshot_id
           WHERE copy.snapshot_id=? AND copy.copied=1 AND (progress.verified_through IS NULL OR copy.capture_id>progress.verified_through)
           ORDER BY copy.capture_id LIMIT ?`)
           .bind(snapshotId, remainingObjects + 1)

@@ -3,7 +3,7 @@ import {
   claimExpiredRun,
   closedRunRetentionMs,
   completeRetiredRunDeletion,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
@@ -78,11 +78,11 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
         // Mark byte absence with the same lease guard that completes deletion.
         await atomic(database, [
           database
-            .prepare(`INSERT INTO ariviso_assertions(valid)
+            .prepare(`INSERT INTO visonaut_assertions(valid)
           SELECT CASE WHEN EXISTS(SELECT 1 FROM work_retained_runs WHERE id=? AND byte_state='deleting' AND deletion_token=? AND deletion_until>?) THEN 1 ELSE 0 END`)
             .bind(candidate.id, token, context.now()),
           database
-            .prepare("UPDATE ariviso_images SET bytes_present=0 WHERE run_id=?")
+            .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE run_id=?")
             .bind(candidate.id),
         ]);
         if (

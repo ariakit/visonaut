@@ -64,7 +64,7 @@ async function githubRequest({
   headers.set("Authorization", `Bearer ${token}`);
   // OIDC, lineage, and webhook checks require the supported PR merge_commit_sha contract.
   headers.set("X-GitHub-Api-Version", "2022-11-28");
-  headers.set("User-Agent", "Ariviso");
+  headers.set("User-Agent", "Visonaut");
   if (init?.body) {
     headers.set("Content-Type", "application/json");
   }

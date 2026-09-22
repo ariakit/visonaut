@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { GitHubClient, VerifiedRun } from "@ariviso/security";
+import type { GitHubClient, VerifiedRun } from "@visonaut/security";
 import { verifyLineage, type LineageSource, type MergeGroupMember } from "./lineage.js";
 
-const repository = "ariakit/ariviso-diagnostics";
+const repository = "ariakit/visonaut-diagnostics";
 const repositoryId = "1380792062";
 const oid = (value: number) => value.toString(16).padStart(40, "0");
 const base = oid(1);

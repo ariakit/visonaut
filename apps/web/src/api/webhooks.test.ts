@@ -64,7 +64,7 @@ const bindings: ApiBindings = {
     webhookSecret: secret,
     oidcAudience: "https://preview.example",
     repositoryOwnerId: "5",
-    trustedPlanPath: ".ariviso/plan.json",
+    trustedPlanPath: ".visonaut/plan.json",
     reusableWorkflowRef: "unused",
     reusableWorkflowSha: "a".repeat(40),
     comparisonMaxAttempts: 3,
@@ -80,7 +80,22 @@ const bindings: ApiBindings = {
 const installation = { id: 456, app_id: 123, account: { id: 5 } };
 const sender = { id: 42 };
 beforeAll(async () => {
-  for (const name of ["0001_service", "0002_work", "0003_auth", "0004_ingest"]) {
+  for (const name of [
+    "0001_service",
+    "0002_work",
+    "0003_auth",
+    "0004_ingest",
+    "0005_operations",
+    "0006_acceptance",
+    "0007_backup_inventory",
+    "0008_capture_profiles",
+    "0009_retention_history",
+    "0010_run_history",
+    "0011_backup_groups",
+    "0012_historical_comparisons",
+    "0013_promotion_scans",
+    "0014_visonaut_brand",
+  ]) {
     const source = (
       await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")
     ).replace(/^--.*$/gm, "");
@@ -93,11 +108,11 @@ beforeAll(async () => {
     }
   }
   await database
-    .prepare("INSERT INTO ariviso_policies(digest,policy_json) VALUES('policy','{}')")
+    .prepare("INSERT INTO visonaut_policies(digest,policy_json) VALUES('policy','{}')")
     .run();
   await database
     .prepare(
-      "INSERT INTO ariviso_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
     )
     .run();
 });

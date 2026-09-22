@@ -109,7 +109,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
         headers: new Headers({ authorization: `Bearer ${session.token}` }),
       }),
     ).toBeNull();
-    expect(preview.options.advanced?.cookiePrefix).toBe("ariviso-preview");
+    expect(preview.options.advanced?.cookiePrefix).toBe("visonaut-preview");
   });
   it("handles concurrent independent request factories", async () => {
     const { session } = await createSession();

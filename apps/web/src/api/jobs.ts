@@ -1,6 +1,6 @@
-import { digestJson, type TrustedPlan } from "@ariviso/protocol";
-import { type GitHubClient, SecurityError, type VerifiedRun } from "@ariviso/security";
-import { IncompleteError } from "@ariviso/service";
+import { digestJson, type TrustedPlan } from "@visonaut/protocol";
+import { type GitHubClient, SecurityError, type VerifiedRun } from "@visonaut/security";
+import { IncompleteError } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 
@@ -155,7 +155,7 @@ export async function verifiedInheritedShard(
 ) {
   const sources = await context.database
     .prepare(
-      "SELECT s.manifest_digest, s.full_profile_digest, m.job_id, r.attempt, original.discovery_json FROM ariviso_shards s JOIN ariviso_runs carrier ON carrier.id=s.run_id JOIN ingest_manifests m ON m.shard_key=s.key AND m.digest=s.manifest_digest AND m.finalized=1 JOIN ariviso_runs r ON r.id=m.run_id JOIN ariviso_shards original ON original.run_id=r.id AND original.key=s.key JOIN ingest_run_provenance provenance ON provenance.run_id=r.id WHERE s.run_id=? AND s.key=? AND s.state='complete' AND s.profile_digest=? AND carrier.project_id=? AND carrier.external_run_id=? AND carrier.tested_sha=? AND carrier.plan_digest=? AND r.project_id=carrier.project_id AND r.external_run_id=carrier.external_run_id AND r.tested_sha=carrier.tested_sha AND r.plan_digest=carrier.plan_digest AND r.attempt=s.source_attempt AND r.attempt<? AND original.state='complete' AND original.manifest_digest=m.digest AND original.full_profile_digest=s.full_profile_digest AND original.profile_digest=s.profile_digest AND json_extract(provenance.verified_json,'$.sourceHead')=? LIMIT 2",
+      "SELECT s.manifest_digest, s.full_profile_digest, m.job_id, r.attempt, original.discovery_json FROM visonaut_shards s JOIN visonaut_runs carrier ON carrier.id=s.run_id JOIN ingest_manifests m ON m.shard_key=s.key AND m.digest=s.manifest_digest AND m.finalized=1 JOIN visonaut_runs r ON r.id=m.run_id JOIN visonaut_shards original ON original.run_id=r.id AND original.key=s.key JOIN ingest_run_provenance provenance ON provenance.run_id=r.id WHERE s.run_id=? AND s.key=? AND s.state='complete' AND s.profile_digest=? AND carrier.project_id=? AND carrier.external_run_id=? AND carrier.tested_sha=? AND carrier.plan_digest=? AND r.project_id=carrier.project_id AND r.external_run_id=carrier.external_run_id AND r.tested_sha=carrier.tested_sha AND r.plan_digest=carrier.plan_digest AND r.attempt=s.source_attempt AND r.attempt<? AND original.state='complete' AND original.manifest_digest=m.digest AND original.full_profile_digest=s.full_profile_digest AND original.profile_digest=s.profile_digest AND json_extract(provenance.verified_json,'$.sourceHead')=? LIMIT 2",
     )
     .bind(
       runId,
@@ -280,7 +280,7 @@ export async function inheritedShards(
   const jobs = await workflowJobs(github, verified.workflowRunId);
   const source = await context.database
     .prepare(
-      "SELECT id FROM ariviso_runs WHERE project_id=? AND external_run_id=? AND tested_sha=? AND plan_digest=? AND attempt<? ORDER BY attempt DESC LIMIT 1",
+      "SELECT id FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND tested_sha=? AND plan_digest=? AND attempt<? ORDER BY attempt DESC LIMIT 1",
     )
     .bind(
       context.configuration.projectId,

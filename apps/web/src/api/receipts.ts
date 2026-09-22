@@ -3,8 +3,8 @@ import {
   type Manifest,
   type TrustedPlan,
   type VerifiedDiscoveryEvidence,
-} from "@ariviso/protocol";
-import { type GitHubClient, SecurityError } from "@ariviso/security";
+} from "@visonaut/protocol";
+import { type GitHubClient, SecurityError } from "@visonaut/security";
 import { object } from "./input.js";
 
 /** The fixed executor publishes this artifact after its reporter succeeds. */

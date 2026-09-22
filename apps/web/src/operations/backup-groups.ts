@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { assertion, atomic, type Statement } from "@ariviso/service";
+import { assertion, atomic, type Statement } from "@visonaut/service";
 import { BACKUP_RETENTION } from "./backup-objects.ts";
 import {
   backupGroupPrefix,
@@ -64,15 +64,15 @@ export function freezeBackupGroups(context: OperationsContext, backupId: string)
     {
       kind: "run",
       query: `SELECT run.id AS source_id,CASE WHEN run.sealed_at IS NULL THEN ? ELSE 'sealed' END AS source_revision,'{}' AS source_json
-        FROM ariviso_runs run JOIN work_retained_runs retained ON retained.id=run.id JOIN work_retention_pins pin ON pin.run_id=run.id WHERE retained.byte_state='live' AND pin.owner=?`,
+        FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id=run.id JOIN work_retention_pins pin ON pin.run_id=run.id WHERE retained.byte_state='live' AND pin.owner=?`,
       values: [`backup:${backupId}`, `backup:${backupId}`],
     },
     {
       kind: "comparison",
       query: `SELECT comparison.id AS source_id,CASE WHEN comparison.state='comparing' THEN ? ELSE 'sealed' END AS source_revision,'{}' AS source_json
-        FROM ariviso_comparisons comparison JOIN work_retained_runs retained ON retained.id=comparison.run_id JOIN work_retention_pins pin ON pin.run_id=comparison.run_id WHERE retained.byte_state='live' AND pin.owner=?
+        FROM visonaut_comparisons comparison JOIN work_retained_runs retained ON retained.id=comparison.run_id JOIN work_retention_pins pin ON pin.run_id=comparison.run_id WHERE retained.byte_state='live' AND pin.owner=?
         AND NOT EXISTS(SELECT 1 FROM operations_ready_history_archives archive WHERE archive.archive_kind='comparison' AND archive.archive_id=comparison.id)
-        AND EXISTS(SELECT 1 FROM ariviso_comparison_rows row WHERE row.comparison_id=comparison.id)`,
+        AND EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id=comparison.id)`,
       values: [`backup:${backupId}`, `backup:${backupId}`],
     },
     {
@@ -85,8 +85,8 @@ export function freezeBackupGroups(context: OperationsContext, backupId: string)
     {
       kind: "snapshot",
       query: `SELECT snapshot.id AS source_id,CASE WHEN snapshot.state='copying' THEN ? ELSE 'sealed' END AS source_revision,'{}' AS source_json
-        FROM ariviso_snapshots snapshot JOIN ariviso_snapshot_retention retention ON retention.snapshot_id=snapshot.id
-        WHERE retention.byte_state IN ('live','retiring') AND EXISTS(SELECT 1 FROM ariviso_snapshot_images image WHERE image.snapshot_id=snapshot.id AND image.copied=1)`,
+        FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id
+        WHERE retention.byte_state IN ('live','retiring') AND EXISTS(SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id=snapshot.id AND image.copied=1)`,
       values: [`backup:${backupId}`],
     },
     {
@@ -135,7 +135,7 @@ async function runSources(context: OperationsContext, group: BackupGroupRow): Pr
   const { database, budget } = context;
   if (stage === "images") {
     const rows = await database
-      .prepare(`SELECT 'images' AS source,object_key AS key,digest,bytes FROM ariviso_images
+      .prepare(`SELECT 'images' AS source,object_key AS key,digest,bytes FROM visonaut_images
       WHERE run_id=? AND role='original' AND bytes_present=1 AND object_key>? ORDER BY object_key LIMIT ?`)
       .bind(group.source_id, after, budget.objectsPerStep)
       .all<SourceObject>();
@@ -180,7 +180,7 @@ async function comparisonSources(
   // index first, rather than sorting/scanning every JSON result for every object page.
   const limit = Math.max(1, Math.floor(context.budget.objectsPerStep / 2));
   const rows = await context.database
-    .prepare(`SELECT id,ordinal,result_json FROM ariviso_comparison_rows
+    .prepare(`SELECT id,ordinal,result_json FROM visonaut_comparison_rows
     WHERE comparison_id=? AND (ordinal,id)>(?,?) ORDER BY ordinal,id LIMIT ?`)
     .bind(group.source_id, cursor?.[0] ?? -1, cursor?.[1] ?? "", limit)
     .all<{ id: string; ordinal: number; result_json: string | null }>();
@@ -199,7 +199,7 @@ async function comparisonSources(
   }
   const images = ids.size
     ? await context.database
-        .prepare(`SELECT 'images' AS source,object_key AS key,digest,bytes FROM ariviso_images
+        .prepare(`SELECT 'images' AS source,object_key AS key,digest,bytes FROM visonaut_images
     WHERE id IN(SELECT value FROM json_each(?)) AND bytes_present=1 AND role IN ('thumbnail','mask') ORDER BY object_key`)
         .bind(JSON.stringify([...ids]))
         .all<SourceObject>()
@@ -251,7 +251,7 @@ async function derivedSources(
   });
   const rows = ids.length
     ? await context.database
-        .prepare(`SELECT id,'images' AS source,object_key AS key,digest,bytes FROM ariviso_images
+        .prepare(`SELECT id,'images' AS source,object_key AS key,digest,bytes FROM visonaut_images
     WHERE run_id=? AND id IN(SELECT value FROM json_each(?)) AND role IN ('thumbnail','mask') AND bytes_present=1 ORDER BY object_key`)
         .bind(pointer.run_id, JSON.stringify(ids))
         .all<SourceObject & { id: string }>()
@@ -285,7 +285,7 @@ async function snapshotSources(
   const after = stringCursor(decodeCursor(group));
   const rows = await context.database
     .prepare(`SELECT 'images' AS source,copy.object_key AS key,copy.digest,image.bytes
-    FROM ariviso_snapshot_images copy JOIN ariviso_images image ON image.id=copy.image_id
+    FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id
     WHERE copy.snapshot_id=? AND copy.copied=1 AND copy.object_key>? ORDER BY copy.object_key LIMIT ?`)
     .bind(group.source_id, after, context.budget.objectsPerStep)
     .all<SourceObject>();

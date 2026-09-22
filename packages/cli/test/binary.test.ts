@@ -62,7 +62,7 @@ it("runs the built executable with a shebang and returns exact usage exit codes"
   expect((await readFile(bin, "utf8")).startsWith("#!/usr/bin/env node\n")).toBe(true);
   const help = await command({ argv: [bin, "--help"] });
   expect(help.code).toBe(0);
-  expect(help.stdout).toContain("ariviso upload --manifest");
+  expect(help.stdout).toContain("visonaut upload --manifest");
   const invalid = await command({ argv: [bin, "approve", "--json"] });
   expect(invalid.code).toBe(2);
   expect(JSON.parse(invalid.stderr)).toMatchObject({ exitCode: 2 });
@@ -94,9 +94,9 @@ it("reads status through the built executable and a real HTTP boundary", async (
   const result = await command({
     argv: [bin, "status", "--json"],
     environment: {
-      ARIVISO_SERVER: `http://127.0.0.1:${address.port}`,
-      ARIVISO_RUN: "run-123",
-      ARIVISO_TOKEN: "binary-session",
+      VISONAUT_SERVER: `http://127.0.0.1:${address.port}`,
+      VISONAUT_RUN: "run-123",
+      VISONAUT_TOKEN: "binary-session",
     },
   });
   expect(authenticated).toBe(true);
@@ -147,7 +147,7 @@ globalThis.fetch = async (input, options) => {
 `,
   );
   const environment = {
-    ARIVISO_SERVER: "https://review.example.test",
+    VISONAUT_SERVER: "https://review.example.test",
     ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
     ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
   };
@@ -164,7 +164,7 @@ globalThis.fetch = async (input, options) => {
 });
 
 it("packs a self-contained public package and runs a clean pnpm exec install", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "ariviso-cli-pack-"));
+  const directory = await mkdtemp(join(tmpdir(), "visonaut-cli-pack-"));
   temporary.push(directory);
   const packed = await command({
     executable: "npm",
@@ -180,7 +180,7 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
   });
   expect(packed.code, packed.stderr).toBe(0);
   const report = JSON.parse(packed.stdout);
-  const details = Array.isArray(report) ? report[0] : report.ariviso;
+  const details = Array.isArray(report) ? report[0] : report.visonaut;
   expect(details.files.map((file: { path: string }) => file.path)).toEqual(
     expect.arrayContaining([
       "dist/bin.js",
@@ -197,7 +197,11 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
   ).toBe(true);
   await writeFile(
     join(directory, "package.json"),
-    JSON.stringify({ name: "ariviso-clean-install", private: true, packageManager: "pnpm@12.5.1" }),
+    JSON.stringify({
+      name: "visonaut-clean-install",
+      private: true,
+      packageManager: "pnpm@12.5.1",
+    }),
   );
   const installed = await command({
     executable: "pnpm",
@@ -217,7 +221,7 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
   expect(packageManager.stdout.trim()).toBe("12.5.1");
   await writeFile(
     join(directory, "types.mts"),
-    'import { runCli } from "ariviso"; const code: Promise<0 | 1 | 2 | 3 | 4> = runCli({ argv: ["--help"], environment: {} }); void code;',
+    'import { runCli } from "visonaut"; const code: Promise<0 | 1 | 2 | 3 | 4> = runCli({ argv: ["--help"], environment: {} }); void code;',
   );
   const types = await command({
     argv: [
@@ -237,23 +241,23 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
   expect(types.code, types.stdout + types.stderr).toBe(0);
   const help = await command({
     executable: "pnpm",
-    argv: ["exec", "ariviso", "--help"],
+    argv: ["exec", "visonaut", "--help"],
     cwd: directory,
   });
   expect(help.code, help.stderr).toBe(0);
-  expect(help.stdout).toContain("Status requires ARIVISO_TOKEN");
+  expect(help.stdout).toContain("Status requires VISONAUT_TOKEN");
   const status = await command({
     executable: "pnpm",
-    argv: ["exec", "ariviso", "status", "--json"],
+    argv: ["exec", "visonaut", "status", "--json"],
     cwd: directory,
-    environment: { ARIVISO_SERVER: "https://review.example.test", ARIVISO_RUN: "run-123" },
+    environment: { VISONAUT_SERVER: "https://review.example.test", VISONAUT_RUN: "run-123" },
   });
   expect(status.code).toBe(4);
   expect(JSON.parse(status.stderr)).toMatchObject({ exitCode: 4 });
   const installedPackage = JSON.parse(
-    await readFile(join(directory, "node_modules/ariviso/package.json"), "utf8"),
+    await readFile(join(directory, "node_modules/visonaut/package.json"), "utf8"),
   );
-  expect(installedPackage.name).toBe("ariviso");
+  expect(installedPackage.name).toBe("visonaut");
   expect(installedPackage.dependencies).toBeUndefined();
-  expect(installedPackage.bin).toEqual({ ariviso: "./dist/bin.js" });
+  expect(installedPackage.bin).toEqual({ visonaut: "./dist/bin.js" });
 }, 30_000);

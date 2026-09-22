@@ -1,4 +1,4 @@
-import { SecurityError, readBoundedBody } from "@ariviso/security";
+import { SecurityError, readBoundedBody } from "@visonaut/security";
 
 export async function jsonBody(request: Request, limit: number): Promise<Record<string, unknown>> {
   if (request.headers.get("content-type")?.split(";", 1)[0]?.trim() !== "application/json") {

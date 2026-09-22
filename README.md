@@ -1,10 +1,10 @@
-# Ariviso
+# Visonaut
 
 Visual regression capture, comparison, and review for Ariakit.
 
-Ariviso captures prepared Playwright pages, compares the original images in a Cloudflare Worker, and lets maintainers review changes in a private web app. GitHub checks report the result for the tested commit. Uploading a capture does not approve it.
+Visonaut captures prepared Playwright pages, compares the original images in a Cloudflare Worker, and lets maintainers review changes in a private web app. GitHub checks report the result for the tested commit. Uploading a capture does not approve it.
 
-[Issue #1](https://github.com/ariakit/ariviso/issues/1) defines the product and launch requirements. Package publication, production deployment, and Ariakit's required-check cutover use the [release and deployment workflow](.github/workflows/README.md). A passing local test suite alone does not establish launch readiness.
+[Issue #1](https://github.com/ariakit/visonaut/issues/1) defines the product and launch requirements. Package publication, production deployment, and Ariakit's required-check cutover use the [release and deployment workflow](.github/workflows/README.md). A passing local test suite alone does not establish launch readiness.
 
 ## Review a run
 
@@ -19,7 +19,7 @@ Use the [review guide](docs/review-guide.md) for image modes, keyboard controls,
 The Playwright adapter captures one prepared variant per call. The caller controls navigation, media settings, viewport, and variant order. Item and variant keys define identity.
 
 ```ts
-import { visual } from "@ariviso/playwright";
+import { visual } from "@visonaut/playwright";
 
 await visual(page, {
   item: "dialog/success/open",
@@ -31,8 +31,8 @@ await visual(page, {
 Configure the reporter and trusted capture workflow before uploading. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, retries, and the reporter. The [CLI guide](packages/cli/README.md) explains GitHub Actions OIDC and upload status.
 
 ```sh
-pnpm exec ariviso upload --manifest .ariviso/manifest.json
-pnpm exec ariviso finalize --manifest .ariviso/manifest.json
+pnpm exec visonaut upload --manifest .visonaut/manifest.json
+pnpm exec visonaut finalize --manifest .visonaut/manifest.json
 ```
 
 The service verifies the complete capture plan and job results. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
@@ -55,7 +55,7 @@ For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite s
 | `apps/web`            | TanStack Start app, private API, review UI, and operations |
 | `apps/compare`        | Independent image comparison Worker                        |
 | `packages/playwright` | Public Playwright adapter and reporter                     |
-| `packages/cli`        | Public `ariviso` upload, finalize, and status commands     |
+| `packages/cli`        | Public `visonaut` upload, finalize, and status commands    |
 | `packages/protocol`   | Capture and service contracts                              |
 | `packages/service`    | Run, review, acceptance, and baseline transitions          |
 | `packages/security`   | Authentication, authorization, OIDC, and GitHub checks     |

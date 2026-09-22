@@ -12,7 +12,7 @@ function client(checks: unknown[]): GitHubClient {
 }
 it("finds the exact check without a write", async () => {
   const github = client([
-    { id: 42, name: "Ariviso", app: { id: 123 }, head_sha: testedSha, external_id: "run:1" },
+    { id: 42, name: "Visonaut", app: { id: 123 }, head_sha: testedSha, external_id: "run:1" },
   ]);
   expect(await findGitHubCheck({ github, testedSha, externalId: "run:1" })).toBe("42");
   expect(github.request).toHaveBeenCalledTimes(1);
@@ -24,7 +24,7 @@ it("returns absence without creating a replacement for an ambiguous POST", async
   expect(github.request).toHaveBeenCalledTimes(1);
 });
 it("refuses duplicate exact check identities", async () => {
-  const check = { name: "Ariviso", app: { id: 123 }, head_sha: testedSha, external_id: "run:1" };
+  const check = { name: "Visonaut", app: { id: 123 }, head_sha: testedSha, external_id: "run:1" };
   await expect(
     findGitHubCheck({
       github: client([

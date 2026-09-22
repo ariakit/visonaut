@@ -50,7 +50,7 @@ async function fixture() {
   const manifest: Manifest = {
     schemaVersion: "1.0",
     producer: {
-      name: "@ariviso/playwright",
+      name: "@visonaut/playwright",
       version: "0.1.0",
       nodeVersion: "24.18.0",
       playwrightVersion: "1.63.0",

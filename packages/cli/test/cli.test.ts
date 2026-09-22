@@ -2,13 +2,13 @@ import { mkdtemp, mkdir, rm, symlink, truncate, writeFile } from "node:fs/promis
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { digestJson } from "@ariviso/protocol";
+import { digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/index.js";
 import { fixture, imageBytes } from "./fixture.js";
 
 const environment = {
-  ARIVISO_SERVER: "https://review.example.test",
+  VISONAUT_SERVER: "https://review.example.test",
   ACTIONS_ID_TOKEN_REQUEST_URL:
     "https://run.actions.githubusercontent.com/id-token?api-version=2.0",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
@@ -73,7 +73,7 @@ async function mockService({
     requests.push({ url, options });
     let response: unknown;
     if (url.hostname.endsWith(".actions.githubusercontent.com")) {
-      expect(url.searchParams.get("audience")).toBe(environment.ARIVISO_SERVER);
+      expect(url.searchParams.get("audience")).toBe(environment.VISONAUT_SERVER);
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${requestToken}`);
       response = { value: oidcToken };
     } else if (url.pathname === "/v1/runs") {
@@ -398,7 +398,7 @@ describe("local data validation before network access", () => {
   });
 
   it("caps manifest file reads", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "ariviso-cli-size-"));
+    const directory = await mkdtemp(join(tmpdir(), "visonaut-cli-size-"));
     directories.push(directory);
     const file = join(directory, "manifest.json");
     await writeFile(file, "{}");
@@ -436,7 +436,7 @@ describe("status output and authentication", () => {
       }),
     );
     const result = await execute(["status", "--run", "run-123", "--json"], {
-      ARIVISO_TOKEN: "maintainer-session-secret",
+      VISONAUT_TOKEN: "maintainer-session-secret",
     });
     expect(result.code).toBe(state === "passed" ? 0 : 3);
     expect(JSON.parse(result.stdout)).toEqual({
@@ -473,7 +473,7 @@ describe("status output and authentication", () => {
       ),
     );
     const result = await execute(["status", "--run", "run-123"], {
-      ARIVISO_TOKEN: "secret-session",
+      VISONAUT_TOKEN: "secret-session",
     });
     expect(result.stdout).toBe(
       "Run run-123: needs-review\nShards: 2/2\nReview: https://review.example.test/runs/run-123\nError: [REDACTED]\n",
@@ -485,9 +485,9 @@ describe("status output and authentication", () => {
       "fetch",
       vi.fn(async () => json({}, status)),
     );
-    expect((await execute(["status", "--run", "run-123"], { ARIVISO_TOKEN: "session" })).code).toBe(
-      4,
-    );
+    expect(
+      (await execute(["status", "--run", "run-123"], { VISONAUT_TOKEN: "session" })).code,
+    ).toBe(4);
   });
 
   it.each(["2.0", "1.0"])(
@@ -508,7 +508,7 @@ describe("status output and authentication", () => {
         ),
       );
       expect(
-        (await execute(["status", "--run", "run-123"], { ARIVISO_TOKEN: "session" })).code,
+        (await execute(["status", "--run", "run-123"], { VISONAUT_TOKEN: "session" })).code,
       ).toBe(1);
     },
   );
@@ -537,7 +537,7 @@ describe("argument and transport boundaries", () => {
     "https://example.test/#secret",
   ])("refuses unsafe service origin %s", async (server) => {
     expect(
-      (await execute(["status", "--run", "one", "--server", server], { ARIVISO_TOKEN: "session" }))
+      (await execute(["status", "--run", "one", "--server", server], { VISONAUT_TOKEN: "session" }))
         .code,
     ).toBe(2);
   });
@@ -563,7 +563,7 @@ describe("argument and transport boundaries", () => {
           }),
       ),
     );
-    expect((await execute(["status", "--run", "one"], { ARIVISO_TOKEN: "session" })).code).toBe(1);
+    expect((await execute(["status", "--run", "one"], { VISONAUT_TOKEN: "session" })).code).toBe(1);
   });
 
   it("never follows a redirect with the maintainer credential", async () => {
@@ -583,7 +583,7 @@ describe("argument and transport boundaries", () => {
     if (!address || typeof address === "string") throw new Error("No server port");
     const result = await execute(
       ["status", "--run", "one", "--server", `http://127.0.0.1:${address.port}`],
-      { ARIVISO_TOKEN: "session" },
+      { VISONAUT_TOKEN: "session" },
     );
     expect(result.code).toBe(1);
     expect(redirected).toBe(false);

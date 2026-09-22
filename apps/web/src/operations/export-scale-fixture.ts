@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { digestJson, type CaptureProfile } from "@ariviso/protocol";
+import { digestJson, type CaptureProfile } from "@visonaut/protocol";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 
@@ -57,7 +57,7 @@ export async function seedExport({ captureCount, imageCount }: SeedExportParams)
   }
   const originalImages = [`image-${runId}`];
   const insertImage = database.connection.prepare(
-    "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,?,?,?,'image/png',?,1,1,?)",
+    "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,?,?,?,'image/png',?,1,1,?)",
   );
   database.connection.exec("BEGIN");
   for (let index = 1; index < imageCount; index++) {
@@ -74,12 +74,12 @@ export async function seedExport({ captureCount, imageCount }: SeedExportParams)
     if (role === "original") originalImages.push(id);
   }
   database.connection
-    .prepare("UPDATE ariviso_captures SET profile_digest=?,metadata_json=?")
+    .prepare("UPDATE visonaut_captures SET profile_digest=?,metadata_json=?")
     .run(profileDigest, JSON.stringify(metadata));
   const expectedCaptures = new Map<string, string>();
   expectedCaptures.set(`capture-${runId}`, "dialog");
   const insertCapture = database.connection.prepare(
-    "INSERT INTO ariviso_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES(?,?,'chromium',?,'light',?,?,?,'test',0,?)",
+    "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES(?,?,'chromium',?,'light',?,?,?,'test',0,?)",
   );
   // Add complete storage rows without turning this bounded export check into an ingest study.
   for (let index = 1; index < captureCount; index++) {

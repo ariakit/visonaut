@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ariviso-preview-compare",
+  "name": "visonaut-preview-compare",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-22",
   "workers_dev": false,
@@ -23,31 +23,31 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "ariviso-preview",
-      "database_id": "bc1093fa-c1d8-4da8-9224-dc40f988fe12",
+      "database_name": "visonaut-preview",
+      "database_id": "395b539c-c423-4ce4-887c-a5792792a63b",
     },
   ],
   "r2_buckets": [
     {
       "binding": "IMAGES",
-      "bucket_name": "ariviso-preview-images",
+      "bucket_name": "visonaut-preview-images",
     },
   ],
   "queues": {
     "producers": [
       {
         "binding": "COMPARISONS",
-        "queue": "ariviso-preview-comparisons",
+        "queue": "visonaut-preview-comparisons",
       },
     ],
     "consumers": [
       {
-        "queue": "ariviso-preview-comparisons",
+        "queue": "visonaut-preview-comparisons",
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_concurrency": 1,
         "max_retries": 5,
-        "dead_letter_queue": "ariviso-preview-dead-letter",
+        "dead_letter_queue": "visonaut-preview-dead-letter",
       },
     ],
   },
@@ -60,75 +60,75 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "ariviso-production",
-          "database_id": "d874fc64-82a9-4bd5-afc3-aefaba882802",
+          "database_name": "visonaut-production",
+          "database_id": "15fcd402-dccb-4359-a1ce-280ff67ca596",
         },
       ],
       "r2_buckets": [
         {
           "binding": "IMAGES",
-          "bucket_name": "ariviso-production-images",
+          "bucket_name": "visonaut-production-images",
         },
       ],
       "queues": {
         "producers": [
           {
             "binding": "COMPARISONS",
-            "queue": "ariviso-production-comparisons",
+            "queue": "visonaut-production-comparisons",
           },
         ],
         "consumers": [
           {
-            "queue": "ariviso-production-comparisons",
+            "queue": "visonaut-production-comparisons",
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_concurrency": 1,
             "max_retries": 5,
-            "dead_letter_queue": "ariviso-production-dead-letter",
+            "dead_letter_queue": "visonaut-production-dead-letter",
           },
         ],
       },
       "triggers": {
         "crons": ["*/5 * * * *"],
       },
-      "name": "ariviso-compare",
+      "name": "visonaut-compare",
     },
     "diagnostics": {
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "ariviso-diagnostics",
-          "database_id": "f7030b0b-7697-49db-a7f8-63f92dea5b5d",
+          "database_name": "visonaut-diagnostics",
+          "database_id": "6d68da10-2754-433f-99d1-fdfc080dfe11",
         },
       ],
       "r2_buckets": [
         {
           "binding": "IMAGES",
-          "bucket_name": "ariviso-diagnostics-images",
+          "bucket_name": "visonaut-diagnostics-images",
         },
       ],
       "queues": {
         "producers": [
           {
             "binding": "COMPARISONS",
-            "queue": "ariviso-diagnostics-comparisons",
+            "queue": "visonaut-diagnostics-comparisons",
           },
         ],
         "consumers": [
           {
-            "queue": "ariviso-diagnostics-comparisons",
+            "queue": "visonaut-diagnostics-comparisons",
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_concurrency": 1,
             "max_retries": 5,
-            "dead_letter_queue": "ariviso-diagnostics-dead-letter",
+            "dead_letter_queue": "visonaut-diagnostics-dead-letter",
           },
         ],
       },
       "triggers": {
         "crons": ["*/5 * * * *"],
       },
-      "name": "ariviso-diagnostics-compare",
+      "name": "visonaut-diagnostics-compare",
     },
   },
 }

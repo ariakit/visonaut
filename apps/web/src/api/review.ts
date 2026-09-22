@@ -1,11 +1,11 @@
-import { SecurityError } from "@ariviso/security";
+import { SecurityError } from "@visonaut/security";
 import {
   ArchivedCommandResultError,
   cancelHistoricalPreparation,
   ConflictError,
   type CommandResult,
   type ReviewRow,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import type { HistoryRow } from "../operations/history-format.ts";
 import type { PrivateContext } from "./context.js";
 import { comparisonReference } from "./ingest.js";
@@ -194,7 +194,7 @@ export async function reviewModel(
     .first<{ byte_state: string }>();
   const pendingHistorical = await context.database
     .prepare(
-      "SELECT id FROM ariviso_comparisons WHERE run_id = ? AND purpose = 'historical' AND state = 'comparing' LIMIT 1",
+      "SELECT id FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' AND state = 'comparing' LIMIT 1",
     )
     .bind(run.id)
     .first();
@@ -203,7 +203,7 @@ export async function reviewModel(
   );
   const historicalComparisons = await context.database
     .prepare(
-      "SELECT id, ordinal, state, created_at AS createdAt FROM ariviso_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
+      "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
     )
     .bind(run.id)
     .all();
@@ -245,7 +245,7 @@ export async function reviewModel(
       )
     : comparison
       ? await context.database
-          .prepare("SELECT policy_json FROM ariviso_policies WHERE digest = ?")
+          .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
           .bind(comparison.policy_digest)
           .first<{ policy_json: string }>()
       : null;
@@ -260,7 +260,7 @@ export async function reviewModel(
       }
     : await context.database
         .prepare(
-          "SELECT c.id, c.image_id, c.metadata_json FROM ariviso_captures c WHERE c.id IN (SELECT candidate_capture_id FROM ariviso_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM ariviso_comparison_rows WHERE comparison_id = ?)",
+          "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
         )
         .bind(comparison?.id ?? "", comparison?.id ?? "")
         .all<CaptureRecord>();
@@ -273,7 +273,7 @@ export async function reviewModel(
       }
     : await context.database
         .prepare(
-          "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM ariviso_images i WHERE i.run_id = (SELECT run_id FROM ariviso_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM ariviso_captures c JOIN ariviso_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
+          "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
         )
         .bind(comparison?.id ?? "", comparison?.id ?? "")
         .all<ImageRecord>();
@@ -288,14 +288,14 @@ export async function reviewModel(
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : await context.database
         .prepare(
-          "SELECT * FROM ariviso_decisions WHERE id IN (SELECT decision_id FROM ariviso_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM ariviso_comparison_rows WHERE comparison_id = ?)",
+          "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
         )
         .bind(comparison?.id ?? "", comparison?.id ?? "")
         .all<DecisionRecord>();
   const history =
     !archive && comparison
       ? await context.database
-          .prepare("SELECT id FROM ariviso_promotions WHERE comparison_id = ? LIMIT 1")
+          .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
           .bind(comparison.id)
           .first()
       : null;
@@ -303,7 +303,7 @@ export async function reviewModel(
     !archive && comparison
       ? await context.database
           .prepare(
-            "SELECT id FROM ariviso_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
+            "SELECT id FROM visonaut_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
           )
           .bind(project.promotion_id, comparison.id)
           .first()
@@ -568,7 +568,7 @@ export async function handleReview(
   if (path === "/api/runs" && request.method === "GET") {
     const runs = await context.database
       .prepare(
-        "SELECT id, kind, tested_sha AS testedSha, state, attempt, created_at AS createdAt, comparison_id AS comparisonId FROM ariviso_runs WHERE project_id = ? ORDER BY created_at DESC LIMIT 100",
+        "SELECT id, kind, tested_sha AS testedSha, state, attempt, created_at AS createdAt, comparison_id AS comparisonId FROM visonaut_runs WHERE project_id = ? ORDER BY created_at DESC LIMIT 100",
       )
       .bind(context.configuration.projectId)
       .all();
@@ -640,7 +640,7 @@ export async function handleReview(
   if (undoMatch?.[1] && request.method === "POST") {
     const commandId = uuid(undoMatch[1]);
     const command = await context.database
-      .prepare("SELECT comparison_id FROM ariviso_commands WHERE id = ? AND actor_id = ?")
+      .prepare("SELECT comparison_id FROM visonaut_commands WHERE id = ? AND actor_id = ?")
       .bind(commandId, context.identity.githubUserId)
       .first<{ comparison_id: string }>();
     if (!command) {

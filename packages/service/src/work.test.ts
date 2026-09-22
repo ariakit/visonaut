@@ -67,7 +67,7 @@ class TestDatabase implements Database {
     this.connection.exec("PRAGMA foreign_keys = ON");
     this.connection.exec(readFileSync(new URL("../work-schema.sql", import.meta.url), "utf8"));
     this.connection.exec(
-      "CREATE TABLE ariviso_assertions (valid INTEGER NOT NULL CHECK (valid = 1))",
+      "CREATE TABLE visonaut_assertions (valid INTEGER NOT NULL CHECK (valid = 1))",
     );
     this.connection.exec("CREATE TABLE result_evidence (id TEXT PRIMARY KEY)");
   }
@@ -114,7 +114,7 @@ function statusInput(
     comparisonRevision: revision,
     sourceRevision: revision,
     conclusion,
-    detailsUrl: "https://ariviso.example/runs/run-1",
+    detailsUrl: "https://visonaut.example/runs/run-1",
     maxAttempts: 2,
     now: 100,
   };

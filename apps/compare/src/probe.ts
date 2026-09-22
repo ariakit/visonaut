@@ -9,7 +9,7 @@ import {
   readBounded,
   sha256,
   validateImage,
-} from "@ariviso/compare";
+} from "@visonaut/compare";
 import { codecsReady } from "./codecs.ts";
 
 interface ProbeEnv {

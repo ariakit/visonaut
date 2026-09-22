@@ -1,10 +1,10 @@
-import { digestJson, SCHEMA_VERSION, TRANSPORT } from "@ariviso/protocol";
+import { digestJson, SCHEMA_VERSION, TRANSPORT } from "@visonaut/protocol";
 import type {
   DeclareShardResponse,
   Manifest,
   ReserveRunResponse,
   RunStatus,
-} from "@ariviso/protocol";
+} from "@visonaut/protocol";
 import { CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
 import { loadManifest, readImage, validateImages } from "./files.js";
@@ -18,14 +18,14 @@ const MAX_UPLOAD_TICKET_LENGTH = 4096;
 const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
 
 const HELP = `Usage:
-  ariviso upload --manifest <file> [--server <origin>] [--json]
-  ariviso finalize --manifest <file> [--server <origin>] [--json]
-  ariviso status --run <id> [--server <origin>] [--json]
+  visonaut upload --manifest <file> [--server <origin>] [--json]
+  visonaut finalize --manifest <file> [--server <origin>] [--json]
+  visonaut status --run <id> [--server <origin>] [--json]
 
-ARIVISO_SERVER supplies the service origin when --server is absent.
-ARIVISO_RUN supplies the run ID when status has no --run.
+VISONAUT_SERVER supplies the service origin when --server is absent.
+VISONAUT_RUN supplies the run ID when status has no --run.
 Upload and finalize require GitHub Actions OIDC (id-token: write).
-Status requires ARIVISO_TOKEN, a maintainer session token.
+Status requires VISONAUT_TOKEN, a maintainer session token.
 Upload success is data acceptance. It is not visual approval.
 
 Exit codes: 0 success, 1 operation failure, 2 invalid arguments,
@@ -73,7 +73,7 @@ function argumentsFrom(argv: string[], environment: Record<string, string | unde
     }
   }
   if (command === "status") {
-    result.run ??= environment.ARIVISO_RUN;
+    result.run ??= environment.VISONAUT_RUN;
     if (!text(result.run) || result.manifest) {
       throw new CliError("Status requires --run and does not accept --manifest.", 2);
     }
@@ -344,7 +344,7 @@ export async function runCli({
   stderr = (value) => process.stderr.write(value),
 }: CliOptions): Promise<ExitCode> {
   const secrets = new Set(
-    [environment.ARIVISO_TOKEN, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
+    [environment.VISONAUT_TOKEN, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
       (value): value is string => Boolean(value),
     ),
   );
@@ -363,11 +363,11 @@ export async function runCli({
       return 0;
     }
     const options = argumentsFrom(argv, environment);
-    const origin = serverOrigin(options.server ?? environment.ARIVISO_SERVER);
+    const origin = serverOrigin(options.server ?? environment.VISONAUT_SERVER);
     if (options.command === "status") {
-      if (!environment.ARIVISO_TOKEN) {
+      if (!environment.VISONAUT_TOKEN) {
         throw new CliError(
-          "Status requires ARIVISO_TOKEN with a current maintainer session. Upload capabilities cannot read status.",
+          "Status requires VISONAUT_TOKEN with a current maintainer session. Upload capabilities cannot read status.",
           4,
         );
       }
@@ -376,7 +376,7 @@ export async function runCli({
       }
       const response = await request({
         url: new URL(TRANSPORT.status(options.run), origin),
-        token: environment.ARIVISO_TOKEN,
+        token: environment.VISONAUT_TOKEN,
         retryUnavailable: true,
       });
       const status = runStatus(response, origin, options.run);
@@ -463,7 +463,7 @@ export async function runCli({
     if (argv.includes("--json")) {
       stderr(`${serialize({ error: failure.message, exitCode: failure.exitCode })}\n`);
     } else {
-      stderr(`ariviso: ${redact(failure.message)}\n`);
+      stderr(`visonaut: ${redact(failure.message)}\n`);
     }
     return failure.exitCode;
   }

@@ -1,11 +1,11 @@
 import type { D1Database } from "@cloudflare/workers-types";
-import type { ArivisoAuth } from "./auth.js";
+import type { VisonautAuth } from "./auth.js";
 import { numericId, SecurityError } from "./errors.js";
 import { type GitHubClient, requireRepositoryWrite } from "./github.js";
 
 export interface RequireMaintainerParams {
   request: Request;
-  auth: ArivisoAuth;
+  auth: VisonautAuth;
   database: D1Database;
   github: GitHubClient;
 }

@@ -1,4 +1,4 @@
-import { assertion } from "@ariviso/service";
+import { assertion } from "@visonaut/service";
 import type { OperationsContext } from "./types.ts";
 
 export const BACKUP_RETENTION = 30 * 24 * 60 * 60 * 1000;

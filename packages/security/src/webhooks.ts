@@ -13,7 +13,7 @@ export interface VerifiedWebhook {
 interface VerifyWebhookParams {
   request: Request;
   secret: string;
-  repositoryId: string;
+  repositoryId: string | readonly string[];
 }
 
 export async function verifyGitHubWebhook({
@@ -68,7 +68,8 @@ export async function verifyGitHubWebhook({
     event !== "installation_repositories" &&
     event !== "ping"
   ) {
-    if (numericId(record(payload.repository).id) !== repositoryId) {
+    const allowedRepositoryIds = typeof repositoryId === "string" ? [repositoryId] : repositoryId;
+    if (!allowedRepositoryIds.includes(numericId(record(payload.repository).id))) {
       throw new SecurityError("wrong_repository", 403, "The webhook repository is not configured.");
     }
   }

@@ -4,8 +4,8 @@ import {
   deliverStatus,
   reconcileStatus,
   Service,
-} from "@ariviso/service";
-import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@ariviso/security";
+} from "@visonaut/service";
+import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/security";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
@@ -24,7 +24,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
   const { database, budget } = context;
   await database
     .prepare(`INSERT INTO operations_check_creations(run_id,external_id,created_at,updated_at)
-    SELECT id,'ariviso:'||id,?,? FROM ariviso_runs WHERE active=1
+    SELECT id,'visonaut:'||id,?,? FROM visonaut_runs WHERE active=1
     ON CONFLICT(run_id) DO NOTHING`)
     .bind(context.now(), context.now())
     .run();
@@ -40,7 +40,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
     .bind(budget.maxAttempts)
     .run();
   const candidates = await database
-    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN ariviso_runs run ON run.id=creation.run_id
+    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN visonaut_runs run ON run.id=creation.run_id
     WHERE run.active=1 AND creation.state='pending' ORDER BY creation.updated_at,creation.run_id LIMIT ?`)
     .bind(budget.tasksPerStep)
     .all<CheckCreation>();
@@ -48,7 +48,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
     .prepare("SELECT value FROM operations_cursors WHERE id='creation-attention'")
     .first<{ value: string | null }>();
   const attention = await database
-    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN ariviso_runs run ON run.id=creation.run_id
+    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN visonaut_runs run ON run.id=creation.run_id
     WHERE run.active=1 AND creation.state IN ('ambiguous','dead') AND creation.run_id>? ORDER BY creation.run_id LIMIT ?`)
     .bind(cursor?.value ?? "", budget.tasksPerStep)
     .all<CheckCreation>();
@@ -131,7 +131,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
             const permitted = await database
               .prepare(`UPDATE operations_check_creations SET request_started=1
             WHERE run_id=? AND state='creating' AND lease_token=? AND lease_until>?
-              AND EXISTS(SELECT 1 FROM ariviso_runs WHERE id=? AND active=1) RETURNING run_id`)
+              AND EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND active=1) RETURNING run_id`)
               .bind(run.id, token, context.now(), run.id)
               .first();
             if (!permitted) throw new ConflictError("The check creation lease changed.");
@@ -177,10 +177,10 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   await createChecks(context, report);
   const updates = await database
-    .prepare(`SELECT DISTINCT run.id,creation.check_id FROM ariviso_runs run
-    JOIN ariviso_projects project ON project.id=run.project_id
+    .prepare(`SELECT DISTINCT run.id,creation.check_id FROM visonaut_runs run
+    JOIN visonaut_projects project ON project.id=run.project_id
     JOIN operations_check_creations creation ON creation.run_id=run.id AND creation.state='complete'
-    LEFT JOIN ariviso_status_outbox pending ON pending.run_id=run.id AND pending.delivered_at IS NULL
+    LEFT JOIN visonaut_status_outbox pending ON pending.run_id=run.id AND pending.delivered_at IS NULL
     WHERE run.active=1 AND (pending.id IS NOT NULL OR EXISTS(SELECT 1 FROM work_status_outbox stale JOIN work_checks checks ON checks.id=stale.check_id AND checks.desired_revision=stale.revision WHERE stale.check_id=creation.check_id AND stale.source_revision!=project.revision) OR NOT EXISTS(SELECT 1 FROM work_status_outbox current JOIN work_checks checks ON checks.id=current.check_id AND checks.desired_revision=current.revision WHERE current.check_id=creation.check_id))
     ORDER BY run.created_at,run.id LIMIT ?`)
     .bind(budget.tasksPerStep)

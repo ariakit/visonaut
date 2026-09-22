@@ -33,7 +33,7 @@ pnpm exec wrangler secret bulk .probe-secrets.json --config wrangler.json
 Set the origin to the new disposable Worker, then run the controller:
 
 ```sh
-ARIVISO_PROBE_ORIGIN=https://YOUR-UNIQUE-PREFIX.YOUR-SUBDOMAIN.workers.dev node run.mjs
+VISONAUT_PROBE_ORIGIN=https://YOUR-UNIQUE-PREFIX.YOUR-SUBDOMAIN.workers.dev node run.mjs
 ```
 
 The controller checks unauthenticated denial, durable work after lost publication, a real expired lease, duplicate delivery, three-attempt work failure, native dead-letter delivery, private alerts, stale completion rejection, and explicit replacement recovery. It stops on a failed assertion. The generic work results do not prove image or GitHub correctness.

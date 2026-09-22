@@ -1,4 +1,4 @@
-import { canonicalJson, digestJson, type CaptureProfile } from "@ariviso/protocol";
+import { canonicalJson, digestJson, type CaptureProfile } from "@visonaut/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { TestDatabase, captured, context } from "./operations/test-fixtures.ts";
 import {
@@ -43,7 +43,7 @@ describe("capture profile storage", () => {
     expect(retained).toBeDefined();
     await storeCaptureProfiles(database, records);
     database.connection
-      .prepare("UPDATE ariviso_captures SET profile_digest=? WHERE id='capture-run'")
+      .prepare("UPDATE visonaut_captures SET profile_digest=? WHERE id='capture-run'")
       .run(retained?.digest ?? "");
     expect(await pruneCaptureProfiles(database, 1)).toMatchObject({ completed: [], hasMore: true });
     expect((await pruneCaptureProfiles(database, 1)).completed).toEqual([records[1]?.digest]);
@@ -53,7 +53,7 @@ describe("capture profile storage", () => {
       hasMore: false,
     });
     expect(
-      database.connection.prepare("SELECT digest FROM ariviso_capture_profiles").all(),
+      database.connection.prepare("SELECT digest FROM visonaut_capture_profiles").all(),
     ).toEqual([{ digest: retained?.digest }]);
     expect(
       database.connection
@@ -75,13 +75,13 @@ describe("capture profile storage", () => {
         if (operation === "update") {
           database.connection
             .prepare(
-              "UPDATE ariviso_captures SET profile_digest=?,metadata_json=? WHERE id='capture-run'",
+              "UPDATE visonaut_captures SET profile_digest=?,metadata_json=? WHERE id='capture-run'",
             )
             .run(digest, metadata);
         } else {
           database.connection
             .prepare(
-              "INSERT INTO ariviso_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT 'capture-other',run_id,shard_key,'other',variant_key,1,image_id,?,test_id,test_retry,? FROM ariviso_captures WHERE id='capture-run'",
+              "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT 'capture-other',run_id,shard_key,'other',variant_key,1,image_id,?,test_id,test_retry,? FROM visonaut_captures WHERE id='capture-run'",
             )
             .run(digest, metadata);
         }
@@ -91,7 +91,9 @@ describe("capture profile storage", () => {
       write();
       expect((await pruneCaptureProfiles(database, 10)).completed).toEqual([]);
       const rows = await database
-        .prepare("SELECT profile_digest,metadata_json FROM ariviso_captures WHERE profile_digest=?")
+        .prepare(
+          "SELECT profile_digest,metadata_json FROM visonaut_captures WHERE profile_digest=?",
+        )
         .bind(digest)
         .all<{ profile_digest: string; metadata_json: string }>();
       const hydrated = await hydrateCaptureMetadata(database, rows.results ?? []);
@@ -107,13 +109,13 @@ describe("capture profile storage", () => {
     database.beforeBatch = () => {
       database.connection
         .prepare(
-          "UPDATE ariviso_captures SET profile_digest=?,metadata_json=? WHERE id='capture-run'",
+          "UPDATE visonaut_captures SET profile_digest=?,metadata_json=? WHERE id='capture-run'",
         )
         .run(digest, JSON.stringify({ profile: captureProfileReference(digest) }));
     };
     expect((await pruneCaptureProfiles(database, 10)).completed).toEqual([]);
     expect(
-      database.connection.prepare("SELECT digest FROM ariviso_capture_profiles").all(),
+      database.connection.prepare("SELECT digest FROM visonaut_capture_profiles").all(),
     ).toEqual([{ digest }]);
   });
 
@@ -141,10 +143,10 @@ describe("capture profile storage", () => {
       { digest, profile: { ...profile, viewport: { height: 720, width: 1280 } } },
     ]);
     expect(
-      prepare.mock.calls.filter(([sql]) => sql.startsWith("INSERT INTO ariviso_capture_profiles")),
+      prepare.mock.calls.filter(([sql]) => sql.startsWith("INSERT INTO visonaut_capture_profiles")),
     ).toHaveLength(1);
     await storeCaptureProfiles(database, [{ digest, profile }]);
-    expect(database.connection.prepare("SELECT * FROM ariviso_capture_profiles").all()).toEqual([
+    expect(database.connection.prepare("SELECT * FROM visonaut_capture_profiles").all()).toEqual([
       { digest, profile_json: canonicalJson(profile) },
     ]);
   });
@@ -154,7 +156,9 @@ describe("capture profile storage", () => {
     await expect(
       storeCaptureProfiles(database, [{ digest: "d".repeat(64), profile }]),
     ).rejects.toThrow("does not match its digest");
-    expect(database.connection.prepare("SELECT * FROM ariviso_capture_profiles").all()).toEqual([]);
+    expect(database.connection.prepare("SELECT * FROM visonaut_capture_profiles").all()).toEqual(
+      [],
+    );
   });
 
   it("refuses conflicting stored content and rolls back other inserts in its batch", async () => {
@@ -163,7 +167,7 @@ describe("capture profile storage", () => {
     const changed = { ...profile, locale: "pt-BR" };
     const wrongContent = canonicalJson(changed);
     database.connection
-      .prepare("INSERT INTO ariviso_capture_profiles VALUES(?,?)")
+      .prepare("INSERT INTO visonaut_capture_profiles VALUES(?,?)")
       .run(digest, wrongContent);
     await expect(
       storeCaptureProfiles(database, [
@@ -171,7 +175,7 @@ describe("capture profile storage", () => {
         { digest, profile },
       ]),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(database.connection.prepare("SELECT * FROM ariviso_capture_profiles").all()).toEqual([
+    expect(database.connection.prepare("SELECT * FROM visonaut_capture_profiles").all()).toEqual([
       { digest, profile_json: wrongContent },
     ]);
   });
@@ -183,7 +187,7 @@ describe("capture profile storage", () => {
     const metadata = {
       name: "Dialog",
       variant: { browser: "chromium", key: "light" },
-      profile: { $arivisoProfileDigest: digest },
+      profile: { $visonautProfileDigest: digest },
       source: { file: "dialog.test.ts", titlePath: ["Dialog", "open"] },
     };
     const normalized = {
@@ -227,7 +231,7 @@ describe("capture profile storage", () => {
     };
     await expect(hydrateCaptureMetadata(database, [capture])).rejects.toThrow("is unavailable");
     database.connection
-      .prepare("INSERT INTO ariviso_capture_profiles VALUES(?,?)")
+      .prepare("INSERT INTO visonaut_capture_profiles VALUES(?,?)")
       .run(digest, canonicalJson({ ...profile, locale: "pt-BR" }));
     await expect(hydrateCaptureMetadata(database, [capture])).rejects.toThrow(
       "does not match its digest",
@@ -235,9 +239,9 @@ describe("capture profile storage", () => {
   });
 
   it.each([
-    { $arivisoProfileDigest: "d".repeat(64) },
-    { $arivisoProfileDigest: "d".repeat(64), extra: true },
-    { $arivisoProfileDigest: null },
+    { $visonautProfileDigest: "d".repeat(64) },
+    { $visonautProfileDigest: "d".repeat(64), extra: true },
+    { $visonautProfileDigest: null },
   ])("rejects an invalid profile marker: %j", async (reference) => {
     using database = new TestDatabase();
     await expect(

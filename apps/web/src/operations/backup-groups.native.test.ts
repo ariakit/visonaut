@@ -10,7 +10,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from "vitest";
 import { TestDatabase, captured, context, ingestRecords } from "./test-fixtures.ts";
 
 const require = createRequire(import.meta.url);
-const directory = await mkdtemp(resolve(tmpdir(), "ariviso-native-group-"));
+const directory = await mkdtemp(resolve(tmpdir(), "visonaut-native-group-"));
 let runtime: Miniflare | undefined;
 let bundleDigest = "";
 let script = "";
@@ -78,7 +78,7 @@ beforeAll(async () => {
         for(const object of input.objects)await env[object.bucket].put(object.key,Uint8Array.from(atob(object.body),c=>c.charCodeAt(0)),{httpMetadata:{contentType:object.contentType}});
         return Response.json({seeded:input.objects.length});
       }
-      const context={database:measuredDatabase(env.DB),images:measuredStore(env.IMAGES),quarantine:measuredStore(env.QUARANTINE),backups:measuredStore(env.BACKUPS,true),budget:{tasksPerStep:10,objectsPerStep:1000,leaseMilliseconds:300000,maxAttempts:3,maximumObjectBytes:2097152,maximumDatabaseBytes:16777216,maximumExportEntries:100000},now:()=>input.now,comparisons:{send(){}},github:{},origin:'https://ariviso.test'};
+      const context={database:measuredDatabase(env.DB),images:measuredStore(env.IMAGES),quarantine:measuredStore(env.QUARANTINE),backups:measuredStore(env.BACKUPS,true),budget:{tasksPerStep:10,objectsPerStep:1000,leaseMilliseconds:300000,maxAttempts:3,maximumObjectBytes:2097152,maximumDatabaseBytes:16777216,maximumExportEntries:100000},now:()=>input.now,comparisons:{send(){}},github:{},origin:'https://visonaut.test'};
       if(input.action==='backup'){
         for(const key of Object.keys(counts))counts[key]=0;
         const reports=[];
@@ -98,7 +98,7 @@ beforeAll(async () => {
           async assertEmpty(){const tables=await env.TARGET.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '_cf_%' AND name NOT LIKE 'sqlite_%'").all();if(tables.results.length)throw new Error('nonempty target');if((await env.TARGET_IMAGES.list()).objects.length)throw new Error('nonempty bucket');},
           async importDatabase(body){const text=await new Response(body).text();if(text!==snapshotSQL)throw new Error('SQL fixture changed');const statements=snapshotStatements;await env.TARGET.exec('PRAGMA defer_foreign_keys=ON');await env.TARGET.batch([env.TARGET.prepare('PRAGMA defer_foreign_keys=ON'),...statements.map(sql=>env.TARGET.prepare(sql))]);},
           async reapplyCurrentRules(){await sanitizeRestoredDatabase(env.TARGET,input.now);},
-          async verifyDatabaseAndReferences(){const violations=await env.TARGET.prepare('PRAGMA foreign_key_check').all();if(violations.results.length)throw new Error('broken foreign key');const images=await env.TARGET.prepare('SELECT object_key,digest,bytes FROM ariviso_images WHERE bytes_present=1').all();for(const image of images.results){const object=await env.TARGET_IMAGES.get(image.object_key);if(!object)throw new Error('missing restored image');const verified=await digestStream(object.body,2097152);if(verified.digest!==image.digest||verified.bytes!==image.bytes)throw new Error('restored image mismatch');}}
+          async verifyDatabaseAndReferences(){const violations=await env.TARGET.prepare('PRAGMA foreign_key_check').all();if(violations.results.length)throw new Error('broken foreign key');const images=await env.TARGET.prepare('SELECT object_key,digest,bytes FROM visonaut_images WHERE bytes_present=1').all();for(const image of images.results){const object=await env.TARGET_IMAGES.get(image.object_key);if(!object)throw new Error('missing restored image');const verified=await digestStream(object.body,2097152);if(verified.digest!==image.digest||verified.bytes!==image.bytes)throw new Error('restored image mismatch');}}
         },context.budget);
         if(input.historyRunId){
           const restoredContext={...context,database:env.TARGET,images:env.TARGET_IMAGES,quarantine:env.TARGET_QUARANTINE};
@@ -118,7 +118,7 @@ beforeAll(async () => {
   await writeFile(
     resolve(directory, "wrangler.json"),
     JSON.stringify({
-      name: "ariviso-native-backup-group-test",
+      name: "visonaut-native-backup-group-test",
       main: "worker.mjs",
       compatibility_date: "2026-09-22",
       compatibility_flags: ["nodejs_compat"],
@@ -170,7 +170,7 @@ afterAll(async () => {
 
 async function request(body: unknown) {
   if (!runtime) throw new Error("Native backup runtime unavailable.");
-  const response = await runtime.dispatchFetch("https://ariviso.test/", {
+  const response = await runtime.dispatchFetch("https://visonaut.test/", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -191,12 +191,12 @@ it.each(["none", "complete", "incomplete"])(
     // pre-stage the immutable destination and let its full digest verification run.
     const serviceSnapshot = "snapshot-native";
     database.connection.exec(
-      `INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,prefix,created_at) VALUES('${serviceSnapshot}','project','run','comparison-run','${"a".repeat(40)}','accepted','baselines/${serviceSnapshot}',0);INSERT INTO ariviso_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT '${serviceSnapshot}',capture.id,image.id,'baselines/${serviceSnapshot}/original',image.digest,1 FROM ariviso_captures capture JOIN ariviso_images image ON image.id=capture.image_id`,
+      `INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,prefix,created_at) VALUES('${serviceSnapshot}','project','run','comparison-run','${"a".repeat(40)}','accepted','baselines/${serviceSnapshot}',0);INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT '${serviceSnapshot}',capture.id,image.id,'baselines/${serviceSnapshot}/original',image.digest,1 FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id`,
     );
     await fixture.images.put(`baselines/${serviceSnapshot}/original`, "original-image-bytes", {
       httpMetadata: { contentType: "image/png" },
     });
-    const extraObjects = Math.max(0, Number(process.env.ARIVISO_BACKUP_SCALE ?? 2) - 2);
+    const extraObjects = Math.max(0, Number(process.env.VISONAUT_BACKUP_SCALE ?? 2) - 2);
     if (!Number.isSafeInteger(extraObjects) || extraObjects > 9998)
       throw new Error("Invalid native backup stress size.");
     for (let index = 0; index < extraObjects; index++) {
@@ -204,7 +204,7 @@ it.each(["none", "complete", "incomplete"])(
       await fixture.images.put(key, "x", { httpMetadata: { contentType: "image/png" } });
       database.connection
         .prepare(
-          "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run','2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881',?,'image/png',1,1,1)",
+          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run','2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881',?,'image/png',1,1,1)",
         )
         .run(`extra-${index}`, key);
     }
@@ -225,7 +225,7 @@ it.each(["none", "complete", "incomplete"])(
           .first();
         expect(archivedRecords.upload).toMatchObject({ complete: 0, image_id: imageId });
         expect(
-          database.connection.prepare("SELECT id FROM ariviso_images WHERE id=?").get(imageId),
+          database.connection.prepare("SELECT id FROM visonaut_images WHERE id=?").get(imageId),
         ).toBeUndefined();
         expect(await fixture.images.get(imageKey)).toBeNull();
       }
@@ -238,7 +238,7 @@ it.each(["none", "complete", "incomplete"])(
       }
       expect(
         database.connection
-          .prepare("SELECT detail_archived FROM ariviso_runs WHERE id='archived-ingest'")
+          .prepare("SELECT detail_archived FROM visonaut_runs WHERE id='archived-ingest'")
           .get(),
       ).toEqual({ detail_archived: 1 });
       expect(
@@ -295,7 +295,7 @@ it.each(["none", "complete", "incomplete"])(
         archivedDocuments: 2,
         liveUploads: 0,
       });
-    if (process.env.ARIVISO_BACKUP_EVIDENCE && !includeArchivedIngest) {
+    if (process.env.VISONAUT_BACKUP_EVIDENCE && !includeArchivedIngest) {
       const sources = [
         "backups.ts",
         "backup-groups.ts",
@@ -321,7 +321,7 @@ it.each(["none", "complete", "incomplete"])(
         ),
       );
       await writeFile(
-        process.env.ARIVISO_BACKUP_EVIDENCE,
+        process.env.VISONAUT_BACKUP_EVIDENCE,
         JSON.stringify(
           {
             objectCount: 2 + extraObjects,

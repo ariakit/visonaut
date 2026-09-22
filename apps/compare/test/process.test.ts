@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { beforeAll, expect, it } from "vitest";
-import { decodeImage, validateImage, type ImageCodecs } from "@ariviso/compare";
-import type { ComparisonTask } from "@ariviso/service";
+import { decodeImage, validateImage, type ImageCodecs } from "@visonaut/compare";
+import type { ComparisonTask } from "@visonaut/service";
 import { nodeCodecs } from "../../../packages/compare/test/codecs.ts";
 import { processComparisonTask, type ArtifactStorage } from "../src/process.ts";
 

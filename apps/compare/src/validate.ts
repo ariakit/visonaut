@@ -5,7 +5,7 @@ import {
   readBounded,
   validateImage,
   type ImageCodecs,
-} from "@ariviso/compare";
+} from "@visonaut/compare";
 import { CodecBusyError, withCodecCapacity } from "./capacity.ts";
 
 /** This handler is available only through the private Worker service binding. */

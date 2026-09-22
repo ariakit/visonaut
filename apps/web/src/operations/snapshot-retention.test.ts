@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { closedRunRetentionMs } from "@ariviso/service";
+import { closedRunRetentionMs } from "@visonaut/service";
 import { captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 import { expireComparisonReferences, expireSnapshotImages } from "./snapshot-retention.ts";
 
@@ -7,16 +7,16 @@ async function snapshot(database: TestDatabase, fixture: ReturnType<typeof conte
   await captured(fixture.context, id, "main");
   database.connection
     .prepare(
-      "INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES(?,'project',?,?,'sha','accepted',1,?,0)",
+      "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES(?,'project',?,?,'sha','accepted',1,?,0)",
     )
     .run(id, id, `comparison-${id}`, `baselines/${id}`);
   database.connection
     .prepare(
-      "INSERT INTO ariviso_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT ?,capture.id,image.id,?,image.digest,1 FROM ariviso_captures capture JOIN ariviso_images image ON image.id=capture.image_id WHERE capture.run_id=?",
+      "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT ?,capture.id,image.id,?,image.digest,1 FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id WHERE capture.run_id=?",
     )
     .run(id, `baselines/${id}/original`, id);
   database.connection
-    .prepare("UPDATE ariviso_runs SET active=0,state='accepted',closed_at=? WHERE id=?")
+    .prepare("UPDATE visonaut_runs SET active=0,state='accepted',closed_at=? WHERE id=?")
     .run(fixture.state.time - closedRunRetentionMs - 1, id);
   database.connection.prepare("DELETE FROM work_retention_pins WHERE run_id=?").run(id);
   await fixture.images.put(`baselines/${id}/original`, "original-image-bytes");
@@ -34,18 +34,18 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   const fixture = context(database);
   await snapshot(database, fixture, "a-current");
   await snapshot(database, fixture, "z-old");
-  database.connection.exec("UPDATE ariviso_projects SET snapshot_id='a-current'");
+  database.connection.exec("UPDATE visonaut_projects SET snapshot_id='a-current'");
   fixture.context.budget.tasksPerStep = 1;
   await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='a-current'")
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='a-current'")
       .get(),
   ).toEqual({ byte_state: "live" });
   await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='z-old'")
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='z-old'")
       .get(),
   ).toEqual({ byte_state: "retiring" });
   expect(fixture.images.objects.has("baselines/z-old/original")).toBe(true);
@@ -57,7 +57,7 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   for (let step = 0; step < 5; step++) await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='z-old'")
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='z-old'")
       .get(),
   ).toEqual({ byte_state: "deleted" });
   expect(fixture.images.objects.has("baselines/a-current/original")).toBe(true);
@@ -86,7 +86,7 @@ it("keeps protected copies during a combined backup and recovers a failed bounde
   for (let step = 0; step < 5; step++) await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='old'")
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='old'")
       .get(),
   ).toEqual({ byte_state: "deleted" });
   expect(

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
-import { digestJson } from "@ariviso/protocol";
+import { digestJson } from "@visonaut/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import { issueUploadTicket } from "../../security/src/capabilities.js";
 import { runCli } from "../src/index.js";
@@ -10,13 +10,13 @@ import { fixture } from "./fixture.js";
 
 const directories: string[] = [];
 const environment = {
-  ARIVISO_SERVER: "https://ariviso.example",
+  VISONAUT_SERVER: "https://visonaut.example",
   ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
 };
 const configuration = {
   secret: "test-only-signing-key-".repeat(2),
-  issuer: environment.ARIVISO_SERVER,
+  issuer: environment.VISONAUT_SERVER,
   environment: "production" as const,
 };
 const runId = "3f13c649-4649-43fd-b846-b1de3e30ec14";

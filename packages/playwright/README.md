@@ -1,11 +1,11 @@
-# @ariviso/playwright
+# @visonaut/playwright
 
-Capture one prepared page variant and write an Ariviso manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
+Capture one prepared page variant and write an Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
 
 Launch support is limited to Node.js 24.18.0, pnpm 12.5.1, and Playwright 1.63.0. The adapter emits original PNG bytes. The ingest protocol also supports validated lossless WebP from other clients.
 
 ```sh
-pnpm add -D @ariviso/playwright ariviso @playwright/test@1.63.0
+pnpm add -D @visonaut/playwright visonaut @playwright/test@1.63.0
 ```
 
 ## Capture
@@ -13,7 +13,7 @@ pnpm add -D @ariviso/playwright ariviso @playwright/test@1.63.0
 The caller owns navigation, page preparation, media settings, variant loops, clipping, and cleanup. Each call captures one variant. Item and variant keys are explicit. A display-name change does not change identity.
 
 ```ts
-import { visual } from "@ariviso/playwright";
+import { visual } from "@visonaut/playwright";
 
 await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
 await visual(page, {
@@ -32,7 +32,7 @@ await visual(page, {
 
 The adapter waits for document and font readiness. It captures PNG images with animations disabled and requires two consecutive images with equal dimensions and equal decoded RGBA pixels. Captures are at least 100 ms apart. A deadline applies to the complete operation. The default is 5000 ms; a timeout is a capture failure, including for a new item. Pass the existing effective timeout and screenshot options when you replace another capture helper. The adapter does not read private Playwright assertion configuration. Capture limits are 20 MiB encoded and 32 million decoded pixels. These are defensive client limits, separate from the measured service policy.
 
-Set the operating-system image digest, font digest, comparison-policy digest, and comparison-engine version in `project.metadata.ariviso.profile`, or pass them in `visual(..., { profile })`. Use real SHA-256 digests from the trusted capture configuration. Browser version, viewport, device scale, locale, time zone, media state, animation policy, and screenshot options are recorded from the prepared page. A variant's declared browser or media state must match that page.
+Set the operating-system image digest, font digest, comparison-policy digest, and comparison-engine version in `project.metadata.visonaut.profile`, or pass them in `visual(..., { profile })`. Use real SHA-256 digests from the trusted capture configuration. Browser version, viewport, device scale, locale, time zone, media state, animation policy, and screenshot options are recorded from the prepared page. A variant's declared browser or media state must match that page.
 
 ```ts
 import { defineConfig } from "@playwright/test";
@@ -40,11 +40,11 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   use: { reducedMotion: "reduce", locale: "en-US", timezoneId: "UTC" },
   metadata: {
-    ariviso: {
+    visonaut: {
       profile: {
-        osImageDigest: process.env.ARIVISO_OS_IMAGE_DIGEST,
-        fontsDigest: process.env.ARIVISO_FONTS_DIGEST,
-        comparisonPolicyDigest: process.env.ARIVISO_POLICY_DIGEST,
+        osImageDigest: process.env.VISONAUT_OS_IMAGE_DIGEST,
+        fontsDigest: process.env.VISONAUT_FONTS_DIGEST,
+        comparisonPolicyDigest: process.env.VISONAUT_POLICY_DIGEST,
         comparisonEngineVersion: "rgba-v1",
       },
     },
@@ -62,20 +62,20 @@ Add the reporter with the verified workflow context and local shard identity. Th
 reporter: [
   ["list"],
   [
-    "@ariviso/playwright/reporter",
+    "@visonaut/playwright/reporter",
     {
-      outputFile: "ariviso/manifest.json",
+      outputFile: "visonaut/manifest.json",
       run: {
         repository: "ariakit/ariakit",
         repositoryId: process.env.GITHUB_REPOSITORY_ID,
         workflowRunId: process.env.GITHUB_RUN_ID,
         workflowAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-        testedSha: process.env.ARIVISO_TESTED_SHA,
-        planDigest: process.env.ARIVISO_PLAN_DIGEST,
+        testedSha: process.env.VISONAUT_TESTED_SHA,
+        planDigest: process.env.VISONAUT_PLAN_DIGEST,
       },
       shard: {
-        key: process.env.ARIVISO_SHARD_KEY,
-        jobId: process.env.ARIVISO_JOB_ID,
+        key: process.env.VISONAUT_SHARD_KEY,
+        jobId: process.env.VISONAUT_JOB_ID,
         sourceAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
       },
     },
@@ -88,8 +88,8 @@ The reporter uses suite declaration order and call order, not worker completion 
 A failed run, exhausted retry, missing image, duplicate identity, or empty capture set produces no successful manifest and fails the command. A prior manifest is removed when the reporter starts, so a failed rerun cannot upload old success. Pass an optional `plan` object to the reporter for an early exact test/capture check. The server always performs its own trusted-plan check.
 
 ```sh
-pnpm exec ariviso upload --manifest ariviso/manifest.json
-pnpm exec ariviso finalize --manifest ariviso/manifest.json
+pnpm exec visonaut upload --manifest visonaut/manifest.json
+pnpm exec visonaut finalize --manifest visonaut/manifest.json
 ```
 
 Run capture and upload as separate steps. The capture job does not wait for human review.

@@ -95,7 +95,7 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
     <div className="dashboard-run-page">
       <header className="dashboard-header">
         <Link to="/" className="dashboard-brand">
-          Ariviso
+          Visonaut
         </Link>
         <Link to="/">All runs</Link>
         {state.status === "ready" && (

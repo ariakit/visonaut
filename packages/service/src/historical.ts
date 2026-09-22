@@ -13,24 +13,24 @@ export function historicalGuard(
 ): Statement {
   return assertion(
     database,
-    `EXISTS (SELECT 1 FROM ariviso_comparisons comparison
-    JOIN ariviso_runs run ON run.id = comparison.run_id
+    `EXISTS (SELECT 1 FROM visonaut_comparisons comparison
+    JOIN visonaut_runs run ON run.id = comparison.run_id
     JOIN work_retained_runs retained ON retained.id = run.id
     JOIN work_retention_pins pin ON pin.run_id = run.id
     WHERE comparison.id = ? AND comparison.purpose = 'historical' AND comparison.state = 'comparing'
       AND run.active = 0 AND run.sealed_at IS NOT NULL AND retained.byte_state = 'live'
       AND pin.owner = ? AND pin.reason = 'manual')
-    AND NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row
-      JOIN ariviso_captures capture ON capture.id = row.candidate_capture_id
-      JOIN ariviso_images image ON image.id = capture.image_id
+    AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row
+      JOIN visonaut_captures capture ON capture.id = row.candidate_capture_id
+      JOIN visonaut_images image ON image.id = capture.image_id
       WHERE row.comparison_id = ? AND (image.bytes_present != 1 OR NOT EXISTS (
         SELECT 1 FROM work_retention_pins pin JOIN work_retained_runs retained ON retained.id = pin.run_id
         WHERE pin.run_id = image.run_id AND pin.owner = ? AND pin.reason = 'manual' AND retained.byte_state = 'live')))
-    AND NOT EXISTS (SELECT 1 FROM ariviso_comparisons comparison
+    AND NOT EXISTS (SELECT 1 FROM visonaut_comparisons comparison
       WHERE comparison.id = ? AND comparison.reference_snapshot_id IS NOT NULL AND NOT EXISTS (
-        SELECT 1 FROM ariviso_snapshots snapshot
-        JOIN ariviso_snapshot_retention retention ON retention.snapshot_id = snapshot.id
-        JOIN ariviso_pins pin ON pin.snapshot_id = snapshot.id
+        SELECT 1 FROM visonaut_snapshots snapshot
+        JOIN visonaut_snapshot_retention retention ON retention.snapshot_id = snapshot.id
+        JOIN visonaut_pins pin ON pin.snapshot_id = snapshot.id
         WHERE snapshot.id = comparison.reference_snapshot_id AND (? = 0 OR snapshot.reference_eligible = 1)
           AND retention.byte_state = 'live' AND pin.reason = 'historical' AND pin.owner_id = comparison.id))`,
     [
@@ -49,7 +49,7 @@ export function releaseHistoricalPins(database: Database, comparisonId: string) 
     statement(database, "DELETE FROM work_retention_pins WHERE owner = ? AND reason = 'manual'", [
       historicalOwner(comparisonId),
     ]),
-    statement(database, "DELETE FROM ariviso_pins WHERE owner_id = ? AND reason = 'historical'", [
+    statement(database, "DELETE FROM visonaut_pins WHERE owner_id = ? AND reason = 'historical'", [
       comparisonId,
     ]),
   ];
@@ -57,20 +57,20 @@ export function releaseHistoricalPins(database: Database, comparisonId: string) 
 
 export async function finalizeHistoricalComparison(database: Database, comparisonId: string) {
   const unavailableReference = await database
-    .prepare(`SELECT 1 FROM ariviso_comparisons comparison
-    JOIN ariviso_snapshots snapshot ON snapshot.id = comparison.reference_snapshot_id
+    .prepare(`SELECT 1 FROM visonaut_comparisons comparison
+    JOIN visonaut_snapshots snapshot ON snapshot.id = comparison.reference_snapshot_id
     WHERE comparison.id = ? AND snapshot.reference_eligible != 1`)
     .bind(comparisonId)
     .first();
   const failedTask = await database
-    .prepare(`SELECT 1 FROM ariviso_comparison_rows row
+    .prepare(`SELECT 1 FROM visonaut_comparison_rows row
     LEFT JOIN work_tasks task ON task.id = row.id
     WHERE row.comparison_id = ? AND (row.outcome = 'error' OR (row.outcome = 'pending' AND task.state = 'dead')) LIMIT 1`)
     .bind(comparisonId)
     .first();
   const pending = await database
     .prepare(
-      "SELECT 1 FROM ariviso_comparison_rows WHERE comparison_id = ? AND outcome = 'pending' LIMIT 1",
+      "SELECT 1 FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome = 'pending' LIMIT 1",
     )
     .bind(comparisonId)
     .first();
@@ -82,26 +82,26 @@ export async function finalizeHistoricalComparison(database: Database, compariso
     historicalGuard(database, comparisonId, !failed),
     assertion(
       database,
-      `NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.comparison_id = ?
+      `NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = ?
       AND (row.decision_id IS NOT NULL OR row.source_decision_id IS NOT NULL OR row.decision_revision != 0))`,
       [comparisonId],
     ),
     statement(
       database,
-      "UPDATE ariviso_comparisons SET state = ? WHERE id = ? AND purpose = 'historical' AND state = 'comparing'",
+      "UPDATE visonaut_comparisons SET state = ? WHERE id = ? AND purpose = 'historical' AND state = 'comparing'",
       [failed ? "invalidated" : "ready", comparisonId],
     ),
     ...(failed
       ? [
           statement(
             database,
-            "UPDATE ariviso_comparison_rows SET outcome = 'error' WHERE comparison_id = ? AND outcome = 'pending'",
+            "UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE comparison_id = ? AND outcome = 'pending'",
             [comparisonId],
           ),
           statement(
             database,
             `UPDATE work_tasks SET state = 'dead', lease_token = NULL, lease_until = NULL,
-      last_error = 'Historical comparison failed' WHERE id IN (SELECT id FROM ariviso_comparison_rows WHERE comparison_id = ?) AND state IN ('queued', 'leased')`,
+      last_error = 'Historical comparison failed' WHERE id IN (SELECT id FROM visonaut_comparison_rows WHERE comparison_id = ?) AND state IN ('queued', 'leased')`,
             [comparisonId],
           ),
         ]
@@ -127,7 +127,7 @@ export async function beginHistoricalPreparation(
   await atomic(database, [
     assertion(
       database,
-      `EXISTS (SELECT 1 FROM ariviso_runs run JOIN work_retained_runs retained ON retained.id = run.id
+      `EXISTS (SELECT 1 FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id = run.id
       WHERE run.id = ? AND run.active = 0 AND run.sealed_at IS NOT NULL AND retained.byte_state = 'live')`,
       [input.runId],
     ),
@@ -135,28 +135,28 @@ export async function beginHistoricalPreparation(
       ? [
           assertion(
             database,
-            `EXISTS (SELECT 1 FROM ariviso_snapshots snapshot
-        JOIN ariviso_runs run ON run.id = ? AND run.project_id = snapshot.project_id
-        JOIN ariviso_ancestry ancestry ON ancestry.run_id = run.id AND ancestry.ancestor_sha = snapshot.tested_sha
+            `EXISTS (SELECT 1 FROM visonaut_snapshots snapshot
+        JOIN visonaut_runs run ON run.id = ? AND run.project_id = snapshot.project_id
+        JOIN visonaut_ancestry ancestry ON ancestry.run_id = run.id AND ancestry.ancestor_sha = snapshot.tested_sha
         WHERE snapshot.id = ? AND snapshot.reference_eligible = 1
-          AND NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1))`,
+          AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1))`,
             [input.runId, input.referenceSnapshotId],
           ),
           statement(
             database,
-            "INSERT INTO ariviso_pins(snapshot_id, reason, owner_id) VALUES (?, 'historical', ?)",
+            "INSERT INTO visonaut_pins(snapshot_id, reason, owner_id) VALUES (?, 'historical', ?)",
             [input.referenceSnapshotId, input.id],
           ),
           statement(
             database,
-            "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT run_id, ?, 'manual' FROM ariviso_snapshots WHERE id = ?",
+            "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT run_id, ?, 'manual' FROM visonaut_snapshots WHERE id = ?",
             [historicalOwner(input.id), input.referenceSnapshotId],
           ),
         ]
       : []),
     statement(
       database,
-      "INSERT INTO ariviso_historical_preparations(id, run_id, lease_until) VALUES (?, ?, ?)",
+      "INSERT INTO visonaut_historical_preparations(id, run_id, lease_until) VALUES (?, ?, ?)",
       [input.id, input.runId, input.now + input.leaseMs],
     ),
     statement(
@@ -179,42 +179,42 @@ export async function expireHistoricalPreparations(database: Database, now: numb
     statement(
       database,
       `DELETE FROM work_retention_pins WHERE reason = 'manual' AND owner IN (
-      SELECT 'historical:' || id FROM ariviso_historical_preparations WHERE lease_until <= ?)`,
+      SELECT 'historical:' || id FROM visonaut_historical_preparations WHERE lease_until <= ?)`,
       [now],
     ),
     statement(
       database,
-      "DELETE FROM ariviso_pins WHERE reason = 'historical' AND owner_id IN (SELECT id FROM ariviso_historical_preparations WHERE lease_until <= ?)",
+      "DELETE FROM visonaut_pins WHERE reason = 'historical' AND owner_id IN (SELECT id FROM visonaut_historical_preparations WHERE lease_until <= ?)",
       [now],
     ),
     statement(
       database,
-      `DELETE FROM ariviso_captures WHERE run_id IN (
-      SELECT preparation.run_id FROM ariviso_historical_preparations preparation
-      JOIN ariviso_runs run ON run.id = preparation.run_id WHERE preparation.lease_until <= ? AND run.detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.candidate_capture_id = ariviso_captures.id OR row.reference_capture_id = ariviso_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images image WHERE image.capture_id = ariviso_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_captures.run_id AND pin.reason = 'manual')`,
+      `DELETE FROM visonaut_captures WHERE run_id IN (
+      SELECT preparation.run_id FROM visonaut_historical_preparations preparation
+      JOIN visonaut_runs run ON run.id = preparation.run_id WHERE preparation.lease_until <= ? AND run.detail_archived = 1)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id = visonaut_captures.id OR row.reference_capture_id = visonaut_captures.id)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.capture_id = visonaut_captures.id)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_captures.run_id AND pin.reason = 'manual')`,
       [now],
     ),
     statement(
       database,
-      `DELETE FROM ariviso_shards WHERE run_id IN (
-      SELECT preparation.run_id FROM ariviso_historical_preparations preparation JOIN ariviso_runs run ON run.id = preparation.run_id
+      `DELETE FROM visonaut_shards WHERE run_id IN (
+      SELECT preparation.run_id FROM visonaut_historical_preparations preparation JOIN visonaut_runs run ON run.id = preparation.run_id
       WHERE preparation.lease_until <= ? AND run.detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_captures capture WHERE capture.run_id = ariviso_shards.run_id AND capture.shard_key = ariviso_shards.key)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_shards.run_id AND pin.reason = 'manual')`,
+      AND NOT EXISTS (SELECT 1 FROM visonaut_captures capture WHERE capture.run_id = visonaut_shards.run_id AND capture.shard_key = visonaut_shards.key)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual')`,
       [now],
     ),
     statement(
       database,
-      `UPDATE ariviso_shards SET expected_json = '{}', discovery_json = NULL WHERE run_id IN (
-      SELECT preparation.run_id FROM ariviso_historical_preparations preparation JOIN ariviso_runs run ON run.id = preparation.run_id
+      `UPDATE visonaut_shards SET expected_json = '{}', discovery_json = NULL WHERE run_id IN (
+      SELECT preparation.run_id FROM visonaut_historical_preparations preparation JOIN visonaut_runs run ON run.id = preparation.run_id
       WHERE preparation.lease_until <= ? AND run.detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_shards.run_id AND pin.reason = 'manual')`,
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual')`,
       [now],
     ),
-    statement(database, "DELETE FROM ariviso_historical_preparations WHERE lease_until <= ?", [
+    statement(database, "DELETE FROM visonaut_historical_preparations WHERE lease_until <= ?", [
       now,
     ]),
   ]);
@@ -271,12 +271,12 @@ export async function compactHistoricalComparison(
     assertion(
       database,
       `EXISTS (SELECT 1 FROM operations_comparison_archives archive
-      JOIN ariviso_comparisons comparison ON comparison.id = archive.comparison_id
+      JOIN visonaut_comparisons comparison ON comparison.id = archive.comparison_id
       WHERE archive.comparison_id = ? AND archive.generation = ? AND archive.state = 'building'
         AND archive.lease_token = ? AND archive.lease_until > ? AND archive.object_key = ?
         AND comparison.purpose = 'historical' AND comparison.state IN ('ready', 'invalidated')
         AND comparison.run_id = archive.run_id)
-      AND NOT EXISTS (SELECT 1 FROM work_tasks task JOIN ariviso_comparison_rows row ON row.id = task.id
+      AND NOT EXISTS (SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id = task.id
         WHERE row.comparison_id = ? AND task.state IN ('queued', 'leased'))`,
       [
         input.comparisonId,
@@ -295,41 +295,41 @@ export async function compactHistoricalComparison(
     ),
     statement(
       database,
-      "DELETE FROM work_tasks WHERE id IN (SELECT id FROM ariviso_comparison_rows WHERE comparison_id = ?)",
+      "DELETE FROM work_tasks WHERE id IN (SELECT id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
       [input.comparisonId],
     ),
-    statement(database, "DELETE FROM ariviso_comparison_rows WHERE comparison_id = ?", [
+    statement(database, "DELETE FROM visonaut_comparison_rows WHERE comparison_id = ?", [
       input.comparisonId,
     ]),
     statement(
       database,
-      `DELETE FROM ariviso_captures WHERE run_id = (SELECT run_id FROM ariviso_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM ariviso_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_comparison_rows row WHERE row.candidate_capture_id = ariviso_captures.id OR row.reference_capture_id = ariviso_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_snapshot_images image WHERE image.capture_id = ariviso_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
+      `DELETE FROM visonaut_captures WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
+      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id = visonaut_captures.id OR row.reference_capture_id = visonaut_captures.id)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.capture_id = visonaut_captures.id)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
       [input.comparisonId, historicalOwner(input.comparisonId)],
     ),
     statement(
       database,
-      `DELETE FROM ariviso_shards WHERE run_id = (SELECT run_id FROM ariviso_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM ariviso_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM ariviso_captures capture WHERE capture.run_id = ariviso_shards.run_id AND capture.shard_key = ariviso_shards.key)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
+      `DELETE FROM visonaut_shards WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
+      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_captures capture WHERE capture.run_id = visonaut_shards.run_id AND capture.shard_key = visonaut_shards.key)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
       [input.comparisonId, historicalOwner(input.comparisonId)],
     ),
     statement(
       database,
-      `UPDATE ariviso_shards SET expected_json = '{}', discovery_json = NULL WHERE run_id = (SELECT run_id FROM ariviso_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM ariviso_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
+      `UPDATE visonaut_shards SET expected_json = '{}', discovery_json = NULL WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
+      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
       [input.comparisonId, historicalOwner(input.comparisonId)],
     ),
     statement(
       database,
-      `UPDATE ariviso_captures SET metadata_json = '{}' WHERE run_id = (SELECT run_id FROM ariviso_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM ariviso_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = ariviso_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
+      `UPDATE visonaut_captures SET metadata_json = '{}' WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
+      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
+      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
       [input.comparisonId, historicalOwner(input.comparisonId)],
     ),
     ...releaseHistoricalPins(database, input.comparisonId),
@@ -342,7 +342,7 @@ export async function cancelHistoricalPreparation(
   now: number,
 ) {
   await database
-    .prepare("UPDATE ariviso_historical_preparations SET lease_until = ? WHERE id = ?")
+    .prepare("UPDATE visonaut_historical_preparations SET lease_until = ? WHERE id = ?")
     .bind(now, comparisonId)
     .run();
   await expireHistoricalPreparations(database, now);

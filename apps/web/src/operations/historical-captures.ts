@@ -5,8 +5,8 @@ import {
   historicalOwner,
   IncompleteError,
   statement,
-} from "@ariviso/service";
-import type { SqlValue } from "@ariviso/service";
+} from "@visonaut/service";
+import type { SqlValue } from "@visonaut/service";
 import { readArchivedSection, readHistoryManifest } from "./history.ts";
 import type { HistoryRow } from "./history-format.ts";
 import type { OperationsContext } from "./types.ts";
@@ -36,15 +36,15 @@ export async function prepareHistoricalCaptures(
   const guard = () =>
     assertion(
       context.database,
-      `EXISTS (SELECT 1 FROM ariviso_historical_preparations preparation
+      `EXISTS (SELECT 1 FROM visonaut_historical_preparations preparation
     JOIN work_retention_pins pin ON pin.run_id = preparation.run_id
     WHERE preparation.id = ? AND preparation.run_id = ? AND preparation.lease_until > ?
       AND pin.owner = ? AND pin.reason = 'manual')`,
       [input.comparisonId, input.runId, context.now(), historicalOwner(input.comparisonId)],
     );
   const missingBytes = await context.database
-    .prepare(`SELECT 1 FROM ariviso_captures capture
-    LEFT JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ?
+    .prepare(`SELECT 1 FROM visonaut_captures capture
+    LEFT JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ?
       AND (image.id IS NULL OR image.bytes_present != 1) LIMIT 1`)
     .bind(input.runId)
     .first();
@@ -52,7 +52,7 @@ export async function prepareHistoricalCaptures(
     throw new IncompleteError("The stored candidate image bytes have expired or are unavailable.");
   const archive = await readHistoryManifest(context, input.runId);
   const run = await context.database
-    .prepare("SELECT detail_archived FROM ariviso_runs WHERE id = ?")
+    .prepare("SELECT detail_archived FROM visonaut_runs WHERE id = ?")
     .bind(input.runId)
     .first<{ detail_archived: number }>();
   if (run?.detail_archived && !archive)
@@ -77,7 +77,7 @@ export async function prepareHistoricalCaptures(
           if (row.run_id !== input.runId) throw new Error("Stored shard belongs to another run.");
           return statement(
             context.database,
-            `INSERT INTO ariviso_shards(${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})
+            `INSERT INTO visonaut_shards(${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})
           ON CONFLICT(run_id,key) DO UPDATE SET expected_json=excluded.expected_json, discovery_json=excluded.discovery_json`,
             columns.map((column) => value(row, column)),
           );
@@ -104,7 +104,7 @@ export async function prepareHistoricalCaptures(
       ];
       const unavailable = await context.database
         .prepare(`SELECT value FROM json_each(?) expected
-        WHERE NOT EXISTS (SELECT 1 FROM ariviso_images image WHERE image.id = expected.value AND image.bytes_present = 1 AND image.validated = 1) LIMIT 1`)
+        WHERE NOT EXISTS (SELECT 1 FROM visonaut_images image WHERE image.id = expected.value AND image.bytes_present = 1 AND image.validated = 1) LIMIT 1`)
         .bind(JSON.stringify(rows.map((row) => value(row, "image_id"))))
         .first();
       if (unavailable)
@@ -118,23 +118,23 @@ export async function prepareHistoricalCaptures(
           return [
             assertion(
               context.database,
-              "EXISTS (SELECT 1 FROM ariviso_images WHERE id = ? AND bytes_present = 1 AND validated = 1)",
+              "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND bytes_present = 1 AND validated = 1)",
               [value(row, "image_id")],
             ),
             statement(
               context.database,
-              "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'manual' FROM ariviso_images WHERE id = ?",
+              "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'manual' FROM visonaut_images WHERE id = ?",
               [historicalOwner(input.comparisonId), value(row, "image_id")],
             ),
             statement(
               context.database,
-              `INSERT INTO ariviso_captures(${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})
-            ON CONFLICT(id) DO UPDATE SET metadata_json=excluded.metadata_json WHERE ariviso_captures.metadata_json='{}'`,
+              `INSERT INTO visonaut_captures(${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})
+            ON CONFLICT(id) DO UPDATE SET metadata_json=excluded.metadata_json WHERE visonaut_captures.metadata_json='{}'`,
               columns.map((column) => value(row, column)),
             ),
             assertion(
               context.database,
-              `EXISTS(SELECT 1 FROM ariviso_captures WHERE ${columns.map((column) => `${column} IS ?`).join(" AND ")})`,
+              `EXISTS(SELECT 1 FROM visonaut_captures WHERE ${columns.map((column) => `${column} IS ?`).join(" AND ")})`,
               columns.map((column) => value(row, column)),
             ),
           ];
@@ -144,7 +144,7 @@ export async function prepareHistoricalCaptures(
     return count;
   }
   const result = await context.database
-    .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id = ?")
+    .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id = ?")
     .bind(input.runId)
     .first<{ count: number }>();
   if (!result || result.count < 1 || result.count > input.maximumCaptures)

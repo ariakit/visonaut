@@ -16,7 +16,7 @@ export async function publicImage(
   if (new URL(request.url).search) return missing();
   const image = await context.database
     .prepare(
-      "SELECT id, object_key, content_type, digest, bytes_present FROM ariviso_images WHERE id = ? AND validated = 1",
+      "SELECT id, object_key, content_type, digest, bytes_present FROM visonaut_images WHERE id = ? AND validated = 1",
     )
     .bind(imageId)
     .first<{
@@ -31,7 +31,7 @@ export async function publicImage(
   if (!stored) {
     const copy = await context.database
       .prepare(
-        "SELECT object_key FROM ariviso_snapshot_images WHERE image_id = ? AND copied = 1 ORDER BY snapshot_id LIMIT 1",
+        "SELECT object_key FROM visonaut_snapshot_images WHERE image_id = ? AND copied = 1 ORDER BY snapshot_id LIMIT 1",
       )
       .bind(image.id)
       .first<{ object_key: string }>();

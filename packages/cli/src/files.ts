@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { parseManifest, validateManifestProfiles } from "@ariviso/protocol";
-import type { Capture, Manifest } from "@ariviso/protocol";
+import { parseManifest, validateManifestProfiles } from "@visonaut/protocol";
+import type { Capture, Manifest } from "@visonaut/protocol";
 import { CliError } from "./errors.js";
 
 const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;

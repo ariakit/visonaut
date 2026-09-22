@@ -1,15 +1,15 @@
 {
-  "name": "ariviso",
+  "name": "visonaut",
   "version": "0.1.0",
-  "description": "Upload visual captures and inspect Ariviso review status",
+  "description": "Upload visual captures and inspect Visonaut review status",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ariakit/ariviso",
+    "url": "https://github.com/ariakit/visonaut",
     "directory": "packages/cli"
   },
   "bin": {
-    "ariviso": "./dist/bin.js"
+    "visonaut": "./dist/bin.js"
   },
   "files": [
     "dist",
@@ -32,8 +32,8 @@
     "typecheck": "tsc6 --noEmit"
   },
   "devDependencies": {
-    "@ariviso/protocol": "workspace:*",
     "@types/node": "24.13.6",
+    "@visonaut/protocol": "workspace:*",
     "tsup": "8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "5.0.1"

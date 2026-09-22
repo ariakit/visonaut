@@ -18,8 +18,8 @@ The comparator uses integer RGBA composites on black and white. This detects vis
 No default tolerance is implicit. The study compares exact visible pixels with a one-level channel tolerance and the prior ratio allowance. The report in [evidence/corpus-study.json](./evidence/corpus-study.json) records the corpus digest and measured results. Exact comparison detected all 100 injected defects. The one-level tolerance missed 50; the prior ratio allowance missed 98. Exact comparison also flagged synthetic antialias changes. Real repeated browser capture noise, the split capture workload, and deployed Worker resource tests remain separate readiness requirements.
 
 ```sh
-pnpm --filter @ariviso/compare test
-pnpm --filter @ariviso/compare study /path/to/ariakit
+pnpm --filter @visonaut/compare test
+pnpm --filter @visonaut/compare study /path/to/ariakit
 ```
 
 The study reads the Ariakit checkout. It does not change its screenshots. Current resource limits are provisional: 2 MiB encoded bytes, 2.1 million decoded pixels, dimension 8192, 64 KiB profile data, and 1024 PNG chunks. The existing corpus fits these bounds. Deployed memory/CPU evidence must confirm the bounds before launch.

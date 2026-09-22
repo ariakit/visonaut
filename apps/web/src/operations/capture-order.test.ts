@@ -6,7 +6,7 @@ import {
   Service,
   type CaptureInput,
   type TrustedPlan,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
 import { archiveClosedRuns, readRunHistory } from "./history.ts";
 import { prepareHistoricalCaptures } from "./historical-captures.ts";
@@ -39,6 +39,8 @@ beforeEach(async () => {
     "0010_run_history",
     "0011_backup_groups",
     "0012_historical_comparisons",
+    "0013_promotion_scans",
+    "0014_visonaut_brand",
   ]) {
     const source = (
       await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")
@@ -185,7 +187,7 @@ async function captureOrder(runId: string) {
   return (
     await operations.database
       .prepare(
-        "SELECT variant_key,ordinal FROM ariviso_captures WHERE run_id=? ORDER BY ordinal,id",
+        "SELECT variant_key,ordinal FROM visonaut_captures WHERE run_id=? ORDER BY ordinal,id",
       )
       .bind(runId)
       .all<{ variant_key: string; ordinal: number }>()

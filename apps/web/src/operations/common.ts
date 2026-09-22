@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Database } from "@ariviso/service";
+import type { Database } from "@visonaut/service";
 import type { ObjectStore, OperationsBudget } from "./types.ts";
 
 export function validateBudget(budget: OperationsBudget) {

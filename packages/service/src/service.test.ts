@@ -48,33 +48,35 @@ class SqliteStatement implements Statement {
   }
 }
 
+function reapplyAcceptanceBackfill(connection: DatabaseSync) {
+  // Historical migration SQL needs current table names when rerun after the brand migration.
+  const source = readFileSync(
+    new URL("../../../apps/web/migrations/0006_acceptance.sql", import.meta.url),
+    "utf8",
+  );
+  connection.exec(source.replaceAll("ariviso_", "visonaut_"));
+}
+
 class TestDatabase implements Database {
   readonly connection = new DatabaseSync(":memory:");
   beforeBatch: (() => void) | null = null;
   preparedQueries = 0;
   constructor() {
-    this.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0001_service.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    this.connection.exec(
-      readFileSync(new URL("../../../apps/web/migrations/0002_work.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0006_acceptance.sql", import.meta.url),
-        "utf8",
-      ),
-    );
     for (const name of [
+      "0001_service.sql",
+      "0002_work.sql",
       "0003_auth.sql",
       "0004_ingest.sql",
       "0005_operations.sql",
+      "0006_acceptance.sql",
+      "0007_backup_inventory.sql",
+      "0008_capture_profiles.sql",
       "0009_retention_history.sql",
       "0010_run_history.sql",
+      "0011_backup_groups.sql",
       "0012_historical_comparisons.sql",
+      "0013_promotion_scans.sql",
+      "0014_visonaut_brand.sql",
     ]) {
       this.connection.exec(
         readFileSync(new URL(`../../../apps/web/migrations/${name}`, import.meta.url), "utf8"),
@@ -125,7 +127,7 @@ async function fixture(service: Service, input: FixtureInput) {
   const items = input.items ?? ["dialog"];
   const snapshot = project.snapshot_id
     ? await service.database
-        .prepare("SELECT tested_sha FROM ariviso_snapshots WHERE id = ?")
+        .prepare("SELECT tested_sha FROM visonaut_snapshots WHERE id = ?")
         .bind(project.snapshot_id)
         .first<{ tested_sha: string }>()
     : null;
@@ -366,7 +368,7 @@ describe("full run and immutable comparison state", () => {
     expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
     expect((await service.status("seed")).status).toBe("passed");
     expect(
-      database.connection.prepare("SELECT kind, actor_id FROM ariviso_decisions").get(),
+      database.connection.prepare("SELECT kind, actor_id FROM visonaut_decisions").get(),
     ).toMatchObject({ kind: "automatic", actor_id: null });
   });
 
@@ -438,7 +440,7 @@ describe("full run and immutable comparison state", () => {
       ]);
     }
     expect((await service.project("project")).baseline_revision).toBe(3);
-    expect(count(database, "ariviso_commands")).toBe(0);
+    expect(count(database, "visonaut_commands")).toBe(0);
   });
 
   it("refuses missing captures, exhausted test retries, and failed-attempt bytes", async () => {
@@ -514,7 +516,7 @@ describe("full run and immutable comparison state", () => {
         now: 2,
       }),
     ).rejects.toThrow("final successful");
-    expect(count(database, "ariviso_captures")).toBe(0);
+    expect(count(database, "visonaut_captures")).toBe(0);
   });
 
   it("rejects late uploads from a superseded attempt without revoking its acceptance", async () => {
@@ -570,7 +572,7 @@ describe("full run and immutable comparison state", () => {
       }),
     ).rejects.toBeInstanceOf(ConflictError);
     expect((await service.project("project")).snapshot_id).toBeNull();
-    expect(count(database, "ariviso_promotions")).toBe(0);
+    expect(count(database, "visonaut_promotions")).toBe(0);
   });
 });
 
@@ -671,22 +673,22 @@ describe("atomic review, rollback, and session Undo", () => {
     const second = rows[1];
     if (!second) throw new Error("Missing second target");
     const before = {
-      audit: count(database, "ariviso_audit"),
-      outbox: count(database, "ariviso_status_outbox"),
-      decisions: count(database, "ariviso_decisions"),
+      audit: count(database, "visonaut_audit"),
+      outbox: count(database, "visonaut_status_outbox"),
+      decisions: count(database, "visonaut_decisions"),
     };
     database.beforeBatch = () => {
       database.connection
         .prepare(
-          "UPDATE ariviso_comparison_rows SET decision_revision = decision_revision + 1 WHERE id = ?",
+          "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1 WHERE id = ?",
         )
         .run(second.id);
     };
     await expect(review(service, "comparison-changed")).rejects.toBeInstanceOf(ConflictError);
-    expect(count(database, "ariviso_commands")).toBe(0);
-    expect(count(database, "ariviso_audit")).toBe(before.audit);
-    expect(count(database, "ariviso_status_outbox")).toBe(before.outbox);
-    expect(count(database, "ariviso_decisions")).toBe(before.decisions);
+    expect(count(database, "visonaut_commands")).toBe(0);
+    expect(count(database, "visonaut_audit")).toBe(before.audit);
+    expect(count(database, "visonaut_status_outbox")).toBe(before.outbox);
+    expect(count(database, "visonaut_decisions")).toBe(before.decisions);
     expect((await service.comparisonRows("comparison-changed"))[0]?.decision_id).toBeNull();
   });
 
@@ -705,7 +707,7 @@ describe("atomic review, rollback, and session Undo", () => {
     const first = await review(service, "comparison-pr", options);
     const replay = await review(service, "comparison-pr", options);
     expect(replay).toEqual(first);
-    expect(count(database, "ariviso_commands")).toBe(1);
+    expect(count(database, "visonaut_commands")).toBe(1);
     await service.undo({
       commandId: "reject",
       undoCommandId: "undo",
@@ -746,7 +748,7 @@ describe("atomic review, rollback, and session Undo", () => {
     expect((await service.status("red")).status).toBe("needs-review");
     expect(
       database.connection
-        .prepare("SELECT reference_eligible FROM ariviso_snapshots WHERE id = 'snapshot-red'")
+        .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id = 'snapshot-red'")
         .get()?.reference_eligible,
     ).toBe(0);
   });
@@ -790,7 +792,7 @@ describe("atomic review, rollback, and session Undo", () => {
     await fixture(service, { id: "green", color: "green" });
     await review(service, "comparison-green");
     await promote(service, "green");
-    const before = count(database, "ariviso_audit");
+    const before = count(database, "visonaut_audit");
     await expect(
       service.undo({
         commandId: approval.commandId,
@@ -802,7 +804,7 @@ describe("atomic review, rollback, and session Undo", () => {
       }),
     ).rejects.toBeInstanceOf(ConflictError);
     expect((await service.project("project")).snapshot_id).toBe("snapshot-green");
-    expect(count(database, "ariviso_audit")).toBe(before);
+    expect(count(database, "visonaut_audit")).toBe(before);
   });
 });
 
@@ -886,7 +888,7 @@ describe("restoration and workflow attempt inheritance", () => {
     expect(
       database.connection
         .prepare(
-          "SELECT source_run_id, source_attempt FROM ariviso_shards WHERE run_id = 'inherited'",
+          "SELECT source_run_id, source_attempt FROM visonaut_shards WHERE run_id = 'inherited'",
         )
         .get(),
     ).toMatchObject({ source_run_id: "first", source_attempt: 1 });
@@ -912,7 +914,7 @@ describe("restoration and workflow attempt inheritance", () => {
     await service.sealRun({ runId: "inherited-again", now: 12 });
     expect(
       database.connection
-        .prepare("SELECT source_attempt FROM ariviso_shards WHERE run_id = 'inherited-again'")
+        .prepare("SELECT source_attempt FROM visonaut_shards WHERE run_id = 'inherited-again'")
         .get()?.source_attempt,
     ).toBe(1);
     await service.reserveRun({ ...reserve, id: "rerun", attempt: 4, rerunShardKeys: ["chromium"] });
@@ -921,7 +923,7 @@ describe("restoration and workflow attempt inheritance", () => {
     );
     expect(
       database.connection
-        .prepare("SELECT count(*) AS count FROM ariviso_captures WHERE run_id = 'rerun'")
+        .prepare("SELECT count(*) AS count FROM visonaut_captures WHERE run_id = 'rerun'")
         .get()?.count,
     ).toBe(0);
     await expect(
@@ -1017,12 +1019,12 @@ describe("restoration and workflow attempt inheritance", () => {
       };
       const captureRows = (runId: string) =>
         database.connection
-          .prepare("SELECT * FROM ariviso_captures WHERE run_id = ? ORDER BY shard_key, ordinal")
+          .prepare("SELECT * FROM visonaut_captures WHERE run_id = ? ORDER BY shard_key, ordinal")
           .all(runId);
       const originalCaptures = (runId: string) =>
         database.connection
           .prepare(
-            "SELECT capture.shard_key, capture.item_key, capture.variant_key, capture.image_id, capture.profile_digest, capture.test_id, capture.test_retry, capture.metadata_json, image.run_id AS image_run_id FROM ariviso_captures capture JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND capture.shard_key != 'firefox' ORDER BY capture.shard_key, capture.ordinal",
+            "SELECT capture.shard_key, capture.item_key, capture.variant_key, capture.image_id, capture.profile_digest, capture.test_id, capture.test_retry, capture.metadata_json, image.run_id AS image_run_id FROM visonaut_captures capture JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND capture.shard_key != 'firefox' ORDER BY capture.shard_key, capture.ordinal",
           )
           .all(runId);
       await service.reserveRun({
@@ -1062,7 +1064,7 @@ describe("restoration and workflow attempt inheritance", () => {
         expect(
           database.connection
             .prepare(
-              "SELECT key, source_run_id, source_attempt, manifest_digest, full_profile_digest FROM ariviso_shards WHERE run_id = ? AND key != 'firefox' ORDER BY key",
+              "SELECT key, source_run_id, source_attempt, manifest_digest, full_profile_digest FROM visonaut_shards WHERE run_id = ? AND key != 'firefox' ORDER BY key",
             )
             .all(runId),
         ).toEqual(
@@ -1098,7 +1100,7 @@ describe("restoration and workflow attempt inheritance", () => {
         expect(
           database.connection
             .prepare(
-              "SELECT capture.item_key, capture.variant_key, capture.ordinal, image.run_id AS image_run_id FROM ariviso_captures capture JOIN ariviso_images image ON image.id = capture.image_id WHERE capture.run_id = ? ORDER BY capture.ordinal",
+              "SELECT capture.item_key, capture.variant_key, capture.ordinal, image.run_id AS image_run_id FROM visonaut_captures capture JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ? ORDER BY capture.ordinal",
             )
             .all(runId),
         ).toEqual(
@@ -1175,7 +1177,7 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
     expect(
       database.connection
-        .prepare("SELECT revoked FROM ariviso_decisions WHERE id = ?")
+        .prepare("SELECT revoked FROM visonaut_decisions WHERE id = ?")
         .get(added.decision_id)?.revoked,
     ).toBe(0);
   });
@@ -1188,7 +1190,7 @@ describe("restoration and workflow attempt inheritance", () => {
     const prepared = await service.prepareStatusIntent({
       runId: "pr",
       checkId: "external-check",
-      detailsUrl: "https://ariviso.example/runs/pr",
+      detailsUrl: "https://visonaut.example/runs/pr",
       maxAttempts: 3,
       now: 10,
     });
@@ -1201,7 +1203,7 @@ describe("restoration and workflow attempt inheritance", () => {
     const fresh = await service.prepareStatusIntent({
       runId: "pr",
       checkId: "external-check",
-      detailsUrl: "https://ariviso.example/runs/pr",
+      detailsUrl: "https://visonaut.example/runs/pr",
       maxAttempts: 3,
       now: 11,
     });
@@ -1303,8 +1305,8 @@ describe("expanded SQL workload", () => {
     });
     await service.finalizeComparison({ comparisonId: "comparison-expanded", now: 5 });
     expect((await service.status("expanded")).status).toBe("passed");
-    expect(count(database, "ariviso_comparison_rows")).toBe(10_580);
-    expect(count(database, "ariviso_decisions")).toBe(10_580);
+    expect(count(database, "visonaut_comparison_rows")).toBe(10_580);
+    expect(count(database, "visonaut_decisions")).toBe(10_580);
   }, 30_000);
 });
 
@@ -1445,7 +1447,7 @@ describe("trusted candidate discovery", () => {
     expect(rows.find((row) => row.item_key === "menu")?.candidate_capture_id).toBeNull();
     expect(
       database.connection
-        .prepare("SELECT discovery_json FROM ariviso_shards WHERE run_id = 'discovered'")
+        .prepare("SELECT discovery_json FROM visonaut_shards WHERE run_id = 'discovered'")
         .get()?.discovery_json,
     ).toContain("github-job-success");
   });
@@ -1457,19 +1459,19 @@ describe("review evidence at the write boundary", () => {
     const service = new Service(database);
     await seed(service);
     await fixture(service, { id: "changed-evidence", color: "red" });
-    const before = count(database, "ariviso_audit");
+    const before = count(database, "visonaut_audit");
     database.beforeBatch = () => {
       database.connection
         .prepare(
-          "UPDATE ariviso_comparisons SET state = 'invalidated' WHERE id = 'comparison-changed-evidence'",
+          "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE id = 'comparison-changed-evidence'",
         )
         .run();
     };
     await expect(review(service, "comparison-changed-evidence")).rejects.toBeInstanceOf(
       ConflictError,
     );
-    expect(count(database, "ariviso_commands")).toBe(0);
-    expect(count(database, "ariviso_audit")).toBe(before);
+    expect(count(database, "visonaut_commands")).toBe(0);
+    expect(count(database, "visonaut_audit")).toBe(before);
   });
 });
 
@@ -1559,9 +1561,9 @@ describe("HTTP state integration", () => {
     expect("failures" in failure && failure.failures?.[0]?.last_error).toBe(
       "Required workflow job failed",
     );
-    const auditCount = count(database, "ariviso_audit");
+    const auditCount = count(database, "visonaut_audit");
     await service.failRun({ runId: "failed", reason: "Repeated notification", now: 3 });
-    expect(count(database, "ariviso_audit")).toBe(auditCount);
+    expect(count(database, "visonaut_audit")).toBe(auditCount);
     await service.commitShard({
       runId: "failed",
       key: "shard",
@@ -1584,7 +1586,7 @@ describe("HTTP state integration", () => {
       now: 4,
     });
     expect(
-      database.connection.prepare("SELECT state FROM ariviso_shards WHERE run_id = 'failed'").get()
+      database.connection.prepare("SELECT state FROM visonaut_shards WHERE run_id = 'failed'").get()
         ?.state,
     ).toBe("complete");
     await expect(service.sealRun({ runId: "failed", now: 5 })).rejects.toBeInstanceOf(
@@ -1610,7 +1612,7 @@ describe("HTTP state integration", () => {
     const service = new Service(database);
     await seed(service);
     await fixture(service, { id: "pr-ancestry", kind: "pull_request", color: "red" });
-    const before = count(database, "ariviso_comparisons");
+    const before = count(database, "visonaut_comparisons");
     await expect(
       service.createComparison({
         id: "stale-ancestry",
@@ -1621,7 +1623,7 @@ describe("HTTP state integration", () => {
         now: 20,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
-    expect(count(database, "ariviso_comparisons")).toBe(before);
+    expect(count(database, "visonaut_comparisons")).toBe(before);
     expect((await service.run("pr-ancestry")).comparison_id).toBe("comparison-pr-ancestry");
   });
 
@@ -1671,20 +1673,15 @@ describe("acceptance replacement boundaries", () => {
     await review(service, "comparison-rejection", { verdict: "rejected" });
     const replacements = database.connection
       .prepare(
-        "SELECT * FROM ariviso_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
+        "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
       )
       .all();
-    database.connection.exec("DROP TABLE ariviso_decision_replacements");
-    database.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0006_acceptance.sql", import.meta.url),
-        "utf8",
-      ),
-    );
+    database.connection.exec("DROP TABLE visonaut_decision_replacements");
+    reapplyAcceptanceBackfill(database.connection);
     expect(
       database.connection
         .prepare(
-          "SELECT * FROM ariviso_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
+          "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
         )
         .all(),
     ).toEqual(replacements);
@@ -1811,15 +1808,15 @@ describe("acceptance replacement boundaries", () => {
     const retryComparison = await recompareFromSeed(service, "retry");
     const project = await service.project("project");
     const rows = await service.comparisonRows(retryComparison);
-    const audits = count(database, "ariviso_audit");
-    const commands = count(database, "ariviso_commands");
+    const audits = count(database, "visonaut_audit");
+    const commands = count(database, "visonaut_commands");
     await expect(review(service, retryComparison, { verdict: "rejected" })).rejects.toBeInstanceOf(
       ConflictError,
     );
     expect(await service.project("project")).toEqual(project);
     expect(await service.comparisonRows(retryComparison)).toEqual(rows);
-    expect(count(database, "ariviso_audit")).toBe(audits);
-    expect(count(database, "ariviso_commands")).toBe(commands);
+    expect(count(database, "visonaut_audit")).toBe(audits);
+    expect(count(database, "visonaut_commands")).toBe(commands);
     expect((await service.status("main")).status).toBe("passed");
   });
 
@@ -1902,20 +1899,15 @@ describe("acceptance replacement boundaries", () => {
     expect((await service.status("automatic")).status).toBe("needs-review");
     const replacements = database.connection
       .prepare(
-        "SELECT * FROM ariviso_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
+        "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
       )
       .all();
-    database.connection.exec("DROP TABLE ariviso_decision_replacements");
-    database.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0006_acceptance.sql", import.meta.url),
-        "utf8",
-      ),
-    );
+    database.connection.exec("DROP TABLE visonaut_decision_replacements");
+    reapplyAcceptanceBackfill(database.connection);
     expect(
       database.connection
         .prepare(
-          "SELECT * FROM ariviso_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
+          "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
         )
         .all(),
     ).toEqual(replacements);
@@ -1936,7 +1928,7 @@ describe("acceptance replacement boundaries", () => {
       related: ["automatic", "rejected", "retry"],
     });
     expect((await service.status("last")).status).toBe("needs-review");
-    expect(count(database, "ariviso_reservations")).toBe(1);
+    expect(count(database, "visonaut_reservations")).toBe(1);
   });
 });
 
@@ -2006,7 +1998,7 @@ describe("closed dependent evidence retention", () => {
     ).toBeUndefined();
     expect(
       database.connection
-        .prepare("SELECT snapshot_id FROM ariviso_pins WHERE owner_id='comparison-dependent'")
+        .prepare("SELECT snapshot_id FROM visonaut_pins WHERE owner_id='comparison-dependent'")
         .get(),
     ).toBeUndefined();
   });
@@ -2067,7 +2059,7 @@ async function prepareArchive(service: Service, runId: string) {
     .run();
   const commands = await service.database
     .prepare(
-      "SELECT command.id,command.request_json FROM ariviso_commands command JOIN ariviso_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=?",
+      "SELECT command.id,command.request_json FROM visonaut_commands command JOIN visonaut_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=?",
     )
     .bind(runId)
     .all<{ id: string; request_json: string }>();
@@ -2088,25 +2080,25 @@ describe("verified closed history compaction", () => {
     await fixture(service, { id: "source", kind: "pull_request", lineage: "pr" });
     const saved = await review(service, "comparison-source");
     const command = database.connection
-      .prepare("SELECT request_json FROM ariviso_commands WHERE id=?")
+      .prepare("SELECT request_json FROM visonaut_commands WHERE id=?")
       .get(saved.commandId);
     const request = JSON.parse(String(command?.request_json));
     const decisions = database.connection
-      .prepare("SELECT * FROM ariviso_decisions ORDER BY id")
+      .prepare("SELECT * FROM visonaut_decisions ORDER BY id")
       .all();
     await service.retireRun({ runId: "source", now: 100 });
     await compactRunHistory(database, await prepareArchive(service, "source"));
     expect(
-      database.connection.prepare("SELECT * FROM ariviso_decisions ORDER BY id").all(),
+      database.connection.prepare("SELECT * FROM visonaut_decisions ORDER BY id").all(),
     ).toEqual(decisions);
     expect(
       database.connection
-        .prepare("SELECT count(*) AS n FROM ariviso_captures WHERE run_id='source'")
+        .prepare("SELECT count(*) AS n FROM visonaut_captures WHERE run_id='source'")
         .get()?.n,
     ).toBe(0);
     expect(
       database.connection
-        .prepare("SELECT count(*) AS n FROM ariviso_images WHERE run_id='source'")
+        .prepare("SELECT count(*) AS n FROM visonaut_images WHERE run_id='source'")
         .get()?.n,
     ).toBe(1);
     await expect(service.review({ ...request, now: 600 })).rejects.toMatchObject({
@@ -2137,7 +2129,7 @@ describe("verified closed history compaction", () => {
     await fixture(service, { id: "source", kind: "pull_request" });
     await service.retireRun({ runId: "source", now: 100 });
     const input = await prepareArchive(service, "source");
-    const captures = database.connection.prepare("SELECT * FROM ariviso_captures").all();
+    const captures = database.connection.prepare("SELECT * FROM visonaut_captures").all();
     database.beforeBatch = () => {
       database.connection
         .prepare(
@@ -2146,7 +2138,7 @@ describe("verified closed history compaction", () => {
         .run();
     };
     await expect(compactRunHistory(database, input)).rejects.toBeInstanceOf(ConflictError);
-    expect(database.connection.prepare("SELECT * FROM ariviso_captures").all()).toEqual(captures);
+    expect(database.connection.prepare("SELECT * FROM visonaut_captures").all()).toEqual(captures);
     expect(
       database.connection
         .prepare("SELECT state FROM operations_run_archives WHERE run_id='source'")
@@ -2162,9 +2154,9 @@ describe("verified closed history compaction", () => {
     await fixture(service, { id: "next", related: ["seed"] });
     await review(service, "comparison-next");
     await promote(service, "next");
-    database.connection.exec("UPDATE ariviso_runs SET active=0,closed_at=100");
+    database.connection.exec("UPDATE visonaut_runs SET active=0,closed_at=100");
     const candidates = database.connection
-      .prepare(`SELECT run.id FROM ariviso_runs run WHERE ${archiveEligibilitySql("run")}`)
+      .prepare(`SELECT run.id FROM visonaut_runs run WHERE ${archiveEligibilitySql("run")}`)
       .all();
     expect(candidates).toEqual([]);
   });
@@ -2174,17 +2166,17 @@ describe("bounded snapshot evidence roots", () => {
   it("reclaims an inherited source image after the final protected retry copy expires", async () => {
     using database = new TestDatabase();
     database.connection.exec(`
-      INSERT INTO ariviso_projects(id,repository_id,policy_digest) VALUES('p','repo','policy');
-      INSERT INTO ariviso_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,active,closed_at,detail_archived,created_at) VALUES
+      INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('p','repo','policy');
+      INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,active,closed_at,detail_archived,created_at) VALUES
         ('source','p','w',1,'main','sha','main','plan','{}',0,1,1,0),
         ('retry','p','w',2,'main','sha','main','plan','{}',0,1,1,0);
       INSERT INTO work_retained_runs(id,object_prefix,closed_at) VALUES('source','runs/source/',1),('retry','runs/retry/',1);
-      INSERT INTO ariviso_shards(run_id,key,profile_digest,expected_json) VALUES('retry','shard','profile','{}');
-      INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES('source-image','source','digest','runs/source/image','image/png',80,10,10);
-      INSERT INTO ariviso_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES('retry-capture','retry','shard','item','variant',0,'source-image','profile','test',0,'{}');
-      INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES('comparison','retry',0,'policy',1,0);
-      INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,prefix,state,created_at) VALUES('snapshot','p','retry','comparison','sha','baselines/retry','accepted',0);
-      INSERT INTO ariviso_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) VALUES('snapshot','retry-capture','source-image','baselines/retry/image','digest',1);
+      INSERT INTO visonaut_shards(run_id,key,profile_digest,expected_json) VALUES('retry','shard','profile','{}');
+      INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES('source-image','source','digest','runs/source/image','image/png',80,10,10);
+      INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES('retry-capture','retry','shard','item','variant',0,'source-image','profile','test',0,'{}');
+      INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES('comparison','retry',0,'policy',1,0);
+      INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,prefix,state,created_at) VALUES('snapshot','p','retry','comparison','sha','baselines/retry','accepted',0);
+      INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) VALUES('snapshot','retry-capture','source-image','baselines/retry/image','digest',1);
       INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('source','inherited-by:retry','comparison');
     `);
     const now = 4_000_000_000;
@@ -2196,10 +2188,10 @@ describe("bounded snapshot evidence roots", () => {
         await completeRetiredRunDeletion(database, { id, token: "delete", now: now + 1 }),
       ).toBe(true);
     }
-    expect(count(database, "ariviso_images")).toBe(1);
+    expect(count(database, "visonaut_images")).toBe(1);
     database.connection
       .prepare(
-        "UPDATE ariviso_snapshot_retention SET byte_state='deleting',lease_token='snapshot-delete',lease_until=? WHERE snapshot_id='snapshot'",
+        "UPDATE visonaut_snapshot_retention SET byte_state='deleting',lease_token='snapshot-delete',lease_until=? WHERE snapshot_id='snapshot'",
       )
       .run(now + 100);
     await completeRetiredSnapshotDeletion(database, {
@@ -2207,8 +2199,8 @@ describe("bounded snapshot evidence roots", () => {
       token: "snapshot-delete",
       now: now + 2,
     });
-    expect(count(database, "ariviso_captures")).toBe(0);
-    expect(count(database, "ariviso_images")).toBe(0);
+    expect(count(database, "visonaut_captures")).toBe(0);
+    expect(count(database, "visonaut_images")).toBe(0);
     expect(database.connection.prepare("SELECT byte_state FROM work_retained_runs").all()).toEqual([
       { byte_state: "deleted" },
       { byte_state: "deleted" },
@@ -2235,13 +2227,13 @@ describe("bounded snapshot evidence roots", () => {
     await retireSnapshot(database, { snapshotId: "snapshot-seed", now: 100, graceMs: 10 });
     expect(
       database.connection
-        .prepare("SELECT reference_eligible FROM ariviso_snapshots WHERE id='snapshot-seed'")
+        .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id='snapshot-seed'")
         .get()?.reference_eligible,
     ).toBe(0);
     expect(() =>
       database.connection
         .prepare(
-          "INSERT INTO ariviso_pins(snapshot_id,reason,owner_id) VALUES('snapshot-seed','comparison','late')",
+          "INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('snapshot-seed','comparison','late')",
         )
         .run(),
     ).toThrow();
@@ -2304,7 +2296,7 @@ describe("bounded snapshot evidence roots", () => {
     expect(
       database.connection
         .prepare(
-          "SELECT count(*) AS n FROM ariviso_snapshot_images WHERE snapshot_id='snapshot-seed'",
+          "SELECT count(*) AS n FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'",
         )
         .get()?.n,
     ).toBe(1);
@@ -2316,14 +2308,14 @@ describe("bounded snapshot evidence roots", () => {
     expect(
       database.connection
         .prepare(
-          "SELECT count(*) AS n FROM ariviso_snapshot_images WHERE snapshot_id='snapshot-seed'",
+          "SELECT count(*) AS n FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'",
         )
         .get()?.n,
     ).toBe(0);
     expect(
       database.connection
         .prepare(
-          "SELECT count(*) AS n FROM ariviso_snapshot_images WHERE snapshot_id IN ('snapshot-second','snapshot-third')",
+          "SELECT count(*) AS n FROM visonaut_snapshot_images WHERE snapshot_id IN ('snapshot-second','snapshot-third')",
         )
         .get()?.n,
     ).toBe(2);
@@ -2374,12 +2366,12 @@ it("rebuilds eligible historical ancestry from direct proofs after intermediate 
   await compactRunHistory(database, await prepareArchive(service, "middle"));
   expect(
     database.connection
-      .prepare("SELECT count(*) AS n FROM ariviso_lineage WHERE target_run_id='middle'")
+      .prepare("SELECT count(*) AS n FROM visonaut_lineage WHERE target_run_id='middle'")
       .get()?.n,
   ).toBe(0);
   expect(
     database.connection
-      .prepare("SELECT source_run_id FROM ariviso_lineage_edges WHERE target_run_id='middle'")
+      .prepare("SELECT source_run_id FROM visonaut_lineage_edges WHERE target_run_id='middle'")
       .get()?.source_run_id,
   ).toBe("ancestor");
   await fixture(service, {
@@ -2417,13 +2409,13 @@ describe("closed stored-run recomparison", () => {
 
   function liveAuthority(database: TestDatabase) {
     return [
-      "ariviso_runs",
-      "ariviso_projects",
-      "ariviso_decisions",
-      "ariviso_reservations",
-      "ariviso_identity_history",
-      "ariviso_promotions",
-      "ariviso_status_outbox",
+      "visonaut_runs",
+      "visonaut_projects",
+      "visonaut_decisions",
+      "visonaut_reservations",
+      "visonaut_identity_history",
+      "visonaut_promotions",
+      "visonaut_status_outbox",
       "work_status_outbox",
       "work_checks",
     ].map((table) => database.connection.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
@@ -2489,22 +2481,26 @@ describe("closed stored-run recomparison", () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await closedFixture(service);
-    database.connection.exec("UPDATE ariviso_images SET bytes_present = 0 WHERE run_id = 'closed'");
+    database.connection.exec(
+      "UPDATE visonaut_images SET bytes_present = 0 WHERE run_id = 'closed'",
+    );
     await expect(historical(service)).rejects.toThrow();
     expect(
       database.connection
-        .prepare("SELECT id FROM ariviso_comparisons WHERE purpose = 'historical'")
+        .prepare("SELECT id FROM visonaut_comparisons WHERE purpose = 'historical'")
         .all(),
     ).toEqual([]);
-    database.connection.exec("UPDATE ariviso_images SET bytes_present = 1 WHERE run_id = 'closed'");
+    database.connection.exec(
+      "UPDATE visonaut_images SET bytes_present = 1 WHERE run_id = 'closed'",
+    );
     database.beforeBatch = () =>
       database.connection.exec(
-        "UPDATE ariviso_snapshots SET reference_eligible = 0 WHERE id = 'snapshot-seed'",
+        "UPDATE visonaut_snapshots SET reference_eligible = 0 WHERE id = 'snapshot-seed'",
       );
     await expect(historical(service)).rejects.toThrow();
     expect(
       database.connection
-        .prepare("SELECT id FROM ariviso_comparisons WHERE purpose = 'historical'")
+        .prepare("SELECT id FROM visonaut_comparisons WHERE purpose = 'historical'")
         .all(),
     ).toEqual([]);
   });
@@ -2582,7 +2578,7 @@ describe("closed stored-run recomparison", () => {
       leaseMilliseconds: 100,
     });
     database.connection.exec(
-      "UPDATE ariviso_snapshots SET reference_eligible=0,state='revoked' WHERE id='snapshot-seed'",
+      "UPDATE visonaut_snapshots SET reference_eligible=0,state='revoked' WHERE id='snapshot-seed'",
     );
     await expect(
       service.commitComparisonResult({

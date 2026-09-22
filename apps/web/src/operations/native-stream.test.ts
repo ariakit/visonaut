@@ -8,7 +8,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const directory = await mkdtemp(resolve(tmpdir(), "ariviso-native-stream-"));
+const directory = await mkdtemp(resolve(tmpdir(), "visonaut-native-stream-"));
 let runtime: Miniflare | undefined;
 beforeAll(async () => {
   const common = fileURLToPath(new URL("./common.ts", import.meta.url));
@@ -65,7 +65,7 @@ beforeAll(async () => {
   await writeFile(
     resolve(directory, "wrangler.json"),
     JSON.stringify({
-      name: "ariviso-native-stream-test",
+      name: "visonaut-native-stream-test",
       main: "worker.mjs",
       compatibility_date: "2026-09-22",
       compatibility_flags: ["nodejs_compat"],
@@ -110,21 +110,21 @@ afterAll(async () => {
 
 it("copies transformed originals through the real Worker fixed-length R2 boundary", async () => {
   if (!runtime) throw new Error("Native runtime unavailable");
-  const response = await runtime.dispatchFetch("https://ariviso.test/copy");
+  const response = await runtime.dispatchFetch("https://visonaut.test/copy");
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ bytes: 65536 });
 });
 
 it("stores unknown-length SQL through real multipart R2 parts with bounded buffers", async () => {
   if (!runtime) throw new Error("Native runtime unavailable");
-  const response = await runtime.dispatchFetch("https://ariviso.test/multipart");
+  const response = await runtime.dispatchFetch("https://visonaut.test/multipart");
   expect(response.status).toBe(200);
   expect(await response.json()).toMatchObject({ bytes: 9 * 1024 * 1024, size: 9 * 1024 * 1024 });
 });
 
 it("rejects an oversized SQL stream without replacing an existing completed backup", async () => {
   if (!runtime) throw new Error("Native runtime unavailable");
-  const response = await runtime.dispatchFetch("https://ariviso.test/limit");
+  const response = await runtime.dispatchFetch("https://visonaut.test/limit");
   expect(response.status).toBe(500);
   expect(await response.json()).toMatchObject({
     error: expect.stringContaining("configured bound"),
@@ -136,7 +136,7 @@ it.each(["early-reject", "early-null", "destination-get", "multipart-create"])(
   "cancels and unlocks the source when %s fails before consumption",
   async (mode) => {
     if (!runtime) throw new Error("Native runtime unavailable");
-    const response = await runtime.dispatchFetch(`https://ariviso.test/failure/${mode}`);
+    const response = await runtime.dispatchFetch(`https://visonaut.test/failure/${mode}`);
     expect(await response.json()).toEqual({ rejected: true, cancelled: 1, locked: false });
   },
 );

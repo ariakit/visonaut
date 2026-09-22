@@ -3,7 +3,7 @@
   "changelog": "@changesets/cli/changelog",
   "commit": false,
   "fixed": [],
-  "linked": [["ariviso", "@ariviso/playwright"]],
+  "linked": [["visonaut", "@visonaut/playwright"]],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",

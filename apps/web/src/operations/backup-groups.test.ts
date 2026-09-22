@@ -99,7 +99,7 @@ async function saveArchive(
     runId: "run",
     generation,
     section: "images",
-    rows: database.connection.prepare("SELECT * FROM ariviso_images WHERE id=?").all(imageId),
+    rows: database.connection.prepare("SELECT * FROM visonaut_images WHERE id=?").all(imageId),
   });
   const root = JSON.stringify({
     version: 1,
@@ -148,11 +148,11 @@ describe("grouped backups", () => {
     });
     database.connection
       .prepare(
-        "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('mask','run',?,'derived/run/mask','image/png',4,1,1,'mask')",
+        "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('mask','run',?,'derived/run/mask','image/png',4,1,1,'mask')",
       )
       .run(digest("mask"));
     database.connection.exec(
-      "UPDATE ariviso_comparison_rows SET result_json=json_set(COALESCE(result_json,'{}'),'$.maskImageId','mask')",
+      "UPDATE visonaut_comparison_rows SET result_json=json_set(COALESCE(result_json,'{}'),'$.maskImageId','mask')",
     );
     await complete(fixture);
     expect(
@@ -225,11 +225,11 @@ describe("grouped backups", () => {
     });
     database.connection
       .prepare(
-        "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('closed-mask','run',?,'derived/run/closed-mask','image/png',4,1,1,'mask')",
+        "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('closed-mask','run',?,'derived/run/closed-mask','image/png',4,1,1,'mask')",
       )
       .run(digest("mask"));
     const base = await saveArchive(fixture, database, "generation", "closed-mask");
-    database.connection.exec("UPDATE ariviso_comparison_rows SET result_json=NULL");
+    database.connection.exec("UPDATE visonaut_comparison_rows SET result_json=NULL");
     await complete(fixture);
     fixture.state.time += day;
     await fixture.images.put("derived/run/historical-mask", "new-mask", {
@@ -237,11 +237,11 @@ describe("grouped backups", () => {
     });
     database.connection
       .prepare(
-        "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('historical-mask','run',?,'derived/run/historical-mask','image/png',8,1,1,'mask')",
+        "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES('historical-mask','run',?,'derived/run/historical-mask','image/png',8,1,1,'mask')",
       )
       .run(digest("new-mask"));
     database.connection.exec(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at,purpose) VALUES('historical','run',0,'policy',2,'ready',0,'historical')",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at,purpose) VALUES('historical','run',0,'policy',2,'ready',0,'historical')",
     );
     const supplement = await saveArchive(
       fixture,
@@ -414,7 +414,7 @@ describe("grouped backups", () => {
       await fixture.images.put(`runs/run/${name}`, name);
       database.connection
         .prepare(
-          "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run',?,?,'image/png',1,1,1)",
+          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run',?,?,'image/png',1,1,1)",
         )
         .run(name, digest(name), `runs/run/${name}`);
     };
@@ -505,7 +505,7 @@ describe("grouped backups", () => {
       await fixture.images.put(`runs/run/${name}`, name);
       database.connection
         .prepare(
-          "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run',?,?,'image/png',1,1,1)",
+          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run',?,?,'image/png',1,1,1)",
         )
         .run(name, digest(name), `runs/run/${name}`);
     }
@@ -624,7 +624,7 @@ describe("grouped backups", () => {
     await captured(fixture.context, "run", "main");
     await promoteBaselines(fixture.context);
     database.connection.exec(
-      "DELETE FROM work_retention_pins; UPDATE work_retained_runs SET byte_state='deleted'; UPDATE ariviso_images SET bytes_present=0",
+      "DELETE FROM work_retention_pins; UPDATE work_retained_runs SET byte_state='deleted'; UPDATE visonaut_images SET bytes_present=0",
     );
     await fixture.images.delete("runs/run/original");
     await backupDaily(fixture.context, exporter());
@@ -646,7 +646,7 @@ describe("grouped backups", () => {
     const fixture = context(database);
     await captured(fixture.context, "run", "main");
     await promoteBaselines(fixture.context);
-    database.connection.exec("UPDATE ariviso_snapshot_retention SET byte_state='deleting'");
+    database.connection.exec("UPDATE visonaut_snapshot_retention SET byte_state='deleting'");
     await expect(backupDaily(fixture.context, exporter())).rejects.toThrow("State changed");
     expect(fixture.backups.objects.size).toBe(0);
   });

@@ -4,7 +4,7 @@ import { operationsStatus } from "./operations.ts";
 
 function addProject(database: TestDatabase, id = "ariakit", repositoryId = "104133653") {
   database.connection
-    .prepare("INSERT INTO ariviso_projects(id,repository_id,policy_digest) VALUES(?,?,?)")
+    .prepare("INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES(?,?,?)")
     .run(id, repositoryId, "policy");
 }
 

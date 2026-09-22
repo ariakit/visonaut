@@ -44,7 +44,7 @@ export function statement(database: Database, sql: string, values: SqlValue[] = 
 export function assertion(database: Database, predicate: string, values: SqlValue[] = []) {
   return statement(
     database,
-    `INSERT INTO ariviso_assertions (valid) VALUES (CASE WHEN (${predicate}) THEN 1 ELSE 0 END)`,
+    `INSERT INTO visonaut_assertions (valid) VALUES (CASE WHEN (${predicate}) THEN 1 ELSE 0 END)`,
     values,
   );
 }
@@ -53,12 +53,12 @@ export async function atomic(database: Database, statements: Statement[]) {
   try {
     return await database.batch([
       ...statements,
-      statement(database, "DELETE FROM ariviso_assertions"),
+      statement(database, "DELETE FROM visonaut_assertions"),
     ]);
   } catch (error) {
     if (
       error instanceof Error &&
-      /CHECK constraint failed.*valid|ariviso_assertions/.test(error.message)
+      /CHECK constraint failed.*valid|visonaut_assertions/.test(error.message)
     ) {
       throw new ConflictError("State changed. Refresh the comparison before trying again.");
     }

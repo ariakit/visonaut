@@ -7,8 +7,8 @@ import {
   revokeGitHubAuthorization,
   verifyGitHubWebhook,
   type VerifiedWebhook,
-} from "@ariviso/security";
-import { assertion, atomic, ConflictError } from "@ariviso/service";
+} from "@visonaut/security";
+import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { trySealRun } from "./ingest.js";
@@ -170,7 +170,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
         .run();
       const runs = await context.database
         .prepare(
-          "SELECT id FROM ariviso_runs WHERE project_id = ? AND tested_sha = ? AND kind = 'merge_group' AND active = 1",
+          "SELECT id FROM visonaut_runs WHERE project_id = ? AND tested_sha = ? AND kind = 'merge_group' AND active = 1",
         )
         .bind(context.configuration.projectId, headSha)
         .all<{ id: string }>();
@@ -184,7 +184,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     const runId = String(integer(workflow.id, 1));
     const runs = await context.database
       .prepare(
-        "SELECT id FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND active = 1",
+        "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 1",
       )
       .bind(context.configuration.projectId, runId)
       .all<{ id: string }>();
@@ -199,7 +199,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     const testedSha = pull.merge_commit_sha;
     const runs = await context.database
       .prepare(
-        "SELECT id, tested_sha FROM ariviso_runs WHERE project_id = ? AND lineage_key = ? AND active = 1",
+        "SELECT id, tested_sha FROM visonaut_runs WHERE project_id = ? AND lineage_key = ? AND active = 1",
       )
       .bind(context.configuration.projectId, `pr:${number}`)
       .all<{ id: string; tested_sha: string }>();

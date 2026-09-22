@@ -1,7 +1,7 @@
 import { reportComparisonRecovery } from "./comparison-alerts.ts";
 import { pruneCaptureProfiles } from "../profiles.ts";
 import { expireComparisonReferences, expireSnapshotImages } from "./snapshot-retention.ts";
-import { reconcileWork, Service } from "@ariviso/service";
+import { reconcileWork, Service } from "@visonaut/service";
 import { backupDaily, expireBackups, type DatabaseExporter } from "./backups.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { recordEvent, resolveEvents, validateBudget } from "./common.ts";

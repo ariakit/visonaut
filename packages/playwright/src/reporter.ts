@@ -7,8 +7,8 @@ import {
   sha256,
   validateManifestProfiles,
   validateShardDeclaration,
-} from "@ariviso/protocol";
-import type { CandidateDiscovery, Manifest, RunProvenance, TrustedPlan } from "@ariviso/protocol";
+} from "@visonaut/protocol";
+import type { CandidateDiscovery, Manifest, RunProvenance, TrustedPlan } from "@visonaut/protocol";
 import type {
   FullConfig,
   FullResult,
@@ -74,7 +74,7 @@ async function playwrightVersion(): Promise<string> {
 }
 
 /** Writes only final successful attempts. A failed run produces no manifest. */
-export default class ArivisoReporter implements Reporter {
+export default class VisonautReporter implements Reporter {
   private collectedTests: { test: TestCase; identity: ReturnType<typeof inventoryEntry> }[] = [];
   private discovery?: CandidateDiscovery;
   private outputFile = "";
@@ -93,7 +93,7 @@ export default class ArivisoReporter implements Reporter {
     }));
     this.outputFile = path.resolve(
       config.rootDir,
-      this.options.outputFile ?? "ariviso/manifest.json",
+      this.options.outputFile ?? "visonaut/manifest.json",
     );
     // Failed reruns must not leave an older manifest that a later job can upload.
     this.receiptFile = path.join(path.dirname(this.outputFile), "receipt.json");
@@ -120,10 +120,10 @@ export default class ArivisoReporter implements Reporter {
   async onEnd(result: FullResult): Promise<{ status: "failed" } | undefined> {
     try {
       if (result.status !== "passed" || this.errors.length) {
-        throw new Error("Ariviso refuses a failed or incomplete Playwright run");
+        throw new Error("Visonaut refuses a failed or incomplete Playwright run");
       }
       if (!this.collectedTests.length || !this.outputFile) {
-        throw new Error("Ariviso reporter did not receive a test suite");
+        throw new Error("Visonaut reporter did not receive a test suite");
       }
       const tests: Manifest["tests"] = [];
       const captures: unknown[] = [];
@@ -217,7 +217,7 @@ export default class ArivisoReporter implements Reporter {
       const manifest = parseManifest({
         schemaVersion: "1.0",
         producer: {
-          name: "@ariviso/playwright",
+          name: "@visonaut/playwright",
           version: "0.1.0",
           nodeVersion: process.versions.node,
           playwrightVersion: await playwrightVersion(),
@@ -248,10 +248,10 @@ export default class ArivisoReporter implements Reporter {
       if (this.receiptFile) {
         await rm(this.receiptFile, { force: true });
       }
-      process.stderr.write(`Ariviso: ${error instanceof Error ? error.message : String(error)}\n`);
+      process.stderr.write(`Visonaut: ${error instanceof Error ? error.message : String(error)}\n`);
       return { status: "failed" };
     }
   }
 }
 
-export type { RunProvenance, TrustedCollection, TrustedPlan } from "@ariviso/protocol";
+export type { RunProvenance, TrustedCollection, TrustedPlan } from "@visonaut/protocol";

@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
-import { assertion, atomic, ConflictError, retentionPinStatement, Service } from "@ariviso/service";
-import { readBounded } from "@ariviso/compare";
+import {
+  assertion,
+  atomic,
+  ConflictError,
+  retentionPinStatement,
+  Service,
+} from "@visonaut/service";
+import { readBounded } from "@visonaut/compare";
 import {
   createExportWriter,
   maximumExportRootBytes,
@@ -10,7 +16,7 @@ import {
   type ExportEntry,
   type PagedExportRecord,
 } from "./export-pages.ts";
-import type { SqlValue } from "@ariviso/service";
+import type { SqlValue } from "@visonaut/service";
 import type { OperationsContext, StoredObject } from "./types.ts";
 import { hydrateCaptureMetadata } from "../profiles.ts";
 import {
@@ -99,14 +105,14 @@ export async function createRunExport(
     retentionPinStatement(context.database, { runId: run.id, owner, reason: "recovery" }),
     context.database
       .prepare(`INSERT INTO work_retention_pins(run_id,owner,reason)
-      SELECT DISTINCT image.run_id,?,'recovery' FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id
+      SELECT DISTINCT image.run_id,?,'recovery' FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id
       WHERE capture.run_id=? ON CONFLICT(run_id,owner) DO NOTHING`)
       .bind(owner, run.id),
     context.database
-      .prepare(`INSERT INTO ariviso_pins(snapshot_id,reason,owner_id)
-      SELECT DISTINCT copy.snapshot_id,'export',? FROM ariviso_snapshot_images copy
-      JOIN ariviso_comparisons comparison ON comparison.reference_snapshot_id=copy.snapshot_id
-      JOIN ariviso_snapshot_retention retention ON retention.snapshot_id=copy.snapshot_id
+      .prepare(`INSERT INTO visonaut_pins(snapshot_id,reason,owner_id)
+      SELECT DISTINCT copy.snapshot_id,'export',? FROM visonaut_snapshot_images copy
+      JOIN visonaut_comparisons comparison ON comparison.reference_snapshot_id=copy.snapshot_id
+      JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=copy.snapshot_id
       WHERE comparison.run_id=? AND copy.copied=1 AND retention.byte_state='live'
       ON CONFLICT(snapshot_id,reason,owner_id) DO NOTHING`)
       .bind(owner, run.id),
@@ -128,49 +134,49 @@ export async function createRunExport(
       }
     }
     const queries: Record<string, string> = {
-      shards: "SELECT * FROM ariviso_shards WHERE run_id=? ORDER BY key",
+      shards: "SELECT * FROM visonaut_shards WHERE run_id=? ORDER BY key",
       images:
-        "SELECT DISTINCT image.* FROM ariviso_images image JOIN ariviso_runs exported ON exported.id=? WHERE image.run_id=exported.id OR EXISTS(SELECT 1 FROM ariviso_captures capture WHERE capture.run_id=exported.id AND capture.image_id=image.id) ORDER BY image.id",
-      captures: "SELECT * FROM ariviso_captures WHERE run_id=? ORDER BY id",
-      comparisons: "SELECT * FROM ariviso_comparisons WHERE run_id=? ORDER BY id",
+        "SELECT DISTINCT image.* FROM visonaut_images image JOIN visonaut_runs exported ON exported.id=? WHERE image.run_id=exported.id OR EXISTS(SELECT 1 FROM visonaut_captures capture WHERE capture.run_id=exported.id AND capture.image_id=image.id) ORDER BY image.id",
+      captures: "SELECT * FROM visonaut_captures WHERE run_id=? ORDER BY id",
+      comparisons: "SELECT * FROM visonaut_comparisons WHERE run_id=? ORDER BY id",
       comparisonRows:
-        "SELECT row.* FROM ariviso_comparison_rows row JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=? ORDER BY row.id",
+        "SELECT row.* FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=? ORDER BY row.id",
       decisions:
-        "SELECT decision.* FROM ariviso_decisions decision JOIN ariviso_comparison_rows row ON row.id=decision.row_id JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=? ORDER BY decision.id",
+        "SELECT decision.* FROM visonaut_decisions decision JOIN visonaut_comparison_rows row ON row.id=decision.row_id JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=? ORDER BY decision.id",
       commands:
-        "SELECT command.* FROM ariviso_commands command JOIN ariviso_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=? ORDER BY command.id",
-      audit: "SELECT * FROM ariviso_audit WHERE run_id=? ORDER BY created_at,id",
+        "SELECT command.* FROM visonaut_commands command JOIN visonaut_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=? ORDER BY command.id",
+      audit: "SELECT * FROM visonaut_audit WHERE run_id=? ORDER BY created_at,id",
       identityHistory:
-        "SELECT history.* FROM ariviso_identity_history history JOIN ariviso_runs run ON run.project_id=history.project_id WHERE run.id=? ORDER BY history.lineage_key,history.item_key,history.variant_key",
-      snapshots: "SELECT * FROM ariviso_snapshots WHERE run_id=? ORDER BY id",
+        "SELECT history.* FROM visonaut_identity_history history JOIN visonaut_runs run ON run.project_id=history.project_id WHERE run.id=? ORDER BY history.lineage_key,history.item_key,history.variant_key",
+      snapshots: "SELECT * FROM visonaut_snapshots WHERE run_id=? ORDER BY id",
       snapshotImages:
-        "SELECT image.* FROM ariviso_snapshot_images image JOIN ariviso_snapshots snapshot ON snapshot.id=image.snapshot_id WHERE snapshot.run_id=? ORDER BY image.snapshot_id,image.capture_id",
+        "SELECT image.* FROM visonaut_snapshot_images image JOIN visonaut_snapshots snapshot ON snapshot.id=image.snapshot_id WHERE snapshot.run_id=? ORDER BY image.snapshot_id,image.capture_id",
       referenceSnapshots:
-        "SELECT DISTINCT snapshot.* FROM ariviso_snapshots snapshot JOIN ariviso_comparisons comparison ON comparison.reference_snapshot_id=snapshot.id WHERE comparison.run_id=? ORDER BY snapshot.id",
+        "SELECT DISTINCT snapshot.* FROM visonaut_snapshots snapshot JOIN visonaut_comparisons comparison ON comparison.reference_snapshot_id=snapshot.id WHERE comparison.run_id=? ORDER BY snapshot.id",
       referenceCaptures:
-        "SELECT DISTINCT capture.* FROM ariviso_captures capture JOIN ariviso_snapshot_images image ON image.capture_id=capture.id JOIN ariviso_comparisons comparison ON comparison.reference_snapshot_id=image.snapshot_id WHERE comparison.run_id=? ORDER BY capture.id",
+        "SELECT DISTINCT capture.* FROM visonaut_captures capture JOIN visonaut_snapshot_images image ON image.capture_id=capture.id JOIN visonaut_comparisons comparison ON comparison.reference_snapshot_id=image.snapshot_id WHERE comparison.run_id=? ORDER BY capture.id",
       referenceSnapshotImages:
-        "SELECT DISTINCT image.* FROM ariviso_snapshot_images image JOIN ariviso_comparisons comparison ON comparison.reference_snapshot_id=image.snapshot_id WHERE comparison.run_id=? ORDER BY image.snapshot_id,image.capture_id",
+        "SELECT DISTINCT image.* FROM visonaut_snapshot_images image JOIN visonaut_comparisons comparison ON comparison.reference_snapshot_id=image.snapshot_id WHERE comparison.run_id=? ORDER BY image.snapshot_id,image.capture_id",
       provenance:
-        "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT * FROM ingest_run_provenance WHERE run_id IN (SELECT id FROM owners) ORDER BY run_id",
+        "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT * FROM ingest_run_provenance WHERE run_id IN (SELECT id FROM owners) ORDER BY run_id",
       manifests:
-        "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT * FROM ingest_manifests WHERE run_id IN (SELECT id FROM owners) ORDER BY run_id,shard_key",
+        "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT * FROM ingest_manifests WHERE run_id IN (SELECT id FROM owners) ORDER BY run_id,shard_key",
     };
     const tables: Record<string, string> = {
-      shards: "ariviso_shards",
-      images: "ariviso_images",
-      captures: "ariviso_captures",
-      comparisons: "ariviso_comparisons",
-      comparisonRows: "ariviso_comparison_rows",
-      decisions: "ariviso_decisions",
-      commands: "ariviso_commands",
-      audit: "ariviso_audit",
-      identityHistory: "ariviso_identity_history",
-      snapshots: "ariviso_snapshots",
-      snapshotImages: "ariviso_snapshot_images",
-      referenceSnapshots: "ariviso_snapshots",
-      referenceCaptures: "ariviso_captures",
-      referenceSnapshotImages: "ariviso_snapshot_images",
+      shards: "visonaut_shards",
+      images: "visonaut_images",
+      captures: "visonaut_captures",
+      comparisons: "visonaut_comparisons",
+      comparisonRows: "visonaut_comparison_rows",
+      decisions: "visonaut_decisions",
+      commands: "visonaut_commands",
+      audit: "visonaut_audit",
+      identityHistory: "visonaut_identity_history",
+      snapshots: "visonaut_snapshots",
+      snapshotImages: "visonaut_snapshot_images",
+      referenceSnapshots: "visonaut_snapshots",
+      referenceCaptures: "visonaut_captures",
+      referenceSnapshotImages: "visonaut_snapshot_images",
       provenance: "ingest_run_provenance",
       manifests: "ingest_manifests",
     };
@@ -221,9 +227,9 @@ export async function createRunExport(
       content_type: string;
     }>({
       context,
-      sql: `SELECT DISTINCT copy.object_key,copy.digest,image.bytes,image.content_type FROM ariviso_snapshot_images copy
-      JOIN ariviso_comparisons comparison ON comparison.reference_snapshot_id=copy.snapshot_id JOIN ariviso_images image ON image.id=copy.image_id
-      WHERE comparison.run_id=? AND copy.copied=1 AND EXISTS(SELECT 1 FROM ariviso_pins pin WHERE pin.snapshot_id=copy.snapshot_id AND pin.reason='export' AND pin.owner_id=?) ORDER BY copy.object_key`,
+      sql: `SELECT DISTINCT copy.object_key,copy.digest,image.bytes,image.content_type FROM visonaut_snapshot_images copy
+      JOIN visonaut_comparisons comparison ON comparison.reference_snapshot_id=copy.snapshot_id JOIN visonaut_images image ON image.id=copy.image_id
+      WHERE comparison.run_id=? AND copy.copied=1 AND EXISTS(SELECT 1 FROM visonaut_pins pin WHERE pin.snapshot_id=copy.snapshot_id AND pin.reason='export' AND pin.owner_id=?) ORDER BY copy.object_key`,
       bindings: [run.id, owner],
       columns: ["object_key", "digest", "bytes", "content_type"],
     })) {
@@ -239,7 +245,7 @@ export async function createRunExport(
     }
     for await (const documents of rows<{ object_key: string }>({
       context,
-      sql: "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM ariviso_images image JOIN ariviso_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT plan_object_key AS object_key FROM ingest_run_provenance WHERE run_id IN (SELECT id FROM owners) UNION SELECT object_key FROM ingest_manifests WHERE run_id IN (SELECT id FROM owners) ORDER BY object_key",
+      sql: "WITH exported AS (SELECT ? AS id),owners AS (SELECT id FROM exported UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=(SELECT id FROM exported)) SELECT plan_object_key AS object_key FROM ingest_run_provenance WHERE run_id IN (SELECT id FROM owners) UNION SELECT object_key FROM ingest_manifests WHERE run_id IN (SELECT id FROM owners) ORDER BY object_key",
       bindings: [run.id],
       columns: ["object_key"],
     })) {
@@ -259,7 +265,7 @@ export async function createRunExport(
     await atomic(context.database, [
       assertion(
         context.database,
-        "EXISTS(SELECT 1 FROM ariviso_projects WHERE id=? AND revision=?)",
+        "EXISTS(SELECT 1 FROM visonaut_projects WHERE id=? AND revision=?)",
         [project.id, project.revision],
       ),
       assertion(
@@ -274,7 +280,7 @@ export async function createRunExport(
     await atomic(context.database, [
       context.database.prepare("UPDATE operations_exports SET state='failed' WHERE id=?").bind(id),
       context.database
-        .prepare("DELETE FROM ariviso_pins WHERE owner_id=? AND reason='export'")
+        .prepare("DELETE FROM visonaut_pins WHERE owner_id=? AND reason='export'")
         .bind(owner),
       context.database
         .prepare("DELETE FROM work_retention_pins WHERE owner=? AND reason='recovery'")
@@ -529,7 +535,7 @@ export async function streamRunExport(context: OperationsContext, exportId: stri
   return new Response(body, {
     headers: {
       "content-type": "application/x-tar",
-      "content-disposition": `attachment; filename="ariviso-${exportId}.tar"`,
+      "content-disposition": `attachment; filename="visonaut-${exportId}.tar"`,
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff",
     },
@@ -559,7 +565,7 @@ export async function expireExports(context: OperationsContext) {
     if (pages.truncated) continue;
     await context.backups.delete(`exports/${row.id}.json`);
     await context.database
-      .prepare("DELETE FROM ariviso_pins WHERE owner_id=? AND reason='export'")
+      .prepare("DELETE FROM visonaut_pins WHERE owner_id=? AND reason='export'")
       .bind(`export:${row.id}`)
       .run();
     await context.database

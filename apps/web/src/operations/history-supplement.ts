@@ -1,4 +1,4 @@
-import { assertion, atomic, compactHistoricalComparison, ConflictError } from "@ariviso/service";
+import { assertion, atomic, compactHistoricalComparison, ConflictError } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./common.ts";
 import {
   historyPrefix,
@@ -18,7 +18,7 @@ import {
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 const eligible = `comparison.purpose='historical' AND comparison.state IN('ready','invalidated')
-  AND NOT EXISTS(SELECT 1 FROM work_tasks task JOIN ariviso_comparison_rows row ON row.id=task.id
+  AND NOT EXISTS(SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id=task.id
     WHERE row.comparison_id=comparison.id AND task.state IN('queued','leased'))`;
 interface ComparisonArchive extends HistoryPointer {
   comparison_id: string;
@@ -62,7 +62,7 @@ export async function archiveHistoricalComparisons(
 ): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const candidates = await context.database
-    .prepare(`SELECT comparison.id,comparison.run_id FROM ariviso_comparisons comparison WHERE ${eligible}
+    .prepare(`SELECT comparison.id,comparison.run_id FROM visonaut_comparisons comparison WHERE ${eligible}
     AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND (archive.state='ready' OR archive.lease_until>? OR archive.retry_at>?)) ORDER BY comparison.created_at,comparison.id LIMIT ?`)
     .bind(context.now(), context.now(), context.budget.tasksPerStep)
     .all<{ id: string; run_id: string }>();
@@ -87,7 +87,7 @@ export async function archiveHistoricalComparisons(
       await atomic(context.database, [
         assertion(
           context.database,
-          `EXISTS(SELECT 1 FROM ariviso_comparisons comparison WHERE comparison.id=? AND ${eligible}) AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=? AND (archive.state='ready' OR archive.lease_until>?))`,
+          `EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.id=? AND ${eligible}) AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=? AND (archive.state='ready' OR archive.lease_until>?))`,
           [candidate.id, candidate.id, context.now()],
         ),
         context.database
@@ -199,7 +199,7 @@ export async function readArchivedComparison(
     }
   } else {
     const run = await context.database
-      .prepare("SELECT * FROM ariviso_runs WHERE id=?")
+      .prepare("SELECT * FROM visonaut_runs WHERE id=?")
       .bind(input.runId)
       .first();
     if (!run) throw new Error("Historical comparison run is missing.");

@@ -1,4 +1,4 @@
-import { ProtocolError, SCHEMA_VERSION } from "@ariviso/protocol";
+import { ProtocolError, SCHEMA_VERSION } from "@visonaut/protocol";
 import {
   createAuth,
   createGitHubClient,
@@ -6,8 +6,8 @@ import {
   requireSameOrigin,
   securePrivateResponse,
   SecurityError,
-} from "@ariviso/security";
-import { ConflictError, IncompleteError } from "@ariviso/service";
+} from "@visonaut/security";
+import { ConflictError, IncompleteError } from "@visonaut/service";
 import { apiContext, assertConfiguredProject, type ApiBindings } from "./context.js";
 import { declareShard, finalize, reserve, runStatus, uploadImage } from "./ingest.js";
 import { uuid } from "./input.js";

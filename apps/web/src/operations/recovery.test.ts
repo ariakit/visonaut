@@ -12,9 +12,9 @@ it.each(["building", "ready", "failed", "expired"])(
     const fixture = context(database);
     await captured(fixture.context, "exported", "main");
     database.connection.exec(`
-      INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
+      INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
         VALUES('exported','project','exported','comparison-exported','sha','accepted',1,'baselines/exported',0);
-      INSERT INTO ariviso_pins(snapshot_id,reason,owner_id) VALUES('exported','export','export:old');
+      INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('exported','export','export:old');
       INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('exported','export:old','recovery');
     `);
     database.connection
@@ -26,14 +26,14 @@ it.each(["building", "ready", "failed", "expired"])(
     await sanitizeRestoredDatabase(database, fixture.state.time);
     await sanitizeRestoredDatabase(database, fixture.state.time);
     expect(database.connection.prepare("SELECT * FROM operations_exports").all()).toEqual([]);
-    expect(database.connection.prepare("SELECT * FROM ariviso_pins").all()).toEqual([]);
+    expect(database.connection.prepare("SELECT * FROM visonaut_pins").all()).toEqual([]);
     expect(database.connection.prepare("SELECT * FROM work_retention_pins").all()).toEqual([]);
     fixture.state.time += 31 * 86400000;
     const retirement = await expireSnapshotImages(fixture.context);
     expect(retirement.attention).toEqual([]);
     expect(
       database.connection
-        .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='exported'")
+        .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='exported'")
         .get(),
     ).toEqual({ byte_state: "retiring" });
     let archived = false;
@@ -57,7 +57,7 @@ it.each(["building", "ready", "failed", "expired"])(
     expect(fixture.images.objects.has("baselines/exported/original")).toBe(false);
     expect(
       database.connection
-        .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='exported'")
+        .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='exported'")
         .get(),
     ).toEqual({ byte_state: "deleted" });
   },
@@ -74,7 +74,7 @@ it("archives and expires restored unfinished work without restarting existing re
   await sanitizeRestoredDatabase(database, restoredAt);
   await sanitizeRestoredDatabase(database, restoredAt + 86400000);
   expect(
-    database.connection.prepare("SELECT id,closed_at FROM ariviso_runs ORDER BY id").all(),
+    database.connection.prepare("SELECT id,closed_at FROM visonaut_runs ORDER BY id").all(),
   ).toEqual([
     { id: "closed", closed_at: closedAt },
     { id: "restored", closed_at: restoredAt },
@@ -115,10 +115,10 @@ it("preserves current, rollback, manual, command, and other independently owned 
   const fixture = context(database);
   for (const id of ["current", "rollback"]) {
     await captured(fixture.context, id, "main");
-    database.connection.prepare("UPDATE ariviso_runs SET state='accepted' WHERE id=?").run(id);
+    database.connection.prepare("UPDATE visonaut_runs SET state='accepted' WHERE id=?").run(id);
     database.connection
       .prepare(
-        "INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES(?,'project',?,?,'sha','accepted',1,?,0)",
+        "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES(?,'project',?,?,'sha','accepted',1,?,0)",
       )
       .run(id, id, `comparison-${id}`, `baselines/${id}`);
     database.connection
@@ -150,22 +150,22 @@ it("preserves current, rollback, manual, command, and other independently owned 
       .run(id, `retained-${reason}`, reason);
   }
   database.connection.exec(`
-    INSERT INTO ariviso_promotions(id,project_id,snapshot_id,previous_snapshot_id,comparison_id,baseline_revision,created_at)
+    INSERT INTO visonaut_promotions(id,project_id,snapshot_id,previous_snapshot_id,comparison_id,baseline_revision,created_at)
       VALUES('promotion','project','current','rollback','comparison-current',1,0);
-    UPDATE ariviso_projects SET snapshot_id='current',promotion_id='promotion';
-    INSERT INTO ariviso_pins(snapshot_id,reason,owner_id) VALUES('rollback','rollback','promotion');
+    UPDATE visonaut_projects SET snapshot_id='current',promotion_id='promotion';
+    INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('rollback','rollback','promotion');
   `);
   const roots = database.connection
     .prepare(
       "SELECT run_id,owner,reason FROM work_retention_pins WHERE owner NOT LIKE 'review:%' ORDER BY run_id,owner",
     )
     .all();
-  const command = database.connection.prepare("SELECT * FROM ariviso_commands").all();
+  const command = database.connection.prepare("SELECT * FROM visonaut_commands").all();
   const restoredAt = fixture.state.time;
   await sanitizeRestoredDatabase(database, restoredAt);
   expect(
     database.connection
-      .prepare("SELECT active,state,closed_at FROM ariviso_runs WHERE id='current'")
+      .prepare("SELECT active,state,closed_at FROM visonaut_runs WHERE id='current'")
       .get(),
   ).toEqual({ active: 0, state: "accepted", closed_at: restoredAt });
   expect(
@@ -175,14 +175,16 @@ it("preserves current, rollback, manual, command, and other independently owned 
       )
       .all(),
   ).toEqual(roots);
-  expect(database.connection.prepare("SELECT * FROM ariviso_commands").all()).toEqual(command);
+  expect(database.connection.prepare("SELECT * FROM visonaut_commands").all()).toEqual(command);
   fixture.state.time += 31 * 86400000;
   expect((await archiveClosedRuns(fixture.context)).completed).toEqual([]);
   expect((await expireRunImages(fixture.context)).completed).toEqual([]);
   await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT snapshot_id,byte_state FROM ariviso_snapshot_retention ORDER BY snapshot_id")
+      .prepare(
+        "SELECT snapshot_id,byte_state FROM visonaut_snapshot_retention ORDER BY snapshot_id",
+      )
       .all(),
   ).toEqual([
     { snapshot_id: "current", byte_state: "live" },
@@ -196,12 +198,12 @@ it("preserves current, rollback, manual, command, and other independently owned 
 
   // A later baseline transition leaves the restored snapshot outside both roots.
   database.connection.exec(
-    "UPDATE ariviso_projects SET snapshot_id='rollback',promotion_id=NULL,revision=revision+1",
+    "UPDATE visonaut_projects SET snapshot_id='rollback',promotion_id=NULL,revision=revision+1",
   );
   await expireSnapshotImages(fixture.context);
   expect(
     database.connection
-      .prepare("SELECT byte_state FROM ariviso_snapshot_retention WHERE snapshot_id='current'")
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='current'")
       .get(),
   ).toEqual({ byte_state: "retiring" });
   let archived = false;
@@ -220,7 +222,7 @@ it("preserves current, rollback, manual, command, and other independently owned 
   expect(fixture.images.objects.has("baselines/current/original")).toBe(false);
   expect(fixture.images.objects.has("baselines/rollback/original")).toBe(true);
   expect(
-    database.connection.prepare("SELECT closed_at FROM ariviso_runs WHERE id='current'").get(),
+    database.connection.prepare("SELECT closed_at FROM visonaut_runs WHERE id='current'").get(),
   ).toEqual({ closed_at: restoredAt });
 });
 
@@ -229,16 +231,16 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
   const fixture = context(database);
   await captured(fixture.context);
   database.connection.exec(`
-    INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
+    INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
       VALUES('exported','project','run','comparison-run','sha','accepted',1,'baselines/exported',0);
-    INSERT INTO ariviso_pins(snapshot_id,reason,owner_id) VALUES('exported','export','export:old');
+    INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('exported','export','export:old');
     INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,created_at)
       VALUES('old','run','maintainer','ready',1,0);
   `);
   const exports = database.connection.prepare("SELECT * FROM operations_exports").all();
-  const snapshotPins = database.connection.prepare("SELECT * FROM ariviso_pins").all();
+  const snapshotPins = database.connection.prepare("SELECT * FROM visonaut_pins").all();
   const before = database.connection
-    .prepare("SELECT active,state,closed_at FROM ariviso_runs")
+    .prepare("SELECT active,state,closed_at FROM visonaut_runs")
     .all();
   database.connection.exec(`CREATE TRIGGER interrupt_restore BEFORE DELETE ON work_retention_pins
     WHEN OLD.reason='review' BEGIN SELECT RAISE(ABORT,'injected restore failure'); END`);
@@ -246,7 +248,7 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
     "injected restore failure",
   );
   expect(
-    database.connection.prepare("SELECT active,state,closed_at FROM ariviso_runs").all(),
+    database.connection.prepare("SELECT active,state,closed_at FROM visonaut_runs").all(),
   ).toEqual(before);
   expect(database.connection.prepare("SELECT closed_at FROM work_retained_runs").get()).toEqual({
     closed_at: null,
@@ -255,7 +257,7 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
     { owner: "review:run" },
   ]);
   expect(database.connection.prepare("SELECT * FROM operations_exports").all()).toEqual(exports);
-  expect(database.connection.prepare("SELECT * FROM ariviso_pins").all()).toEqual(snapshotPins);
+  expect(database.connection.prepare("SELECT * FROM visonaut_pins").all()).toEqual(snapshotPins);
 });
 
 it("keeps verified history and drops unfinished run and comparison archives independently of auth tables", async () => {
@@ -282,7 +284,7 @@ it("keeps verified history and drops unfinished run and comparison archives inde
       .all(),
   ).toEqual([{ comparison_id: "comparison-ready", state: "ready" }]);
   expect(
-    database.connection.prepare("SELECT id,active,state FROM ariviso_runs ORDER BY id").all(),
+    database.connection.prepare("SELECT id,active,state FROM visonaut_runs ORDER BY id").all(),
   ).toEqual([
     { id: "building", active: 0, state: "failed" },
     { id: "ready", active: 0, state: "failed" },

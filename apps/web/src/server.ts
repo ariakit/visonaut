@@ -5,7 +5,7 @@ import {
   requireMaintainer,
   securePrivateResponse,
   SecurityError,
-} from "@ariviso/security";
+} from "@visonaut/security";
 import { handleApi } from "./api/index.ts";
 import {
   apiBindings,
@@ -53,22 +53,22 @@ export default {
     if (url.pathname === "/health") {
       return Response.json(
         {
-          service: "ariviso",
-          status: launchEnabled(env.ARIVISO_LAUNCH_ENABLED) ? "ready" : "setup",
-          launchEnabled: launchEnabled(env.ARIVISO_LAUNCH_ENABLED),
+          service: "visonaut",
+          status: launchEnabled(env.VISONAUT_LAUNCH_ENABLED) ? "ready" : "setup",
+          launchEnabled: launchEnabled(env.VISONAUT_LAUNCH_ENABLED),
         },
         { headers: { "Cache-Control": "no-store" } },
       );
     }
     try {
       if (url.pathname.startsWith("/api/auth/")) {
-        if (url.origin !== env.ARIVISO_ORIGIN)
+        if (url.origin !== env.VISONAUT_ORIGIN)
           return securePrivateResponse(new Response(null, { status: 403 }));
         const auth = createAuth(authConfiguration(env));
         return securePrivateResponse(await auth.handler(request));
       }
       if (url.pathname === "/api/me") {
-        if (request.method !== "GET" || url.origin !== env.ARIVISO_ORIGIN)
+        if (request.method !== "GET" || url.origin !== env.VISONAUT_ORIGIN)
           return securePrivateResponse(
             new Response(null, { status: request.method === "GET" ? 403 : 405 }),
           );

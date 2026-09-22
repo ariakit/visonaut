@@ -1,9 +1,9 @@
 {
-  "name": "ariviso-workspace",
+  "name": "visonaut-workspace",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @ariviso/web dev",
+    "dev": "pnpm --filter @visonaut/web dev",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",

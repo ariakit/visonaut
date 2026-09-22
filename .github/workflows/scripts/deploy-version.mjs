@@ -117,7 +117,8 @@ export function versionConfiguration(configuration, propertyNames) {
 
 export async function deployVersion(configPath, expectedName, environment) {
   assert(
-    /^ariviso(?:-(?:preview|diagnostics))?(?:-compare)?$/.test(expectedName),
+    /^visonaut(?:-(?:preview|diagnostics))?(?:-compare)?$/.test(expectedName) ||
+      expectedName === "visonaut-webhook",
     "Unexpected Worker name",
   );
   const { unstable_readConfig } = await import("wrangler");
@@ -149,7 +150,7 @@ export async function deployVersion(configPath, expectedName, environment) {
     configuration,
     Object.keys(schema.definitions.RawConfig.properties),
   );
-  await using temporary = await mkdtempDisposable(resolve(tmpdir(), "ariviso-version-"));
+  await using temporary = await mkdtempDisposable(resolve(tmpdir(), "visonaut-version-"));
   const temporaryConfig = resolve(temporary.path, "wrangler.json");
   const recordsPath = resolve(temporary.path, "output.jsonl");
   await writeFile(temporaryConfig, JSON.stringify(output));

@@ -7,7 +7,7 @@ import {
   type Result,
   type SqlValue,
   type Statement,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 class SqliteStatement implements Statement {
   constructor(
@@ -67,6 +67,7 @@ export class TestDatabase implements Database {
       "0011_backup_groups",
       "0012_historical_comparisons",
       "0013_promotion_scans",
+      "0014_visonaut_brand",
     ]) {
       this.connection.exec(
         readFileSync(new URL(`../../migrations/${migration}.sql`, import.meta.url), "utf8"),
@@ -198,7 +199,7 @@ export function context(database: TestDatabase) {
     backups,
     quarantine,
     comparisons: { async send() {} },
-    origin: "https://ariviso.example",
+    origin: "https://visonaut.example",
     budget: {
       tasksPerStep: 10,
       objectsPerStep: 2,
@@ -240,7 +241,7 @@ export async function reserve(
   kind: "main" | "pull_request" = "pull_request",
 ) {
   const service = new Service(context.database);
-  if (!(await context.database.prepare("SELECT id FROM ariviso_projects").first())) {
+  if (!(await context.database.prepare("SELECT id FROM visonaut_projects").first())) {
     await service.createPolicy({
       digest: "policy",
       policy: { id: "fixture", channelThreshold: 0, maxChangedPixels: 0, maxChangedRatio: 0 },
@@ -329,7 +330,7 @@ export async function captured(
 
 export async function ingestRecords(context: OperationsContext, runId: string) {
   const image = await context.database
-    .prepare("SELECT * FROM ariviso_images WHERE run_id=? AND role='original' LIMIT 1")
+    .prepare("SELECT * FROM visonaut_images WHERE run_id=? AND role='original' LIMIT 1")
     .bind(runId)
     .first<{
       id: string;

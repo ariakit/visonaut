@@ -2,22 +2,22 @@ import { prepareHistoricalCaptures } from "../operations/historical-captures.ts"
 import { TestDatabase, context as operationsContext } from "../operations/test-fixtures.ts";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { decodeImage, validateImage } from "@ariviso/compare";
-import { createCodecs } from "@ariviso/compare/jsquash";
+import { decodeImage, validateImage } from "@visonaut/compare";
+import { createCodecs } from "@visonaut/compare/jsquash";
 import {
   digestJson,
   type CaptureProfile,
   type Manifest,
   type TrustedPlan,
-} from "@ariviso/protocol";
+} from "@visonaut/protocol";
 import {
   createAuth,
   createGitHubClient,
   issueIngestCapability,
   SecurityError,
   type VerifiedRun,
-} from "@ariviso/security";
-import { Service } from "@ariviso/service";
+} from "@visonaut/security";
+import { Service } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -44,7 +44,7 @@ const quarantine = await runtime.getR2Bucket("QUARANTINE");
 const privateKey = await exportPKCS8(
   (await generateKeyPair("RS256", { extractable: true })).privateKey,
 );
-const require = createRequire(import.meta.resolve("@ariviso/compare"));
+const require = createRequire(import.meta.resolve("@visonaut/compare"));
 const codecs = await createCodecs({
   png: await WebAssembly.compile(
     await readFile(require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm")),
@@ -54,7 +54,7 @@ const codecs = await createCodecs({
   ),
 });
 const bytes = new Uint8Array(
-  await readFile(new URL("../test/fixtures/rgba.png", import.meta.resolve("@ariviso/compare"))),
+  await readFile(new URL("../test/fixtures/rgba.png", import.meta.resolve("@visonaut/compare"))),
 );
 const image = await validateImage(bytes);
 let repositoryId = 100;
@@ -86,15 +86,15 @@ beforeAll(async () => {
   const sources = [
     new URL(
       "../../../apps/web/migrations/0001_service.sql",
-      import.meta.resolve("@ariviso/service"),
+      import.meta.resolve("@visonaut/service"),
     ),
-    new URL("../work-schema.sql", import.meta.resolve("@ariviso/service")),
-    new URL("../migrations/0001_auth.sql", import.meta.resolve("@ariviso/security")),
+    new URL("../work-schema.sql", import.meta.resolve("@visonaut/service")),
+    new URL("../migrations/0001_auth.sql", import.meta.resolve("@visonaut/security")),
     new URL("../../migrations/0004_ingest.sql", import.meta.url),
 
     new URL(
       "../../../apps/web/migrations/0006_acceptance.sql",
-      import.meta.resolve("@ariviso/service"),
+      import.meta.resolve("@visonaut/service"),
     ),
     new URL("../../migrations/0005_operations.sql", import.meta.url),
     new URL("../../migrations/0007_backup_inventory.sql", import.meta.url),
@@ -103,6 +103,8 @@ beforeAll(async () => {
     new URL("../../migrations/0010_run_history.sql", import.meta.url),
     new URL("../../migrations/0011_backup_groups.sql", import.meta.url),
     new URL("../../migrations/0012_historical_comparisons.sql", import.meta.url),
+    new URL("../../migrations/0013_promotion_scans.sql", import.meta.url),
+    new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
@@ -202,7 +204,7 @@ async function fixture(secondShard = false, discovery = false) {
   const manifest: Manifest = {
     schemaVersion: "1.0",
     producer: {
-      name: "@ariviso/playwright",
+      name: "@visonaut/playwright",
       version: "0.1.0",
       nodeVersion: "24.18.0",
       playwrightVersion: "1.63.0",
@@ -323,7 +325,7 @@ async function fixture(secondShard = false, discovery = false) {
             return Response.json({
               artifacts: [
                 {
-                  name: `ariviso-discovery-1-789-chrome-1-${await digestJson(manifest)}`,
+                  name: `visonaut-discovery-1-789-chrome-1-${await digestJson(manifest)}`,
                   expired: false,
                   workflow_run: {
                     id: 456,
@@ -379,7 +381,7 @@ async function fixture(secondShard = false, discovery = false) {
       webhookSecret: "test-webhook-secret-with-32-characters-or-more",
       oidcAudience: "https://preview.example/ingest",
       repositoryOwnerId: "5",
-      trustedPlanPath: ".ariviso/plan.json",
+      trustedPlanPath: ".visonaut/plan.json",
       reusableWorkflowRef: "ariakit/ariakit/.github/workflows/capture.yml@sha",
       reusableWorkflowSha: "f".repeat(40),
       comparisonMaxAttempts: 3,
@@ -698,7 +700,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     await images.put(key, bytes);
     await database
       .prepare(
-        "INSERT INTO ariviso_images(id,run_id,object_key,digest,bytes,width,height,content_type,validated,bytes_present,role) SELECT ?,run_id,?,digest,bytes,width,height,content_type,validated,bytes_present,'mask' FROM ariviso_images WHERE run_id=? LIMIT 1",
+        "INSERT INTO visonaut_images(id,run_id,object_key,digest,bytes,width,height,content_type,validated,bytes_present,role) SELECT ?,run_id,?,digest,bytes,width,height,content_type,validated,bytes_present,'mask' FROM visonaut_images WHERE run_id=? LIMIT 1",
       )
       .bind(derivedId, key, test.runId)
       .run();
@@ -713,7 +715,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     expect(await head.text()).toBe("");
     expect((await test.send(`/images/${"e".repeat(64)}`)).status).toBe(404);
     await database
-      .prepare("UPDATE ariviso_images SET bytes_present=0 WHERE id=?")
+      .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id=?")
       .bind(derivedId)
       .run();
     expect((await test.send(`/images/${derivedId}`)).status).toBe(404);
@@ -730,7 +732,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     });
     expect(response.status).toBe(422);
     const count = await database
-      .prepare("SELECT count(*) AS count FROM ariviso_images WHERE run_id = ?")
+      .prepare("SELECT count(*) AS count FROM visonaut_images WHERE run_id = ?")
       .bind(test.runId)
       .first<{ count: number }>();
     expect(count?.count).toBe(0);
@@ -758,15 +760,15 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     expect(result.progressed).toBe(1);
     expect((await test.service.run(test.runId)).sealed_at).not.toBeNull();
     const capture = await database
-      .prepare("SELECT profile_digest,metadata_json FROM ariviso_captures WHERE run_id=?")
+      .prepare("SELECT profile_digest,metadata_json FROM visonaut_captures WHERE run_id=?")
       .bind(test.runId)
       .first<{ profile_digest: string; metadata_json: string }>();
     expect(capture).not.toBeNull();
     expect(capture && JSON.parse(capture.metadata_json).profile).toEqual({
-      $arivisoProfileDigest: capture?.profile_digest,
+      $visonautProfileDigest: capture?.profile_digest,
     });
     const profile = await database
-      .prepare("SELECT profile_json FROM ariviso_capture_profiles WHERE digest=?")
+      .prepare("SELECT profile_json FROM visonaut_capture_profiles WHERE digest=?")
       .bind(capture?.profile_digest ?? "")
       .first<{ profile_json: string }>();
     expect(profile && JSON.parse(profile.profile_json)).toEqual(test.manifest.profiles[0]?.profile);
@@ -796,7 +798,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     ).toBe(202);
     const promotionId = `promotion-${"a".repeat(64)}`;
     await database
-      .prepare("UPDATE ariviso_projects SET promotion_id=? WHERE id=?")
+      .prepare("UPDATE visonaut_projects SET promotion_id=? WHERE id=?")
       .bind(promotionId, test.bindings.configuration.projectId)
       .run();
     const headers = {
@@ -845,7 +847,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       ).status,
     ).toBe(202);
     const capture = await database
-      .prepare("SELECT metadata_json FROM ariviso_captures WHERE run_id=?")
+      .prepare("SELECT metadata_json FROM visonaut_captures WHERE run_id=?")
       .bind(test.runId)
       .first<{ metadata_json: string }>();
     expect(capture).not.toBeNull();
@@ -853,24 +855,24 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const inline = JSON.stringify({ ...metadata, profile: test.manifest.profiles[0]?.profile });
     // These rows model a prior deployment interrupted before the shard's final transaction.
     await database
-      .prepare("UPDATE ariviso_captures SET metadata_json=? WHERE run_id=?")
+      .prepare("UPDATE visonaut_captures SET metadata_json=? WHERE run_id=?")
       .bind(inline, test.runId)
       .run();
     await database
       .prepare(
-        "UPDATE ariviso_shards SET state='pending',manifest_digest=NULL WHERE run_id=? AND key='chrome-1'",
+        "UPDATE visonaut_shards SET state='pending',manifest_digest=NULL WHERE run_id=? AND key='chrome-1'",
       )
       .bind(test.runId)
       .run();
     expect((await reconcileIngest(apiContext(test.bindings))).errors).toEqual([]);
     const retried = await database
-      .prepare("SELECT metadata_json FROM ariviso_captures WHERE run_id=?")
+      .prepare("SELECT metadata_json FROM visonaut_captures WHERE run_id=?")
       .bind(test.runId)
       .first<{ metadata_json: string }>();
     expect(retried?.metadata_json).toBe(inline);
     expect(
       await database
-        .prepare("SELECT state FROM ariviso_shards WHERE run_id=? AND key='chrome-1'")
+        .prepare("SELECT state FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
         .bind(test.runId)
         .first<{ state: string }>(),
     ).toEqual({ state: "complete" });
@@ -886,7 +888,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     );
     expect(response.status).toBe(202);
     const successful = await database
-      .prepare("SELECT state FROM ariviso_shards WHERE run_id = ? AND key = 'chrome-1'")
+      .prepare("SELECT state FROM visonaut_shards WHERE run_id = ? AND key = 'chrome-1'")
       .bind(test.runId)
       .first<{ state: string }>();
     expect(successful?.state).toBe("complete");
@@ -930,7 +932,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     });
     const inherited = await database
       .prepare(
-        "SELECT state, source_attempt FROM ariviso_shards WHERE run_id = ? AND key = 'chrome-1'",
+        "SELECT state, source_attempt FROM visonaut_shards WHERE run_id = ? AND key = 'chrome-1'",
       )
       .bind(next.id)
       .first<{ state: string; source_attempt: number }>();
@@ -993,7 +995,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", {
       artifacts: [
         {
-          name: `ariviso-discovery-1-789-chrome-1-${digest}`,
+          name: `visonaut-discovery-1-789-chrome-1-${digest}`,
           expired: false,
           workflow_run: {
             id: 456,
@@ -1003,7 +1005,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
           },
         },
         {
-          name: `ariviso-discovery-2-792-firefox-1-${declared.manifestDigest}`,
+          name: `visonaut-discovery-2-792-firefox-1-${declared.manifestDigest}`,
           expired: false,
           workflow_run: {
             id: 456,
@@ -1056,14 +1058,14 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     expect(
       await database
         .prepare(
-          "SELECT s.source_attempt,s.manifest_digest,m.job_id FROM ariviso_shards s JOIN ingest_manifests m ON m.run_id=? AND m.shard_key=s.key WHERE s.run_id=? AND s.key='chrome-1'",
+          "SELECT s.source_attempt,s.manifest_digest,m.job_id FROM visonaut_shards s JOIN ingest_manifests m ON m.run_id=? AND m.shard_key=s.key WHERE s.run_id=? AND s.key='chrome-1'",
         )
         .bind(test.runId, next.id)
         .first(),
     ).toEqual({ source_attempt: 1, manifest_digest: digest, job_id: "789" });
     expect(
       await database
-        .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id=?")
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
         .bind(next.id)
         .first(),
     ).toEqual({ count: 2 });
@@ -1078,12 +1080,12 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
 
     expect(
       await database
-        .prepare("SELECT image_id FROM ariviso_captures WHERE run_id=? AND shard_key='chrome-1'")
+        .prepare("SELECT image_id FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'")
         .bind(next.id)
         .first(),
     ).toEqual(
       await database
-        .prepare("SELECT image_id FROM ariviso_captures WHERE run_id=? AND shard_key='chrome-1'")
+        .prepare("SELECT image_id FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'")
         .bind(test.runId)
         .first(),
     );
@@ -1211,12 +1213,12 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         restore: "UPDATE ingest_manifests SET finalized=1 WHERE run_id=?",
       },
       {
-        sql: "UPDATE ariviso_shards SET state='pending' WHERE run_id=? AND key='chrome-1'",
-        restore: "UPDATE ariviso_shards SET state='complete' WHERE run_id=? AND key='chrome-1'",
+        sql: "UPDATE visonaut_shards SET state='pending' WHERE run_id=? AND key='chrome-1'",
+        restore: "UPDATE visonaut_shards SET state='complete' WHERE run_id=? AND key='chrome-1'",
       },
       {
-        sql: "UPDATE ariviso_shards SET source_attempt=2 WHERE run_id=? AND key='chrome-1'",
-        restore: "UPDATE ariviso_shards SET source_attempt=1 WHERE run_id=? AND key='chrome-1'",
+        sql: "UPDATE visonaut_shards SET source_attempt=2 WHERE run_id=? AND key='chrome-1'",
+        restore: "UPDATE visonaut_shards SET source_attempt=1 WHERE run_id=? AND key='chrome-1'",
       },
     ];
     for (const change of changes) {
@@ -1231,7 +1233,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       test.verified[key] = value;
     }
     const proof = await database
-      .prepare("SELECT discovery_json FROM ariviso_shards WHERE run_id=? AND key='chrome-1'")
+      .prepare("SELECT discovery_json FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
       .bind(test.runId)
       .first<{ discovery_json: string }>();
     if (!proof) throw new Error("Expected a verified discovery source.");
@@ -1241,23 +1243,23 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         [field]: field === "configurationDigest" ? "a".repeat(64) : "",
       };
       await database
-        .prepare("UPDATE ariviso_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
+        .prepare("UPDATE visonaut_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
         .bind(JSON.stringify(altered), test.runId)
         .run();
       await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
     }
     await database
-      .prepare("UPDATE ariviso_shards SET discovery_json=NULL WHERE run_id=? AND key='chrome-1'")
+      .prepare("UPDATE visonaut_shards SET discovery_json=NULL WHERE run_id=? AND key='chrome-1'")
       .bind(test.runId)
       .run();
     await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
     await database
-      .prepare("UPDATE ariviso_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
+      .prepare("UPDATE visonaut_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
       .bind(proof.discovery_json, test.runId)
       .run();
     const next = await test.reserve();
     await database
-      .prepare("UPDATE ariviso_shards SET full_profile_digest=? WHERE run_id=? AND key='chrome-1'")
+      .prepare("UPDATE visonaut_shards SET full_profile_digest=? WHERE run_id=? AND key='chrome-1'")
       .bind("a".repeat(64), next.id)
       .run();
     await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
@@ -1305,7 +1307,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     ).rejects.toThrow("original verified manifest");
     expect(
       await database
-        .prepare("SELECT state FROM ariviso_shards WHERE run_id=? AND key='chrome-1'")
+        .prepare("SELECT state FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
         .bind(test.runId)
         .first(),
     ).toEqual({ state: "pending" });
@@ -1473,7 +1475,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const test = await fixture();
     const receiptDigest = "e".repeat(64);
     const artifact = {
-      name: `ariviso-discovery-1-789-chrome-1-${receiptDigest}`,
+      name: `visonaut-discovery-1-789-chrome-1-${receiptDigest}`,
       expired: false,
       workflow_run: {
         id: 456,
@@ -1601,7 +1603,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       expect(await objectResponse(paused)).toMatchObject({ error: { code: "capacity_exceeded" } });
       expect(
         await database
-          .prepare("SELECT id FROM ariviso_runs WHERE project_id=? AND external_run_id='457'")
+          .prepare("SELECT id FROM visonaut_runs WHERE project_id=? AND external_run_id='457'")
           .bind(configuration.projectId)
           .first(),
       ).toBeNull();
@@ -1635,7 +1637,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const ancestorSha = "a".repeat(40);
     await database
       .prepare(
-        "INSERT INTO ariviso_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at) VALUES (?, ?, ?, ?, ?, 'accepted', 1, ?, ?)",
+        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at) VALUES (?, ?, ?, ?, ?, 'accepted', 1, ?, ?)",
       )
       .bind(
         snapshotId,
@@ -1649,7 +1651,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       .run();
     await database
       .prepare(
-        "UPDATE ariviso_projects SET snapshot_id = ?, baseline_revision = 1, fresh_setup = 0 WHERE id = ?",
+        "UPDATE visonaut_projects SET snapshot_id = ?, baseline_revision = 1, fresh_setup = 0 WHERE id = ?",
       )
       .bind(snapshotId, run.project_id)
       .run();
@@ -1663,7 +1665,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const reference = await comparisonReference(apiContext(test.bindings), run);
     expect(reference).toEqual({ referenceSnapshotId: snapshotId, expectedBaselineRevision: 1 });
     await database
-      .prepare("UPDATE ariviso_projects SET baseline_revision = 2 WHERE id = ?")
+      .prepare("UPDATE visonaut_projects SET baseline_revision = 2 WHERE id = ?")
       .bind(run.project_id)
       .run();
     await expect(
@@ -1691,29 +1693,29 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     // Reconstruct an explicit replacement of the accepted decision revision.
     await database
       .prepare(
-        "INSERT INTO ariviso_comparisons (id, run_id, baseline_revision, policy_digest, ordinal, state, created_at) SELECT ?, run_id, baseline_revision, policy_digest, 2, 'ready', created_at FROM ariviso_comparisons WHERE id = ?",
+        "INSERT INTO visonaut_comparisons (id, run_id, baseline_revision, policy_digest, ordinal, state, created_at) SELECT ?, run_id, baseline_revision, policy_digest, 2, 'ready', created_at FROM visonaut_comparisons WHERE id = ?",
       )
       .bind(rejectedComparison, run.comparison_id)
       .run();
     await database
       .prepare(
-        "INSERT INTO ariviso_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, candidate_capture_id, tuple_json, outcome, decision_revision) SELECT ?, ?, item_key, variant_key, ordinal, candidate_capture_id, tuple_json, outcome, 1 FROM ariviso_comparison_rows WHERE comparison_id = ?",
+        "INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, candidate_capture_id, tuple_json, outcome, decision_revision) SELECT ?, ?, item_key, variant_key, ordinal, candidate_capture_id, tuple_json, outcome, 1 FROM visonaut_comparison_rows WHERE comparison_id = ?",
       )
       .bind(rejectedRow, rejectedComparison, run.comparison_id)
       .run();
     await database
       .prepare(
-        "INSERT INTO ariviso_decisions (id, row_id, revision, verdict, kind, actor_id, tuple_json, created_at) SELECT ?, id, 1, 'rejected', 'human', '42', tuple_json, ? FROM ariviso_comparison_rows WHERE id = ?",
+        "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, tuple_json, created_at) SELECT ?, id, 1, 'rejected', 'human', '42', tuple_json, ? FROM visonaut_comparison_rows WHERE id = ?",
       )
       .bind(rejectedDecision, Date.now(), rejectedRow)
       .run();
     await database.batch([
       database
-        .prepare("UPDATE ariviso_comparison_rows SET decision_id = ? WHERE id = ?")
+        .prepare("UPDATE visonaut_comparison_rows SET decision_id = ? WHERE id = ?")
         .bind(rejectedDecision, rejectedRow),
       database
         .prepare(
-          "INSERT INTO ariviso_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) SELECT COALESCE(source_decision_id, decision_id), ?, 'descendants', ? FROM ariviso_comparison_rows WHERE comparison_id = ?",
+          "INSERT INTO visonaut_decision_replacements (source_decision_id, replacement_decision_id, scope, scope_run_id) SELECT COALESCE(source_decision_id, decision_id), ?, 'descendants', ? FROM visonaut_comparison_rows WHERE comparison_id = ?",
         )
         .bind(rejectedDecision, run.id, run.comparison_id),
     ]);
@@ -1728,12 +1730,12 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const test = await fixture();
     const priorId = crypto.randomUUID();
     await database
-      .prepare("UPDATE ariviso_runs SET attempt = 2 WHERE id = ?")
+      .prepare("UPDATE visonaut_runs SET attempt = 2 WHERE id = ?")
       .bind(test.runId)
       .run();
     await database
       .prepare(
-        "INSERT INTO ariviso_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, active, state, created_at) SELECT ?, project_id, external_run_id, 1, kind, tested_sha, lineage_key, plan_digest, plan_json, 0, 'failed', created_at FROM ariviso_runs WHERE id = ?",
+        "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, active, state, created_at) SELECT ?, project_id, external_run_id, 1, kind, tested_sha, lineage_key, plan_digest, plan_json, 0, 'failed', created_at FROM visonaut_runs WHERE id = ?",
       )
       .bind(priorId, test.runId)
       .run();
@@ -1746,7 +1748,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const run = await test.service.run(test.runId);
     await comparisonReference(apiContext(test.bindings), run);
     const edges = await database
-      .prepare("SELECT source_run_id FROM ariviso_lineage WHERE target_run_id = ?")
+      .prepare("SELECT source_run_id FROM visonaut_lineage WHERE target_run_id = ?")
       .bind(test.runId)
       .all<{ source_run_id: string }>();
     expect(edges.results.map((entry) => entry.source_run_id)).toEqual([priorId]);
@@ -1774,7 +1776,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     }));
     await database
       .prepare(
-        "INSERT INTO ariviso_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) SELECT json_extract(value, '$.id'), ?, 'old-' || json_extract(value, '$.number'), 1, 'pull_request', ?, 'pr:' || json_extract(value, '$.number'), ?, '{}', ? FROM json_each(?)",
+        "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) SELECT json_extract(value, '$.id'), ?, 'old-' || json_extract(value, '$.number'), 1, 'pull_request', ?, 'pr:' || json_extract(value, '$.number'), ?, '{}', ? FROM json_each(?)",
       )
       .bind(
         projectId,
@@ -1786,7 +1788,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       .run();
     await database
       .prepare(
-        "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at) SELECT r.id, json_object('repositoryId', ?, 'repository', ?, 'testedSha', r.tested_sha, 'event', 'pull_request', 'ref', 'refs/pull/' || substr(r.lineage_key, 4) || '/merge', 'pullRequestNumber', CAST(substr(r.lineage_key, 4) AS INTEGER)), 'fixture', ? FROM ariviso_runs r WHERE r.project_id = ? AND r.kind = 'pull_request'",
+        "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at) SELECT r.id, json_object('repositoryId', ?, 'repository', ?, 'testedSha', r.tested_sha, 'event', 'pull_request', 'ref', 'refs/pull/' || substr(r.lineage_key, 4) || '/merge', 'pullRequestNumber', CAST(substr(r.lineage_key, 4) AS INTEGER)), 'fixture', ? FROM visonaut_runs r WHERE r.project_id = ? AND r.kind = 'pull_request'",
       )
       .bind(test.manifest.run.repositoryId, test.manifest.run.repository, cutoff - 10000, projectId)
       .run();
@@ -1808,13 +1810,13 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const snapshotId = crypto.randomUUID();
     await database
       .prepare(
-        "INSERT INTO ariviso_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at) VALUES (?, ?, ?, 'fixture', ?, 'accepted', 1, ?, ?)",
+        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at) VALUES (?, ?, ?, 'fixture', ?, 'accepted', 1, ?, ?)",
       )
       .bind(snapshotId, projectId, test.runId, previousSha, `baselines/${snapshotId}/`, Date.now())
       .run();
     await database
       .prepare(
-        "UPDATE ariviso_projects SET snapshot_id = ?, baseline_revision = 1, fresh_setup = 0 WHERE id = ?",
+        "UPDATE visonaut_projects SET snapshot_id = ?, baseline_revision = 1, fresh_setup = 0 WHERE id = ?",
       )
       .bind(snapshotId, projectId)
       .run();
@@ -1822,7 +1824,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const newlyMergedSource = string(oldRuns[41]?.id);
     await database
       .prepare(
-        "INSERT INTO ariviso_lineage_edges (source_run_id, target_run_id, proof_digest) VALUES (?, ?, 'verified-prior-proof')",
+        "INSERT INTO visonaut_lineage_edges (source_run_id, target_run_id, proof_digest) VALUES (?, ?, 'verified-prior-proof')",
       )
       .bind(inheritedSource, test.runId)
       .run();
@@ -1894,7 +1896,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       now: Date.now(),
     });
     const closure = await database
-      .prepare("SELECT source_run_id FROM ariviso_lineage WHERE target_run_id=?")
+      .prepare("SELECT source_run_id FROM visonaut_lineage WHERE target_run_id=?")
       .bind(next.id)
       .all<{ source_run_id: string }>();
     expect(new Set(closure.results.map((row) => row.source_run_id))).toEqual(

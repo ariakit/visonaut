@@ -1,4 +1,4 @@
-# Internal Ariviso protocol
+# Internal Visonaut protocol
 
 This package is private. The public clients bundle its runtime and declaration types. It contains no server credentials or server authorization code.
 
@@ -41,6 +41,6 @@ The trusted reporter freezes the complete collected test inventory before execut
 
 `validateShardDeclaration` permits quarantine staging. It does not authorize sealing, removals, or success. `validateShardAgainstPlan` additionally requires `VerifiedDiscoveryEvidence` from the server's GitHub verifier. The evidence binds the exact run, attempt, tested SHA, job, trusted executor, successful job conclusion, and canonical manifest digest. Do not construct this evidence from an uploaded JSON object.
 
-The reporter writes `receipt.json` next to its manifest. The immutable workflow uploads this receipt as one GitHub artifact using the generated `artifactName`, with overwrite disabled and missing-file/conflict failures enabled. The artifact name is `ariviso-discovery-<attempt>-<jobId>-<encodedShardKey>-<manifestDigest>`. `discoveryArtifactPrefix` and `createDiscoveryReceipt` provide this spelling. After the exact job succeeds, the server independently lists its run artifacts and requires exactly one nonexpired matching receipt. The digest from GitHub artifact metadata must match the ingested manifest. A modified subset cannot reuse the original receipt.
+The reporter writes `receipt.json` next to its manifest. The immutable workflow uploads this receipt as one GitHub artifact using the generated `artifactName`, with overwrite disabled and missing-file/conflict failures enabled. The artifact name is `visonaut-discovery-<attempt>-<jobId>-<encodedShardKey>-<manifestDigest>`. `discoveryArtifactPrefix` and `createDiscoveryReceipt` provide this spelling. After the exact job succeeds, the server independently lists its run artifacts and requires exactly one nonexpired matching receipt. The digest from GitHub artifact metadata must match the ingested manifest. A modified subset cannot reuse the original receipt.
 
 This boundary depends on the pinned reusable workflow, trusted configuration and reporter injection, fixed artifact step, and GitHub job verification. Candidate code still supplies screenshot content. GitHub identity and receipt evidence do not prove screenshot truth. Keep capability and artifact credentials outside the candidate process where possible. The service never executes candidate manifests or installs candidate packages.

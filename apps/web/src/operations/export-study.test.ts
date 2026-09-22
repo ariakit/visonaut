@@ -13,7 +13,7 @@ it("consumes a10,580-image local export with TAR checksum validation and bounded
   value.fill(37);
   const hash = digest(value);
   const insert = database.connection.prepare(
-    "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,'run',?,?,'image/png',1024,1,1,'thumbnail')",
+    "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,'run',?,?,'image/png',1024,1,1,'thumbnail')",
   );
   database.connection.exec("BEGIN");
   for (let index = 1; index < 10_580; index++) {

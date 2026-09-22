@@ -9,7 +9,7 @@ export async function reportComparisonRecovery(
 ) {
   const database = context.database;
   const now = context.now();
-  const historicalRecovered = `EXISTS(SELECT 1 FROM ariviso_comparisons recovered
+  const historicalRecovered = `EXISTS(SELECT 1 FROM visonaut_comparisons recovered
     WHERE recovered.run_id=comparison.run_id AND recovered.purpose='historical'
       AND recovered.ordinal>comparison.ordinal AND recovered.state='ready'
       AND recovered.reference_snapshot_id IS comparison.reference_snapshot_id
@@ -50,7 +50,7 @@ export async function reportComparisonRecovery(
   // ID. A verified terminal archive is the receipt after task rows are pruned.
   await database
     .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
-    SELECT event.id FROM operations_events event JOIN ariviso_comparisons comparison
+    SELECT event.id FROM operations_events event JOIN visonaut_comparisons comparison
       ON comparison.id=substr(event.subject_id,1,instr(event.subject_id,':')-1)
     WHERE event.kind='comparison-publication' AND event.resolved_at IS NULL
       AND instr(event.subject_id,':')>1 AND length(event.subject_id)>length(comparison.id)+1
@@ -64,8 +64,8 @@ export async function reportComparisonRecovery(
     .run();
   await database
     .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
-    SELECT event.id FROM operations_events event JOIN ariviso_comparisons comparison ON comparison.id=event.subject_id
-    JOIN ariviso_runs run ON run.id=comparison.run_id
+    SELECT event.id FROM operations_events event JOIN visonaut_comparisons comparison ON comparison.id=event.subject_id
+    JOIN visonaut_runs run ON run.id=comparison.run_id
     WHERE event.kind IN ('comparison-finalization','comparison-task') AND event.resolved_at IS NULL
       AND (comparison.state='ready'
         OR (comparison.purpose='review' AND (run.active=0 OR run.comparison_id!=comparison.id))
@@ -75,9 +75,9 @@ export async function reportComparisonRecovery(
     .run();
   const exhausted = await database
     .prepare(`SELECT DISTINCT comparison.id FROM work_tasks task
-    JOIN ariviso_comparison_rows row ON row.id=task.id
-    JOIN ariviso_comparisons comparison ON comparison.id=row.comparison_id
-    JOIN ariviso_runs run ON run.id=comparison.run_id
+    JOIN visonaut_comparison_rows row ON row.id=task.id
+    JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+    JOIN visonaut_runs run ON run.id=comparison.run_id
     WHERE task.kind='compare' AND task.state='dead'
       AND ((comparison.purpose='review' AND run.active=1 AND run.comparison_id=comparison.id)
         OR (comparison.purpose='historical' AND NOT ${historicalRecovered}))

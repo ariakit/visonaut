@@ -55,11 +55,11 @@ jobs:
         with:
           method: oidc
           identity-id: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
-          oidc-audience: ariviso-deploy
+          oidc-audience: visonaut-deploy
           domain: https://eu.infisical.com
           project-id: ${{ vars.INFISICAL_PROJECT_ID }}
           env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
-          secret-path: /ci/ariviso-deploy
+          secret-path: /ci/visonaut-deploy
           include-imports: "false"
           recursive: "false"
           export-type: env
@@ -71,6 +71,8 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
       - name: Deploy production comparator
-        run: node .github/workflows/scripts/deploy-version.mjs apps/compare/wrangler.jsonc ariviso-compare production
+        run: node .github/workflows/scripts/deploy-version.mjs apps/compare/wrangler.jsonc visonaut-compare production
       - name: Deploy production web worker
-        run: node .github/workflows/scripts/deploy-version.mjs apps/web/dist/server/wrangler.json ariviso
+        run: node .github/workflows/scripts/deploy-version.mjs apps/web/dist/server/wrangler.json visonaut
+      - name: Deploy GitHub App webhook router
+        run: node .github/workflows/scripts/deploy-version.mjs apps/webhook/wrangler.jsonc visonaut-webhook

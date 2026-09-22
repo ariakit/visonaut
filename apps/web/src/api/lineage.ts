@@ -1,12 +1,12 @@
-import { type GitHubClient, SecurityError, type VerifiedRun } from "@ariviso/security";
-import { digestJson } from "@ariviso/protocol";
+import { type GitHubClient, SecurityError, type VerifiedRun } from "@visonaut/security";
+import { digestJson } from "@visonaut/protocol";
 import {
   assertion,
   atomic,
   materializeLineageStatements,
   statement,
   type RunRow,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 
@@ -65,7 +65,7 @@ function sha(value: unknown) {
   return result;
 }
 
-const queueQuery = `query ArivisoQueue($owner: String!, $name: String!, $after: String) {
+const queueQuery = `query VisonautQueue($owner: String!, $name: String!, $after: String) {
   repository(owner: $owner, name: $name) {
     databaseId
     mergeQueue(branch: "main") {
@@ -436,7 +436,7 @@ interface LineageAnchor {
 async function lineageAnchor(context: ApiContext, github: GitHubClient, targetBase: string) {
   const candidates = await context.database
     .prepare(
-      "SELECT r.id, s.tested_sha, COALESCE(json_extract(p.verified_json, '$.lineageProof.startedAt'), 0) AS verified_at FROM ariviso_snapshots s JOIN ariviso_runs r ON r.id = s.run_id JOIN ingest_run_provenance p ON p.run_id = r.id JOIN ariviso_projects project ON project.id = s.project_id WHERE s.project_id = ? AND s.reference_eligible = 1 ORDER BY (s.id = project.snapshot_id) DESC, s.created_at DESC LIMIT 100",
+      "SELECT r.id, s.tested_sha, COALESCE(json_extract(p.verified_json, '$.lineageProof.startedAt'), 0) AS verified_at FROM visonaut_snapshots s JOIN visonaut_runs r ON r.id = s.run_id JOIN ingest_run_provenance p ON p.run_id = r.id JOIN visonaut_projects project ON project.id = s.project_id WHERE s.project_id = ? AND s.reference_eligible = 1 ORDER BY (s.id = project.snapshot_id) DESC, s.created_at DESC LIMIT 100",
     )
     .bind(context.configuration.projectId)
     .all<LineageAnchor>();
@@ -494,7 +494,7 @@ async function newMainPulls(github: GitHubClient, anchor: string, head: string) 
       await github.request("/graphql", {
         method: "POST",
         body: JSON.stringify({
-          query: `query ArivisoMergedHistory($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { databaseId ${fields} } }`,
+          query: `query VisonautMergedHistory($owner: String!, $name: String!) { repository(owner: $owner, name: $name) { databaseId ${fields} } }`,
           variables: { owner, name },
         }),
       }),
@@ -553,7 +553,7 @@ export async function relatedRunEvidence(
   const projection = `json_object('repositoryId', json_extract(p.verified_json, '$.repositoryId'), 'repository', json_extract(p.verified_json, '$.repository'), 'testedSha', json_extract(p.verified_json, '$.testedSha'), 'event', json_extract(p.verified_json, '$.event'), 'ref', json_extract(p.verified_json, '$.ref'), 'sourceHead', json_extract(p.verified_json, '$.sourceHead'), 'pullRequestNumber', json_extract(p.verified_json, '$.pullRequestNumber'), 'mergeGroup', json_extract(p.verified_json, '$.mergeGroup'), 'lineageProof', json_object('version', json_extract(p.verified_json, '$.lineageProof.version'), 'testedSha', json_extract(p.verified_json, '$.lineageProof.testedSha'), 'mergeGroupMembers', json_extract(p.verified_json, '$.lineageProof.mergeGroupMembers'))) AS verified_json`;
   const result = await context.database
     .prepare(
-      `SELECT r.id, r.kind, r.tested_sha, r.lineage_key, ${projection} FROM ariviso_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND (? = 1 OR (r.kind = 'pull_request' AND r.lineage_key IN (SELECT 'pr:' || value FROM json_each(?))) OR (r.kind != 'pull_request' AND (r.created_at >= ? OR p.created_at >= ?)) OR (r.kind = 'merge_group' AND EXISTS (SELECT 1 FROM json_each(p.verified_json, '$.lineageProof.mergeGroupMembers') member WHERE json_extract(member.value, '$.number') IN (SELECT value FROM json_each(?))))) ORDER BY r.created_at DESC`,
+      `SELECT r.id, r.kind, r.tested_sha, r.lineage_key, ${projection} FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND (? = 1 OR (r.kind = 'pull_request' AND r.lineage_key IN (SELECT 'pr:' || value FROM json_each(?))) OR (r.kind != 'pull_request' AND (r.created_at >= ? OR p.created_at >= ?)) OR (r.kind = 'merge_group' AND EXISTS (SELECT 1 FROM json_each(p.verified_json, '$.lineageProof.mergeGroupMembers') member WHERE json_extract(member.value, '$.number') IN (SELECT value FROM json_each(?))))) ORDER BY r.created_at DESC`,
     )
     .bind(
       context.configuration.projectId,
@@ -668,12 +668,12 @@ export async function refreshRunLineage(context: ApiContext, github: GitHubClien
   await atomic(context.database, [
     assertion(
       context.database,
-      "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND project_id = ? AND active = 1)",
+      "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND project_id = ? AND active = 1)",
       [run.id, run.project_id],
     ),
     statement(
       context.database,
-      "INSERT INTO ariviso_lineage_edges (source_run_id, target_run_id, proof_digest) SELECT r.id, ?, ? FROM ariviso_runs r JOIN json_each(?) source ON source.value = r.id WHERE r.project_id = ? ON CONFLICT(source_run_id, target_run_id) DO NOTHING",
+      "INSERT INTO visonaut_lineage_edges (source_run_id, target_run_id, proof_digest) SELECT r.id, ?, ? FROM visonaut_runs r JOIN json_each(?) source ON source.value = r.id WHERE r.project_id = ? ON CONFLICT(source_run_id, target_run_id) DO NOTHING",
       [run.id, proofDigest, JSON.stringify(runIds), run.project_id],
     ),
     ...materializeLineageStatements(context.database, run.id, proofDigest),

@@ -12,7 +12,7 @@ import { captured, context, TestDatabase } from "./test-fixtures.ts";
 
 function completedTasks(database: TestDatabase, count: number, resultSize = 0) {
   const insertRow = database.connection.prepare(
-    "INSERT INTO ariviso_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,candidate_capture_id,tuple_json,outcome,result_json) VALUES(?,'comparison-run',?,'light',?,'capture-run','{}','changed',?)",
+    "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,candidate_capture_id,tuple_json,outcome,result_json) VALUES(?,'comparison-run',?,'light',?,'capture-run','{}','changed',?)",
   );
   const insertTask = database.connection.prepare(
     "INSERT INTO work_tasks(id,kind,payload,state,attempts,max_attempts,available_at,result,created_at,updated_at) VALUES(?,'compare',?,'complete',1,2,0,?,0,0)",
@@ -95,7 +95,7 @@ describe("bounded archive row packing", () => {
     await captured(fixture.context);
     fixture.context.budget.maximumObjectBytes = 2 * 1024 * 1024;
     const insert = database.connection.prepare(
-      "INSERT INTO ariviso_commands(id,request_json,actor_id,session_id,kind,comparison_id,previous_json,result_json,created_at) VALUES(?,'{}','actor','session','approve','comparison-run',?,'{}',0)",
+      "INSERT INTO visonaut_commands(id,request_json,actor_id,session_id,kind,comparison_id,previous_json,result_json,created_at) VALUES(?,'{}','actor','session','approve','comparison-run',?,'{}',0)",
     );
     for (let index = 0; index < 5; index++) {
       insert.run(`command-${index}`, JSON.stringify({ notes: "é".repeat(200_000) }));
@@ -129,7 +129,7 @@ describe("bounded archive row packing", () => {
     const fixture = context(database);
     const service = await captured(fixture.context);
     const insert = database.connection.prepare(
-      "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role,validated,bytes_present) VALUES(?,'run','digest',?,'image/png',80,10,10,'mask',1,1)",
+      "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role,validated,bytes_present) VALUES(?,'run','digest',?,'image/png',80,10,10,'mask',1,1)",
     );
     for (let index = 0; index < 205; index++) {
       const id = `mask-${String(index).padStart(4, "0")}`;
@@ -157,7 +157,7 @@ describe("bounded archive row packing", () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const insert = database.connection.prepare(
-      "INSERT INTO ariviso_commands(id,request_json,actor_id,session_id,kind,comparison_id,previous_json,result_json,created_at) VALUES(?,'{}','actor','session','approve',?,'{}','{}',0)",
+      "INSERT INTO visonaut_commands(id,request_json,actor_id,session_id,kind,comparison_id,previous_json,result_json,created_at) VALUES(?,'{}','actor','session','approve',?,'{}','{}',0)",
     );
     for (const runId of ["first", "second", "third"]) {
       const service = await captured(fixture.context, runId);

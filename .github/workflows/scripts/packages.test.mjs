@@ -7,18 +7,18 @@ import { resolve } from "node:path";
 import { after, test } from "node:test";
 import { assertRelease, auditTarball, publicationNeeded, verifyPackages } from "./packages.mjs";
 
-const temporary = mkdtempSync(resolve(tmpdir(), "ariviso-release-test-"));
+const temporary = mkdtempSync(resolve(tmpdir(), "visonaut-release-test-"));
 after(() => rmSync(temporary, { recursive: true, force: true }));
 let fixtureId = 0;
 
-function packFixture(name = "ariviso", extraFiles = {}, dependencies = {}) {
+function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
   const directory = resolve(temporary, `fixture-${fixtureId++}`);
   mkdirSync(resolve(directory, "dist"), { recursive: true });
-  const packageDirectory = name === "ariviso" ? "packages/cli" : "packages/playwright";
+  const packageDirectory = name === "visonaut" ? "packages/cli" : "packages/playwright";
   const manifest = {
     name,
     version: "1.2.3",
-    repository: { url: "https://github.com/ariakit/ariviso", directory: packageDirectory },
+    repository: { url: "https://github.com/ariakit/visonaut", directory: packageDirectory },
     dependencies,
   };
   const files = {
@@ -27,7 +27,7 @@ function packFixture(name = "ariviso", extraFiles = {}, dependencies = {}) {
     LICENSE: "MIT",
     "dist/index.js": "export const ready = true;",
     "dist/index.d.ts": "export declare const ready: true;",
-    "dist/bin.js": "#!/usr/bin/env node\nconsole.log('ariviso');",
+    "dist/bin.js": "#!/usr/bin/env node\nconsole.log('visonaut');",
     "dist/reporter.js": "export default class Reporter {}",
     ...extraFiles,
   };
@@ -51,17 +51,17 @@ function packFixture(name = "ariviso", extraFiles = {}, dependencies = {}) {
 
 test("the public package audit accepts actual npm archives and rejects private files and imports", () => {
   const good = packFixture();
-  assert.equal(auditTarball(good.bytes, good.expected).name, "ariviso");
-  const config = packFixture("ariviso", { "dist/wrangler.json": "{}" });
+  assert.equal(auditTarball(good.bytes, good.expected).name, "visonaut");
+  const config = packFixture("visonaut", { "dist/wrangler.json": "{}" });
   assert.throws(
     () => auditTarball(config.bytes, config.expected),
     /Unexpected public package file/,
   );
-  const internal = packFixture("ariviso", {
-    "dist/index.d.ts": 'export { Secret } from "@ariviso/security";',
+  const internal = packFixture("visonaut", {
+    "dist/index.d.ts": 'export { Secret } from "@visonaut/security";',
   });
   assert.throws(() => auditTarball(internal.bytes, internal.expected), /escaped bundling/);
-  const workspace = packFixture("ariviso", {}, { internal: "file:../server" });
+  const workspace = packFixture("visonaut", {}, { internal: "file:../server" });
   assert.throws(
     () => auditTarball(workspace.bytes, workspace.expected),
     /Local runtime dependency/,
@@ -71,7 +71,7 @@ test("the public package audit accepts actual npm archives and rejects private f
 test("artifact verification binds both tarballs and their hashes to one source commit", async () => {
   const directory = resolve(temporary, "artifact");
   mkdirSync(directory);
-  const packages = [packFixture(), packFixture("@ariviso/playwright")].map((fixture) => {
+  const packages = [packFixture(), packFixture("@visonaut/playwright")].map((fixture) => {
     writeFileSync(resolve(directory, fixture.filename), fixture.bytes);
     return {
       name: fixture.expected.name,
@@ -99,16 +99,16 @@ test("publication requires the exact main commit with completed launch readiness
     GITHUB_REF: "refs/heads/main",
     GITHUB_EVENT_NAME: "workflow_dispatch",
     GITHUB_SHA: "a".repeat(40),
-    ARIVISO_RELEASE_COMMIT: "a".repeat(40),
-    ARIVISO_RELEASE_TAG: "latest",
+    VISONAUT_RELEASE_COMMIT: "a".repeat(40),
+    VISONAUT_RELEASE_TAG: "latest",
   };
   assert.doesNotThrow(() => assertRelease(environment));
   for (const field of [
     "GITHUB_REPOSITORY_ID",
     "GITHUB_REF",
     "GITHUB_EVENT_NAME",
-    "ARIVISO_RELEASE_COMMIT",
-    "ARIVISO_RELEASE_TAG",
+    "VISONAUT_RELEASE_COMMIT",
+    "VISONAUT_RELEASE_TAG",
   ]) {
     assert.throws(() => assertRelease({ ...environment, [field]: "untrusted" }));
   }

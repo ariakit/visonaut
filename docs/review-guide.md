@@ -1,6 +1,6 @@
 # Review a visual run
 
-Open Ariviso in Chrome Desktop. Sign in with a GitHub account that has current write permission to the configured repository. A review link does not grant access.
+Open Visonaut in Chrome Desktop. Sign in with a GitHub account that has current write permission to the configured repository. A review link does not grant access.
 
 ## Check service attention
 
@@ -83,7 +83,7 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 Choose **Recompare stored run** to compare stored originals again without a new capture job. The page keeps the previous evidence visible while the new comparison runs. Review actions stay unavailable until the new result is ready. A comparison failure remains visible.
 
-Choose **Export run** after the sealed comparison is ready. Ariviso prepares a private TAR archive, then requests its download. The archive contains originals and private run, profile, provenance, review, and audit data. Access is checked again when the download starts. Export links expire after 24 hours; create a new export if needed. A complete archive has a final `complete.json` marker with image checksums.
+Choose **Export run** after the sealed comparison is ready. Visonaut prepares a private TAR archive, then requests its download. The archive contains originals and private run, profile, provenance, review, and audit data. Access is checked again when the download starts. Export links expire after 24 hours; create a new export if needed. A complete archive has a final `complete.json` marker with image checksums.
 
 Use **All runs** to return to the dashboard and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 

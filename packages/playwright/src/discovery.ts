@@ -1,11 +1,11 @@
 import path from "node:path";
-import { canonicalJson, digestJson } from "@ariviso/protocol";
+import { canonicalJson, digestJson } from "@visonaut/protocol";
 import type {
   CandidateDiscovery,
   TestOutcome,
   TrustedCollection,
   TrustedPlan,
-} from "@ariviso/protocol";
+} from "@visonaut/protocol";
 import type { FullConfig, Suite } from "@playwright/test/reporter";
 
 interface DiscoverParams {

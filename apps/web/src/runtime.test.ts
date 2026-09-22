@@ -32,8 +32,8 @@ beforeAll(async () => {
       compatibilityDate: "2026-09-22",
       bindings: {
         ...configuration.vars,
-        ARIVISO_API_LIMITS: JSON.stringify({
-          ...JSON.parse(String(configuration.vars?.ARIVISO_API_LIMITS)),
+        VISONAUT_API_LIMITS: JSON.stringify({
+          ...JSON.parse(String(configuration.vars?.VISONAUT_API_LIMITS)),
           databaseWarningBytes: 100000000,
           databaseAdmissionBytes: 200000000,
           sqlWarningBytes: 100000000,
@@ -59,15 +59,15 @@ beforeAll(async () => {
   if (!events) throw new Error("Operations event schema is missing.");
   await env.DB.prepare(events).run();
   await env.DB.prepare(
-    "CREATE TABLE ariviso_runs(id TEXT,project_id TEXT,external_run_id TEXT,attempt INTEGER,active INTEGER,state TEXT)",
+    "CREATE TABLE visonaut_runs(id TEXT,project_id TEXT,external_run_id TEXT,attempt INTEGER,active INTEGER,state TEXT)",
   ).run();
   await env.DB.prepare(
     "CREATE TABLE operations_backups(state TEXT,database_bytes INTEGER,created_at INTEGER)",
   ).run();
   await env.DB.prepare("CREATE TABLE operations_cursors(id TEXT PRIMARY KEY,value TEXT)").run();
-  await env.DB.prepare("CREATE TABLE ariviso_projects(id TEXT, repository_id TEXT)").run();
-  await env.DB.prepare("INSERT INTO ariviso_projects VALUES (?,?)")
-    .bind(env.ARIVISO_PROJECT_ID, env.GITHUB_REPOSITORY_ID)
+  await env.DB.prepare("CREATE TABLE visonaut_projects(id TEXT, repository_id TEXT)").run();
+  await env.DB.prepare("INSERT INTO visonaut_projects VALUES (?,?)")
+    .bind(env.VISONAUT_PROJECT_ID, env.GITHUB_REPOSITORY_ID)
     .run();
 });
 

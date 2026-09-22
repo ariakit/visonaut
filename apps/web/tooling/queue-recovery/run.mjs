@@ -1,7 +1,7 @@
 import { readFile, writeFile, appendFile, mkdir } from "node:fs/promises";
-const endpoint = process.env.ARIVISO_PROBE_ORIGIN;
+const endpoint = process.env.VISONAUT_PROBE_ORIGIN;
 if (!endpoint || new URL(endpoint).protocol !== "https:")
-  throw new Error("Set ARIVISO_PROBE_ORIGIN to the new disposable Worker HTTPS origin");
+  throw new Error("Set VISONAUT_PROBE_ORIGIN to the new disposable Worker HTTPS origin");
 const token = (await readFile(new URL(".probe-token", import.meta.url), "utf8")).trim();
 const root = new URL("results/", import.meta.url);
 await mkdir(root, { recursive: true });

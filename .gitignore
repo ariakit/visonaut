@@ -13,7 +13,7 @@ playwright-report/
 *.tgz
 .DS_Store
 *.pem
-.ariviso-app.json
+.visonaut-app.json
 artifacts/
 
 # Generated from the committed Wrangler bindings before type checking.

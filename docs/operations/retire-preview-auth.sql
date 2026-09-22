@@ -1,4 +1,4 @@
--- Run only against ariviso-preview and ariviso-diagnostics after public routes close.
+-- Run only against visonaut-preview and visonaut-diagnostics after public routes close.
 INSERT OR IGNORE INTO auth_audit (id,user_id,action,created_at)
 SELECT 'cutover:nonproduction-auth-disabled:' || id,id,'environment_disabled',
        CAST(strftime('%s','now') AS INTEGER) * 1000

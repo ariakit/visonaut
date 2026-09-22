@@ -1,5 +1,5 @@
-import { SecurityError } from "@ariviso/security";
-import type { Database } from "@ariviso/service";
+import { SecurityError } from "@visonaut/security";
+import type { Database } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./operations/common.ts";
 
 export interface CapacityPolicy {
@@ -45,7 +45,7 @@ export async function monitorDatabaseCapacity(
   validateCapacityPolicy(policy);
   const result = await database
     .prepare(`SELECT
-    (SELECT COUNT(*) FROM ariviso_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs,
+    (SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs,
     (SELECT database_bytes FROM operations_backups WHERE state='complete' ORDER BY created_at DESC LIMIT 1) AS sql_bytes,
     (SELECT created_at FROM operations_backups WHERE state='complete' ORDER BY created_at DESC LIMIT 1) AS sql_snapshot_at`)
     .all<{
@@ -116,7 +116,7 @@ export async function checkRunAdmission(
 ) {
   validateCapacityPolicy(policy);
   const existing = await database
-    .prepare("SELECT id FROM ariviso_runs WHERE project_id=? AND external_run_id=? AND attempt=?")
+    .prepare("SELECT id FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?")
     .bind(identity.projectId, identity.externalRunId, identity.attempt)
     .first();
   if (existing) return { maximumActiveRuns: policy.maximumActiveRuns };

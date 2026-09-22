@@ -6,7 +6,7 @@ import {
   claimExpiredRun,
   closedRunRetentionMs,
   retentionPinStatement,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { TestDatabase, MemoryStore, context, reserve, captured, digest } from "./test-fixtures.ts";
 import { backupDaily, restoreBackup, expireBackups } from "./backups-v2.ts";
 import { createRunExport, streamRunExport, expireExports } from "./exports.ts";
@@ -178,7 +178,7 @@ describe("serialized GitHub checks", () => {
         )
         .first(),
     ).toEqual(
-      await database.prepare("SELECT revision AS source_revision FROM ariviso_projects").first(),
+      await database.prepare("SELECT revision AS source_revision FROM visonaut_projects").first(),
     );
   });
   it("terminalizes an exhausted unstarted check creation lease", async () => {
@@ -187,7 +187,7 @@ describe("serialized GitHub checks", () => {
     await reserve(fixture.context);
     await database
       .prepare(
-        "INSERT INTO operations_check_creations(run_id,external_id,state,attempts,lease_token,lease_until,created_at,updated_at) VALUES('run','ariviso:run','creating',2,'old',0,0,0)",
+        "INSERT INTO operations_check_creations(run_id,external_id,state,attempts,lease_token,lease_until,created_at,updated_at) VALUES('run','visonaut:run','creating',2,'old',0,0,0)",
       )
       .run();
     await deliverGitHubStatuses(fixture.context);
@@ -445,7 +445,7 @@ describe("daily backup and isolated recovery", () => {
         },
         async verifyDatabaseAndReferences() {
           expect(target.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-          for (const row of target.prepare("SELECT object_key,bytes FROM ariviso_images").all()) {
+          for (const row of target.prepare("SELECT object_key,bytes FROM visonaut_images").all()) {
             if (typeof row.object_key !== "string") throw new Error("Invalid image");
             expect(images.objects.get(row.object_key)?.bytes.length).toBe(row.bytes);
           }
@@ -453,11 +453,11 @@ describe("daily backup and isolated recovery", () => {
       },
       fixture.context.budget,
     );
-    expect(target.prepare("SELECT id,tested_sha FROM ariviso_runs").all()).toEqual(
-      database.connection.prepare("SELECT id,tested_sha FROM ariviso_runs").all(),
+    expect(target.prepare("SELECT id,tested_sha FROM visonaut_runs").all()).toEqual(
+      database.connection.prepare("SELECT id,tested_sha FROM visonaut_runs").all(),
     );
-    expect(target.prepare("SELECT metadata_json FROM ariviso_captures").all()).toEqual(
-      database.connection.prepare("SELECT metadata_json FROM ariviso_captures").all(),
+    expect(target.prepare("SELECT metadata_json FROM visonaut_captures").all()).toEqual(
+      database.connection.prepare("SELECT metadata_json FROM visonaut_captures").all(),
     );
   });
   it("fences restored external work and invalidates old authentication", async () => {
@@ -476,7 +476,7 @@ describe("daily backup and isolated recovery", () => {
     expect(database.connection.prepare("SELECT ambiguous FROM work_checks").get()).toEqual({
       ambiguous: 1,
     });
-    expect(database.connection.prepare("SELECT active FROM ariviso_runs").get()).toEqual({
+    expect(database.connection.prepare("SELECT active FROM visonaut_runs").get()).toEqual({
       active: 0,
     });
   });
@@ -729,7 +729,7 @@ describe("private streaming exports", () => {
       await fixture.images.put(key, "original-image-bytes");
       await database
         .prepare(
-          "INSERT INTO ariviso_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,'run',?,?,'image/png',20,1,1,'thumbnail')",
+          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,'run',?,?,'image/png',20,1,1,'thumbnail')",
         )
         .bind(`derived-${index}`, digest(new TextEncoder().encode("original-image-bytes")), key)
         .run();

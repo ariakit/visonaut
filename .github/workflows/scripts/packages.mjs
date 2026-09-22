@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 
 const packages = [
-  { name: "ariviso", directory: "packages/cli" },
-  { name: "@ariviso/playwright", directory: "packages/playwright" },
+  { name: "visonaut", directory: "packages/cli" },
+  { name: "@visonaut/playwright", directory: "packages/playwright" },
 ];
 const sourcePattern = /^[a-f0-9]{40}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -67,7 +67,7 @@ export function auditTarball(bytes, expected) {
   assert.equal(manifest.version, expected.version, "Unexpected package version");
   assert(versionPattern.test(manifest.version), "Invalid package version");
   assert.notEqual(manifest.private, true, "Cannot publish a private package");
-  assert.equal(manifest.repository?.url, "https://github.com/ariakit/ariviso");
+  assert.equal(manifest.repository?.url, "https://github.com/ariakit/visonaut");
   assert.equal(manifest.repository?.directory, expected.directory);
   for (const dependencies of [
     manifest.dependencies,
@@ -75,7 +75,7 @@ export function auditTarball(bytes, expected) {
     manifest.peerDependencies,
   ]) {
     for (const [name, range] of Object.entries(dependencies ?? {})) {
-      assert(!name.startsWith("@ariviso/"), "Internal runtime dependency escaped bundling");
+      assert(!name.startsWith("@visonaut/"), "Internal runtime dependency escaped bundling");
       assert(!/^(?:workspace|file|link):/.test(range), "Local runtime dependency escaped packing");
     }
   }
@@ -84,7 +84,7 @@ export function auditTarball(bytes, expected) {
       continue;
     }
     assert(
-      !/(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)["']@ariviso\//.test(content.toString()),
+      !/(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)["']@visonaut\//.test(content.toString()),
       "Internal runtime or declaration import escaped bundling",
     );
     assert(!content.includes(Buffer.from("PRIVATE KEY-----")), "Private key in public package");
@@ -97,7 +97,7 @@ export function auditTarball(bytes, expected) {
   ]) {
     assert(files.has(required), `Missing public package file: ${required}`);
   }
-  if (expected.name === "ariviso") {
+  if (expected.name === "visonaut") {
     assert(files.has("package/dist/bin.js"), "CLI binary is missing");
   } else {
     assert(files.has("package/dist/reporter.js"), "Playwright reporter is missing");
@@ -115,11 +115,11 @@ export function assertRelease(environment) {
   );
   assert(sourcePattern.test(environment.GITHUB_SHA ?? ""), "Invalid release source commit");
   assert.equal(
-    environment.ARIVISO_RELEASE_COMMIT,
+    environment.VISONAUT_RELEASE_COMMIT,
     environment.GITHUB_SHA,
     "Source commit has not passed launch readiness",
   );
-  assert(["latest", "next"].includes(environment.ARIVISO_RELEASE_TAG), "Invalid npm tag");
+  assert(["latest", "next"].includes(environment.VISONAUT_RELEASE_TAG), "Invalid npm tag");
 }
 
 export function publicationNeeded(record, registry, tag) {
@@ -224,7 +224,7 @@ async function registryPackage(name) {
 async function publish(directory) {
   assertRelease(process.env);
   const records = await verifyPackages(directory, process.env.GITHUB_SHA);
-  const tag = process.env.ARIVISO_RELEASE_TAG;
+  const tag = process.env.VISONAUT_RELEASE_TAG;
   const pending = [];
   for (const record of records) {
     if (publicationNeeded(record, await registryPackage(record.name), tag)) {

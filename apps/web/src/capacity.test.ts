@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Service, type ReserveRunParams } from "@ariviso/service";
+import { Service, type ReserveRunParams } from "@visonaut/service";
 import { TestDatabase, context, reserve } from "./operations/test-fixtures.ts";
 import { checkRunAdmission, monitorDatabaseCapacity, type CapacityPolicy } from "./capacity.ts";
 
@@ -103,11 +103,11 @@ describe("database capacity admission", () => {
     await expect(checkRunAdmission(database, policy, identity, 1)).rejects.toMatchObject({
       code: "capacity_exceeded",
     });
-    database.connection.exec("UPDATE ariviso_runs SET state='reviewing',sealed_at=1");
+    database.connection.exec("UPDATE visonaut_runs SET state='reviewing',sealed_at=1");
     await expect(checkRunAdmission(database, policy, identity, 2)).resolves.toEqual({
       maximumActiveRuns: 1,
     });
-    database.connection.exec("UPDATE ariviso_runs SET state='comparing'");
+    database.connection.exec("UPDATE visonaut_runs SET state='comparing'");
     await expect(checkRunAdmission(database, policy, identity, 3)).rejects.toMatchObject({
       code: "capacity_exceeded",
     });
@@ -116,7 +116,7 @@ describe("database capacity admission", () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const service = await reserve(fixture.context, "existing");
-    database.connection.exec("UPDATE ariviso_runs SET state='reviewing',sealed_at=1");
+    database.connection.exec("UPDATE visonaut_runs SET state='reviewing',sealed_at=1");
     const params: ReserveRunParams = {
       ...identity,
       id: "new",
@@ -146,7 +146,7 @@ describe("database capacity admission", () => {
       service.reserveRun({ ...params, id: "second", externalRunId: "second" }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(
-      await database.prepare("SELECT id FROM ariviso_runs WHERE id='second'").first(),
+      await database.prepare("SELECT id FROM visonaut_runs WHERE id='second'").first(),
     ).toBeNull();
     await expect(new Service(database).reserveRun(params)).resolves.toMatchObject({ id: "new" });
   });

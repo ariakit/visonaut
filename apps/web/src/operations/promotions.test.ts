@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { claimPromotionLease, ConflictError, type Service } from "@ariviso/service";
+import { claimPromotionLease, ConflictError, type Service } from "@visonaut/service";
 import { promoteBaselines } from "./promotions.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
 
@@ -113,7 +113,7 @@ describe("bounded promotion traversal", () => {
     expect((await promoteBaselines(fixture.context)).deferred).toEqual(["earlier"]);
     await promoteBaselines(fixture.context);
     expect(
-      await database.prepare("SELECT id,state FROM ariviso_snapshots ORDER BY id").all(),
+      await database.prepare("SELECT id,state FROM visonaut_snapshots ORDER BY id").all(),
     ).toEqual({
       results: [
         { id: "copy-earlier", state: "copying" },
@@ -134,7 +134,7 @@ describe("bounded promotion traversal", () => {
     ).toBeNull();
     expect(
       await database
-        .prepare("SELECT owner_id FROM ariviso_pins WHERE owner_id='copy-later'")
+        .prepare("SELECT owner_id FROM visonaut_pins WHERE owner_id='copy-later'")
         .first(),
     ).toBeNull();
   });

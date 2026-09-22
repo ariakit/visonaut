@@ -6,10 +6,10 @@ export default defineConfig({
   target: "node24",
   dts: {
     resolve: true,
-    compilerOptions: { paths: { "@ariviso/protocol": ["../protocol/src/index.ts"] } },
+    compilerOptions: { paths: { "@visonaut/protocol": ["../protocol/src/index.ts"] } },
   },
   clean: true,
   splitting: false,
-  noExternal: ["@ariviso/protocol"],
+  noExternal: ["@visonaut/protocol"],
   external: ["@playwright/test", "@playwright/test/reporter", "pngjs"],
 });

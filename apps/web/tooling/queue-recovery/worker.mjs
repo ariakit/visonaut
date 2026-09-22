@@ -19,13 +19,13 @@ async function createFixture(env, id, mode = "success") {
   const now = Date.now();
   await env.DB.batch([
     env.DB.prepare(
-      "INSERT INTO ariviso_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,sealed_at,comparison_id,created_at) VALUES(?,'probe',?,1,'pull_request','probe-sha',?,'probe-plan','{}','comparing',?,?,?)",
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,sealed_at,comparison_id,created_at) VALUES(?,'probe',?,1,'pull_request','probe-sha',?,'probe-plan','{}','comparing',?,?,?)",
     ).bind(id, id, id, now, id, now),
     env.DB.prepare(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES(?,?,0,'probe-policy',1,?)",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES(?,?,0,'probe-policy',1,?)",
     ).bind(id, id, now),
     env.DB.prepare(
-      "INSERT INTO ariviso_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json) VALUES(?,?,'queue-control','default',0,'{}')",
+      "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json) VALUES(?,?,'queue-control','default',0,'{}')",
     ).bind(`${id}:row`, id),
   ]);
   await enqueueWork(env.DB, {
@@ -54,10 +54,10 @@ export default {
     const url = new URL(request.url);
     try {
       if (url.pathname === "/prepare" && request.method === "POST") {
-        if (await env.DB.prepare("SELECT id FROM ariviso_projects LIMIT 1").first())
+        if (await env.DB.prepare("SELECT id FROM visonaut_projects LIMIT 1").first())
           throw new Error("Probe already prepared");
         await env.DB.prepare(
-          "INSERT INTO ariviso_projects(id,repository_id,policy_digest) VALUES('probe','disposable-probe','probe-policy')",
+          "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('probe','disposable-probe','probe-policy')",
         ).run();
         for (const [id, mode] of [
           ["lost", "success"],
@@ -77,10 +77,10 @@ export default {
         // Empty inventory is only a control for finalization failure. It proves no visual pixels.
         await env.DB.batch([
           env.DB.prepare(
-            "INSERT INTO ariviso_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,sealed_at,comparison_id,created_at) VALUES('finalization','probe','finalization',1,'pull_request','probe-sha','finalization','probe-plan','{}','comparing',?,'finalization',?)",
+            "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,sealed_at,comparison_id,created_at) VALUES('finalization','probe','finalization',1,'pull_request','probe-sha','finalization','probe-plan','{}','comparing',?,'finalization',?)",
           ).bind(Date.now(), Date.now()),
           env.DB.prepare(
-            "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES('finalization','finalization',0,'probe-policy',1,?)",
+            "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES('finalization','finalization',0,'probe-policy',1,?)",
           ).bind(Date.now()),
         ]);
         return json({
@@ -148,7 +148,7 @@ export default {
       }
       if (url.pathname === "/recover" && request.method === "POST") {
         await env.DB.prepare(
-          "UPDATE ariviso_runs SET active=0,state='superseded' WHERE id='bounded'",
+          "UPDATE visonaut_runs SET active=0,state='superseded' WHERE id='bounded'",
         ).run();
         await createFixture(env, "bounded-replacement", "success");
         await env.WORK.send({ taskId: "bounded-replacement:row" });

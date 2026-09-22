@@ -33,7 +33,7 @@ jobs:
       contents: read
       id-token: write
     env:
-      ARIVISO_RELEASE_COMMIT: ${{ vars.ARIVISO_RELEASE_COMMIT }}
+      VISONAUT_RELEASE_COMMIT: ${{ vars.VISONAUT_RELEASE_COMMIT }}
       NPM_CONFIG_PROVENANCE: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,4 +51,4 @@ jobs:
       - name: Publish verified tarballs through npm trusted publishing
         run: node .github/workflows/scripts/packages.mjs publish "$RUNNER_TEMP/public-packages"
         env:
-          ARIVISO_RELEASE_TAG: ${{ inputs.tag }}
+          VISONAUT_RELEASE_TAG: ${{ inputs.tag }}

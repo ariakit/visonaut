@@ -501,7 +501,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
     >
       <header className="review-run-header">
         <div>
-          <p className="review-eyebrow">Ariviso · ariakit/ariakit</p>
+          <p className="review-eyebrow">Visonaut · ariakit/ariakit</p>
           <h1>
             {model.run.title ??
               `${model.run.kind === "main" ? "Main" : model.run.kind === "merge_group" ? "Merge queue" : "Pull request"} visual review`}

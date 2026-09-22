@@ -1,5 +1,5 @@
-import { SecurityError } from "@ariviso/security";
-import type { Database } from "@ariviso/service";
+import { SecurityError } from "@visonaut/security";
+import type { Database } from "@visonaut/service";
 
 export async function operationsStatus({
   database,
@@ -12,7 +12,7 @@ export async function operationsStatus({
 }) {
   // Operations events belong to the deployment's single project.
   const projects = await database
-    .prepare("SELECT id,repository_id FROM ariviso_projects ORDER BY id LIMIT 2")
+    .prepare("SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2")
     .all<{ id: string; repository_id: string }>();
   if (
     projects.results?.length !== 1 ||

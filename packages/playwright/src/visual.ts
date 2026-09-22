@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
-import { digestJson, identityKey, sha256, validateKey, validateProfile } from "@ariviso/protocol";
-import type { Capture, CaptureProfile, Json, ProfileRecord, Variant } from "@ariviso/protocol";
+import { digestJson, identityKey, sha256, validateKey, validateProfile } from "@visonaut/protocol";
+import type { Capture, CaptureProfile, Json, ProfileRecord, Variant } from "@visonaut/protocol";
 import { test } from "@playwright/test";
 import type { Page, PageScreenshotOptions, TestInfo } from "@playwright/test";
 import { PNG } from "pngjs";
@@ -17,7 +17,7 @@ export interface VisualOptions {
   item: string;
   name?: string;
   variant: Variant;
-  /** Set here or in project.metadata.ariviso.profile. */
+  /** Set here or in project.metadata.visonaut.profile. */
   profile?: EnvironmentProfile;
   /** Total capture deadline, including fonts and consecutive stable images. */
   timeout?: number;
@@ -36,26 +36,26 @@ export interface CaptureAttachment {
   ordinal: number;
 }
 
-export const CAPTURE_STARTED_CONTENT_TYPE = "application/vnd.ariviso.capture-started+json";
-export const CAPTURE_CONTENT_TYPE = "application/vnd.ariviso.capture+json";
+export const CAPTURE_STARTED_CONTENT_TYPE = "application/vnd.visonaut.capture-started+json";
+export const CAPTURE_CONTENT_TYPE = "application/vnd.visonaut.capture+json";
 const captureIdentities = new WeakMap<TestInfo, Set<string>>();
 
 function getEnvironmentProfile(options: VisualOptions, info: TestInfo): EnvironmentProfile {
   if (options.profile) {
     return options.profile;
   }
-  const metadata: unknown = info.project.metadata.ariviso;
+  const metadata: unknown = info.project.metadata.visonaut;
   if (
     !metadata ||
     typeof metadata !== "object" ||
     !Object.hasOwn(metadata, "profile") ||
     !("profile" in metadata)
   ) {
-    throw new Error("Set profile in visual options or project.metadata.ariviso.profile");
+    throw new Error("Set profile in visual options or project.metadata.visonaut.profile");
   }
   const profile = metadata.profile;
   if (!profile || typeof profile !== "object") {
-    throw new Error("Invalid Ariviso environment profile");
+    throw new Error("Invalid Visonaut environment profile");
   }
   for (const key of [
     "osImageDigest",
@@ -64,7 +64,7 @@ function getEnvironmentProfile(options: VisualOptions, info: TestInfo): Environm
     "comparisonEngineVersion",
   ]) {
     if (!Object.hasOwn(profile, key)) {
-      throw new Error(`Missing Ariviso environment profile ${key}`);
+      throw new Error(`Missing Visonaut environment profile ${key}`);
     }
   }
   if (
@@ -77,7 +77,7 @@ function getEnvironmentProfile(options: VisualOptions, info: TestInfo): Environm
     !("comparisonEngineVersion" in profile) ||
     typeof profile.comparisonEngineVersion !== "string"
   ) {
-    throw new Error("Ariviso environment profile values must be strings");
+    throw new Error("Visonaut environment profile values must be strings");
   }
   return {
     osImageDigest: profile.osImageDigest,
@@ -115,7 +115,7 @@ async function getProfile(
 ): Promise<CaptureProfile> {
   const browser = page.context().browser();
   if (!browser) {
-    throw new Error("Ariviso requires a connected Playwright browser");
+    throw new Error("Visonaut requires a connected Playwright browser");
   }
   const browserName = browser.browserType().name();
   if (browserName !== options.variant.browser) {
@@ -172,7 +172,7 @@ function screenshotOptions(options: VisualOptions): Record<string, Json> & PageS
 export async function visual(page: Page, options: VisualOptions): Promise<void> {
   const info = test.info();
   const attemptToken = randomUUID();
-  await info.attach(`ariviso-started-${attemptToken}`, {
+  await info.attach(`visonaut-started-${attemptToken}`, {
     body: Buffer.from(JSON.stringify({ attemptToken })),
     contentType: CAPTURE_STARTED_CONTENT_TYPE,
   });
@@ -253,7 +253,7 @@ async function capturePrepared({
   if (!bytes || !decoded || performance.now() >= deadline) {
     throw new Error("Visual capture timed out before pixels stabilized");
   }
-  const imageAttachment = `ariviso-image-${ordinal}`;
+  const imageAttachment = `visonaut-image-${ordinal}`;
   const attachment: CaptureAttachment = {
     attemptToken,
     capture: {
@@ -276,7 +276,7 @@ async function capturePrepared({
     ordinal,
   };
   await info.attach(imageAttachment, { body: bytes, contentType: "image/png" });
-  await info.attach(`ariviso-capture-${ordinal}`, {
+  await info.attach(`visonaut-capture-${ordinal}`, {
     body: Buffer.from(JSON.stringify(attachment)),
     contentType: CAPTURE_CONTENT_TYPE,
   });

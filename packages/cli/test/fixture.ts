@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { digestJson } from "@ariviso/protocol";
-import type { Capture, CaptureProfile, Manifest } from "@ariviso/protocol";
+import { digestJson } from "@visonaut/protocol";
+import type { Capture, CaptureProfile, Manifest } from "@visonaut/protocol";
 
 export const imageBytes = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=",
@@ -11,7 +11,7 @@ export const imageBytes = Buffer.from(
 );
 
 export async function fixture() {
-  const directory = await mkdtemp(join(tmpdir(), "ariviso-cli-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "visonaut-cli-test-"));
   const profile: CaptureProfile = {
     browser: "chromium",
     browserVersion: "149.0",
@@ -51,7 +51,7 @@ export async function fixture() {
   const manifest: Manifest = {
     schemaVersion: "1.0",
     producer: {
-      name: "@ariviso/playwright",
+      name: "@visonaut/playwright",
       version: "0.1.0",
       nodeVersion: "24.18.0",
       playwrightVersion: "1.63.0",

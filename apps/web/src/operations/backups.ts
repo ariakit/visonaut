@@ -1,4 +1,4 @@
-import { assertion, atomic } from "@ariviso/service";
+import { assertion, atomic } from "@visonaut/service";
 import {
   backupDaily as backupDailyV2,
   expireBackups as expireBackupsV2,
@@ -103,7 +103,7 @@ export async function backupDaily(
       ),
       assertion(
         database,
-        "NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE byte_state='deleting') AND NOT EXISTS(SELECT 1 FROM ariviso_snapshot_retention WHERE byte_state='deleting')",
+        "NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE byte_state='deleting') AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_retention WHERE byte_state='deleting')",
       ),
       database
         .prepare(
@@ -144,7 +144,7 @@ export async function backupDaily(
         guard(),
         assertion(
           database,
-          "NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE byte_state='deleting') AND NOT EXISTS(SELECT 1 FROM ariviso_snapshot_retention WHERE byte_state='deleting')",
+          "NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE byte_state='deleting') AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_retention WHERE byte_state='deleting')",
         ),
         pinLiveRuns(context, id),
         ...freezeBackupGroups(context, id),

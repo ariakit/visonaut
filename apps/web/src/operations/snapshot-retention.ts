@@ -7,7 +7,7 @@ import {
   ConflictError,
   releaseExpiredComparisonReferences,
   retireSnapshot,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { recordEvent, resolveEvents, safeKey } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
@@ -34,7 +34,7 @@ export async function expireComparisonReferences(
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const cursor = "snapshot-reference-retention";
   const rows = await context.database
-    .prepare(`SELECT run.id FROM ariviso_runs run JOIN work_retained_runs retained ON retained.id=run.id
+    .prepare(`SELECT run.id FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id=run.id
     WHERE run.id>? AND run.active=0 AND run.closed_at<=? AND retained.references_released_at IS NULL
     ORDER BY run.id LIMIT ?`)
     .bind(
@@ -80,8 +80,8 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const cursor = "snapshot-byte-retention";
   const rows = await context.database
-    .prepare(`SELECT snapshot.id,snapshot.prefix,retention.byte_state FROM ariviso_snapshots snapshot
-    JOIN ariviso_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id>? AND (
+    .prepare(`SELECT snapshot.id,snapshot.prefix,retention.byte_state FROM visonaut_snapshots snapshot
+    JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id>? AND (
       (retention.byte_state='live' AND snapshot.state!='copying') OR (retention.byte_state='retiring' AND retention.delete_after<=?)
       OR (retention.byte_state='deleting' AND retention.lease_until<=?)) ORDER BY snapshot.id LIMIT ?`)
     .bind(
@@ -133,12 +133,12 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
         await atomic(context.database, [
           assertion(
             context.database,
-            "EXISTS(SELECT 1 FROM ariviso_snapshot_retention WHERE snapshot_id=? AND byte_state='deleting' AND lease_token=? AND lease_until>?)",
+            "EXISTS(SELECT 1 FROM visonaut_snapshot_retention WHERE snapshot_id=? AND byte_state='deleting' AND lease_token=? AND lease_until>?)",
             [row.id, token, context.now()],
           ),
           context.database
             .prepare(
-              "UPDATE ariviso_snapshot_retention SET lease_until=? WHERE snapshot_id=? AND lease_token=?",
+              "UPDATE visonaut_snapshot_retention SET lease_until=? WHERE snapshot_id=? AND lease_token=?",
             )
             .bind(context.now(), row.id, token),
         ]);

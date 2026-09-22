@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { Service } from "@ariviso/service";
+import { Service } from "@visonaut/service";
 import { createRunExport, expireExports, streamRunExport } from "./exports.ts";
 import { archiveClosedRuns } from "./history.ts";
 import { profile, seedExport, sha256 } from "./export-scale-fixture.ts";
@@ -13,7 +13,7 @@ it("exports 35,820 hydrated captures and 10,580 distinct image payloads as a com
   );
   expect(
     fixture.database.connection
-      .prepare("SELECT COUNT(*) AS count FROM ariviso_capture_profiles")
+      .prepare("SELECT COUNT(*) AS count FROM visonaut_capture_profiles")
       .get(),
   ).toEqual({ count: 1 });
   const started = performance.now();
@@ -34,7 +34,7 @@ it("exports 35,820 hydrated captures and 10,580 distinct image payloads as a com
   console.info(
     JSON.stringify({
       study: "SQLite and memory stores; no hosted latency or CLI admission claim",
-      subject: process.env.ARIVISO_EXPORT_SUBJECT ?? "working",
+      subject: process.env.VISONAUT_EXPORT_SUBJECT ?? "working",
       preparationMilliseconds,
       totalMilliseconds: performance.now() - started,
       profileBytes: Buffer.byteLength(JSON.stringify(profile)),
@@ -179,7 +179,7 @@ it("exports the archived 35,820-capture fixture with all retained payloads and e
   expect(archived).toBe(true);
   expect(
     fixture.database.connection
-      .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id=?")
+      .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
       .get(fixture.runId),
   ).toEqual({ count: 0 });
   const expectedObjects = new Map(fixture.expectedObjects);

@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ariviso-codec-probe",
+  "name": "visonaut-codec-probe",
   "main": "src/probe.ts",
   "compatibility_date": "2026-09-21",
   "workers_dev": true,

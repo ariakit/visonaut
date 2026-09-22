@@ -177,7 +177,7 @@ function Index() {
   if (state.status === "guest") {
     return (
       <main className="dashboard-sign-in">
-        <div className="dashboard-brand">Ariviso</div>
+        <div className="dashboard-brand">Visonaut</div>
         <h1>Every detail, reviewed.</h1>
         <p>Visual regression review for Ariakit maintainers.</p>
         <Button className="review-control" disabled={action !== null} onClick={() => void signIn()}>
@@ -195,7 +195,7 @@ function Index() {
     <div className="dashboard">
       <header className="dashboard-header">
         <Link to="/" className="dashboard-brand">
-          Ariviso
+          Visonaut
         </Link>
         <span>ariakit/ariakit</span>
         {state.status !== "loading" && (

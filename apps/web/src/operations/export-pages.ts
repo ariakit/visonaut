@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readBounded } from "@ariviso/compare";
+import { readBounded } from "@visonaut/compare";
 import type { OperationsContext } from "./types.ts";
 
 export interface ExportEntry {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancelHistoricalPreparation, compactHistoricalComparison } from "@ariviso/service";
+import { cancelHistoricalPreparation, compactHistoricalComparison } from "@visonaut/service";
 import { archiveClosedRuns, readHistoryManifest } from "./history.ts";
 import { prepareHistoricalCaptures } from "./historical-captures.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
@@ -82,7 +82,7 @@ describe("historical comparison candidate recovery", () => {
       state: "superseded",
     });
     expect(
-      database.connection.prepare("SELECT key FROM ariviso_shards WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT key FROM visonaut_shards WHERE run_id='run'").all(),
     ).toHaveLength(0);
     expect(
       database.connection
@@ -113,14 +113,14 @@ describe("historical comparison candidate recovery", () => {
         .all(),
     ).toEqual([]);
     expect(
-      database.connection.prepare("SELECT id FROM ariviso_captures WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
     ).toEqual([]);
   });
 
   it("rejects originals that expired after archival rather than treating missing captures as removals", async () => {
     const { database, fixture } = await archivedFixture();
     using _owned = database;
-    database.connection.exec("UPDATE ariviso_images SET bytes_present=0 WHERE run_id='run'");
+    database.connection.exec("UPDATE visonaut_images SET bytes_present=0 WHERE run_id='run'");
     await expect(
       prepareHistoricalCaptures(fixture.context, {
         runId: "run",
@@ -131,7 +131,7 @@ describe("historical comparison candidate recovery", () => {
     ).rejects.toThrow();
     await cancelHistoricalPreparation(database, "expired", fixture.context.now());
     expect(
-      database.connection.prepare("SELECT id FROM ariviso_captures WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
     ).toEqual([]);
   });
   it("removes partial restored detail when preparation is cancelled before a job exists", async () => {
@@ -144,14 +144,14 @@ describe("historical comparison candidate recovery", () => {
       maximumCaptures: 10,
     });
     expect(
-      database.connection.prepare("SELECT id FROM ariviso_captures WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
     ).toHaveLength(1);
     await cancelHistoricalPreparation(database, "cancelled", fixture.context.now());
     expect(
-      database.connection.prepare("SELECT id FROM ariviso_captures WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
     ).toHaveLength(0);
     expect(
-      database.connection.prepare("SELECT key FROM ariviso_shards WHERE run_id='run'").all(),
+      database.connection.prepare("SELECT key FROM visonaut_shards WHERE run_id='run'").all(),
     ).toHaveLength(0);
   });
 });

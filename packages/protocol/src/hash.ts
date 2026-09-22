@@ -91,7 +91,7 @@ export function discoveryArtifactPrefix({
   jobId,
   shardKey,
 }: DiscoveryArtifactPrefixParams): string {
-  return `ariviso-discovery-${workflowAttempt}-${jobId}-${encodeURIComponent(shardKey)}-`;
+  return `visonaut-discovery-${workflowAttempt}-${jobId}-${encodeURIComponent(shardKey)}-`;
 }
 
 export async function createDiscoveryReceipt(manifest: Manifest): Promise<DiscoveryReceipt> {

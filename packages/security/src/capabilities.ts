@@ -71,7 +71,7 @@ async function issueToken(
   return new SignJWT({ ...claims, kind, environment: configuration.environment })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuer(configuration.issuer)
-    .setAudience(`ariviso:${kind}:${configuration.environment}`)
+    .setAudience(`visonaut:${kind}:${configuration.environment}`)
     .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime(`${expiresIn}s`)
@@ -87,7 +87,7 @@ async function verifyToken(
     const result = await jwtVerify(token, signingKey(configuration), {
       algorithms: ["HS256"],
       issuer: configuration.issuer,
-      audience: `ariviso:${kind}:${configuration.environment}`,
+      audience: `visonaut:${kind}:${configuration.environment}`,
       typ: "JWT",
       requiredClaims: ["exp", "iat", "jti"],
       maxTokenAge: "15m",

@@ -251,7 +251,7 @@ export async function loadReview(
         }
         const link = document.createElement("a");
         link.href = url.href;
-        link.download = `ariviso-${runId}.tar`;
+        link.download = `visonaut-${runId}.tar`;
         document.body.appendChild(link);
         link.click();
         link.remove();

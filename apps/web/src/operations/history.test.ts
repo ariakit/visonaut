@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { retentionPinStatement } from "@ariviso/service";
+import { retentionPinStatement } from "@visonaut/service";
 import {
   captured,
   context,
@@ -34,7 +34,7 @@ import {
 import { publicImage } from "../api/images.ts";
 import { apiContext, type ApiContext } from "../api/context.ts";
 import { declareShard, finalize, uploadImage } from "../api/ingest.ts";
-import { issueIngestCapability } from "@ariviso/security";
+import { issueIngestCapability } from "@visonaut/security";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 
 let runtime: Miniflare;
@@ -63,7 +63,10 @@ beforeEach(async () => {
     "0008_capture_profiles",
     "0009_retention_history",
     "0010_run_history",
+    "0011_backup_groups",
     "0012_historical_comparisons",
+    "0013_promotion_scans",
+    "0014_visonaut_brand",
   ]) {
     const source = (
       await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")
@@ -108,7 +111,7 @@ async function finish(runId = "run") {
 }
 async function detailCount(runId = "run") {
   return operations.database
-    .prepare("SELECT COUNT(*) AS count FROM ariviso_captures WHERE run_id=?")
+    .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
     .bind(runId)
     .first<{ count: number }>();
 }
@@ -141,32 +144,32 @@ async function archivedRows(runId: string, section: HistorySection) {
 async function historical(archiveSource = true) {
   await closed();
   const captured = await operations.database
-    .prepare("SELECT * FROM ariviso_captures WHERE run_id='run'")
+    .prepare("SELECT * FROM visonaut_captures WHERE run_id='run'")
     .first<{ metadata_json: string }>();
   if (!captured) throw new Error("Missing fixture capture.");
   if (archiveSource) {
     await finish();
     await operations.database
       .prepare(
-        "INSERT INTO ariviso_shards(run_id,key,profile_digest,expected_json,state) VALUES('run','chromium','profile','{}','complete')",
+        "INSERT INTO visonaut_shards(run_id,key,profile_digest,expected_json,state) VALUES('run','chromium','profile','{}','complete')",
       )
       .run();
     await operations.database
       .prepare(
-        "INSERT INTO ariviso_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES('capture-run','run','chromium','dialog','light',0,'image-run','profile','test',0,?)",
+        "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES('capture-run','run','chromium','dialog','light',0,'image-run','profile','test',0,?)",
       )
       .bind(captured.metadata_json)
       .run();
   }
   await operations.database
     .prepare(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at,purpose) VALUES('historical','run',0,'policy',2,'ready',?,'historical')",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at,purpose) VALUES('historical','run',0,'policy',2,'ready',?,'historical')",
     )
     .bind(operations.now())
     .run();
   await operations.database
     .prepare(
-      "INSERT INTO ariviso_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,candidate_capture_id,tuple_json,outcome,result_json) VALUES('historical-row','historical','dialog','light',0,'capture-run','{}','changed',?)",
+      "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,candidate_capture_id,tuple_json,outcome,result_json) VALUES('historical-row','historical','dialog','light',0,'capture-run','{}','changed',?)",
     )
     .bind(JSON.stringify({ changedPixels: 2 }))
     .run();
@@ -248,7 +251,7 @@ async function seedLargeCheckpoint(
     await operations.database
       .prepare(
         `INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,page_count,progress_json,created_at)
-        SELECT run.id,?,'building',run.revision,project.revision,?,?,?,0 FROM ariviso_runs run JOIN ariviso_projects project ON project.id=run.project_id WHERE run.id='run'`,
+        SELECT run.id,?,'building',run.revision,project.revision,?,?,?,0 FROM visonaut_runs run JOIN visonaut_projects project ON project.id=run.project_id WHERE run.id='run'`,
       )
       .bind(generation, key, progress.pages.length, encoded)
       .run();
@@ -368,7 +371,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(
       await operations.database
         .prepare(
-          "SELECT COUNT(*) AS count FROM ariviso_comparison_rows WHERE comparison_id='historical'",
+          "SELECT COUNT(*) AS count FROM visonaut_comparison_rows WHERE comparison_id='historical'",
         )
         .first(),
     ).toEqual({ count: 0 });
@@ -405,7 +408,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(
       await operations.database
         .prepare(
-          "SELECT COUNT(*) AS count FROM ariviso_comparison_rows WHERE comparison_id='historical'",
+          "SELECT COUNT(*) AS count FROM visonaut_comparison_rows WHERE comparison_id='historical'",
         )
         .first(),
     ).toEqual({ count: 1 });
@@ -427,14 +430,14 @@ describe("verified closed history with native D1 and R2", () => {
     // The route stops at the database lookup before using other API bindings.
     const api = { database: operations.database } as ApiContext;
     const response = await publicImage(
-      new Request(`https://ariviso.example/images/${root.pointer.generation}`),
+      new Request(`https://visonaut.example/images/${root.pointer.generation}`),
       api,
       root.pointer.generation,
     );
     expect(response.status).toBe(404);
     await expect(
       publicImage(
-        new Request(`https://ariviso.example/images/${root.pointer.object_key}`),
+        new Request(`https://visonaut.example/images/${root.pointer.object_key}`),
         api,
         root.pointer.object_key,
       ),
@@ -444,18 +447,18 @@ describe("verified closed history with native D1 and R2", () => {
     await closed();
     await operations.database
       .prepare(
-        "INSERT INTO ariviso_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES('snapshot','project','run','comparison-run',?,'accepted',0,'baselines/snapshot/',?)",
+        "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES('snapshot','project','run','comparison-run',?,'accepted',0,'baselines/snapshot/',?)",
       )
       .bind("a".repeat(40), operations.now())
       .run();
     await operations.database
       .prepare(
-        "INSERT INTO ariviso_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT 'snapshot','capture-run',id,'baselines/snapshot/original',digest,1 FROM ariviso_images WHERE id='image-run'",
+        "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT 'snapshot','capture-run',id,'baselines/snapshot/original',digest,1 FROM visonaut_images WHERE id='image-run'",
       )
       .run();
     await operations.images.put("baselines/snapshot/original", "original-image-bytes");
     await operations.database
-      .prepare("UPDATE ariviso_images SET bytes_present=0 WHERE id='image-run'")
+      .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id='image-run'")
       .run();
     await operations.images.delete("runs/run/original");
     await finish();
@@ -465,7 +468,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(body).toContain("original-image-bytes");
     expect(
       await operations.database
-        .prepare("SELECT reason FROM ariviso_pins WHERE snapshot_id='snapshot'")
+        .prepare("SELECT reason FROM visonaut_pins WHERE snapshot_id='snapshot'")
         .first(),
     ).toEqual({ reason: "export" });
   });
@@ -491,11 +494,11 @@ describe("verified closed history with native D1 and R2", () => {
     await closed("target");
     await operations.database
       .prepare(
-        "UPDATE ariviso_comparison_rows SET reference_capture_id='capture-source' WHERE comparison_id='comparison-target'",
+        "UPDATE visonaut_comparison_rows SET reference_capture_id='capture-source' WHERE comparison_id='comparison-target'",
       )
       .run();
     await operations.database
-      .prepare("UPDATE ariviso_captures SET image_id='image-source' WHERE id='capture-target'")
+      .prepare("UPDATE visonaut_captures SET image_id='image-source' WHERE id='capture-target'")
       .run();
     await operations.database
       .prepare(
@@ -507,7 +510,7 @@ describe("verified closed history with native D1 and R2", () => {
     await finish("source");
     expect(
       await operations.database
-        .prepare("SELECT metadata_json FROM ariviso_captures WHERE id='capture-source'")
+        .prepare("SELECT metadata_json FROM visonaut_captures WHERE id='capture-source'")
         .first(),
     ).toEqual({ metadata_json: "{}" });
     await operations.quarantine.delete("plans/source.json");
@@ -592,7 +595,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(await uploads()).toEqual([records.upload]);
     expect(
       await operations.database
-        .prepare("SELECT detail_archived FROM ariviso_runs WHERE id='run'")
+        .prepare("SELECT detail_archived FROM visonaut_runs WHERE id='run'")
         .first(),
     ).toEqual({ detail_archived: 0 });
     expect(
@@ -614,7 +617,7 @@ describe("verified closed history with native D1 and R2", () => {
     await closed("source");
     const records = await ingestRecords(operations, "source");
     const shard = await operations.database
-      .prepare("SELECT * FROM ariviso_shards WHERE run_id='source'")
+      .prepare("SELECT * FROM visonaut_shards WHERE run_id='source'")
       .first();
     const dependent = await captured(operations, "dependent");
     await retentionPinStatement(operations.database, {
@@ -626,7 +629,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(await uploads("source")).toEqual([records.upload]);
     expect(
       await operations.database
-        .prepare("SELECT * FROM ariviso_shards WHERE run_id='source'")
+        .prepare("SELECT * FROM visonaut_shards WHERE run_id='source'")
         .first(),
     ).toEqual(shard);
     expect(
@@ -648,7 +651,7 @@ describe("verified closed history with native D1 and R2", () => {
     const runId = "26e29ef3-cac4-4c4f-8f65-1e219a89f526";
     const service = await closed(runId);
     await operations.database
-      .prepare("UPDATE ariviso_runs SET external_run_id='456' WHERE id=?")
+      .prepare("UPDATE visonaut_runs SET external_run_id='456' WHERE id=?")
       .bind(runId)
       .run();
     const records = await ingestRecords(operations, runId);
@@ -705,7 +708,7 @@ describe("verified closed history with native D1 and R2", () => {
         webhookSecret: "unused",
         oidcAudience: operations.origin,
         repositoryOwnerId: "1",
-        trustedPlanPath: ".github/ariviso-plan.json",
+        trustedPlanPath: ".github/visonaut-plan.json",
         reusableWorkflowRef: "unused",
         reusableWorkflowSha: "b".repeat(40),
         comparisonMaxAttempts: 2,
@@ -787,7 +790,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect((await expireRunImages(operations)).completed).toEqual(["run"]);
     expect(
       await operations.database
-        .prepare("SELECT detail_archived FROM ariviso_runs WHERE id='run'")
+        .prepare("SELECT detail_archived FROM visonaut_runs WHERE id='run'")
         .first(),
     ).toEqual({ detail_archived: 1 });
     expect(await operations.images.get("runs/run/original")).toBeNull();

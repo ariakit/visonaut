@@ -1,4 +1,4 @@
-import { ArchivedCommandResultError, ConflictError } from "@ariviso/service";
+import { ArchivedCommandResultError, ConflictError } from "@visonaut/service";
 import { describe, expect, it, vi } from "vitest";
 import type { ArchivedRunHistory } from "../operations/history-format.ts";
 import type { PrivateContext } from "./context.ts";

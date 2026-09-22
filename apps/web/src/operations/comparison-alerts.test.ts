@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enqueueWork } from "@ariviso/service";
+import { enqueueWork } from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
 import { reportComparisonRecovery } from "./comparison-alerts.ts";
 const noPublication = { published: [], failed: [] };
@@ -7,22 +7,22 @@ const noFinalization = { completed: [], errors: [] };
 function comparison(database: TestDatabase, id: string) {
   database.connection
     .prepare(
-      "INSERT OR IGNORE INTO ariviso_projects(id,repository_id,policy_digest) VALUES('project','123','policy')",
+      "INSERT OR IGNORE INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','123','policy')",
     )
     .run();
   database.connection
     .prepare(
-      "INSERT INTO ariviso_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,comparison_id,created_at) VALUES(?,'project',?,1,'pull_request','sha',?,'plan','{}',?,0)",
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,comparison_id,created_at) VALUES(?,'project',?,1,'pull_request','sha',?,'plan','{}',?,0)",
     )
     .run(id, id, id, id);
   database.connection
     .prepare(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES(?,?,0,'policy',1,0)",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at) VALUES(?,?,0,'policy',1,0)",
     )
     .run(id, id);
   database.connection
     .prepare(
-      "INSERT INTO ariviso_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json) VALUES(?,?,'item','variant',0,'{}')",
+      "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json) VALUES(?,?,'item','variant',0,'{}')",
     )
     .run(`${id}:row`, id);
 }
@@ -42,7 +42,7 @@ describe("comparison recovery alerts", () => {
       const id = `receipt-${purpose}`;
       comparison(database, id);
       database.connection
-        .prepare("UPDATE ariviso_comparisons SET purpose=? WHERE id=?")
+        .prepare("UPDATE visonaut_comparisons SET purpose=? WHERE id=?")
         .run(purpose, id);
       await enqueueWork(database, {
         id: `${id}:row`,
@@ -61,11 +61,11 @@ describe("comparison recovery alerts", () => {
         .prepare("UPDATE work_tasks SET state='complete',attempts=1,updated_at=? WHERE id=?")
         .run(fixture.state.time + 1, `${id}:row`);
       database.connection
-        .prepare("UPDATE ariviso_comparisons SET state='ready' WHERE id=?")
+        .prepare("UPDATE visonaut_comparisons SET state='ready' WHERE id=?")
         .run(id);
       database.connection.prepare("DELETE FROM work_tasks WHERE id=?").run(`${id}:row`);
       database.connection
-        .prepare("DELETE FROM ariviso_comparison_rows WHERE comparison_id=?")
+        .prepare("DELETE FROM visonaut_comparison_rows WHERE comparison_id=?")
         .run(id);
       database.connection
         .prepare(
@@ -100,7 +100,7 @@ describe("comparison recovery alerts", () => {
     const fixture = context(database);
     comparison(database, "historical");
     database.connection.exec(
-      "UPDATE ariviso_runs SET active=0,comparison_id=NULL WHERE id='historical'; UPDATE ariviso_comparisons SET purpose='historical' WHERE id='historical'",
+      "UPDATE visonaut_runs SET active=0,comparison_id=NULL WHERE id='historical'; UPDATE visonaut_comparisons SET purpose='historical' WHERE id='historical'",
     );
     await enqueueWork(database, {
       id: "historical:row",
@@ -122,22 +122,22 @@ describe("comparison recovery alerts", () => {
       { kind: "comparison-task", subject: "historical" },
     ]);
     database.connection.exec(
-      "UPDATE ariviso_comparisons SET state='invalidated' WHERE id='historical'",
+      "UPDATE visonaut_comparisons SET state='invalidated' WHERE id='historical'",
     );
     database.connection.exec(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('different','historical',0,'different-policy',2,1,'historical','ready')",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('different','historical',0,'different-policy',2,1,'historical','ready')",
     );
     await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
     expect(unresolved(database)).toHaveLength(2);
     database.connection.exec(
-      "INSERT INTO ariviso_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('recovered','historical',0,'policy',3,2,'historical','ready')",
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('recovered','historical',0,'policy',3,2,'historical','ready')",
     );
     await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
     await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
     expect(unresolved(database)).toEqual([]);
     expect(
       database.connection
-        .prepare("SELECT state FROM ariviso_comparisons WHERE id='historical'")
+        .prepare("SELECT state FROM visonaut_comparisons WHERE id='historical'")
         .get()?.state,
     ).toBe("invalidated");
   });
@@ -182,7 +182,7 @@ describe("comparison recovery alerts", () => {
       errors: [{ comparisonId: "ready" }, { comparisonId: "still-failing" }],
     });
     database.connection
-      .prepare("UPDATE ariviso_comparisons SET state='ready' WHERE id='ready'")
+      .prepare("UPDATE visonaut_comparisons SET state='ready' WHERE id='ready'")
       .run();
     fixture.context.budget.tasksPerStep = 1;
     await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
@@ -215,7 +215,7 @@ describe("comparison recovery alerts", () => {
         .get()?.occurrences,
     ).toBe(1);
     database.connection
-      .prepare("UPDATE ariviso_runs SET comparison_id='new-comparison' WHERE id='dead'")
+      .prepare("UPDATE visonaut_runs SET comparison_id='new-comparison' WHERE id='dead'")
       .run();
     await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
     expect(unresolved(database)).toEqual([]);

@@ -14,7 +14,7 @@ import {
   type ReserveRunRequest,
   type RunStatus,
   type TrustedPlan,
-} from "@ariviso/protocol";
+} from "@visonaut/protocol";
 import {
   bearerToken,
   createGitHubClient,
@@ -28,7 +28,7 @@ import {
   verifyUploadTicket,
   type GitHubClient,
   type IngestCapability,
-} from "@ariviso/security";
+} from "@visonaut/security";
 import {
   assertion,
   atomic,
@@ -36,7 +36,7 @@ import {
   IncompleteError,
   statement,
   type RunRow,
-} from "@ariviso/service";
+} from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { discoveryEvidence } from "./receipts.js";
@@ -124,7 +124,7 @@ async function runPlan(context: ApiContext, runId: string) {
 async function verifyAncestry(context: ApiContext, github: GitHubClient, testedSha: string) {
   const snapshots = await context.database
     .prepare(
-      "SELECT DISTINCT tested_sha FROM ariviso_snapshots WHERE project_id = ? AND reference_eligible = 1 ORDER BY created_at DESC LIMIT 100",
+      "SELECT DISTINCT tested_sha FROM visonaut_snapshots WHERE project_id = ? AND reference_eligible = 1 ORDER BY created_at DESC LIMIT 100",
     )
     .bind(context.configuration.projectId)
     .all<{ tested_sha: string }>();
@@ -245,7 +245,7 @@ export async function reserve(request: Request, context: ApiContext): Promise<Re
   if (verified.workflowAttempt > 1) {
     const previous = await context.database
       .prepare(
-        "SELECT id FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND attempt < ? AND active = 1 AND sealed_at IS NULL ORDER BY attempt DESC LIMIT 1",
+        "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND attempt < ? AND active = 1 AND sealed_at IS NULL ORDER BY attempt DESC LIMIT 1",
       )
       .bind(context.configuration.projectId, verified.workflowRunId, verified.workflowAttempt)
       .first<{ id: string }>();
@@ -280,7 +280,7 @@ export async function reserve(request: Request, context: ApiContext): Promise<Re
     if (!(error instanceof ConflictError)) throw error;
     const concurrent = await context.database
       .prepare(
-        "SELECT id FROM ariviso_runs WHERE project_id = ? AND external_run_id = ? AND attempt = ?",
+        "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND attempt = ?",
       )
       .bind(reservation.projectId, reservation.externalRunId, reservation.attempt)
       .first();
@@ -424,7 +424,7 @@ export async function declareShard(
   await atomic(context.database, [
     assertion(
       context.database,
-      "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
+      "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
       [run.id],
     ),
     statement(
@@ -447,7 +447,7 @@ export async function declareShard(
     ),
     assertion(
       context.database,
-      "(SELECT COALESCE(sum(capture_count), 0) FROM ingest_manifests WHERE run_id = ?) + (SELECT count(*) FROM ariviso_captures c WHERE c.run_id = ? AND NOT EXISTS (SELECT 1 FROM ingest_manifests m WHERE m.run_id = c.run_id AND m.shard_key = c.shard_key)) <= ?",
+      "(SELECT COALESCE(sum(capture_count), 0) FROM ingest_manifests WHERE run_id = ?) + (SELECT count(*) FROM visonaut_captures c WHERE c.run_id = ? AND NOT EXISTS (SELECT 1 FROM ingest_manifests m WHERE m.run_id = c.run_id AND m.shard_key = c.shard_key)) <= ?",
       [run.id, run.id, context.configuration.limits.maximumCaptures],
     ),
   ]);
@@ -470,7 +470,7 @@ export async function declareShard(
     await atomic(context.database, [
       assertion(
         context.database,
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
         [run.id],
       ),
       ...rows.map((row) =>
@@ -636,7 +636,7 @@ export async function runStatus(context: ApiContext, runId: string): Promise<Run
   }
   const counts = await context.database
     .prepare(
-      "SELECT count(*) AS expected, COALESCE(sum(CASE WHEN state = 'complete' THEN 1 ELSE 0 END), 0) AS complete FROM ariviso_shards WHERE run_id = ?",
+      "SELECT count(*) AS expected, COALESCE(sum(CASE WHEN state = 'complete' THEN 1 ELSE 0 END), 0) AS complete FROM visonaut_shards WHERE run_id = ?",
     )
     .bind(runId)
     .first<{ expected: number; complete: number }>();
@@ -698,7 +698,7 @@ async function commitVerifiedShard(
   stored: StoredManifest,
   plan: TrustedPlan,
   verificationDigest: string,
-  evidence?: import("@ariviso/protocol").VerifiedDiscoveryEvidence,
+  evidence?: import("@visonaut/protocol").VerifiedDiscoveryEvidence,
 ) {
   const manifest = parseManifest(
     await privateJson(
@@ -741,7 +741,7 @@ async function commitVerifiedShard(
   );
   const previous = await context.database
     .prepare(
-      "SELECT id, json_extract(metadata_json, '$.profile') AS profile_json FROM ariviso_captures WHERE run_id=? AND shard_key=?",
+      "SELECT id, json_extract(metadata_json, '$.profile') AS profile_json FROM visonaut_captures WHERE run_id=? AND shard_key=?",
     )
     .bind(run.id, shardKey)
     .all<{ id: string; profile_json: string }>();
@@ -804,7 +804,7 @@ export async function comparisonReference(context: ApiContext, run: RunRow, hist
     await atomic(context.database, [
       assertion(
         context.database,
-        "EXISTS (SELECT 1 FROM ariviso_runs WHERE id = ? AND active = ? AND revision = ?)",
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = ? AND revision = ?)",
         [run.id, historical ? 0 : 1, run.revision],
       ),
       ...ancestors
@@ -812,7 +812,7 @@ export async function comparisonReference(context: ApiContext, run: RunRow, hist
         .map((sha) =>
           statement(
             context.database,
-            "INSERT INTO ariviso_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?) ON CONFLICT(run_id, ancestor_sha) DO NOTHING",
+            "INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?) ON CONFLICT(run_id, ancestor_sha) DO NOTHING",
             [run.id, sha, proof],
           ),
         ),
@@ -872,7 +872,7 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
   for (const shard of plan.shards) {
     const completed = await context.database
       .prepare(
-        "SELECT state, source_attempt, manifest_digest FROM ariviso_shards WHERE run_id = ? AND key = ?",
+        "SELECT state, source_attempt, manifest_digest FROM visonaut_shards WHERE run_id = ? AND key = ?",
       )
       .bind(run.id, shard.key)
       .first<{ state: string; source_attempt: number; manifest_digest: string }>();
@@ -972,7 +972,7 @@ export async function reconcileIngest(context: ApiContext, limit = 25) {
   await assertConfiguredProject(context);
   const runs = await context.database
     .prepare(
-      "SELECT r.id FROM ariviso_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND r.active = 1 AND r.state IN ('uploading', 'comparing') ORDER BY p.last_checked_at, r.created_at LIMIT ?",
+      "SELECT r.id FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND r.active = 1 AND r.state IN ('uploading', 'comparing') ORDER BY p.last_checked_at, r.created_at LIMIT ?",
     )
     .bind(context.configuration.projectId, Math.min(limit, 100))
     .all<{ id: string }>();

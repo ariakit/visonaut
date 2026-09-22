@@ -13,7 +13,7 @@ function validCredential(value: unknown): value is string {
 
 export function serverOrigin(value: string | undefined): URL {
   if (!value) {
-    throw new CliError("Set ARIVISO_SERVER or pass --server with the service origin.", 2);
+    throw new CliError("Set VISONAUT_SERVER or pass --server with the service origin.", 2);
   }
   let url: URL;
   try {

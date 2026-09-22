@@ -33,7 +33,7 @@ test("operation alerts explain recovery and poll resolved events while the dashb
     page.getByRole("link", { name: "Open the operations and recovery guide" }),
   ).toHaveAttribute(
     "href",
-    "https://github.com/ariakit/ariviso/blob/main/apps/web/src/operations/README.md",
+    "https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md",
   );
   resolved = true;
   await page.clock.fastForward(60000);

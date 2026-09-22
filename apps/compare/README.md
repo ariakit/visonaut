@@ -20,16 +20,16 @@ const response = await env.COMPARATOR.fetch("https://compare/validate", {
 The Wrangler configurations name the provisioned D1, R2, and queue resources for each environment. Verify those resource IDs before deployment. The queue consumer requires batch size one and concurrency one until deployed measurements establish a larger safe limit. Generate binding types after configuration changes.
 
 ```sh
-pnpm --filter @ariviso/compare-worker typecheck
-pnpm --filter @ariviso/compare-worker build
-pnpm --filter @ariviso/compare-worker deploy
+pnpm --filter @visonaut/compare-worker typecheck
+pnpm --filter @visonaut/compare-worker build
+pnpm --filter @visonaut/compare-worker deploy
 ```
 
 The separate `wrangler.probe.jsonc` has no production bindings. Set its `PROBE_TOKEN` secret and deploy it to a disposable environment. The token is required for `POST /probe`. The endpoint has the same encoded/decoded limits as the production codec. It returns fixture digests and bounded resource metrics. The test runner reads its token from the environment and never writes it to evidence.
 
 ```sh
 # CODEC_PROBE_URL and CODEC_PROBE_TOKEN must already be set.
-pnpm --filter @ariviso/compare probe /path/to/largest-capture.webp
+pnpm --filter @visonaut/compare probe /path/to/largest-capture.webp
 ```
 
 The probe deliberately encodes a full-size mask for equal images to exercise worst-case buffer allocation. The production consumer emits masks only for changed pairs. The probe reports WASM linear memory and allocated RGBA sizes; these are not peak isolate memory. Attach Cloudflare trace CPU/resource evidence before launch.

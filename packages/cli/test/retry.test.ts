@@ -1,15 +1,15 @@
 import { rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import { digestJson } from "@ariviso/protocol";
+import { digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/index.js";
 import { fixture, imageBytes } from "./fixture.js";
 
 const directories: string[] = [];
 const environment = {
-  ARIVISO_SERVER: "https://review.example.test",
-  ARIVISO_TOKEN: "session-secret",
+  VISONAUT_SERVER: "https://review.example.test",
+  VISONAUT_TOKEN: "session-secret",
   ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
 };
@@ -46,7 +46,7 @@ async function execute(argv = ["status", "--run", "run-123", "--json"], origin?:
   let stderr = "";
   const code = await runCli({
     argv,
-    environment: { ...environment, ...(origin ? { ARIVISO_SERVER: origin } : {}) },
+    environment: { ...environment, ...(origin ? { VISONAUT_SERVER: origin } : {}) },
     stdout: (value) => {
       stdout += value;
     },

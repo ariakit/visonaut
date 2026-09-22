@@ -1,8 +1,8 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeAll, expect, it } from "vitest";
-import { Service } from "@ariviso/service";
-import { validateImage, type ImageCodecs } from "@ariviso/compare";
+import { Service } from "@visonaut/service";
+import { validateImage, type ImageCodecs } from "@visonaut/compare";
 import { processComparisonTask } from "../../../compare/src/process.ts";
 import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
 import { context, TestDatabase } from "../operations/test-fixtures.ts";

@@ -1,5 +1,5 @@
-import { ImageValidationError } from "@ariviso/compare";
-import { ConflictError, IncompleteError, reconcileWork, Service } from "@ariviso/service";
+import { ImageValidationError } from "@visonaut/compare";
+import { ConflictError, IncompleteError, reconcileWork, Service } from "@visonaut/service";
 import { codecsReady } from "./codecs.ts";
 import { processComparisonTask } from "./process.ts";
 import { CodecBusyError, withCodecCapacity } from "./capacity.ts";

@@ -6,7 +6,7 @@ import {
   type AuthConfiguration,
   type GitHubAppConfiguration,
   type GitHubClient,
-} from "@ariviso/security";
+} from "@visonaut/security";
 import {
   apiContext,
   reconcileIngest,
@@ -54,8 +54,8 @@ function configurationObject(value: unknown, name: string): Record<string, unkno
 export function authConfiguration(env: Env): AuthConfiguration {
   return {
     database: env.DB,
-    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
-    environment: env.ARIVISO_ENVIRONMENT,
+    origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
+    environment: env.VISONAUT_ENVIRONMENT,
     secret: required(env.BETTER_AUTH_SECRET, "BETTER_AUTH_SECRET"),
     githubClientId: required(env.GITHUB_CLIENT_ID, "GITHUB_CLIENT_ID"),
     githubClientSecret: required(env.GITHUB_CLIENT_SECRET, "GITHUB_CLIENT_SECRET"),
@@ -68,12 +68,12 @@ export function githubConfiguration(env: Env): GitHubAppConfiguration {
     privateKey: required(env.GITHUB_APP_PRIVATE_KEY, "GITHUB_APP_PRIVATE_KEY"),
     installationId: required(env.GITHUB_INSTALLATION_ID, "GITHUB_INSTALLATION_ID"),
     repositoryId: required(env.GITHUB_REPOSITORY_ID, "GITHUB_REPOSITORY_ID"),
-    repository: required(env.ARIVISO_REPOSITORY, "ARIVISO_REPOSITORY"),
+    repository: required(env.VISONAUT_REPOSITORY, "VISONAUT_REPOSITORY"),
   };
 }
 
 export function operationsBudget(env: Env): OperationsBudget {
-  const budget = configurationObject(env.ARIVISO_OPERATIONS_BUDGET, "ARIVISO_OPERATIONS_BUDGET");
+  const budget = configurationObject(env.VISONAUT_OPERATIONS_BUDGET, "VISONAUT_OPERATIONS_BUDGET");
   const result: OperationsBudget = {
     tasksPerStep: positive(budget.tasksPerStep, "tasksPerStep"),
     objectsPerStep: positive(budget.objectsPerStep, "objectsPerStep"),
@@ -88,7 +88,7 @@ export function operationsBudget(env: Env): OperationsBudget {
 }
 
 export function databaseCapacityPolicy(env: Env): CapacityPolicy {
-  const limits = configurationObject(env.ARIVISO_API_LIMITS, "ARIVISO_API_LIMITS");
+  const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
   const policy: CapacityPolicy = {
     databaseWarningBytes: positive(limits.databaseWarningBytes, "databaseWarningBytes"),
     databaseAdmissionBytes: positive(limits.databaseAdmissionBytes, "databaseAdmissionBytes"),
@@ -126,16 +126,16 @@ export function operationsContext(env: Env): OperationsContext {
       },
     },
     github,
-    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
+    origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
     budget: operationsBudget(env),
     now: Date.now,
   };
 }
 
 export async function assertOperationsProject(env: Env) {
-  const expected = required(env.ARIVISO_PROJECT_ID, "ARIVISO_PROJECT_ID");
+  const expected = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
   const projects = await env.DB.prepare(
-    "SELECT id,repository_id FROM ariviso_projects ORDER BY id LIMIT 2",
+    "SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2",
   ).all<{ id: string; repository_id: string }>();
   const project = projects.results[0];
   if (
@@ -148,35 +148,35 @@ export async function assertOperationsProject(env: Env) {
 }
 
 export function apiBindings(env: Env): ApiBindings {
-  const limits = configurationObject(env.ARIVISO_API_LIMITS, "ARIVISO_API_LIMITS");
+  const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
   const auth = authConfiguration(env);
   const configuration: ApiConfiguration = {
-    origin: required(env.ARIVISO_ORIGIN, "ARIVISO_ORIGIN"),
-    projectId: required(env.ARIVISO_PROJECT_ID, "ARIVISO_PROJECT_ID"),
+    origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
+    projectId: required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID"),
     auth,
     github: githubConfiguration(env),
     capability: {
       secret: required(env.CAPABILITY_SECRET, "CAPABILITY_SECRET"),
-      issuer: env.ARIVISO_ORIGIN,
-      environment: env.ARIVISO_ENVIRONMENT,
+      issuer: env.VISONAUT_ORIGIN,
+      environment: env.VISONAUT_ENVIRONMENT,
     },
     webhookSecret: required(env.GITHUB_WEBHOOK_SECRET, "GITHUB_WEBHOOK_SECRET"),
-    oidcAudience: required(env.ARIVISO_OIDC_AUDIENCE, "ARIVISO_OIDC_AUDIENCE"),
+    oidcAudience: required(env.VISONAUT_OIDC_AUDIENCE, "VISONAUT_OIDC_AUDIENCE"),
     allowMainDispatch:
-      enabled(env.ARIVISO_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
+      enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
-    trustedPlanPath: required(env.ARIVISO_TRUSTED_PLAN_PATH, "ARIVISO_TRUSTED_PLAN_PATH"),
+    trustedPlanPath: required(env.VISONAUT_TRUSTED_PLAN_PATH, "VISONAUT_TRUSTED_PLAN_PATH"),
     reusableWorkflowRef: required(
-      env.ARIVISO_REUSABLE_WORKFLOW_REF,
-      "ARIVISO_REUSABLE_WORKFLOW_REF",
+      env.VISONAUT_REUSABLE_WORKFLOW_REF,
+      "VISONAUT_REUSABLE_WORKFLOW_REF",
     ),
     reusableWorkflowSha: required(
-      env.ARIVISO_REUSABLE_WORKFLOW_SHA,
-      "ARIVISO_REUSABLE_WORKFLOW_SHA",
+      env.VISONAUT_REUSABLE_WORKFLOW_SHA,
+      "VISONAUT_REUSABLE_WORKFLOW_SHA",
     ),
     trustedExecutorDigest: required(
-      env.ARIVISO_TRUSTED_EXECUTOR_DIGEST,
-      "ARIVISO_TRUSTED_EXECUTOR_DIGEST",
+      env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
+      "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
     ),
     comparisonMaxAttempts: positive(limits.comparisonMaxAttempts, "comparisonMaxAttempts"),
     limits: {
@@ -286,8 +286,8 @@ export async function runScheduledOperations(env: Env) {
   const exporter = {
     async export() {
       const maximumMilliseconds = positive(
-        env.ARIVISO_DATABASE_EXPORT_TIMEOUT_MS,
-        "ARIVISO_DATABASE_EXPORT_TIMEOUT_MS",
+        env.VISONAUT_DATABASE_EXPORT_TIMEOUT_MS,
+        "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS",
       );
       if (maximumMilliseconds >= context.budget.leaseMilliseconds)
         throw new Error("Database export deadline must be shorter than the operations lease.");

@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { beforeAll, expect, it } from "vitest";
-import type { ImageCodecs } from "@ariviso/compare";
+import type { ImageCodecs } from "@visonaut/compare";
 import { nodeCodecs } from "../../../packages/compare/test/codecs.ts";
 import { validateRequest } from "../src/validate.ts";
 import { withCodecCapacity } from "../src/capacity.ts";

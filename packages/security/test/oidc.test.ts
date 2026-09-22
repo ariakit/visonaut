@@ -11,9 +11,9 @@ const workflowSha = "d".repeat(40);
 const configuration: OidcConfiguration = {
   audience: "https://preview.example/ingest",
   repositoryOwnerId: "5",
-  workflowPath: ".github/workflows/ariviso.yml",
+  workflowPath: ".github/workflows/visonaut.yml",
   reusableWorkflowSha: workflowSha,
-  reusableWorkflowRef: `${repository}/.github/workflows/ariviso-capture.yml@${workflowSha}`,
+  reusableWorkflowRef: `${repository}/.github/workflows/visonaut-capture.yml@${workflowSha}`,
   planDigest: "e".repeat(64),
   shards: [{ key: "chromium", jobName: "capture / chromium" }],
   loadMergeGroup: async () => null,

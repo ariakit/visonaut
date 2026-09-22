@@ -5,8 +5,8 @@ import {
   type CapabilityConfiguration,
   type GitHubAppConfiguration,
   type MaintainerIdentity,
-} from "@ariviso/security";
-import { Service, type CommandResult } from "@ariviso/service";
+} from "@visonaut/security";
+import { Service, type CommandResult } from "@visonaut/service";
 import type { ArchivedRunHistory } from "../operations/history-format.ts";
 
 export interface ApiConfiguration {

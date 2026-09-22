@@ -192,7 +192,7 @@ describe("browser boundary", () => {
     "only exposes generic %s check output",
     (status) => {
       expect(Object.keys(genericCheckOutput(status))).toEqual(["title", "summary"]);
-      expect(genericCheckOutput(status).summary).toBe("Sign in to Ariviso to view this run.");
+      expect(genericCheckOutput(status).summary).toBe("Sign in to Visonaut to view this run.");
     },
   );
 });

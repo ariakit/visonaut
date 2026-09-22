@@ -1,14 +1,14 @@
-# ariviso
+# visonaut
 
-The Ariviso CLI uploads a capture shard, finalizes that shard, and reads a run's status. It does not capture pages or grant visual approval. Use `@ariviso/playwright` to capture prepared pages.
+The Visonaut CLI uploads a capture shard, finalizes that shard, and reads a run's status. It does not capture pages or grant visual approval. Use `@visonaut/playwright` to capture prepared pages.
 
 ```sh
-pnpm add -D ariviso @ariviso/playwright
-pnpm exec ariviso upload --manifest .ariviso/manifest.json
-pnpm exec ariviso finalize --manifest .ariviso/manifest.json
+pnpm add -D visonaut @visonaut/playwright
+pnpm exec visonaut upload --manifest .visonaut/manifest.json
+pnpm exec visonaut finalize --manifest .visonaut/manifest.json
 ```
 
-Set `ARIVISO_SERVER` to the service origin. You can also pass `--server https://your-service.example`. The origin must use HTTPS. Local development can use HTTP on `localhost`, `127.0.0.1`, or `::1`. Redirects are refused. The CLI sends all image bytes through the service.
+Set `VISONAUT_SERVER` to the service origin. You can also pass `--server https://your-service.example`. The origin must use HTTPS. Local development can use HTTP on `localhost`, `127.0.0.1`, or `::1`. Redirects are refused. The CLI sends all image bytes through the service.
 
 ## GitHub Actions uploads
 
@@ -20,12 +20,12 @@ permissions:
   id-token: write
 steps:
   # Install the pinned toolchain and run the capture suite first.
-  - run: pnpm exec ariviso upload --manifest .ariviso/manifest.json
+  - run: pnpm exec visonaut upload --manifest .visonaut/manifest.json
     env:
-      ARIVISO_SERVER: https://your-service.example
-  - run: pnpm exec ariviso finalize --manifest .ariviso/manifest.json
+      VISONAUT_SERVER: https://your-service.example
+  - run: pnpm exec visonaut finalize --manifest .visonaut/manifest.json
     env:
-      ARIVISO_SERVER: https://your-service.example
+      VISONAUT_SERVER: https://your-service.example
 ```
 
 `upload` validates the complete local manifest and all declared images before the first request. Image paths must stay inside the manifest directory and cannot contain symbolic links. Each image must match its declared byte count and SHA-256 digest. The service checks the actual image format and decoded content again. A client manifest cannot prove that a run is complete.
@@ -38,14 +38,14 @@ During a long upload, the CLI obtains a fresh capability and repeats the same de
 
 ## Private status
 
-Status requires `ARIVISO_TOKEN`, a current Better Auth maintainer session token. The service checks current repository access. An upload capability or GitHub OIDC token cannot read private status. Set the token through your environment or secret manager; do not put it in a command argument.
+Status requires `VISONAUT_TOKEN`, a current Better Auth maintainer session token. The service checks current repository access. An upload capability or GitHub OIDC token cannot read private status. Set the token through your environment or secret manager; do not put it in a command argument.
 
 ```sh
-# ARIVISO_SERVER and ARIVISO_TOKEN are already set in the environment.
-pnpm exec ariviso status --run run-id
-pnpm exec ariviso status --run run-id --json
-# Set ARIVISO_RUN to omit --run.
-pnpm exec ariviso status
+# VISONAUT_SERVER and VISONAUT_TOKEN are already set in the environment.
+pnpm exec visonaut status --run run-id
+pnpm exec visonaut status --run run-id --json
+# Set VISONAUT_RUN to omit --run.
+pnpm exec visonaut status
 ```
 
 Text output reports the state, shard progress, errors, and review URL. JSON output contains `schemaVersion`, `runId`, `state`, `reviewUrl`, `completedShards`, `expectedShards`, and `errors`. Upload JSON also includes `manifestDigest`, `shardKey`, `uploadedImages`, `dataAccepted`, and `visualApproval: false`. Finalize JSON includes the run status, `operation: "finalize"`, and `visualApproval: false`. With `--json`, errors are JSON on stderr; successful command output is on stdout.

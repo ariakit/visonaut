@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { assertion, atomic } from "@ariviso/service";
+import { assertion, atomic } from "@visonaut/service";
 import {
   copyVerifiedObject,
   digestStream,
@@ -155,12 +155,12 @@ export async function backupDaily(
         // Freeze the required superset once while recovery pins protect the SQL snapshot.
         database
           .prepare(`INSERT OR IGNORE INTO operations_backup_inventory(backup_id,source,object_key,digest,bytes)
-          SELECT ?,'images',object_key,digest,bytes FROM ariviso_images WHERE bytes_present=1`)
+          SELECT ?,'images',object_key,digest,bytes FROM visonaut_images WHERE bytes_present=1`)
           .bind(id),
         database
           .prepare(`INSERT OR IGNORE INTO operations_backup_inventory(backup_id,source,object_key,digest,bytes)
-          SELECT ?,'images',copy.object_key,copy.digest,image.bytes FROM ariviso_snapshot_images copy
-          JOIN ariviso_images image ON image.id=copy.image_id WHERE copy.copied=1`)
+          SELECT ?,'images',copy.object_key,copy.digest,image.bytes FROM visonaut_snapshot_images copy
+          JOIN visonaut_images image ON image.id=copy.image_id WHERE copy.copied=1`)
           .bind(id),
         database
           .prepare(`INSERT OR IGNORE INTO operations_backup_inventory(backup_id,source,object_key)

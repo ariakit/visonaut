@@ -2,9 +2,9 @@
 
 ## Current local UI, round 3
 
-Captured on September 22, 2026 from the working tree based on [`c8c465c`](https://github.com/ariakit/ariviso/commit/c8c465cedd8318b1bbe4b99baec1757ec02347c6). The UI changes were uncommitted at capture time. The [source manifest](./evidence/review-ui.json) records all 62 UI, fixture, style, route, test, configuration, and dependency checksums. They matched before and after the tests and capture. The SHA-256 digest of the sorted, compact JSON checksum map is `d89a6369b0083b68a9e34d566e55bafa7bbc0d1d406e837cea93aa83d5df2dcc`. Verify those checksums before reusing the media for a later revision. The base commit alone does not identify the captured source.
+Captured on September 22, 2026 from the working tree based on [`c8c465c`](https://github.com/ariakit/visonaut/commit/c8c465cedd8318b1bbe4b99baec1757ec02347c6). The UI changes were uncommitted at capture time. The [source manifest](./evidence/review-ui.json) records all 62 UI, fixture, style, route, test, configuration, and dependency checksums. They matched before and after the tests and capture. The SHA-256 digest of the sorted, compact JSON checksum map is `d89a6369b0083b68a9e34d566e55bafa7bbc0d1d406e837cea93aa83d5df2dcc`. Verify those checksums before reusing the media for a later revision. The base commit alone does not identify the captured source.
 
-Round 3 includes the final required-mask rule and replaces the previous local UI captures. Its local bundle is named `ariviso-final-ui-evidence-r3`. The media are not repository files. They were later published as attachments to [PR #2](https://github.com/ariakit/ariviso/pull/2), as recorded in the publication check below. Artifact names below identify members of that bundle; the manifest records their byte counts and SHA-256 values.
+Round 3 includes the final required-mask rule and replaces the previous local UI captures. Its local bundle is named `visonaut-final-ui-evidence-r3`. The media are not repository files. They were later published as attachments to [PR #2](https://github.com/ariakit/visonaut/pull/2), as recorded in the publication check below. Artifact names below identify members of that bundle; the manifest records their byte counts and SHA-256 values.
 
 | Artifact                       | Bundle member                                 | Dimensions  |
 | ------------------------------ | --------------------------------------------- | ----------- |
@@ -33,6 +33,6 @@ The deployed capture is tied to the versions recorded in its [manifest](./eviden
 
 ## PR attachment verification
 
-The three round 3 screenshots and the keyboard/history recording are published in [PR #2](https://github.com/ariakit/ariviso/pull/2). The [publication receipt](./evidence/review-publication.json) records their exact attachment links. On September 22, the in-app browser loaded all three images with the dimensions above and played the 29.4-second video through its end without a media error. An earlier tab renderer had crashed; verification used a fresh PR tab. All 62 source checksums still match the original UI manifest.
+The three round 3 screenshots and the keyboard/history recording are published in [PR #2](https://github.com/ariakit/visonaut/pull/2). The [publication receipt](./evidence/review-publication.json) records their exact attachment links. On September 22, the in-app browser loaded all three images with the dimensions above and played the 29.4-second video through its end without a media error. An earlier tab renderer had crashed; verification used a fresh PR tab. All 62 source checksums still match the original UI manifest.
 
 Keep the local simulated capture and deployed diagnostic evidence labeled separately. Neither set establishes production readiness, OAuth completion, the full accessibility gate, or the remaining launch checks.

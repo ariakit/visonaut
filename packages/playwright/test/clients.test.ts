@@ -6,16 +6,16 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
 import { chromium } from "@playwright/test";
-import { digestEnvironmentProfile, digestJson, parseManifest, sha256 } from "@ariviso/protocol";
+import { digestEnvironmentProfile, digestJson, parseManifest, sha256 } from "@visonaut/protocol";
 
 const require = createRequire(import.meta.url);
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
 const runtime = process.execPath;
 const playwrightCli = require.resolve("@playwright/test/cli");
-const adapter = "@ariviso/playwright";
-const reporter = "@ariviso/playwright/reporter";
+const adapter = "@visonaut/playwright";
+const reporter = "@visonaut/playwright/reporter";
 const metadata = {
-  ariviso: {
+  visonaut: {
     profile: {
       osImageDigest: "a".repeat(64),
       fontsDigest: "b".repeat(64),
@@ -33,16 +33,16 @@ async function runFixture(
 ) {
   const directory = await mkdtemp(path.join(packageDirectory, ".fixture-"));
   const modules = path.join(directory, "node_modules");
-  await mkdir(path.join(modules, "@ariviso"), { recursive: true });
+  await mkdir(path.join(modules, "@visonaut"), { recursive: true });
   await mkdir(path.join(modules, "@playwright"), { recursive: true });
-  await symlink(packageDirectory, path.join(modules, "@ariviso/playwright"));
+  await symlink(packageDirectory, path.join(modules, "@visonaut/playwright"));
   await symlink(
     path.dirname(require.resolve("@playwright/test/package.json")),
     path.join(modules, "@playwright/test"),
   );
   const environmentBrowser = discovery ? await chromium.launch() : undefined;
   const environmentProfile = {
-    ...metadata.ariviso.profile,
+    ...metadata.visonaut.profile,
     browser: "chromium" as const,
     browserVersion: environmentBrowser?.version() ?? "unused",
     viewport: { width: 32, height: 32 },
@@ -288,7 +288,7 @@ it("discovers candidate identities under the immutable full collection configura
   );
   expect(receipt.manifestDigest).toBe(await digestJson(manifest));
   expect(receipt.artifactName).toBe(
-    `ariviso-discovery-1-789-chromium-1-${await digestJson(manifest)}`,
+    `visonaut-discovery-1-789-chromium-1-${await digestJson(manifest)}`,
   );
 }, 20000);
 

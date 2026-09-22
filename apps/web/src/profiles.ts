@@ -5,8 +5,8 @@ import {
   validateProfile,
   type CaptureProfile,
   type ProfileRecord,
-} from "@ariviso/protocol";
-import { assertion, atomic, type Database } from "@ariviso/service";
+} from "@visonaut/protocol";
+import { assertion, atomic, type Database } from "@visonaut/service";
 
 interface ProfileRow {
   digest: string;
@@ -28,7 +28,7 @@ function metadataObject(encoded: string): Record<string, unknown> {
 
 export function captureProfileReference(digest: string) {
   validateDigest(digest);
-  return { $arivisoProfileDigest: digest };
+  return { $visonautProfileDigest: digest };
 }
 
 export async function ingestCaptureProfile(digest: string, previousProfileJson?: string) {
@@ -47,9 +47,9 @@ export async function ingestCaptureProfile(digest: string, previousProfileJson?:
 function referencedDigest(metadata: Record<string, unknown>, digest: string) {
   const value = metadata.profile;
   if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
-  if (!Object.hasOwn(value, "$arivisoProfileDigest")) return null;
+  if (!Object.hasOwn(value, "$visonautProfileDigest")) return null;
   const reference = Object.fromEntries(Object.entries(value));
-  if (Object.keys(reference).length !== 1 || reference.$arivisoProfileDigest !== digest) {
+  if (Object.keys(reference).length !== 1 || reference.$visonautProfileDigest !== digest) {
     throw new Error("The stored capture profile reference is invalid.");
   }
   validateDigest(digest);
@@ -78,12 +78,12 @@ function profileStatements(database: Database, profiles: readonly ProfileRow[]) 
   return profiles.flatMap(({ digest, profile_json }) => [
     database
       .prepare(
-        "INSERT INTO ariviso_capture_profiles(digest,profile_json) VALUES(?,?) ON CONFLICT(digest) DO NOTHING",
+        "INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?) ON CONFLICT(digest) DO NOTHING",
       )
       .bind(digest, profile_json),
     assertion(
       database,
-      "EXISTS(SELECT 1 FROM ariviso_capture_profiles WHERE digest=? AND profile_json=?)",
+      "EXISTS(SELECT 1 FROM visonaut_capture_profiles WHERE digest=? AND profile_json=?)",
       [digest, profile_json],
     ),
   ]);
@@ -107,7 +107,7 @@ export async function pruneCaptureProfiles(database: Database, limit: number) {
     .first<{ value: string }>();
   const after = cursor?.value ?? "";
   const page = await database
-    .prepare("SELECT digest FROM ariviso_capture_profiles WHERE digest>? ORDER BY digest LIMIT ?")
+    .prepare("SELECT digest FROM visonaut_capture_profiles WHERE digest>? ORDER BY digest LIMIT ?")
     .bind(after, limit)
     .all<{ digest: string }>();
   const digests = (page.results ?? []).map((row) => row.digest);
@@ -120,7 +120,7 @@ export async function pruneCaptureProfiles(database: Database, limit: number) {
     ]),
     database
       .prepare(
-        "DELETE FROM ariviso_capture_profiles WHERE digest IN (SELECT value FROM json_each(?)) AND NOT EXISTS(SELECT 1 FROM ariviso_captures capture WHERE capture.profile_digest=ariviso_capture_profiles.digest) RETURNING digest",
+        "DELETE FROM visonaut_capture_profiles WHERE digest IN (SELECT value FROM json_each(?)) AND NOT EXISTS(SELECT 1 FROM visonaut_captures capture WHERE capture.profile_digest=visonaut_capture_profiles.digest) RETURNING digest",
       )
       .bind(JSON.stringify(digests)),
     database
@@ -152,7 +152,7 @@ export async function hydrateCaptureMetadata<T extends CaptureMetadataRow>(
   for (let offset = 0; offset < digests.length; offset += 50) {
     const result = await database
       .prepare(
-        "SELECT digest,profile_json FROM ariviso_capture_profiles WHERE digest IN (SELECT value FROM json_each(?))",
+        "SELECT digest,profile_json FROM visonaut_capture_profiles WHERE digest IN (SELECT value FROM json_each(?))",
       )
       .bind(JSON.stringify(digests.slice(offset, offset + 50)))
       .all<ProfileRow>();

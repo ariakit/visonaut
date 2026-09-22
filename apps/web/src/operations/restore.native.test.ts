@@ -16,7 +16,7 @@ import {
 import { MemoryStore } from "./test-fixtures.ts";
 
 const require = createRequire(import.meta.url);
-const directory = await mkdtemp(resolve(tmpdir(), "ariviso-restore-page-"));
+const directory = await mkdtemp(resolve(tmpdir(), "visonaut-restore-page-"));
 let runtime: Miniflare | undefined;
 
 beforeAll(async () => {
@@ -52,7 +52,7 @@ beforeAll(async () => {
   await writeFile(
     resolve(directory, "wrangler.json"),
     JSON.stringify({
-      name: "ariviso-restore-page-test",
+      name: "visonaut-restore-page-test",
       main: "worker.mjs",
       compatibility_date: "2026-09-22",
       compatibility_flags: ["nodejs_compat"],

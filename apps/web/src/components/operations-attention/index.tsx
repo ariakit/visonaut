@@ -301,7 +301,7 @@ export function OperationsAttention({
         </ul>
       )}
       {status?.hasMore && <p>Showing the 50 most recently reported unresolved alerts.</p>}
-      <a href="https://github.com/ariakit/ariviso/blob/main/apps/web/src/operations/README.md">
+      <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md">
         Open the operations and recovery guide
       </a>
     </section>

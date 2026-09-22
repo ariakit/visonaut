@@ -3,26 +3,26 @@ import { test } from "node:test";
 import { assertInfrastructure, versionConfiguration } from "./deploy-version.mjs";
 
 const configuration = {
-  name: "ariviso",
+  name: "visonaut",
   configPath: "/workspace/apps/web/dist/server/wrangler.json",
   main: "/workspace/apps/web/dist/server/index.js",
   assets: { directory: "../client", binding: "ASSETS" },
   queues: {
-    producers: [{ binding: "OPERATIONS", queue: "ariviso-production-operations" }],
-    consumers: [{ queue: "ariviso-production-operations", max_retries: 5 }],
+    producers: [{ binding: "OPERATIONS", queue: "visonaut-production-operations" }],
+    consumers: [{ queue: "visonaut-production-operations", max_retries: 5 }],
   },
   d1_databases: [{ binding: "DB", database_id: "database-id" }],
-  r2_buckets: [{ binding: "IMAGES", bucket_name: "ariviso-production-images" }],
+  r2_buckets: [{ binding: "IMAGES", bucket_name: "visonaut-production-images" }],
   triggers: { crons: ["*/5 * * * *"] },
-  vars: { ARIVISO_ENVIRONMENT: "production" },
+  vars: { VISONAUT_ENVIRONMENT: "production" },
   secrets: { required: ["BETTER_AUTH_SECRET"] },
   unsafe: {},
 };
 const settings = {
   bindings: [
-    { type: "queue", name: "OPERATIONS", queue_name: "ariviso-production-operations" },
+    { type: "queue", name: "OPERATIONS", queue_name: "visonaut-production-operations" },
     { type: "d1", name: "DB", id: "database-id" },
-    { type: "r2_bucket", name: "IMAGES", bucket_name: "ariviso-production-images" },
+    { type: "r2_bucket", name: "IMAGES", bucket_name: "visonaut-production-images" },
     { type: "secret_text", name: "BETTER_AUTH_SECRET" },
   ],
 };

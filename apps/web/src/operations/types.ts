@@ -1,5 +1,5 @@
-import type { Database } from "@ariviso/service";
-import type { GitHubClient } from "@ariviso/security";
+import type { Database } from "@visonaut/service";
+import type { GitHubClient } from "@visonaut/security";
 
 export interface ObjectInfo {
   key: string;
