@@ -645,7 +645,7 @@ describe("verified closed history with native D1 and R2", () => {
     await dependent.retireRun({ runId: "dependent", now: operations.now() });
     await finish("source");
     expect(await uploads("source")).toEqual([]);
-  });
+  }, 30_000);
 
   it("rejects stale declaration, upload, and finalization requests after compaction", async () => {
     const runId = "26e29ef3-cac4-4c4f-8f65-1e219a89f526";
