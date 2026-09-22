@@ -1,0 +1,21 @@
+{
+  "archive": "frozen-evidence.tar.gz",
+  "sha256": "3b538e16dce5b583c6180ef670bd51ba370709945d7bab6c560e1b4ea2379186",
+  "bytes": 31123,
+  "tarBytes": 184320,
+  "files": 28,
+  "originalBytes": 153972,
+  "originalPackageManifestSha256": "3f6e072f3b8df520645b15cb1c4dd767183fe46d7338c42c9c7e655662651e2a",
+  "normalization": "Sorted regular-file paths, uid/gid/mtime zero, mode 0644, USTAR, gzip mtime zero",
+  "originalContentsUnchanged": true,
+  "omittedInputs": [
+    "Private screenshots and Playwright blobs",
+    "Encrypted browser artifacts and authenticated raw archives",
+    "Private encryption key",
+    "Comparator source bodies, WASM binaries and runtime dependencies",
+    "Original upstream test inventory body"
+  ],
+  "portableCheckScope": "Frozen package identities and consistency of recorded counts only; no omitted-image or codec revalidation",
+  "portableVerifierSha256": "cfec0bf5fb4b1455272f9c4abf711a6b13463cefce4c5e89f62330130a996380",
+  "portableVerifierTestsSha256": "f54e21ebf7389b4cc741608fb14227b0162813692ee3cb42d013aba3470f882e"
+}

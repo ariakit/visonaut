@@ -1,0 +1,120 @@
+{
+  "kind": "Independent local evidence curation and arithmetic check; no formal implementation review or hosted replay",
+  "sourcePackageFiles": 65,
+  "sourcePackageBytesUnchanged": true,
+  "sourcePackageManifestSha256": "768e0a52750c20159bea94df9009eba93af4962abb58359b502e62f4a884a172",
+  "verifierSha256": "4a94dfb7eff588f76bb4165cddda37d06977448c3a696260f67ecfe7be72c3f2",
+  "portableVerification": {
+    "result": "passed",
+    "originalFiles": 58,
+    "smallDependencyFiles": 18,
+    "frozenBaseSourceFiles": 77,
+    "frozenProgressSourceFiles": 77,
+    "progressChanges": 3
+  },
+  "negativeChecks": {
+    "existingOutputRejectedWithoutChanges": true,
+    "changedOriginalRejectedBeforeOutputCreation": true
+  },
+  "separateArithmeticChecks": {
+    "largeArchiveApplication": {
+      "queries": 30568,
+      "reads": 421489106,
+      "writes": 141749,
+      "sqlMilliseconds": 474065.3137
+    },
+    "largeArchivePages": 3408,
+    "largeArchiveBytes": 299995133,
+    "largeBackup": {
+      "cold": {
+        "elapsedMilliseconds": 5772659,
+        "attemptExitCodes": [1, 0],
+        "kernel": {
+          "r2A": 75283,
+          "r2B": 229394,
+          "d1Reads": 186436,
+          "d1Writes": 2940,
+          "queries": 3976,
+          "sqlMilliseconds": 2022.1479000000002
+        }
+      },
+      "warm": {
+        "elapsedMilliseconds": 115555,
+        "attemptExitCodes": [0],
+        "kernel": {
+          "r2A": 3,
+          "r2B": 3,
+          "d1Reads": 220,
+          "d1Writes": 76,
+          "queries": 58,
+          "sqlMilliseconds": 16.241
+        }
+      }
+    },
+    "cadenceSQLBytes": {
+      "30Roots": 6138912930,
+      "60Roots": 12277825860
+    }
+  },
+  "secretScan": {
+    "files": 80,
+    "gzipDecompressed": true,
+    "patterns": ["literalBearer", "privateKey", "signedUrl", "tokenLiteral", "credentialJsonKey"],
+    "matches": [],
+    "limitation": "Targeted pattern scan, not a general absence-of-secrets guarantee. The historical HTTP script uses the deliberate localhost-only literal local-memory-probe."
+  },
+  "limits": [
+    "Frozen source through migration 0012, earlier packing and daily backup IDs.",
+    "Four SQL bodies omitted; receipt identities agree, but omitted bytes were not rehashed.",
+    "Historical preservation lists do not supply omitted prior cost-model artifact bodies.",
+    "No new hosted calls, deployment, resource changes, full large restore, sustained capacity, or launch pass."
+  ],
+  "archiveIntegration": {
+    "archive": "frozen-evidence.tar.gz",
+    "sha256": "9c76d5e5698d6aa7af12e61c9bfda18e2a82315df706838106f8d3ef74392edb",
+    "bytes": 1024438,
+    "tarBytes": 1464320,
+    "files": 65,
+    "originalBytes": 1409455,
+    "normalization": "Sorted regular-file paths, uid/gid/mtime zero, mode 0644, gzip mtime zero",
+    "originalPackageManifestSha256": "768e0a52750c20159bea94df9009eba93af4962abb58359b502e62f4a884a172",
+    "originalVerifierSha256": "4a94dfb7eff588f76bb4165cddda37d06977448c3a696260f67ecfe7be72c3f2",
+    "canonicalOriginalContentsUnchanged": true,
+    "readableWrapperIsNew": true,
+    "newLintOrFormatExceptions": false,
+    "verification": {
+      "originalFileCount": 65,
+      "extractedCanonicalBytesMatch": true,
+      "existingOutputRejectedWithoutChanges": true,
+      "changedArchiveRejectedBeforeOutputCreation": true,
+      "unsafeMemberChecks": ["parent-path", "absolute-path", "symlink", "duplicate-name"],
+      "unsafeMemberTestScope": "The test substitutes only the in-memory expected archive hash to exercise member checks. Production wrapper bytes and constants are unchanged."
+    },
+    "readableWrapperSha256": "54a16d834c8d8138c6635b1852c4fe376cec3513beccfcf681edc79f82111c46",
+    "repositoryChecks": {
+      "sourceCommit": "1465ca260fb13582cb4fdda614e55b4c404e1ea1",
+      "scope": "Full isolated Git checkout with the 13 proposed evidence files overlaid; existing pinned dependency directory linked",
+      "oxlint": {
+        "version": "1.83.0",
+        "command": "oxlint",
+        "exitCode": 0
+      },
+      "oxfmt": {
+        "version": "0.68.0",
+        "command": "oxfmt --check",
+        "exitCode": 0,
+        "matchedFiles": 416
+      },
+      "configChanges": false,
+      "newIgnorePatterns": false
+    },
+    "credentialScan": {
+      "files": 91,
+      "archiveFilesExpanded": 80,
+      "nestedGzipDecompressed": true,
+      "patterns": ["literalBearer", "privateKey", "signedUrl", "tokenLiteral", "credentialJsonKey"],
+      "matches": [],
+      "limitation": "Targeted pattern scan, not a general absence-of-secrets guarantee; historical local-memory-probe is a deliberate localhost fixture."
+    }
+  }
+}

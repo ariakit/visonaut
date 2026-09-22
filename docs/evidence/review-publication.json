@@ -1,0 +1,47 @@
+{
+  "recordedAt": "2026-09-22T15:46:03.835260+00:00",
+  "pullRequest": "https://github.com/ariakit/ariviso/pull/2",
+  "title": "Implement Ariviso capture and review service",
+  "sourceManifest": "review-ui.json",
+  "sourceManifestSha256": "5afc85168f9453c2e7b4df5fa6de976f7f8999ac5bc9cb7d74ff5d50a69b817b",
+  "uiSourceDigest": "d89a6369b0083b68a9e34d566e55bafa7bbc0d1d406e837cea93aa83d5df2dcc",
+  "uiSourceFilesVerified": 62,
+  "uiSourceDifferences": [],
+  "observationDate": "2026-09-22",
+  "observationMethod": "Codex in-app browser; actual rendered PR attachments and player controls",
+  "images": [
+    {
+      "url": "https://github.com/user-attachments/assets/5d643897-18aa-41bf-bced-89a57283f62d",
+      "width": 1280,
+      "height": 1090,
+      "complete": true
+    },
+    {
+      "url": "https://github.com/user-attachments/assets/6dc266af-c819-4d9c-908c-436e7c678869",
+      "width": 1280,
+      "height": 1252,
+      "complete": true
+    },
+    {
+      "url": "https://github.com/user-attachments/assets/3a288b5e-8738-49f7-a2c1-815ebe22d88e",
+      "width": 1224,
+      "height": 540,
+      "complete": true
+    }
+  ],
+  "video": {
+    "url": "https://github.com/user-attachments/assets/ed64b14a-4ca8-46d0-a2fd-41470c9a0686",
+    "durationSeconds": 29.4,
+    "readyState": 4,
+    "observedPlaybackTimeSeconds": 0.217,
+    "observedPausedDuringPlayback": false,
+    "observedEndedTimeSeconds": 29.4,
+    "playbackError": null
+  },
+  "limitations": [
+    "Synthetic local screenshots and simulated save/access responses; no OAuth or deployed mutation proof.",
+    "An earlier browser tab renderer crashed. The three image loads and playback were verified in a fresh PR tab.",
+    "This records observed browser results; it does not preserve a new screen recording of the PR player.",
+    "The UI source hashes identify capture compatibility, not the entire backend source or launch readiness."
+  ]
+}
