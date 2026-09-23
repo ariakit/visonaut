@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "scope": "diagnostic-only, one Container lane, full current Ariakit pass-1 image-size matrix with synthetic changed candidates",
+  "sourceSha256": {
+    "final": "e2f64b4d83f0ad7f03d24140a5e4bf7f09f036ae2d39be1f8caef0967ac2dcb7",
+    "active_metrics": "aa4d20311e20276c4d63ccbb901b64cdf4f10a01f81630011c9e5491ad9778c2",
+    "drained_metrics": "37ee47dd1a26206c44bee965952d91e4f4865b227f50401b7e86d323d0ae3f7e",
+    "archive": "2502568f6f4b5107d67c5f85d1cfb156f083f9f18d778344dd1b04efa61db01d",
+    "quiescence": "3135568c0482d5038676731c8e4045f30f654269453698f8af581839a8b29ace",
+    "cleanup": "2616f217bdf2ca0fd8cfaef5483711a9f9244856ae9594b459b9006fb1205acd",
+    "health": "c4d9857e666f8653b854a17736732c5373cdbc3b36ca4686253dc31ed0ad0028",
+    "source_cleanup": "6e506186f8d11620d5d1630f6bc1d3511138866b6e2915c2c96c64934ce278c7"
+  },
+  "comparison": {
+    "verifiedAt": "2026-09-23T12:13:27.964311Z",
+    "tasks": 3583,
+    "changed": 3583,
+    "changedPixels": 2103582,
+    "retriedTasks": 1,
+    "maximumAttempts": 2,
+    "earliestTaskCreationToLastCompletionMs": 19272852,
+    "taskCreationToCompletionMs": {
+      "p50": 8998266,
+      "p95": 18386182,
+      "max": 19272852
+    },
+    "images": {
+      "mask": {
+        "count": 3583,
+        "bytes": 2368749
+      },
+      "original": {
+        "count": 7166,
+        "bytes": 110560047
+      },
+      "thumbnail": {
+        "count": 3583,
+        "bytes": 14434855
+      }
+    }
+  },
+  "cloudflare": {
+    "activeInterval": {
+      "start": "2026-09-23T06:50:00Z",
+      "end": "2026-09-23T12:13:00Z",
+      "queriedAt": "2026-09-23T12:24:50.394211Z"
+    },
+    "drainInterval": {
+      "start": "2026-09-23T06:50:00Z",
+      "end": "2026-09-23T12:45:00Z",
+      "queriedAt": "2026-09-23T12:55:44.724321Z"
+    },
+    "queueOperationsThroughUniqueCompletion": {
+      "DeleteMessage": 8851,
+      "WriteMessage": 9992,
+      "ReadMessage": 9559
+    },
+    "queueOperationsThroughDrain": {
+      "DeleteMessage": 9883,
+      "WriteMessage": 9992,
+      "ReadMessage": 10582
+    },
+    "maximumObservedConsumerConcurrency": 1,
+    "container": {
+      "metricMinuteGroups": 295,
+      "usageMinuteGroups": 295,
+      "maximumSampledMemoryBytes": 295636992,
+      "reportedProcessCpuSeconds": 90.293056,
+      "reportedUsageCpuSeconds": 265.88,
+      "reportedAllocatedMemoryByteSeconds": 20266780027453,
+      "reportedAllocatedDiskByteSeconds": 75499639017332
+    },
+    "workerRequestsThroughUniqueCompletion": 9546,
+    "r2OperationsThroughUniqueCompletion": {
+      "PutObject": 7544,
+      "HeadBucket": 12,
+      "GetObject": 7155
+    },
+    "d1ThroughUniqueCompletion": {
+      "readQueries": 133461,
+      "rowsRead": 10872944,
+      "rowsWritten": 193568,
+      "writeQueries": 54882
+    }
+  },
+  "afterRun": {
+    "archiveObjectsSha256Verified": 14332,
+    "archiveBytes": 127363651,
+    "queueQuietSamples": 3,
+    "queueQuietIntervalSeconds": 154.200939,
+    "diagnosticD1FixtureRemoved": true,
+    "diagnosticOperationsHttpStatus": 200,
+    "sourceR2DeletionCompletedPages": 137,
+    "sourceR2DeletionDeferred": true
+  },
+  "limitations": [
+    "Container memory is Cloudflare's maximum observed sample, not a continuous or cgroup peak.",
+    "Container usage groups cannot be converted to duty from a nominal one-instance envelope.",
+    "Task latency includes Queue backlog and is not isolated codec latency.",
+    "Resource-scoped adaptive GraphQL meters are not an invoice or a per-comparison cost.",
+    "Fixture candidates changed one pixel, except for one 2.1-million-pixel full-change boundary pair."
+  ]
+}

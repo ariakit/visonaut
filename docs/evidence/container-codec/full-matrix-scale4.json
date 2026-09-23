@@ -1,0 +1,246 @@
+{
+  "schemaVersion": 1,
+  "status": "E01 partial; this isolated probe does not authorize a production fallback switch",
+  "scope": "Four basic Containers and one Queue consumer per lane; 3,582 Ariakit pass-1 PNG originals with controlled one-pixel candidate edits, plus one admissible full-change boundary pair",
+  "sourceSha256": {
+    "final": "1e2298922269df78f742d37fed6d352a0dd6bfbf311bc35de4ebcb85b92d323a",
+    "r2": "5ff3dc0fe239f64f88ffc229d4ebba0874f28f470d7a8ae4070d8f329c7f5e0e",
+    "observations": "606bd835321174d6fcb2f0b5b1fc039ebf2b1748a99bc87f9feb60d8becb41f2",
+    "tail": "8a09d7cc65c30e6d1cd86a80528c8f639f896d9b6fa46f4a624c96536be2e22e",
+    "metrics": "158c8eafbcac06d085f41538f23b51c923c913c8147bb169f041d3170449b0b5",
+    "archive_before": "150c3ef4e3e56a9c524a9e4fc90252c721d25c8078864dcab719587b123756ac",
+    "archive_after": "418b881be703e8789efa0f09f2853da39d65cab2ef7ec201a8584af468c31bb4",
+    "fixture_manifest": "d14bc1eb01a240703f4aad30acecf06f3ad5e18f5aaec2d760155c5388255f6a",
+    "preflight": "4e7d82efa1be243d6a4ae160cc6febb44a581e90038f4df7dcd583662792c887",
+    "publish": "609212230e783ffde7fc27b35e0e4dec3029e8afa7ddb0054cdd2eab3d08ff59",
+    "publish_manifest": "0d168c323a10ccfb137b4728e41562695f35c0fa994f4ab6acb198f7cff0d036",
+    "worker_config": "3bf363bee2540f905ff16043385a6cce42c1f8d91063150c1574071c803ab54e",
+    "hard_stop": "bdd6454eb4b5e87552684926b58a70a61f6dc6c606f82e202d88fd94c937138a",
+    "fallback": "ec143d46d864bfca8f7c55a9ed27af15d2f75ed3c638573088944dd98e13273a",
+    "quiescence": "a92cfee63d66c4afe046e84bc553311b598e2d819ba508edb07f20c5f2258678",
+    "stop": "854c09646e77d2e4958697005aea11e9a4fa4c54db2bb6e6bf05aae62dbddd07"
+  },
+  "fixture": {
+    "pairs": 3583,
+    "browserCounts": {
+      "chromium": 1230,
+      "firefox": 1230,
+      "webkit": 1122,
+      "boundary": 1
+    },
+    "baselineBytes": {
+      "minimum": 265,
+      "p50": 10572,
+      "p95": 41218,
+      "maximum": 1668228,
+      "total": 64567121
+    },
+    "candidateBytes": {
+      "minimum": 268,
+      "p50": 7606,
+      "p95": 30222,
+      "maximum": 404269,
+      "total": 45992926
+    },
+    "widthPixels": {
+      "minimum": 97,
+      "p50": 416,
+      "p95": 1264,
+      "maximum": 1440,
+      "total": 1746735
+    },
+    "heightPixels": {
+      "minimum": 57,
+      "p50": 188,
+      "p95": 600,
+      "maximum": 1500,
+      "total": 864325
+    }
+  },
+  "comparison": {
+    "tasks": 3583,
+    "changed": 3583,
+    "changedPixels": 2103582,
+    "retriedTasks": 3,
+    "maximumAttempts": 2,
+    "fromEarliestTaskCreationToLastUniqueCompletionMs": 3941493,
+    "taskCreatedToCompletedLatencyMs": {
+      "p50": 1955396,
+      "p95": 3616819,
+      "max": 3941493
+    },
+    "images": {
+      "mask": {
+        "count": 3583,
+        "bytes": 2368749
+      },
+      "original": {
+        "count": 7166,
+        "bytes": 110560047
+      },
+      "thumbnail": {
+        "count": 3583,
+        "bytes": 14434855
+      }
+    }
+  },
+  "publication": {
+    "batches": 36,
+    "manifestSha256": "ebd1611bd6a984a7cc4ca013c6a3ceb2f3ae9df8c3c7a7ef5ea8d0354744ff26",
+    "firstQueueDeliveryAt": "2026-09-23T16:55:00.282000Z",
+    "firstDeliveryToLastUniqueCompletionMs": 3765529
+  },
+  "hardStop": {
+    "armedAt": "2026-09-23T16:54:12.416977Z",
+    "deadline": "2026-09-23T19:54:12.416977Z",
+    "isolatedQueues": 4,
+    "watchdogCount": 2,
+    "watchdogSourceSha256": {
+      "primary": "a8db1d8176268aa02672d52614c44a760a5bd5a5f849eb3c8860e5ad23c0de06",
+      "fallback": "b14c7a450786f50a79317f184b0fbbcbe194b1b3e35e2b438fca5625f58dd524"
+    },
+    "completedAt": "2026-09-23T18:02:30.818270Z",
+    "stoppedBeforeDeadline": true
+  },
+  "queueDrain": {
+    "emptyQueueSamples": 3,
+    "durationSeconds": 166.88757,
+    "includedDeadLetter": true
+  },
+  "memory": {
+    "processMaxRssBytesByLane": {
+      "0": 208711680,
+      "1": 219168768,
+      "2": 221212672,
+      "3": 207675392
+    },
+    "cgroupPeakBytesByLane": {},
+    "maximumCloudflareSampledMemoryBytes": 279851008,
+    "maximumObservedContainerComparisonsByLane": {
+      "0": 898,
+      "1": 896,
+      "2": 597,
+      "3": 895
+    },
+    "observedProcessRestartsByLane": {
+      "0": 0,
+      "1": 0,
+      "2": 1,
+      "3": 0
+    },
+    "maximumObservationGapSeconds": 62.77681
+  },
+  "observedFourHealthyLanes": 272,
+  "containerFetch": {
+    "fetch": {
+      "count": 3520,
+      "p50Ms": 249,
+      "p95Ms": 530,
+      "maxMs": 10013
+    },
+    "uniqueFetchTasks": 3519,
+    "httpStatusCounts": {
+      "200": 3520
+    },
+    "firstFetchMsByLane": {
+      "0": 2154,
+      "2": 2930,
+      "1": 2898,
+      "3": 2872
+    },
+    "subsequentFetch": {
+      "count": 3516,
+      "p50Ms": 249,
+      "p95Ms": 518,
+      "maxMs": 10013
+    },
+    "fetchCountByLane": {
+      "0": 880,
+      "1": 881,
+      "2": 881,
+      "3": 878
+    },
+    "maximumOverlappingObservedFetches": 4,
+    "fetchOverTwoSeconds": 7,
+    "fetchOverFiveSeconds": 1,
+    "errors": {
+      "task:Error": 1,
+      "invocation:canceled": 2
+    },
+    "lifecycle": {
+      "canceledIdleAlarm": 12,
+      "idleAlarmException": 1
+    }
+  },
+  "cloudflare": {
+    "interval": {
+      "start": "2026-09-23T16:54:00Z",
+      "end": "2026-09-23T18:03:00Z",
+      "queriedAt": "2026-09-23T18:15:27.027774Z"
+    },
+    "usageMinuteGroups": 241,
+    "metricMinuteGroups": 245,
+    "instanceCount": 4,
+    "reportedCodeCpuSeconds": 120.1084629999999,
+    "reportedContainerUptimeSum": 30316981,
+    "estimatedQueueBillableOperations": {
+      "DeleteMessage": 3569,
+      "WriteMessage": 3587,
+      "ReadMessage": 3586
+    },
+    "worker": {
+      "errors": 0,
+      "requests": 3798,
+      "subrequests": 5637
+    },
+    "d1": {
+      "readQueries": 54111,
+      "rowsRead": 3957519,
+      "rowsWritten": 129014,
+      "writeQueries": 53763
+    },
+    "r2": {
+      "PutObject": 6972,
+      "HeadBucket": 2,
+      "GetObject": 7449
+    },
+    "containerUsage": {
+      "cpuSeconds": 341.8800000000004,
+      "allocatedMemoryByteSeconds": 16632240959433.904,
+      "allocatedDiskByteSeconds": 61959925887860.0,
+      "transmittedBytes": 25791075.0
+    },
+    "publishedContainerOverageRatesUsd": {
+      "cpuPerVcpuSecond": "0.000020",
+      "memoryPerGibSecond": "0.0000025",
+      "diskPerGbSecond": "7E-8"
+    },
+    "rateSource": "https://developers.cloudflare.com/containers/platform/pricing/",
+    "containerPublishedRateEquivalentUsd": 0.0499
+  },
+  "archiveAfterProbe": {
+    "objects": 14332,
+    "bytes": 127363651,
+    "inventorySha256Unchanged": true
+  },
+  "newRunR2": {
+    "objectsSha256Verified": 14332,
+    "bytes": 127363651,
+    "listedInventorySha256": "b6c404c85afb6102ba9ab795fce8898a62bd56d8d8e6f1c997d83eb4bbf551b5",
+    "verifierWorkerSourceSha256": "369e2b5b1cd3aa29442e4113da2c0825cf286331cf2294470a9bb4f021df5ed5",
+    "verifierDriverSourceSha256": "1d5ef237da0d80923eae2882d9d66ce369f92f5dea0b5ff863d1ed423a774116"
+  },
+  "limitations": [
+    "The cgroup memory.peak counter was unavailable. Process maxRSS is a Node process high-water mark, not the full Container peak.",
+    "Processes can sleep or restart between observations, so even process maxRSS is bounded by sampled lifetimes.",
+    "Cloudflare Container memory is a maximum observed sample, not a continuous peak.",
+    "Adaptive GraphQL operation totals can be estimates and are not an exact task ledger.",
+    "The Container rate equivalent uses published overage rates before monthly allowance; it is not an invoice or full Worker, DO, Queue, D1, R2, log, and egress cost.",
+    "The Container uptime sum does not give a validated active duty cycle; the field changed from zero while running to a cumulative-looking value later.",
+    "The scoped comparison interval begins after seeding 7,166 original R2 objects, so its R2 writes omit those source uploads. D1 and Worker totals include observation traffic.",
+    "The scoped R2 bucket also contains the frozen first-run archive and its read-only inventory audit.",
+    "The four-lane probe uses controlled synthetic changes and does not certify the 10,580-capture design or 35,820-capture stress workload.",
+    "The live Worker tail missed at least one native fetch; its latency distribution is incomplete.",
+    "The process high-water series has an observation gap after the status observer's cached OAuth token was rejected."
+  ]
+}
