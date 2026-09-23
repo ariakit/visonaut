@@ -180,7 +180,14 @@ for (const changedProfile of [false, true]) {
     await service.finalizeComparison({ comparisonId: "comparison-run", now: fixture.state.time });
     // reviewModel uses only these context members; D1 and SQLite share the SQL interface.
     const privateContext = {} as PrivateContext;
-    Object.assign(privateContext, { service, database, configuration: { projectId: "project" } });
+    Object.assign(privateContext, {
+      service,
+      database,
+      configuration: {
+        projectId: "project",
+        github: { repository: "ariakit/visonaut-diagnostics" },
+      },
+    });
     const model = parseReviewModel(await reviewModel(privateContext, "run"));
     const variant = model.items[0]?.variants[0];
     if (!variant) throw new Error("Missing review variant.");

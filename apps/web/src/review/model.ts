@@ -61,6 +61,7 @@ export interface HistoricalComparison {
 export interface ReviewModel {
   run: {
     id: string;
+    repository?: string;
     kind: "main" | "pull_request" | "merge_group";
     testedSha: string;
     attempt: number;

@@ -20,7 +20,7 @@ interface DashboardRun {
 type DashboardState =
   | { status: "loading" | "guest" }
   | { status: "error" | "forbidden"; message: string }
-  | { status: "ready"; runs: DashboardRun[]; baselineRevision: number };
+  | { status: "ready"; runs: DashboardRun[]; repository: string; baselineRevision: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -51,10 +51,18 @@ function parseDashboard(value: unknown): Extract<DashboardState, { status: "read
       createdAt: run.createdAt,
     };
   });
-  if (typeof value.project.baselineRevision !== "number") {
+  if (
+    typeof value.project.baselineRevision !== "number" ||
+    typeof value.project.repository !== "string"
+  ) {
     throw new Error("The baseline state could not be read.");
   }
-  return { status: "ready", runs, baselineRevision: value.project.baselineRevision };
+  return {
+    status: "ready",
+    runs,
+    repository: value.project.repository,
+    baselineRevision: value.project.baselineRevision,
+  };
 }
 
 function kindLabel(kind: string) {
@@ -85,7 +93,7 @@ function Index() {
         ? { status: "guest" }
         : {
             status: "forbidden",
-            message: "Your repository access changed. Write access to ariakit/ariakit is required.",
+            message: "Your repository access changed. Write access to this repository is required.",
           },
     );
   }, []);
@@ -106,7 +114,7 @@ function Index() {
         if (access.status === 403) {
           setState({
             status: "forbidden",
-            message: "This GitHub account does not have write access to ariakit/ariakit.",
+            message: "This GitHub account does not have write access to this repository.",
           });
           return;
         }
@@ -124,7 +132,7 @@ function Index() {
         if (response.status === 403) {
           setState({
             status: "forbidden",
-            message: "Your repository access changed. Write access to ariakit/ariakit is required.",
+            message: "Your repository access changed. Write access to this repository is required.",
           });
           return;
         }
@@ -185,7 +193,7 @@ function Index() {
         </Button>
         {actionError && <p role="alert">{actionError}</p>}
         <p className="dashboard-access-note">
-          Access requires write permission to ariakit/ariakit.
+          Access requires write permission to the configured repository.
         </p>
       </main>
     );
@@ -197,7 +205,7 @@ function Index() {
         <Link to="/" className="dashboard-brand">
           Visonaut
         </Link>
-        <span>ariakit/ariakit</span>
+        <span>{state.status === "ready" ? state.repository : "Repository"}</span>
         {state.status !== "loading" && (
           <Button
             className="review-control"

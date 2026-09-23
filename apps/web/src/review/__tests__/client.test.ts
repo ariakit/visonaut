@@ -14,6 +14,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+test("the review client keeps the configured repository and rejects an invalid label", () => {
+  const model = fixtureModel();
+  const raw = { ...model, run: { ...model.run, repository: "ariakit/visonaut-diagnostics" } };
+  expect(parseReviewModel(raw).run.repository).toBe("ariakit/visonaut-diagnostics");
+  expect(() => parseReviewModel({ ...raw, run: { ...raw.run, repository: 42 } })).toThrow();
+});
+
 test("the client preserves archived read-only history and rejects malformed archive state", async () => {
   const model = {
     ...fixtureModel(),

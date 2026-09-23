@@ -44,7 +44,7 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
           return;
         }
         if (access.status === 403)
-          throw new Error("Write access to ariakit/ariakit is required to open this run.");
+          throw new Error("Write access to this repository is required to open this run.");
         if (!access.ok)
           throw new Error("Your repository access could not be checked. Please retry.");
         const review = await loadReview(runId, comparisonId);

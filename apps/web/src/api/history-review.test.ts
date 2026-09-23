@@ -108,7 +108,11 @@ function fixture() {
   Object.assign(context, {
     service,
     database: { prepare },
-    configuration: { projectId: "project", limits: { maximumCaptures: 100 } },
+    configuration: {
+      projectId: "project",
+      github: { repository: "ariakit/visonaut-diagnostics" },
+      limits: { maximumCaptures: 100 },
+    },
     identity: { sessionId: "auth", githubUserId: "reviewer" },
     history: { read, readCommand },
   });
@@ -139,7 +143,11 @@ describe("private archived run review", () => {
       reviewReady: false,
       comparisonId,
       comparisonRevision: 3,
-      run: { id: runId, status: "superseded" },
+      run: {
+        id: runId,
+        repository: "ariakit/visonaut-diagnostics",
+        status: "superseded",
+      },
     });
     expect(model.items[0]).toMatchObject({
       key: "button",

@@ -119,6 +119,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
   return {
     run: {
       id: string(run.id),
+      ...(run.repository == null ? {} : { repository: string(run.repository) }),
       kind: oneOf(run.kind, ["main", "pull_request", "merge_group"]),
       testedSha: string(run.testedSha),
       attempt: number(run.attempt),

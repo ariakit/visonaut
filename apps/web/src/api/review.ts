@@ -428,6 +428,7 @@ export async function reviewModel(
   return {
     run: {
       id: run.id,
+      repository: context.configuration.github.repository,
       kind: run.kind,
       testedSha: run.tested_sha,
       attempt: run.attempt,
@@ -576,6 +577,7 @@ export async function handleReview(
     return Response.json({
       runs: runs.results,
       project: {
+        repository: context.configuration.github.repository,
         baselineRevision: project.baseline_revision,
         snapshotId: project.snapshot_id,
         promotionId: project.promotion_id,
