@@ -1,0 +1,55 @@
+{
+  "scope": "Sanitized Visonaut and legacy-project aggregates plus shared-account totals; no unrelated resource names or credentials",
+  "usageWindowUtc": "2026-09-22T00:00:00Z/2026-09-23T00:00:00Z",
+  "resourceAnalyticsQueriedAtUtc": "2026-09-23T06:43:08Z",
+  "paygoV1QueriedAtUtc": "2026-09-23T12:11:24Z",
+  "billingCycleStartUtc": "2026-09-09",
+  "billingFeedLatestChargeDateUtc": "2026-09-22",
+  "d1RowsWritten": {
+    "accountSeptember22": 77310085,
+    "projectSeptember22": 77305282,
+    "projectSyntheticFixtureSeptember22": 77261869,
+    "projectServiceSeptember22": 43413,
+    "otherAccountSeptember22": 4803,
+    "accountEarlierCycle": 200847,
+    "accountWithoutProjectSeptember22": 205650,
+    "includedPerCycle": 50000000,
+    "billedOverageRows": 27510932,
+    "billedCostUsd": 28
+  },
+  "r2September22Operations": {
+    "classAProject": 564739,
+    "classAAccount": 564910,
+    "classBProject": 1872915,
+    "classBAccount": 1875365,
+    "classABilledCostUsd": 0,
+    "classBBilledCostUsd": 0
+  },
+  "queuesSeptember22Operations": {
+    "project": 1670,
+    "account": 1670,
+    "billedCostUsd": 0
+  },
+  "workersSeptember22AnalyticsRequests": {
+    "projectEstimate": 12685,
+    "accountEstimate": 18397,
+    "requestAndCpuBillingRowsAvailable": false,
+    "billedCostUsd": null
+  },
+  "containerSeptember22": {
+    "projectAnalyticsCpuSeconds": 19.39,
+    "accountBillingVcpuSeconds": 16.93,
+    "billedCostUsd": 0
+  },
+  "accountR2Storage": {
+    "september22BilledCostUsd": 0.09,
+    "cycleThroughSeptember22BilledCostUsd": 0.9,
+    "projectByteMonthAttributionAvailable": false
+  },
+  "limitations": [
+    "Resource analytics are not billing meters and may be sampled.",
+    "Cloudflare V1 pay-as-you-go records are delayed daily shared-account records.",
+    "The project workload was dominated by one-off synthetic capacity and recovery fixtures.",
+    "This observation does not establish final-source Ariakit cost or a recurring monthly ceiling."
+  ]
+}
