@@ -1,0 +1,43 @@
+{
+  "source": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+  "slots": 64,
+  "first": "2026-08-23T00Z",
+  "latest": "2026-09-23T12Z",
+  "exactBoundary": {
+    "at60": "complete",
+    "at61": "deleted",
+    "secondAt61": "complete",
+    "secondAt62": "deleted"
+  },
+  "final": {
+    "complete": 61,
+    "deleted": 3,
+    "groups": [
+      {
+        "state": "ready",
+        "count": 126,
+        "objects": 160,
+        "bytes": 11200
+      }
+    ],
+    "originals": {
+      "verified": 3,
+      "bytes": 210
+    }
+  },
+  "removedArtifacts": [
+    {
+      "key": "backups/2026-08-23T00Z/complete.json",
+      "status": 404
+    },
+    {
+      "key": "backup-groups/a65a568950126b09a6e967cc905716e0/manifest-596585046838707127cc0dd5cb9bcfffd47ed7b4d00ff7ba91c469d3966c12dd.json",
+      "status": 404
+    },
+    {
+      "key": "backup-groups/dfada346163a379cc60359f2bb495bff/manifest-e4b5e53c00f112bf81e9861816f733d434166b16b7db028a305f723ed8c02f47.json",
+      "status": 404
+    }
+  ],
+  "latestRoot": 200
+}

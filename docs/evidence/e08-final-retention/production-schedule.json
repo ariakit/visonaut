@@ -1,0 +1,33 @@
+{
+  "observedAtUtc": "2026-09-23T07:59:36Z",
+  "deployedSource": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+  "environment": "production",
+  "method": "Read-only remote D1 query and R2 object stream through SHA-256; no SQL content retained or printed.",
+  "slots": [
+    {
+      "id": "2026-09-22T12Z",
+      "state": "complete",
+      "formatVersion": 3,
+      "createdAtUtc": "2026-09-22T21:11:19.499Z",
+      "completedAtUtc": "2026-09-22T21:11:46.401Z",
+      "sqlBytes": 4512723,
+      "sqlDigest": "37b24e19be583bff14eaa2a505afe046a85d2f215e326a7d60e239323ba6aecf",
+      "scheduleInterpretation": "late completion; does not prove on-time Cron delivery"
+    },
+    {
+      "id": "2026-09-23T00Z",
+      "state": "complete",
+      "formatVersion": 3,
+      "createdAtUtc": "2026-09-23T00:01:30.182Z",
+      "completedAtUtc": "2026-09-23T00:02:03.679Z",
+      "sqlBytes": 8157849,
+      "sqlDigest": "6d8d9718df5922d812e3d7e76172f80b91286165ba9f63d66bc17b6ad04f835b",
+      "streamedObjectSha256": "6d8d9718df5922d812e3d7e76172f80b91286165ba9f63d66bc17b6ad04f835b",
+      "scheduleInterpretation": "timing consistent with scheduled five-minute Cron path"
+    }
+  ],
+  "limitations": [
+    "The 00Z row alone does not prove recurrent Cron reliability.",
+    "The 12Z row was late. The isolated retention drill covered image-bearing churn."
+  ]
+}

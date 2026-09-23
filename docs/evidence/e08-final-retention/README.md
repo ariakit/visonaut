@@ -1,0 +1,26 @@
+# E08 hosted retention and image-churn drill
+
+Source commit: [`507179f`](https://github.com/ariakit/visonaut/commit/507179fd59fad0333880be40d2b4a33ba2e0e653). The hosted drill used an archive of this commit. The [source identity](./source-identity.json) records SHA-256 digests for the operations source, harness, bundles, deployed Worker version, and isolated resource IDs. The operations files are unchanged from the source of the earlier 735 MB E08 capacity restore ([`b75b471`](https://github.com/ariakit/visonaut/commit/b75b4719e7dc8129cc0bd3d26e9c19cbb58c211e)). No production, preview, or shared diagnostic resource was bound to this drill.
+
+The synthetic Worker called the final-source functions for each logical half-day slot:
+
+```ts
+await backupDaily(context, exporter);
+await expireBackups(context);
+```
+
+It ran 64 slots from 2026-08-23 00:00 UTC through 2026-09-23 12:00 UTC. Slots 0 and 1 finished through an isolated Queue continuation. The [raw Queue log](./schedule-queue-events.jsonl) records the slot 0 completion and slot 1 start; a later D1 tick and backup state establish slot 1 completion. The [cadence receipt](./schedule-events.jsonl) uses the original slot 0 event and labels slot 1 as retrospective, without presenting a no-op replay as its Queue latency. Slots 2 through 63 used guarded direct Worker calls after the shared account Queue returned transient overload error 10250 while a separate E01 diagnostic backlog drained. This tested hosted backup and expiry logic with controlled time. It did **not** wait 32 real days or prove 64 Cloudflare Cron deliveries. The direct calls took 11.3–17.3 seconds per slot (median 12.0, p95 16.8). The cadence receipt preserves the observed state for each slot.
+
+All 64 backup rows reached a terminal state. At exactly 30 days (slot 60), the first backup was still `complete`. At 30 days plus 12 hours (slot 61), it was `deleted`, while the second was still `complete`; the second became `deleted` at slot 62. At slot 63, the third also became `deleted`. The final source D1 had 61 complete and 3 deleted backups and 64 complete tick receipts. The first root manifest and both group manifests returned 404 after their grace period; the latest root returned 200. The final inventory retained 126 ready backup groups. The [retention receipt](./retention-verified.json) records the asserted boundary and object states.
+
+The fixture used valid, CRC-checked 1×1 PNGs. Two active runs and two images (140 bytes total) were present at the start. A third image was added to an existing active run at slot 30. The [initial](./manifest-initial.json), [churn](./manifest-churn.json), and [final](./manifest-final.json) root manifests show the membership change. The final manifest recorded three originals (210 bytes), two groups, and the SQL SHA-256 `f284d6247665d93aa4d57906d3ae098690063bf174a787984d5060b5f055795f`. Across all ready groups, 160 copied object entries represented 11,200 synthetic image bytes. The three source originals remained present and matched their original SHA-256 values after the oldest backup was removed.
+
+The latest backup set was restored to a separate, empty D1 and a separate R2 prefix. The restore checked the SQL digest, restored and verified both group pages, and rehashed all three target image bytes. Foreign-key violations were zero. Recovery sanitation changed active runs from two to zero and left the three image originals present. The small restore took 5.850 seconds. The [restore receipt](./restore.json) records these assertions. This timing is for the tiny fixture; the earlier [source-identical capacity drill](../e08-capacity-restore.md) measured a 735 MB restore in 11 minutes 19 seconds.
+
+There was one harness correction. The first version invoked full operations and produced two synthetic check-creation rows and a backup-freshness event when its intentionally unavailable GitHub client threw. No GitHub check was created. The two rows were cleared only from the isolated source D1; the six-occurrence freshness event remains visible in that fixture. The final harness calls only backup and expiry functions. Thirty local focused backup/retention tests also passed. The first two slots and initial harness versions are identified separately in the [source identity](./source-identity.json).
+
+This drill supports the 30-day expiry boundary, backup-set membership under image churn, protected source bytes, and restore integrity on final operations source. The remaining qualification is real-time Cron delivery across 30 calendar days; controlled-time calls cannot prove that service-level schedule reliability.
+
+The [production schedule observation](./production-schedule.json) adds a separate check on the deployed V3 path. The 2026-09-23 00Z slot began at 00:01:30 UTC and completed at 00:02:03 UTC, with an 8,157,849-byte SQL object whose streamed SHA-256 matches the D1 digest. The previous 12Z slot completed at 21:11 UTC, so it is evidence of eventual completion, not on-time delivery. A second on-time slot and the final operational limits remain to be checked before this gate passes.
+
+After the receipts were saved, the isolated Worker and Queue were deleted. This removed the Worker's temporary D1 backup API secret. The two isolated D1 databases and R2 bucket remain for evidence inspection; no shared resources were deleted.
