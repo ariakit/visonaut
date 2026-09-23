@@ -1,0 +1,4836 @@
+{
+  "mode": "hosted-cloudflare-native",
+  "origin": "https://visonaut-e03-final-20260923.ariakit.workers.dev",
+  "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+  "bundle": {
+    "path": "dist/worker.js",
+    "sha256": "054ac9b6a5660132662456e9f34689d56c2c1eadebe83ba7d78b15cf3508f24d"
+  },
+  "startedAt": "2026-09-23T17:08:10.599Z",
+  "passed": true,
+  "scenarios": [
+    {
+      "scenario": "atomicCommands",
+      "prefix": "final20260923-atomiccommands",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:08:11.043Z",
+      "completedAt": "2026-09-23T17:09:02.798Z",
+      "durationMs": 51755,
+      "passed": true,
+      "result": {
+        "targets": 2,
+        "guards": [
+          "real competing command before native batch",
+          "zero partial writes",
+          "idempotent replay",
+          "whole-item prior verdict restoration"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected competing native D1 review immediately before whole-item atomic batch",
+          "wallTime": "2026-09-23T17:08:41.068Z",
+          "target": "final20260923-atomiccommands-comparison-changed:final20260923-atomiccommands-capture-changed-1"
+        },
+        {
+          "name": "stale whole-item command refuses all writes",
+          "wallTime": "2026-09-23T17:08:41.323Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "whole-item atomic save, replay and Undo passed",
+          "wallTime": "2026-09-23T17:09:02.798Z",
+          "targets": 2
+        }
+      ],
+      "assertions": [
+        {
+          "message": "stale command leaves audit, outbox, decisions, commands, promotions unchanged",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 1,
+              "sha256": "194227f3b945a6a9b2b94475ce55e24998fc9771c07b79f65a5383c2b7e68bdf"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 8,
+              "sha256": "5cfccd2094cc139e3d5de751103f04ff020a274a7aa145b67daf81614fa05856"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 4,
+              "sha256": "a2d324cf0d5d6b19fc24d626d7f313fa8bb9df136cefc55685a9f4ce1a082fd4"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 1,
+              "sha256": "56766349aa0525e8c15af7aa52f349128595ea3860ca85bf173b9f8e63457311"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 4,
+              "sha256": "2b4de60b7f9463a053f03ff896ff1d7b20418099d88fd94b5e44423cdba82fd5"
+            },
+            "visonaut_comparisons": {
+              "rows": 2,
+              "sha256": "fc3341b4577c918592aedbd69fa0879f141f8bda704b595fb132d0783d7c2f05"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 3,
+              "sha256": "3aef94731fbb3c3ce4c626456d795e0c2cba646f649ca06a01c2511e52f1632a"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 2,
+              "sha256": "1f88edbb05d4891fb6369ae4d02589b49dfc0e43f85e4deed120db0c2dc3eb5b"
+            },
+            "visonaut_images": {
+              "rows": 4,
+              "sha256": "b3aca21d9b225db77c517f7ffb38977583dbdf4f7e0b8b4acef3bfd5d52e6f55"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 2,
+              "sha256": "6c3f29795d677dbf33dade3861af6493dd8beceffede15350dbaa9bccd9193a7"
+            },
+            "visonaut_policies": {
+              "rows": 1,
+              "sha256": "a3f96eb21d8b3f865b4ee613471eaafb78ad679f1ec0a72c929df4acd59fdd76"
+            },
+            "visonaut_projects": {
+              "rows": 1,
+              "sha256": "fc07cf7df6276715f571ccbb183913b9e44453c4c3725a6e741ad42f16979d46"
+            },
+            "visonaut_promotions": {
+              "rows": 1,
+              "sha256": "afea6aad5e565f1ebaef80075ca2e7f1b7681c7ba756b6c6803979758e782368"
+            },
+            "visonaut_reservations": {
+              "rows": 2,
+              "sha256": "3cb764a2e6719bbb8405943d61c4a58216c48a57715f1684212b2544d5c10b12"
+            },
+            "visonaut_runs": {
+              "rows": 2,
+              "sha256": "0942261e590651ca3689c208d2b87d2536875e98adb3fdb97df8b4bcdfcadb27"
+            },
+            "visonaut_shards": {
+              "rows": 2,
+              "sha256": "25f12d49f7594d20f83d1be4f443ce9a4f6a98dd03436b06448c9babeaef69f9"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 2,
+              "sha256": "3a0b78b70191056f9d394b4ac7471f7297135d6be91e113b237aa715fe249eba"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 1,
+              "sha256": "2eb67f1797be563ad0d7c7f6d4fa32c33ec6e6ee377ff0e47cb6f5c7d53010c3"
+            },
+            "visonaut_snapshots": {
+              "rows": 1,
+              "sha256": "1c6f8964d538c90ce19f1cef5b33766dd24a4c6f6cbfbb057d917c0ba62d5210"
+            },
+            "visonaut_status_outbox": {
+              "rows": 11,
+              "sha256": "faabd5e39d312a81de9362483915c73e438b0f9922e3613c5b5bd6b2c28df2ea"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "382d70a58d7b6b7920153c5be87defd87f12f05f072ccb2f6ae36a806d648288"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "208959f81f2e50fca251d6d8104c4ef73048ff556128a7098b955121a2aa94c5"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "d5beb6ca0c0b181502c33d801688aa633ff2083d03923eb345d357535cb6212a"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 1,
+              "sha256": "194227f3b945a6a9b2b94475ce55e24998fc9771c07b79f65a5383c2b7e68bdf"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 8,
+              "sha256": "5cfccd2094cc139e3d5de751103f04ff020a274a7aa145b67daf81614fa05856"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 4,
+              "sha256": "a2d324cf0d5d6b19fc24d626d7f313fa8bb9df136cefc55685a9f4ce1a082fd4"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 1,
+              "sha256": "56766349aa0525e8c15af7aa52f349128595ea3860ca85bf173b9f8e63457311"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 4,
+              "sha256": "2b4de60b7f9463a053f03ff896ff1d7b20418099d88fd94b5e44423cdba82fd5"
+            },
+            "visonaut_comparisons": {
+              "rows": 2,
+              "sha256": "fc3341b4577c918592aedbd69fa0879f141f8bda704b595fb132d0783d7c2f05"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 3,
+              "sha256": "3aef94731fbb3c3ce4c626456d795e0c2cba646f649ca06a01c2511e52f1632a"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 2,
+              "sha256": "1f88edbb05d4891fb6369ae4d02589b49dfc0e43f85e4deed120db0c2dc3eb5b"
+            },
+            "visonaut_images": {
+              "rows": 4,
+              "sha256": "b3aca21d9b225db77c517f7ffb38977583dbdf4f7e0b8b4acef3bfd5d52e6f55"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 2,
+              "sha256": "6c3f29795d677dbf33dade3861af6493dd8beceffede15350dbaa9bccd9193a7"
+            },
+            "visonaut_policies": {
+              "rows": 1,
+              "sha256": "a3f96eb21d8b3f865b4ee613471eaafb78ad679f1ec0a72c929df4acd59fdd76"
+            },
+            "visonaut_projects": {
+              "rows": 1,
+              "sha256": "fc07cf7df6276715f571ccbb183913b9e44453c4c3725a6e741ad42f16979d46"
+            },
+            "visonaut_promotions": {
+              "rows": 1,
+              "sha256": "afea6aad5e565f1ebaef80075ca2e7f1b7681c7ba756b6c6803979758e782368"
+            },
+            "visonaut_reservations": {
+              "rows": 2,
+              "sha256": "3cb764a2e6719bbb8405943d61c4a58216c48a57715f1684212b2544d5c10b12"
+            },
+            "visonaut_runs": {
+              "rows": 2,
+              "sha256": "0942261e590651ca3689c208d2b87d2536875e98adb3fdb97df8b4bcdfcadb27"
+            },
+            "visonaut_shards": {
+              "rows": 2,
+              "sha256": "25f12d49f7594d20f83d1be4f443ce9a4f6a98dd03436b06448c9babeaef69f9"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 2,
+              "sha256": "3a0b78b70191056f9d394b4ac7471f7297135d6be91e113b237aa715fe249eba"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 1,
+              "sha256": "2eb67f1797be563ad0d7c7f6d4fa32c33ec6e6ee377ff0e47cb6f5c7d53010c3"
+            },
+            "visonaut_snapshots": {
+              "rows": 1,
+              "sha256": "1c6f8964d538c90ce19f1cef5b33766dd24a4c6f6cbfbb057d917c0ba62d5210"
+            },
+            "visonaut_status_outbox": {
+              "rows": 11,
+              "sha256": "faabd5e39d312a81de9362483915c73e438b0f9922e3613c5b5bd6b2c28df2ea"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "382d70a58d7b6b7920153c5be87defd87f12f05f072ccb2f6ae36a806d648288"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "208959f81f2e50fca251d6d8104c4ef73048ff556128a7098b955121a2aa94c5"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "d5beb6ca0c0b181502c33d801688aa633ff2083d03923eb345d357535cb6212a"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "untouched variant receives no partial decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact command replay returns same saved result",
+          "actual": {
+            "commandId": "final20260923-atomiccommands-whole-approve",
+            "revisions": [
+              {
+                "id": "final20260923-atomiccommands-comparison-changed:final20260923-atomiccommands-capture-changed-0",
+                "expectedRevision": 1
+              },
+              {
+                "id": "final20260923-atomiccommands-comparison-changed:final20260923-atomiccommands-capture-changed-1",
+                "expectedRevision": 2
+              }
+            ],
+            "selection": {
+              "itemKey": "dialog",
+              "variantKey": "light"
+            },
+            "baselineRevision": 1,
+            "promotionId": "final20260923-atomiccommands-promotion-seed"
+          },
+          "expected": {
+            "commandId": "final20260923-atomiccommands-whole-approve",
+            "revisions": [
+              {
+                "id": "final20260923-atomiccommands-comparison-changed:final20260923-atomiccommands-capture-changed-0",
+                "expectedRevision": 1
+              },
+              {
+                "id": "final20260923-atomiccommands-comparison-changed:final20260923-atomiccommands-capture-changed-1",
+                "expectedRevision": 2
+              }
+            ],
+            "selection": {
+              "itemKey": "dialog",
+              "variantKey": "light"
+            },
+            "baselineRevision": 1,
+            "promotionId": "final20260923-atomiccommands-promotion-seed"
+          },
+          "passed": true
+        },
+        {
+          "message": "command replay makes no writes",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 1,
+              "sha256": "194227f3b945a6a9b2b94475ce55e24998fc9771c07b79f65a5383c2b7e68bdf"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 9,
+              "sha256": "47a330ad6beeb912ae984be0b356bf9af3a77b883848019255f85ab0e90ecd6d"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 4,
+              "sha256": "a2d324cf0d5d6b19fc24d626d7f313fa8bb9df136cefc55685a9f4ce1a082fd4"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 2,
+              "sha256": "d950536cedbecb8f208bb4b76a520fabb9d4dce282d56eb4805c6cf78d05b47b"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 4,
+              "sha256": "778ad20453651b00a794fcbb0b8a55658610189933052c9ebef2d866f04b3cfb"
+            },
+            "visonaut_comparisons": {
+              "rows": 2,
+              "sha256": "fc3341b4577c918592aedbd69fa0879f141f8bda704b595fb132d0783d7c2f05"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 5,
+              "sha256": "def41ab7769125223b6558fd8624bc70e2250ea140e1562224ca30d938a2dc4b"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 2,
+              "sha256": "1f88edbb05d4891fb6369ae4d02589b49dfc0e43f85e4deed120db0c2dc3eb5b"
+            },
+            "visonaut_images": {
+              "rows": 4,
+              "sha256": "b3aca21d9b225db77c517f7ffb38977583dbdf4f7e0b8b4acef3bfd5d52e6f55"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 2,
+              "sha256": "6c3f29795d677dbf33dade3861af6493dd8beceffede15350dbaa9bccd9193a7"
+            },
+            "visonaut_policies": {
+              "rows": 1,
+              "sha256": "a3f96eb21d8b3f865b4ee613471eaafb78ad679f1ec0a72c929df4acd59fdd76"
+            },
+            "visonaut_projects": {
+              "rows": 1,
+              "sha256": "01b54f15e8e6b3257e23bc2b1a4fef9440a04b986b2fde657aeb48a0d875b911"
+            },
+            "visonaut_promotions": {
+              "rows": 1,
+              "sha256": "afea6aad5e565f1ebaef80075ca2e7f1b7681c7ba756b6c6803979758e782368"
+            },
+            "visonaut_reservations": {
+              "rows": 2,
+              "sha256": "3cb764a2e6719bbb8405943d61c4a58216c48a57715f1684212b2544d5c10b12"
+            },
+            "visonaut_runs": {
+              "rows": 2,
+              "sha256": "a9f41de772d6d3b53a7501d6b8686993e64dd43a92417ff69d9df528a5aa6c7b"
+            },
+            "visonaut_shards": {
+              "rows": 2,
+              "sha256": "25f12d49f7594d20f83d1be4f443ce9a4f6a98dd03436b06448c9babeaef69f9"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 2,
+              "sha256": "3a0b78b70191056f9d394b4ac7471f7297135d6be91e113b237aa715fe249eba"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 1,
+              "sha256": "2eb67f1797be563ad0d7c7f6d4fa32c33ec6e6ee377ff0e47cb6f5c7d53010c3"
+            },
+            "visonaut_snapshots": {
+              "rows": 1,
+              "sha256": "1c6f8964d538c90ce19f1cef5b33766dd24a4c6f6cbfbb057d917c0ba62d5210"
+            },
+            "visonaut_status_outbox": {
+              "rows": 14,
+              "sha256": "94d86207e4df2fce03faee685fbc6f2396c1bb00c61bb4f44c1ed5379498465d"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "382d70a58d7b6b7920153c5be87defd87f12f05f072ccb2f6ae36a806d648288"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "208959f81f2e50fca251d6d8104c4ef73048ff556128a7098b955121a2aa94c5"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "d5beb6ca0c0b181502c33d801688aa633ff2083d03923eb345d357535cb6212a"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 1,
+              "sha256": "194227f3b945a6a9b2b94475ce55e24998fc9771c07b79f65a5383c2b7e68bdf"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 9,
+              "sha256": "47a330ad6beeb912ae984be0b356bf9af3a77b883848019255f85ab0e90ecd6d"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 4,
+              "sha256": "a2d324cf0d5d6b19fc24d626d7f313fa8bb9df136cefc55685a9f4ce1a082fd4"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 2,
+              "sha256": "d950536cedbecb8f208bb4b76a520fabb9d4dce282d56eb4805c6cf78d05b47b"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 4,
+              "sha256": "778ad20453651b00a794fcbb0b8a55658610189933052c9ebef2d866f04b3cfb"
+            },
+            "visonaut_comparisons": {
+              "rows": 2,
+              "sha256": "fc3341b4577c918592aedbd69fa0879f141f8bda704b595fb132d0783d7c2f05"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 5,
+              "sha256": "def41ab7769125223b6558fd8624bc70e2250ea140e1562224ca30d938a2dc4b"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 2,
+              "sha256": "1f88edbb05d4891fb6369ae4d02589b49dfc0e43f85e4deed120db0c2dc3eb5b"
+            },
+            "visonaut_images": {
+              "rows": 4,
+              "sha256": "b3aca21d9b225db77c517f7ffb38977583dbdf4f7e0b8b4acef3bfd5d52e6f55"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 2,
+              "sha256": "6c3f29795d677dbf33dade3861af6493dd8beceffede15350dbaa9bccd9193a7"
+            },
+            "visonaut_policies": {
+              "rows": 1,
+              "sha256": "a3f96eb21d8b3f865b4ee613471eaafb78ad679f1ec0a72c929df4acd59fdd76"
+            },
+            "visonaut_projects": {
+              "rows": 1,
+              "sha256": "01b54f15e8e6b3257e23bc2b1a4fef9440a04b986b2fde657aeb48a0d875b911"
+            },
+            "visonaut_promotions": {
+              "rows": 1,
+              "sha256": "afea6aad5e565f1ebaef80075ca2e7f1b7681c7ba756b6c6803979758e782368"
+            },
+            "visonaut_reservations": {
+              "rows": 2,
+              "sha256": "3cb764a2e6719bbb8405943d61c4a58216c48a57715f1684212b2544d5c10b12"
+            },
+            "visonaut_runs": {
+              "rows": 2,
+              "sha256": "a9f41de772d6d3b53a7501d6b8686993e64dd43a92417ff69d9df528a5aa6c7b"
+            },
+            "visonaut_shards": {
+              "rows": 2,
+              "sha256": "25f12d49f7594d20f83d1be4f443ce9a4f6a98dd03436b06448c9babeaef69f9"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 2,
+              "sha256": "3a0b78b70191056f9d394b4ac7471f7297135d6be91e113b237aa715fe249eba"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 1,
+              "sha256": "2eb67f1797be563ad0d7c7f6d4fa32c33ec6e6ee377ff0e47cb6f5c7d53010c3"
+            },
+            "visonaut_snapshots": {
+              "rows": 1,
+              "sha256": "1c6f8964d538c90ce19f1cef5b33766dd24a4c6f6cbfbb057d917c0ba62d5210"
+            },
+            "visonaut_status_outbox": {
+              "rows": 14,
+              "sha256": "94d86207e4df2fce03faee685fbc6f2396c1bb00c61bb4f44c1ed5379498465d"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "382d70a58d7b6b7920153c5be87defd87f12f05f072ccb2f6ae36a806d648288"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "208959f81f2e50fca251d6d8104c4ef73048ff556128a7098b955121a2aa94c5"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "d5beb6ca0c0b181502c33d801688aa633ff2083d03923eb345d357535cb6212a"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores prior rejection",
+          "actual": "rejected",
+          "expected": "rejected",
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores first unreviewed target",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores competing target decision",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 355,
+        "attemptedStatements": 650,
+        "statements": 628,
+        "rowsRead": 2066,
+        "rowsWritten": 534,
+        "nativeDurationMs": 112.83370000000008
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 51991.893458,
+        "httpStatus": 200,
+        "ray": "a3fb2660fa28debe-GRU",
+        "date": "Wed, 23 Sep 2026 17:09:03 GMT"
+      }
+    },
+    {
+      "scenario": "currentAndStaleUndo",
+      "prefix": "final20260923-currentandstaleundo",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:09:03.425Z",
+      "completedAt": "2026-09-23T17:09:53.636Z",
+      "durationMs": 50211,
+      "passed": true,
+      "result": {
+        "finalBaselineRevision": 4,
+        "guards": [
+          "stale D22 Undo",
+          "stale D26 rejection",
+          "current D22 rollback",
+          "complete native D1 state hashes"
+        ]
+      },
+      "events": [
+        {
+          "name": "D22 old approval Undo refuses after later promotion",
+          "wallTime": "2026-09-23T17:09:44.452Z",
+          "code": "CONFLICT",
+          "message": "The command no longer targets the active comparison."
+        },
+        {
+          "name": "D26 old human rejection refuses after later promotion",
+          "wallTime": "2026-09-23T17:09:45.337Z",
+          "code": "CONFLICT",
+          "message": "This promotion is no longer current. Use explicit recovery."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "stale D22/D26 leave every production table unchanged",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 3,
+              "sha256": "255a9e52406077eb87d2cd6fd00af7f9816c39643855bfcd2a5dcbcb8f93c084"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 24,
+              "sha256": "1bda7586935539060590ee475b1a9e4982221c521806aa14f15fa54f35c16fdc"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 7,
+              "sha256": "35b3792b99e26f37099e0e3fcfcf39afa9ab599371ae8d626e413c1c36f63dab"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 5,
+              "sha256": "3cb03a37466551916004c5e29f5f65e6f3d768fcfeff4da439213c9891a8d2e5"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 7,
+              "sha256": "5780d71033f5d9a2efad628dfa0c9e0212ebfcdad47ce34b45fd02325efdc42a"
+            },
+            "visonaut_comparisons": {
+              "rows": 5,
+              "sha256": "2970512cb907cad87e4a0b5ea604058c9459a1425f2a783b210fac79f3a26944"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 8,
+              "sha256": "235661075e051738b7058befdd659b9b6d09056a8876e1add13abcfb89dd4037"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 3,
+              "sha256": "1bf5ea95faeab90ccbc5bd5fc902780ad6ca4e45cbe1fc52107dd9466366667f"
+            },
+            "visonaut_images": {
+              "rows": 7,
+              "sha256": "d218a7389b82e35372a1695247a045307045f65d03fcd0e76b28faf22c194b02"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 9,
+              "sha256": "87874bbbefa2d0230a7f4bf19bb8f029d97de57673b01c31324cf88293c74a76"
+            },
+            "visonaut_policies": {
+              "rows": 2,
+              "sha256": "b3d475b80704459ba93aedb566a094839c8f3e4bc63a94790d8f3a16abc133d2"
+            },
+            "visonaut_projects": {
+              "rows": 2,
+              "sha256": "ddf547ed37f2391d773e07457884239e8ab86c2982a0b851384415f8e350ffaf"
+            },
+            "visonaut_promotions": {
+              "rows": 4,
+              "sha256": "7a70c8c340bdfea7a74b8aa95ad55a9f251a4ca8b1e217cc36bf476d63fbc9a9"
+            },
+            "visonaut_reservations": {
+              "rows": 3,
+              "sha256": "3846a4c8cf220d9d209cc84ad9281244b69c59331463f409e961a0c41f4a6853"
+            },
+            "visonaut_runs": {
+              "rows": 5,
+              "sha256": "3db6bccdbb9678dcda4dffa7ec57872ca60c8eece13d4b0d8a6472bb10396a5c"
+            },
+            "visonaut_shards": {
+              "rows": 5,
+              "sha256": "eaebcc6efd8d6068a063e430b1ce5a62f14d231ee58bef85b5fe4a68acae078a"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 5,
+              "sha256": "c5153f42d50b47231c790fb20b61ed2f15f15b5ced69a4e762f9c3b91fda25fa"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 4,
+              "sha256": "b658f6e7d1d34239bb766c3816215892b086bcc03c3b31501084138e6b81c0d5"
+            },
+            "visonaut_snapshots": {
+              "rows": 4,
+              "sha256": "f442041f886ce359b93381b68deab68ba5b2d58c4b9dec7900e5b4dba0fd786a"
+            },
+            "visonaut_status_outbox": {
+              "rows": 38,
+              "sha256": "8632efc3e2fba6b3c6160e0aae67f9644bb131d8d0e3800a441e0fdd544afc0a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 5,
+              "sha256": "a65a088c45f0bf9caa9fc541bd70cf815e0e89e0eb19cbc42e2a89515662216e"
+            },
+            "work_retention_pins": {
+              "rows": 10,
+              "sha256": "c9cdd861b7436f032c688c5924564947dfbc9890db596c0c588152adc45ac508"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 4,
+              "sha256": "53d25f9b8603401086092bf4094395770e1b7b7efde6a95621a8e76f251dfebc"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 3,
+              "sha256": "255a9e52406077eb87d2cd6fd00af7f9816c39643855bfcd2a5dcbcb8f93c084"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 24,
+              "sha256": "1bda7586935539060590ee475b1a9e4982221c521806aa14f15fa54f35c16fdc"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 7,
+              "sha256": "35b3792b99e26f37099e0e3fcfcf39afa9ab599371ae8d626e413c1c36f63dab"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 5,
+              "sha256": "3cb03a37466551916004c5e29f5f65e6f3d768fcfeff4da439213c9891a8d2e5"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 7,
+              "sha256": "5780d71033f5d9a2efad628dfa0c9e0212ebfcdad47ce34b45fd02325efdc42a"
+            },
+            "visonaut_comparisons": {
+              "rows": 5,
+              "sha256": "2970512cb907cad87e4a0b5ea604058c9459a1425f2a783b210fac79f3a26944"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 8,
+              "sha256": "235661075e051738b7058befdd659b9b6d09056a8876e1add13abcfb89dd4037"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 3,
+              "sha256": "1bf5ea95faeab90ccbc5bd5fc902780ad6ca4e45cbe1fc52107dd9466366667f"
+            },
+            "visonaut_images": {
+              "rows": 7,
+              "sha256": "d218a7389b82e35372a1695247a045307045f65d03fcd0e76b28faf22c194b02"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 9,
+              "sha256": "87874bbbefa2d0230a7f4bf19bb8f029d97de57673b01c31324cf88293c74a76"
+            },
+            "visonaut_policies": {
+              "rows": 2,
+              "sha256": "b3d475b80704459ba93aedb566a094839c8f3e4bc63a94790d8f3a16abc133d2"
+            },
+            "visonaut_projects": {
+              "rows": 2,
+              "sha256": "ddf547ed37f2391d773e07457884239e8ab86c2982a0b851384415f8e350ffaf"
+            },
+            "visonaut_promotions": {
+              "rows": 4,
+              "sha256": "7a70c8c340bdfea7a74b8aa95ad55a9f251a4ca8b1e217cc36bf476d63fbc9a9"
+            },
+            "visonaut_reservations": {
+              "rows": 3,
+              "sha256": "3846a4c8cf220d9d209cc84ad9281244b69c59331463f409e961a0c41f4a6853"
+            },
+            "visonaut_runs": {
+              "rows": 5,
+              "sha256": "3db6bccdbb9678dcda4dffa7ec57872ca60c8eece13d4b0d8a6472bb10396a5c"
+            },
+            "visonaut_shards": {
+              "rows": 5,
+              "sha256": "eaebcc6efd8d6068a063e430b1ce5a62f14d231ee58bef85b5fe4a68acae078a"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 5,
+              "sha256": "c5153f42d50b47231c790fb20b61ed2f15f15b5ced69a4e762f9c3b91fda25fa"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 4,
+              "sha256": "b658f6e7d1d34239bb766c3816215892b086bcc03c3b31501084138e6b81c0d5"
+            },
+            "visonaut_snapshots": {
+              "rows": 4,
+              "sha256": "f442041f886ce359b93381b68deab68ba5b2d58c4b9dec7900e5b4dba0fd786a"
+            },
+            "visonaut_status_outbox": {
+              "rows": 38,
+              "sha256": "8632efc3e2fba6b3c6160e0aae67f9644bb131d8d0e3800a441e0fdd544afc0a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 5,
+              "sha256": "a65a088c45f0bf9caa9fc541bd70cf815e0e89e0eb19cbc42e2a89515662216e"
+            },
+            "work_retention_pins": {
+              "rows": 10,
+              "sha256": "c9cdd861b7436f032c688c5924564947dfbc9890db596c0c588152adc45ac508"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 4,
+              "sha256": "53d25f9b8603401086092bf4094395770e1b7b7efde6a95621a8e76f251dfebc"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "stale commands preserve later baseline",
+          "actual": "final20260923-currentandstaleundo-snapshot-green",
+          "expected": "final20260923-currentandstaleundo-snapshot-green",
+          "passed": true
+        },
+        {
+          "message": "D22 current approval Undo restores predecessor",
+          "actual": "final20260923-currentandstaleundo-snapshot-red",
+          "expected": "final20260923-currentandstaleundo-snapshot-red",
+          "passed": true
+        },
+        {
+          "message": "D22 current Undo increments baseline revision",
+          "actual": 4,
+          "expected": 4,
+          "passed": true
+        },
+        {
+          "message": "D22 revokes effective approval",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "D22 revokes snapshot reference eligibility",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 314,
+        "attemptedStatements": 729,
+        "statements": 729,
+        "rowsRead": 1885,
+        "rowsWritten": 722,
+        "nativeDurationMs": 116.25100000000012
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 13,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 50639.49758399999,
+        "httpStatus": 200,
+        "ray": "a3fb27a85c6f625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:09:53 GMT"
+      }
+    },
+    {
+      "scenario": "rollbackHistory",
+      "prefix": "final20260923-rollbackhistory",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:09:54.393Z",
+      "completedAt": "2026-09-23T17:10:55.698Z",
+      "durationMs": 61305,
+      "passed": true,
+      "result": {
+        "mixedTargets": 2,
+        "finalBaselineRevision": 4,
+        "protectedNativeCopiesVerified": 1,
+        "guards": [
+          "automatic history",
+          "whole-item protection",
+          "D26 rollback",
+          "D26 Undo new promotion",
+          "stale promotion and Undo",
+          "native R2 rollback pin"
+        ]
+      },
+      "events": [
+        {
+          "name": "protected automatic target refuses whole-item rejection",
+          "wallTime": "2026-09-23T17:10:24.747Z",
+          "code": "CONFLICT",
+          "message": "Automatically accepted promoted history is protected. Capture a correction in a new main run."
+        },
+        {
+          "name": "current snapshot retirement is refused",
+          "wallTime": "2026-09-23T17:10:38.349Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "rollback predecessor retirement is refused",
+          "wallTime": "2026-09-23T17:10:38.603Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "injected native GC claim immediately before D26 rollback batch",
+          "wallTime": "2026-09-23T17:10:39.859Z",
+          "claim": null
+        },
+        {
+          "name": "restoring a snapshot does not revive its old promotion guard",
+          "wallTime": "2026-09-23T17:10:49.059Z",
+          "code": "CONFLICT",
+          "message": "This promotion is no longer current. Use explicit recovery."
+        },
+        {
+          "name": "completed rejection Undo cannot be revived with a new command ID",
+          "wallTime": "2026-09-23T17:10:49.431Z",
+          "code": "CONFLICT",
+          "message": "Only your saved command in this review session can be undone."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "mixed fixture has human change and automatic addition",
+          "passed": true
+        },
+        {
+          "message": "protected whole-item rejection makes no partial writes",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 34,
+              "sha256": "31fa39aca51e96369e26d72bdb3d922456b0ee9b0906ac66c772164614f089c3"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 7,
+              "sha256": "7ca4432f54dbc848201e36d9026e81e8d6ebe6c701c8b3e6ff37503915ca5540"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "c1cca31920864fdb7c58a359373b38d81b96f421d768b3321e1a84a14e08383d"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 11,
+              "sha256": "f5bdcd7da276fb3e5ad9c6008fd135d7e8d4cae6b568dc7777d1c11e81e78769"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "c8b20860c1d7e7714f85d990b177f9971a406cd72fdbc08ead3e81dc1fb64092"
+            },
+            "visonaut_promotions": {
+              "rows": 6,
+              "sha256": "320d8e599857ddb06bf378f414e92b74583776673b20de0612289b8c3371d1a2"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "3ad0aedf41c8e69164ae5aeb83bb7b80a55549cf8efd626d98241a3f00f716c2"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 54,
+              "sha256": "d10c491ba3c12aa8a5c0aca0431eed617416ef7af0fb10fc4dde4f1578a1aa3a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 34,
+              "sha256": "31fa39aca51e96369e26d72bdb3d922456b0ee9b0906ac66c772164614f089c3"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 7,
+              "sha256": "7ca4432f54dbc848201e36d9026e81e8d6ebe6c701c8b3e6ff37503915ca5540"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "c1cca31920864fdb7c58a359373b38d81b96f421d768b3321e1a84a14e08383d"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 11,
+              "sha256": "f5bdcd7da276fb3e5ad9c6008fd135d7e8d4cae6b568dc7777d1c11e81e78769"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "c8b20860c1d7e7714f85d990b177f9971a406cd72fdbc08ead3e81dc1fb64092"
+            },
+            "visonaut_promotions": {
+              "rows": 6,
+              "sha256": "320d8e599857ddb06bf378f414e92b74583776673b20de0612289b8c3371d1a2"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "3ad0aedf41c8e69164ae5aeb83bb7b80a55549cf8efd626d98241a3f00f716c2"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 54,
+              "sha256": "d10c491ba3c12aa8a5c0aca0431eed617416ef7af0fb10fc4dde4f1578a1aa3a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "protected rejection preserves current baseline",
+          "actual": "final20260923-rollbackhistory-snapshot-mixed",
+          "expected": "final20260923-rollbackhistory-snapshot-mixed",
+          "passed": true
+        },
+        {
+          "message": "approval of accepted history is a no-op",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "accepted-history approval creates no Undo/audit/outbox work",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 34,
+              "sha256": "31fa39aca51e96369e26d72bdb3d922456b0ee9b0906ac66c772164614f089c3"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 7,
+              "sha256": "7ca4432f54dbc848201e36d9026e81e8d6ebe6c701c8b3e6ff37503915ca5540"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "c1cca31920864fdb7c58a359373b38d81b96f421d768b3321e1a84a14e08383d"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 11,
+              "sha256": "f5bdcd7da276fb3e5ad9c6008fd135d7e8d4cae6b568dc7777d1c11e81e78769"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "c8b20860c1d7e7714f85d990b177f9971a406cd72fdbc08ead3e81dc1fb64092"
+            },
+            "visonaut_promotions": {
+              "rows": 6,
+              "sha256": "320d8e599857ddb06bf378f414e92b74583776673b20de0612289b8c3371d1a2"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "3ad0aedf41c8e69164ae5aeb83bb7b80a55549cf8efd626d98241a3f00f716c2"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 54,
+              "sha256": "d10c491ba3c12aa8a5c0aca0431eed617416ef7af0fb10fc4dde4f1578a1aa3a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 34,
+              "sha256": "31fa39aca51e96369e26d72bdb3d922456b0ee9b0906ac66c772164614f089c3"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 7,
+              "sha256": "7ca4432f54dbc848201e36d9026e81e8d6ebe6c701c8b3e6ff37503915ca5540"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "c1cca31920864fdb7c58a359373b38d81b96f421d768b3321e1a84a14e08383d"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 11,
+              "sha256": "f5bdcd7da276fb3e5ad9c6008fd135d7e8d4cae6b568dc7777d1c11e81e78769"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "c8b20860c1d7e7714f85d990b177f9971a406cd72fdbc08ead3e81dc1fb64092"
+            },
+            "visonaut_promotions": {
+              "rows": 6,
+              "sha256": "320d8e599857ddb06bf378f414e92b74583776673b20de0612289b8c3371d1a2"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "3ad0aedf41c8e69164ae5aeb83bb7b80a55549cf8efd626d98241a3f00f716c2"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 54,
+              "sha256": "d10c491ba3c12aa8a5c0aca0431eed617416ef7af0fb10fc4dde4f1578a1aa3a"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "GC cannot claim rollback predecessor during review save",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "D26 rollback restores complete prior baseline",
+          "actual": "final20260923-rollbackhistory-snapshot-seed",
+          "expected": "final20260923-rollbackhistory-snapshot-seed",
+          "passed": true
+        },
+        {
+          "message": "rollback advances baseline revision",
+          "actual": 3,
+          "expected": 3,
+          "passed": true
+        },
+        {
+          "message": "mixed rollback preserves automatic acceptance",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        },
+        {
+          "message": "rollback predecessor native R2 bytes remain intact",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "Undo D26 restores snapshot",
+          "actual": "final20260923-rollbackhistory-snapshot-mixed",
+          "expected": "final20260923-rollbackhistory-snapshot-mixed",
+          "passed": true
+        },
+        {
+          "message": "Undo D26 advances revision",
+          "actual": 4,
+          "expected": 4,
+          "passed": true
+        },
+        {
+          "message": "Undo D26 creates new promotion identity",
+          "passed": true
+        },
+        {
+          "message": "stale history commands make no partial writes",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 36,
+              "sha256": "ce3cba53a9e7e1bc636994110f0bcec2449aea199954bcc563440e23daa6dfec"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 9,
+              "sha256": "2da26c1c8f1e2274f9fb6735c324f48cbe26d9ad4464bf71b279f704b6066fd8"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "971925a21a59d5179962d215621b18d8bf5eee644a8d5db3171bc8554f3165f6"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 12,
+              "sha256": "b2f612190ac24ac55ef6586105d983bd9b742ad42053a65dfaedf52a0b8b9fd0"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "edaec1085ab4b488e2149b2051997c3a3322f4175432be509b0f8b296a8bd50e"
+            },
+            "visonaut_promotions": {
+              "rows": 7,
+              "sha256": "726d723dce8d694fea947ea4defb24993e7aa8ddbcb0b04c7363237af369872c"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "7f0a5805ebf9d39f6c64254e34e4a16c378ee06f529c37f998b32fb3e48c98a7"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 59,
+              "sha256": "6ba4e81f50e64cf5f5138628270c4a336c177a770a34f04d06c936f20809efae"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 4,
+              "sha256": "2aa9aef5165045b9f1879b39dbf64f1dfe7f7592dd87d8922fb881576c823402"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 36,
+              "sha256": "ce3cba53a9e7e1bc636994110f0bcec2449aea199954bcc563440e23daa6dfec"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 10,
+              "sha256": "139853539520451bd25c9585c63eb5239a10b825be8f21cd743a0ddc42e11d3a"
+            },
+            "visonaut_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_commands": {
+              "rows": 9,
+              "sha256": "2da26c1c8f1e2274f9fb6735c324f48cbe26d9ad4464bf71b279f704b6066fd8"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 10,
+              "sha256": "971925a21a59d5179962d215621b18d8bf5eee644a8d5db3171bc8554f3165f6"
+            },
+            "visonaut_comparisons": {
+              "rows": 7,
+              "sha256": "799f1e875c9025bfc5bd8572a9c2d243a721aae72768f1182749d97a1d28b0ca"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 12,
+              "sha256": "b2f612190ac24ac55ef6586105d983bd9b742ad42053a65dfaedf52a0b8b9fd0"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 5,
+              "sha256": "f431b4d0e126faaae405908fa74b84ffe7b63cd213799919164851396e922e1b"
+            },
+            "visonaut_images": {
+              "rows": 10,
+              "sha256": "330a7647c71d549b20887b2688d3d4a6918c58ef08a73f56954a8bfe6f141829"
+            },
+            "visonaut_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_pins": {
+              "rows": 13,
+              "sha256": "9a2036fddd92c0b8f57508168883861fdb340e85eb478ee2e24a0168dda249d6"
+            },
+            "visonaut_policies": {
+              "rows": 3,
+              "sha256": "c941342270adff05017e4698b9a3ce162518c251f48c982b2967c4de4328a9f1"
+            },
+            "visonaut_projects": {
+              "rows": 3,
+              "sha256": "edaec1085ab4b488e2149b2051997c3a3322f4175432be509b0f8b296a8bd50e"
+            },
+            "visonaut_promotions": {
+              "rows": 7,
+              "sha256": "726d723dce8d694fea947ea4defb24993e7aa8ddbcb0b04c7363237af369872c"
+            },
+            "visonaut_reservations": {
+              "rows": 5,
+              "sha256": "3721e7c98f3f8b49af116e81ab43bd64f4180692a17f1f2a48c28fe061a2a8c5"
+            },
+            "visonaut_runs": {
+              "rows": 7,
+              "sha256": "7f0a5805ebf9d39f6c64254e34e4a16c378ee06f529c37f998b32fb3e48c98a7"
+            },
+            "visonaut_shards": {
+              "rows": 7,
+              "sha256": "daf8e73f95b33ecafd33b5b9b55f1b64ae14d6379547589717a4cd302776bcf1"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 8,
+              "sha256": "892ff711b257c2e9ff3212ebc8c963cfd441ff1a8e1bfce85ad9648355caf79a"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 6,
+              "sha256": "62c2e85ccce2e46c4cd2184d0a10c766646670d9793d5ae5065f94bec31b70d3"
+            },
+            "visonaut_snapshots": {
+              "rows": 6,
+              "sha256": "bd00a3f926f96f8b8e6e5fbd68ebdf5d925f5e5b42d76c6f8226c5b257c45dfe"
+            },
+            "visonaut_status_outbox": {
+              "rows": 59,
+              "sha256": "6ba4e81f50e64cf5f5138628270c4a336c177a770a34f04d06c936f20809efae"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "31a0cb3683f10a3475e1d2a65371db599f3e33d588ca0744f99985bf0599efcb"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "c192205d4ae5bc4d6be9b1c2bddbde62dd502c2b5df48e04a062b37c3826e6df"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "341dff4910e1d39645dafd865b9e13fe9afd3779898b3f46f143c6dd7d8e2d47"
+            }
+          },
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 417,
+        "attemptedStatements": 743,
+        "statements": 721,
+        "rowsRead": 3452,
+        "rowsWritten": 558,
+        "nativeDurationMs": 126.65629999999989
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 61561.085458999994,
+        "httpStatus": 200,
+        "ray": "a3fb28e6eb7e625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:10:55 GMT"
+      }
+    },
+    {
+      "scenario": "acceptanceStatus",
+      "prefix": "final20260923-acceptancestatus",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:10:56.347Z",
+      "completedAt": "2026-09-23T17:11:40.408Z",
+      "durationMs": 44061,
+      "passed": true,
+      "result": {
+        "oldRevision": 14,
+        "invalidatedRevision": 15,
+        "newRevision": 15,
+        "transport": "synthetic send recorder; no GitHub request",
+        "sent": ["failure"],
+        "guards": [
+          "exact source reference",
+          "source invalidation",
+          "source Undo",
+          "unrelated-lineage refusal",
+          "delayed status freshness"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected source rejection after status claim and before delivery",
+          "wallTime": "2026-09-23T17:11:24.316Z",
+          "queuedRevision": 14
+        },
+        {
+          "name": "source rejection prevents baseline promotion",
+          "wallTime": "2026-09-23T17:11:27.596Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "exact verified-related acceptance is reused",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "reuse references specific original source decision",
+          "actual": "8f18e546-6281-4b84-8184-9e827817602b",
+          "expected": "8f18e546-6281-4b84-8184-9e827817602b",
+          "passed": true
+        },
+        {
+          "message": "reuse creates no detached decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact acceptance initially queues success",
+          "actual": "success",
+          "expected": "success",
+          "passed": true
+        },
+        {
+          "message": "old success has native outbox lease",
+          "passed": true
+        },
+        {
+          "message": "source rejection invalidates dependent acceptance",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "source rejection atomically advances native desired status revision",
+          "passed": true
+        },
+        {
+          "message": "delayed success is refused before mock sender",
+          "actual": "stale",
+          "expected": "stale",
+          "passed": true
+        },
+        {
+          "message": "no stale transport invocation",
+          "actual": ["failure"],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "message": "fresh domain status is failure",
+          "actual": "failure",
+          "expected": "failure",
+          "passed": true
+        },
+        {
+          "message": "fresh failure claim",
+          "passed": true
+        },
+        {
+          "message": "fresh failure reaches mock sender",
+          "actual": "delivered",
+          "expected": "delivered",
+          "passed": true
+        },
+        {
+          "message": "only current failure was recorded",
+          "actual": ["failure"],
+          "expected": ["failure"],
+          "passed": true
+        },
+        {
+          "message": "source rejection Undo restores exact acceptance eligibility",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "unrelated equal bytes cannot borrow acceptance",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "fixture leaves baseline at seed",
+          "actual": "final20260923-acceptancestatus-snapshot-seed",
+          "expected": "final20260923-acceptancestatus-snapshot-seed",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 281,
+        "attemptedStatements": 719,
+        "statements": 709,
+        "rowsRead": 1411,
+        "rowsWritten": 784,
+        "nativeDurationMs": 119.53429999999999
+      },
+      "r2": {
+        "puts": 5,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 350
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 44290.542625,
+        "httpStatus": 200,
+        "ray": "a3fb2a6a2f6c625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:11:40 GMT"
+      }
+    },
+    {
+      "scenario": "restoration",
+      "prefix": "final20260923-restoration",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:11:41.039Z",
+      "completedAt": "2026-09-23T17:12:50.803Z",
+      "durationMs": 69764,
+      "passed": true,
+      "result": {
+        "exactRestoration": "passed",
+        "driftedRestoration": "needs-review",
+        "protectedRemoval": true
+      },
+      "events": [
+        {
+          "name": "automatic removal promoted history stays protected",
+          "wallTime": "2026-09-23T17:12:24.713Z",
+          "code": "CONFLICT",
+          "message": "Automatically accepted promoted history is protected. Capture a correction in a new main run."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "seed menu has original automatic acceptance",
+          "passed": true
+        },
+        {
+          "message": "confirmed removal has automatic acceptance and retained row",
+          "passed": true
+        },
+        {
+          "message": "protected removal makes no partial writes",
+          "actual": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 8,
+              "sha256": "f2c96d73fc8ebb01de1104d0bbdf16cab447e1f629dc23f34d5709013ca2b868"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 60,
+              "sha256": "386023d051ce2e968e12ffb8a40859064d23d142df8ca3502cc081fc3ed13dfd"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 17,
+              "sha256": "0e121f426eabb3ff0a856e73e65c1074f6ddd7cdaac01279c2388ab19114aa3d"
+            },
+            "visonaut_checks": {
+              "rows": 1,
+              "sha256": "00089542c119349b099eca0c7189be22ae3ddf52bb63e554b78ef17a6ad3e160"
+            },
+            "visonaut_commands": {
+              "rows": 12,
+              "sha256": "ad33d94f43e47046ac140b2b01360292c18daccb75c8c2517cabe50c8c152c6b"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 18,
+              "sha256": "1c9db408d73aaeb8e257a0dcb6406a3efa57f7cbcd76044632799fd7185607c3"
+            },
+            "visonaut_comparisons": {
+              "rows": 13,
+              "sha256": "19f31dc10e205104f53efea6bc607ec7e4f81153ceae0bddfbe589980d37d325"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 18,
+              "sha256": "9a0a94cbd6ef8d1656f7f0bc9baf2b21ddac38ff4607c2ecd87adae88a32fabd"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 10,
+              "sha256": "5b6b0234f8cf3335c154a8f4a45c9773ce85dd5fbb74aa1672ee396863b59787"
+            },
+            "visonaut_images": {
+              "rows": 17,
+              "sha256": "642abab67759d1e01f4afd792b63a4dedb32d09f3ffccbc9f2ca217ade427673"
+            },
+            "visonaut_lineage": {
+              "rows": 1,
+              "sha256": "fc407d09d6ea1eea290b6ce5704ea6fc40c743d6b525141ba63f52ad700cc075"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 1,
+              "sha256": "fc407d09d6ea1eea290b6ce5704ea6fc40c743d6b525141ba63f52ad700cc075"
+            },
+            "visonaut_pins": {
+              "rows": 21,
+              "sha256": "7916b4b4f2e1591e10cacbafa93ccd2c37d2cdcf9c01820fa1f5e86538b61d2a"
+            },
+            "visonaut_policies": {
+              "rows": 5,
+              "sha256": "7450ddde3b9000414723487423aa3c4d3be7fa84919fdc0818d00be804fe22e8"
+            },
+            "visonaut_projects": {
+              "rows": 5,
+              "sha256": "5db19691c4e6944afb9d59fd3eda76cff2861c072b20330870f2bf3665d6a3f2"
+            },
+            "visonaut_promotions": {
+              "rows": 10,
+              "sha256": "6a9050b61de4bb4cca83ed52afcb64b4fd55563ac4fef4fe4fc305eda9b4317b"
+            },
+            "visonaut_reservations": {
+              "rows": 9,
+              "sha256": "0e65deb1450bad5c5615798e808833be495d48cd63eadf18513e687721c2807a"
+            },
+            "visonaut_runs": {
+              "rows": 13,
+              "sha256": "b267645a85a5a4e51d5fb82951a1e40c09ccc1eee04e94fb2bc05d86e0db8506"
+            },
+            "visonaut_shards": {
+              "rows": 13,
+              "sha256": "a3c20a1ddacb562318f76258c4a9c29f727fdb0e197193004c23d6f411f4a2a3"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 12,
+              "sha256": "21acaa4b4ebedbdfcd618f89180b29cbd0c5f49abd0a74c44cbfa19fe7e59cc4"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 9,
+              "sha256": "db43edfbc44bd82623a771746ebbb992abf0dc45240e5c68c9252ea44a5e5ba8"
+            },
+            "visonaut_snapshots": {
+              "rows": 9,
+              "sha256": "5596624ae7dae7477a9f5920a95c99d4610651e96474194c7d01f2e716b85a9f"
+            },
+            "visonaut_status_outbox": {
+              "rows": 94,
+              "sha256": "f1e9f2efa27dae1eb4d650ccf349e15d54148fb84b79868d3a91dcf7d981824a"
+            },
+            "work_checks": {
+              "rows": 1,
+              "sha256": "ae17f22d182c41d05bf4dcd8a55462951695949485a52624d455c77930749928"
+            },
+            "work_retained_runs": {
+              "rows": 13,
+              "sha256": "e3b44b25c5f64b8ced8980969a904d73127520b907a75a9fdd4803412f6f7be9"
+            },
+            "work_retention_pins": {
+              "rows": 26,
+              "sha256": "468ddaa901a182eec5875169f4b9db8206ad66ba93ce644dd99be1816301d82d"
+            },
+            "work_status_outbox": {
+              "rows": 2,
+              "sha256": "faea645ea9be7e3b4894f1545b3cf02c66f0963b73364e3d6d3b183ceb31dd04"
+            },
+            "work_tasks": {
+              "rows": 9,
+              "sha256": "6b47bec5e0d02875fe0bd77104d2400fd11c29448a0aaa8dba9f276f201dfee7"
+            }
+          },
+          "expected": {
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_ancestry": {
+              "rows": 8,
+              "sha256": "f2c96d73fc8ebb01de1104d0bbdf16cab447e1f629dc23f34d5709013ca2b868"
+            },
+            "visonaut_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_audit": {
+              "rows": 60,
+              "sha256": "386023d051ce2e968e12ffb8a40859064d23d142df8ca3502cc081fc3ed13dfd"
+            },
+            "visonaut_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_captures": {
+              "rows": 17,
+              "sha256": "0e121f426eabb3ff0a856e73e65c1074f6ddd7cdaac01279c2388ab19114aa3d"
+            },
+            "visonaut_checks": {
+              "rows": 1,
+              "sha256": "00089542c119349b099eca0c7189be22ae3ddf52bb63e554b78ef17a6ad3e160"
+            },
+            "visonaut_commands": {
+              "rows": 12,
+              "sha256": "ad33d94f43e47046ac140b2b01360292c18daccb75c8c2517cabe50c8c152c6b"
+            },
+            "visonaut_comparison_rows": {
+              "rows": 18,
+              "sha256": "1c9db408d73aaeb8e257a0dcb6406a3efa57f7cbcd76044632799fd7185607c3"
+            },
+            "visonaut_comparisons": {
+              "rows": 13,
+              "sha256": "19f31dc10e205104f53efea6bc607ec7e4f81153ceae0bddfbe589980d37d325"
+            },
+            "visonaut_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_decisions": {
+              "rows": 18,
+              "sha256": "9a0a94cbd6ef8d1656f7f0bc9baf2b21ddac38ff4607c2ecd87adae88a32fabd"
+            },
+            "visonaut_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "visonaut_identity_history": {
+              "rows": 10,
+              "sha256": "5b6b0234f8cf3335c154a8f4a45c9773ce85dd5fbb74aa1672ee396863b59787"
+            },
+            "visonaut_images": {
+              "rows": 17,
+              "sha256": "642abab67759d1e01f4afd792b63a4dedb32d09f3ffccbc9f2ca217ade427673"
+            },
+            "visonaut_lineage": {
+              "rows": 1,
+              "sha256": "fc407d09d6ea1eea290b6ce5704ea6fc40c743d6b525141ba63f52ad700cc075"
+            },
+            "visonaut_lineage_edges": {
+              "rows": 1,
+              "sha256": "fc407d09d6ea1eea290b6ce5704ea6fc40c743d6b525141ba63f52ad700cc075"
+            },
+            "visonaut_pins": {
+              "rows": 21,
+              "sha256": "7916b4b4f2e1591e10cacbafa93ccd2c37d2cdcf9c01820fa1f5e86538b61d2a"
+            },
+            "visonaut_policies": {
+              "rows": 5,
+              "sha256": "7450ddde3b9000414723487423aa3c4d3be7fa84919fdc0818d00be804fe22e8"
+            },
+            "visonaut_projects": {
+              "rows": 5,
+              "sha256": "5db19691c4e6944afb9d59fd3eda76cff2861c072b20330870f2bf3665d6a3f2"
+            },
+            "visonaut_promotions": {
+              "rows": 10,
+              "sha256": "6a9050b61de4bb4cca83ed52afcb64b4fd55563ac4fef4fe4fc305eda9b4317b"
+            },
+            "visonaut_reservations": {
+              "rows": 9,
+              "sha256": "0e65deb1450bad5c5615798e808833be495d48cd63eadf18513e687721c2807a"
+            },
+            "visonaut_runs": {
+              "rows": 13,
+              "sha256": "b267645a85a5a4e51d5fb82951a1e40c09ccc1eee04e94fb2bc05d86e0db8506"
+            },
+            "visonaut_shards": {
+              "rows": 13,
+              "sha256": "a3c20a1ddacb562318f76258c4a9c29f727fdb0e197193004c23d6f411f4a2a3"
+            },
+            "visonaut_snapshot_images": {
+              "rows": 12,
+              "sha256": "21acaa4b4ebedbdfcd618f89180b29cbd0c5f49abd0a74c44cbfa19fe7e59cc4"
+            },
+            "visonaut_snapshot_retention": {
+              "rows": 9,
+              "sha256": "db43edfbc44bd82623a771746ebbb992abf0dc45240e5c68c9252ea44a5e5ba8"
+            },
+            "visonaut_snapshots": {
+              "rows": 9,
+              "sha256": "5596624ae7dae7477a9f5920a95c99d4610651e96474194c7d01f2e716b85a9f"
+            },
+            "visonaut_status_outbox": {
+              "rows": 94,
+              "sha256": "f1e9f2efa27dae1eb4d650ccf349e15d54148fb84b79868d3a91dcf7d981824a"
+            },
+            "work_checks": {
+              "rows": 1,
+              "sha256": "ae17f22d182c41d05bf4dcd8a55462951695949485a52624d455c77930749928"
+            },
+            "work_retained_runs": {
+              "rows": 13,
+              "sha256": "e3b44b25c5f64b8ced8980969a904d73127520b907a75a9fdd4803412f6f7be9"
+            },
+            "work_retention_pins": {
+              "rows": 26,
+              "sha256": "468ddaa901a182eec5875169f4b9db8206ad66ba93ce644dd99be1816301d82d"
+            },
+            "work_status_outbox": {
+              "rows": 2,
+              "sha256": "faea645ea9be7e3b4894f1545b3cf02c66f0963b73364e3d6d3b183ceb31dd04"
+            },
+            "work_tasks": {
+              "rows": 9,
+              "sha256": "6b47bec5e0d02875fe0bd77104d2400fd11c29448a0aaa8dba9f276f201dfee7"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "exact restoration reuses specific original eligible decision",
+          "actual": "automatic:final20260923-restoration-comparison-seed:final20260923-restoration-capture-seed-1",
+          "expected": "automatic:final20260923-restoration-comparison-seed:final20260923-restoration-capture-seed-1",
+          "passed": true
+        },
+        {
+          "message": "restoration creates no detached decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact restoration passes",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "drifted restoration receives no automatic/reused decision",
+          "passed": true
+        },
+        {
+          "message": "changed restoration needs review",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "protected removal retains decision metadata",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 334,
+        "attemptedStatements": 759,
+        "statements": 759,
+        "rowsRead": 2754,
+        "rowsWritten": 832,
+        "nativeDurationMs": 132.78009999999998
+      },
+      "r2": {
+        "puts": 10,
+        "gets": 19,
+        "deletes": 0,
+        "bytesWritten": 700
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 70001.28300000002,
+        "httpStatus": 200,
+        "ray": "a3fb2b817a2d625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:12:51 GMT"
+      }
+    },
+    {
+      "scenario": "retentionRaces",
+      "prefix": "final20260923-retentionraces",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:12:51.440Z",
+      "completedAt": "2026-09-23T17:12:57.298Z",
+      "durationMs": 5858,
+      "passed": true,
+      "result": {
+        "injectedClock": 2592000100,
+        "boundary": "synthetic retained-run rows; exact native D1 lease/pin algorithms plus native R2 bytes",
+        "guards": [
+          "promotion-first",
+          "expired promotion pin",
+          "GC-first",
+          "late rollback refusal",
+          "stale deletion token",
+          "rollback-first"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected 30-day elapsed clock with expired promotion lease",
+          "wallTime": "2026-09-23T17:12:52.497Z",
+          "now": 2592000100
+        },
+        {
+          "name": "injected GC pause after native claim and before R2 delete",
+          "wallTime": "2026-09-23T17:12:54.861Z",
+          "runId": "final20260923-retentionraces-gc-first",
+          "latePromotion": false,
+          "lateRollback": "refused"
+        }
+      ],
+      "assertions": [
+        {
+          "message": "promotion obtains native retained-byte lease",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "expired promotion lease still pins bytes against GC",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "stale owner cannot release promotion pin",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "fresh owner recovers expired promotion lease",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "promotion-first R2 bytes remain",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "GC becomes eligible only after explicit promotion settlement",
+          "passed": true
+        },
+        {
+          "message": "GC wins native claim",
+          "passed": true
+        },
+        {
+          "message": "GC-first blocks late promotion",
+          "actual": false,
+          "expected": false,
+          "passed": true
+        },
+        {
+          "message": "GC-first refuses late rollback reference",
+          "passed": true
+        },
+        {
+          "message": "new deletion token recovers expired native lease",
+          "passed": true
+        },
+        {
+          "message": "stale deletion token cannot settle",
+          "actual": false,
+          "expected": false,
+          "passed": true
+        },
+        {
+          "message": "native R2 object was deleted",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "current token settles deleted bytes",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "existing rollback pin blocks GC",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "rollback R2 bytes remain",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "released rollback pin permits GC",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 20,
+        "attemptedStatements": 20,
+        "statements": 19,
+        "rowsRead": 55,
+        "rowsWritten": 21,
+        "nativeDurationMs": 5.1547
+      },
+      "r2": {
+        "puts": 3,
+        "gets": 2,
+        "deletes": 1,
+        "bytesWritten": 210
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 6076.320208999969,
+        "httpStatus": 200,
+        "ray": "a3fb2d397e68625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:12:57 GMT"
+      }
+    },
+    {
+      "scenario": "statusScenarios",
+      "prefix": "final20260923-statusscenarios",
+      "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+      "deployment": {
+        "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+        "tag": "",
+        "timestamp": "2026-09-23T17:07:32.182424Z"
+      },
+      "startedAt": "2026-09-23T17:12:57.879Z",
+      "completedAt": "2026-09-23T17:13:11.315Z",
+      "durationMs": 13436,
+      "passed": true,
+      "result": {
+        "scope": "Standalone work.ts status delivery state transitions on the supplied native D1 database",
+        "githubTransport": "mocked; no GitHub HTTP requests or credential requests are performed",
+        "domainStatusPreparation": "Not exercised here; prepareStatusIntent is covered by the parent fixture",
+        "invocation": "bb3d28ba-bd7d-48b8-b64c-d80423282192",
+        "scenarioCount": 5,
+        "assertionCount": 79,
+        "assertions": [
+          {
+            "name": "stale-success-refusal: old claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "stale-success: obsolete success refused",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "stale-success: obsolete success made no transport call",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success: old outbox row obsolete",
+            "passed": true,
+            "actual": "obsolete",
+            "expected": "obsolete"
+          },
+          {
+            "name": "stale-success-refusal: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "stale-success-refusal: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "stale-success: failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "stale-success: only current failure reached mocked remote",
+            "passed": true,
+            "actual": ["failure"],
+            "expected": ["failure"]
+          },
+          {
+            "name": "stale-success-refusal: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "stale-success-refusal: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success-refusal: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success-refusal: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "stale-success-refusal: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: old claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: old request was current before transport",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "delayed: expired in-flight request needs attention",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: expired in-flight lock retained",
+            "passed": true,
+            "actual": "old",
+            "expected": "old"
+          },
+          {
+            "name": "delayed: request remains marked as started",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: premature-current claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "delayed: duplicate old send refused",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "delayed: exactly one request started during pause",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: mocked response has not yet applied",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed: old request settles after response barrier",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "delayed: old response records revision one",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: old response is obsolete locally",
+            "passed": true,
+            "actual": "obsolete",
+            "expected": "obsolete"
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "delayed: current failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "delayed: current failure follows the settled old success",
+            "passed": true,
+            "actual": ["success", "failure"],
+            "expected": ["success", "failure"]
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: ambiguous-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "ambiguous: intent current before mocked request",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous: uncertain response recorded",
+            "passed": true,
+            "actual": "ambiguous",
+            "expected": "ambiguous"
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: lease-expiry-cannot-recover claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "ambiguous: wrong token cannot settle lock",
+            "passed": true,
+            "actual": false,
+            "expected": false
+          },
+          {
+            "name": "ambiguous: attention flag survives lease expiry",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "ambiguous: owner lock survives expiry",
+            "passed": true,
+            "actual": "ambiguous-owner",
+            "expected": "ambiguous-owner"
+          },
+          {
+            "name": "ambiguous: old outbox remains sending",
+            "passed": true,
+            "actual": "sending",
+            "expected": "sending"
+          },
+          {
+            "name": "ambiguous: owning token explicitly settles stopped transport",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: recovered-current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous: current failure delivered after explicit settlement",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "ambiguous: only current failure applied in the controlled transport",
+            "passed": true,
+            "actual": ["failure"],
+            "expected": ["failure"]
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: credential-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "credentials: old success refused after credentials return",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "credentials: current check changes while credentials are paused",
+            "passed": true,
+            "actual": [true, false],
+            "expected": [true, false]
+          },
+          {
+            "name": "credentials: invalidated success never starts mocked PATCH",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "current-check-after-credential-pause: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "credentials: current failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "current-check-after-credential-pause: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "current-check-after-credential-pause: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "current-check-after-credential-pause: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: shared-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: winning intent current before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "duplicate: competing call refuses before winner responds",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "duplicate: only one sender callback enters transport",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: competing-owner claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "duplicate: winning request remains started",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: one outbox delivery attempt consumed",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: one delivery and one refusal",
+            "passed": true,
+            "actual": ["delivered", "stale"],
+            "expected": ["delivered", "stale"]
+          },
+          {
+            "name": "duplicate: completed delivery cannot replay with old token",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "duplicate: repeated calls produce one mocked write",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "duplicate-serialized-sends: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          }
+        ],
+        "scenarios": [
+          {
+            "name": "stale-success-refusal",
+            "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "staleOutcome": "stale",
+              "refusedBeforeTransport": true,
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 101
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "obsolete-success-refused",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure",
+            "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "oldOutcome": "delivered",
+              "duplicateOutcome": "stale",
+              "currentClaimBlockedDuringOldRequest": true,
+              "injectedLeaseExpiryAt": 110,
+              "injectedReconciliationAt": 120,
+              "transportCalls": 2,
+              "appliedWrites": 2,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 120,
+                "outcome": "delivered"
+              },
+              {
+                "sequence": 2,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 120,
+                "completedAt": 120,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 1,
+                "conclusion": "success",
+                "at": 120
+              },
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 120
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "expired-in-flight-lock-held",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "old",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 1
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "old-response-settled",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": 1,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement",
+            "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "ambiguousOutcome": "ambiguous",
+              "settlementProof": {
+                "source": "injected mocked transport terminal state",
+                "cannotWriteAgain": true,
+                "remoteWasReadToInferSettlement": false,
+                "appliesToRealGitHubTransport": false
+              },
+              "leaseExpiryAloneRecovered": false,
+              "wrongTokenSettled": false,
+              "ownerSettled": true,
+              "transportCalls": 2,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "connection-reset-without-confirmation"
+              },
+              {
+                "sequence": 2,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 1000,
+                "completedAt": 1000,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 1000
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "ambiguous-after-expiry-and-wrong-token",
+                "logicalNow": 1000,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "ambiguous-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 1
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": "Error: Injected mocked GitHub transport connection reset"
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 1000,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 1000,
+                    "last_error": "Error: Injected mocked GitHub transport connection reset"
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 1000,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "current-check-after-credential-pause",
+            "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "oldOutcome": "stale",
+              "credentialLookups": 1,
+              "currentChecks": [
+                {
+                  "phase": "before-credentials",
+                  "current": true
+                },
+                {
+                  "phase": "after-credentials-before-patch",
+                  "current": false
+                }
+              ],
+              "credentialTransport": "injected Promise barrier; no real credential request",
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 102,
+                "completedAt": 102,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 102
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "new-intent-during-credential-pause",
+                "logicalNow": 102,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "credential-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 102,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "duplicate-serialized-sends",
+            "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "concurrentCalls": 2,
+              "firstOutcome": "stale",
+              "outcomes": ["delivered", "stale"],
+              "replayOutcome": "stale",
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 1,
+                "conclusion": "success",
+                "at": 101
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "duplicate-refused-while-winner-in-flight",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                  "desired_revision": 1,
+                  "delivered_revision": null,
+                  "lease_token": "shared-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                  "desired_revision": 1,
+                  "delivered_revision": 1,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "events": [
+        {
+          "name": "status.stale-success-refusal.start",
+          "wallTime": "2026-09-23T17:12:58.032Z",
+          "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:stale-success-refusal",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.stale-success-refusal.complete",
+          "wallTime": "2026-09-23T17:13:00.391Z",
+          "staleOutcome": "stale",
+          "refusedBeforeTransport": true,
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.delayed-in-flight-then-current-failure.start",
+          "wallTime": "2026-09-23T17:13:00.391Z",
+          "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:delayed-in-flight-then-current-failure",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.delayed-in-flight-then-current-failure.complete",
+          "wallTime": "2026-09-23T17:13:03.797Z",
+          "oldOutcome": "delivered",
+          "duplicateOutcome": "stale",
+          "currentClaimBlockedDuringOldRequest": true,
+          "injectedLeaseExpiryAt": 110,
+          "injectedReconciliationAt": 120,
+          "transportCalls": 2,
+          "appliedWrites": 2,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.ambiguous-transport-explicit-settlement.start",
+          "wallTime": "2026-09-23T17:13:03.797Z",
+          "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:ambiguous-transport-explicit-settlement",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.ambiguous-transport-explicit-settlement.complete",
+          "wallTime": "2026-09-23T17:13:07.197Z",
+          "ambiguousOutcome": "ambiguous",
+          "settlementProof": {
+            "source": "injected mocked transport terminal state",
+            "cannotWriteAgain": true,
+            "remoteWasReadToInferSettlement": false,
+            "appliesToRealGitHubTransport": false
+          },
+          "leaseExpiryAloneRecovered": false,
+          "wrongTokenSettled": false,
+          "ownerSettled": true,
+          "transportCalls": 2,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.current-check-after-credential-pause.start",
+          "wallTime": "2026-09-23T17:13:07.197Z",
+          "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:current-check-after-credential-pause",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.current-check-after-credential-pause.complete",
+          "wallTime": "2026-09-23T17:13:09.653Z",
+          "oldOutcome": "stale",
+          "credentialLookups": 1,
+          "currentChecks": [
+            {
+              "phase": "before-credentials",
+              "current": true
+            },
+            {
+              "phase": "after-credentials-before-patch",
+              "current": false
+            }
+          ],
+          "credentialTransport": "injected Promise barrier; no real credential request",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.duplicate-serialized-sends.start",
+          "wallTime": "2026-09-23T17:13:09.653Z",
+          "checkId": "e03:status:bb3d28ba-bd7d-48b8-b64c-d80423282192:duplicate-serialized-sends",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.duplicate-serialized-sends.complete",
+          "wallTime": "2026-09-23T17:13:11.315Z",
+          "concurrentCalls": 2,
+          "firstOutcome": "stale",
+          "outcomes": ["delivered", "stale"],
+          "replayOutcome": "stale",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        }
+      ],
+      "assertions": [],
+      "d1": {
+        "calls": 104,
+        "attemptedStatements": 124,
+        "statements": 124,
+        "rowsRead": 334,
+        "rowsWritten": 107,
+        "nativeDurationMs": 32.1397
+      },
+      "r2": {
+        "puts": 0,
+        "gets": 0,
+        "deletes": 0,
+        "bytesWritten": 0
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact a953a2b final-source service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks only; no outbound GitHub request or check route",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 13688.531332999992,
+        "httpStatus": 200,
+        "ray": "a3fb2d61afab625a-GRU",
+        "date": "Wed, 23 Sep 2026 17:13:11 GMT"
+      }
+    }
+  ],
+  "authentication": {
+    "missing": 401,
+    "wrong": 401,
+    "tokenRecorded": false
+  },
+  "deployment": {
+    "id": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+    "tag": "",
+    "timestamp": "2026-09-23T17:07:32.182424Z"
+  },
+  "fixtureDigest": "038e6326d2e1aaa3d4a4680e74c11c32ed184b2376456b475870d0ee77fc9016",
+  "manifestVerified": true,
+  "completedAt": "2026-09-23T17:13:11.768Z"
+}

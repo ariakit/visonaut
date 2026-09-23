@@ -1,0 +1,14 @@
+{
+  "worker": "visonaut-e03-final-20260923",
+  "origin": "https://visonaut-e03-final-20260923.ariakit.workers.dev",
+  "accountId": "b04f3af3f0f10a6b9481bc23ba974eca",
+  "databaseId": "f1197621-9b01-4d2e-be9b-0e40d9bb4026",
+  "bucket": "visonaut-e03-final-20260923-images",
+  "versionId": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+  "bundleSha256": "054ac9b6a5660132662456e9f34689d56c2c1eadebe83ba7d78b15cf3508f24d",
+  "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+  "recordedAt": "2026-09-23T17:07:54.139344+00:00",
+  "githubCredentialUploaded": false,
+  "routes": [],
+  "triggers": []
+}

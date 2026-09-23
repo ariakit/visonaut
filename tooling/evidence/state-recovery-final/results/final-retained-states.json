@@ -1,0 +1,36 @@
+[
+  {
+    "results": [
+      {
+        "byte_state": "deleted",
+        "runs": 1
+      },
+      {
+        "byte_state": "deleting",
+        "runs": 2
+      },
+      {
+        "byte_state": "live",
+        "runs": 15
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "MIA",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.172
+      },
+      "duration": 0.172,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 1028096,
+      "rows_read": 36,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

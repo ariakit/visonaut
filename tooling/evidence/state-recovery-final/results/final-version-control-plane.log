@@ -1,0 +1,20 @@
+
+ ⛅️ wrangler 4.136.1 (update available 4.137.0)
+───────────────────────────────────────────────
+Version ID:  89e1c8de-6084-4e81-986a-d729f250b5f4
+Created:     2026-09-23T17:07:32.182Z
+Author:      hazdiego@gmail.com
+Source:      Upload
+Tag:         -
+Message:     -
+
+Handlers:             fetch
+Compatibility Date:   2026-09-22
+Compatibility Flags:  nodejs_compat
+Secrets:
+Secret Name:  PROBE_TOKEN
+Your Worker has access to the following bindings:
+Binding                                                 Resource
+env.DB (f1197621-9b01-4d2e-be9b-0e40d9bb4026)           D1 Database
+env.IMAGES (visonaut-e03-final-20260923-images)         R2 Bucket
+env.VERSION                                             Worker Version Metadata

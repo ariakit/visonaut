@@ -1,0 +1,175 @@
+{
+  "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+  "verifiedAgainstGitTree": true,
+  "sourceFiles": [
+    {
+      "path": "packages/service/src/comparison-publication.ts",
+      "sha256": "e1112375a87751d8820e11846a25b3fc864c93ae2e43f53afd0ff61cf57fec04"
+    },
+    {
+      "path": "packages/service/src/database.ts",
+      "sha256": "fac44755fd237b6c215caf2a79f95e77a0cfaeb5beacd3bbf8431eac6c2e47e7"
+    },
+    {
+      "path": "packages/service/src/historical.ts",
+      "sha256": "8c7bb73486faca682649690224f9ba9f6d43f9aeb77bf43d4965a47b67b4cd4c"
+    },
+    {
+      "path": "packages/service/src/history.ts",
+      "sha256": "91a7ce6b23116bf14a15bd1bdd2a4bcca1a8bef05b5ac9a1515fcf921ee941cf"
+    },
+    {
+      "path": "packages/service/src/index.ts",
+      "sha256": "e82825ef2399b641d98924c7abe684e2e0ba25b268fb578d2fae6343f50565ba"
+    },
+    {
+      "path": "packages/service/src/lineage.ts",
+      "sha256": "8e8b20d95d70c5b91df91b8f7f5cbd03713a5a7fb5e00d2c8073bc7ac57c362d"
+    },
+    {
+      "path": "packages/service/src/prune.ts",
+      "sha256": "a24612a804beb97ce0f1b425f0775f1be0dafd012f918ea5beee9554c54d7409"
+    },
+    {
+      "path": "packages/service/src/retention.ts",
+      "sha256": "cb3ed44700b6a6d30f712c8729613c89fd75764803e626cbd1faf4ae6a93332f"
+    },
+    {
+      "path": "packages/service/src/service.ts",
+      "sha256": "d7b28e55cd70c199df8f1397b86181db5dd443576011e845e6ca73b33ae34ee7"
+    },
+    {
+      "path": "packages/service/src/types.ts",
+      "sha256": "aa178241d8c793920e6d7012e24a0eebd0f296609105e944cb872efe9098b909"
+    },
+    {
+      "path": "packages/service/src/work.ts",
+      "sha256": "a89eda546a30ae02bc3fdc3bad721998b1750eb20f21464c4e44e1cdd7d92f77"
+    },
+    {
+      "path": "packages/protocol/src/hash.ts",
+      "sha256": "3ffd2ee2d4668fb63ba60187dc5261b0b4777fc245358608575e823735854d6e"
+    },
+    {
+      "path": "packages/protocol/src/index.ts",
+      "sha256": "65f10f41fb1ac4982549cde75bac56b694f9e0b89fac751667203321f442eafe"
+    },
+    {
+      "path": "packages/protocol/src/types.ts",
+      "sha256": "2549f4a03ea729690e00fc2df91e0cef3b53ce71da33f9480ee9a95cf73521dd"
+    },
+    {
+      "path": "packages/protocol/src/validate.ts",
+      "sha256": "30b13782c646039caa9af2f349a0e60c81f1a937db1b79fc270784b227d6c327"
+    },
+    {
+      "path": "packages/compare/src/binary.ts",
+      "sha256": "5c36a4c338e8e0e2a0cf9845cefba6c083eda2539c1fb9157ebc15443a2b3286"
+    },
+    {
+      "path": "packages/compare/src/compare.ts",
+      "sha256": "266bfe8bb97bdbaca2d445e195c481b27eca8fa055b15a1e1b78c68b1ed2567e"
+    },
+    {
+      "path": "packages/compare/src/exif.ts",
+      "sha256": "f280f7ef7af0aaad364ccce996ee9ed212cd18edb415688c036356f9022fdfe8"
+    },
+    {
+      "path": "packages/compare/src/image.ts",
+      "sha256": "5f75e8680eaaaefc8774195dfb3f7597157b5ab3099894d9af2dedcfb8f0ad36"
+    },
+    {
+      "path": "packages/compare/src/index.ts",
+      "sha256": "c0c77a7353b523fbccdff2940982418a80abaa57f42b03cd5ab84ee2fbbc5318"
+    },
+    {
+      "path": "packages/compare/src/jsquash.ts",
+      "sha256": "8dea39560d46d139dc75c80bdcb2ba968c3a142aaf59823c6832e3d681a6d45d"
+    },
+    {
+      "path": "packages/compare/src/png.ts",
+      "sha256": "86201dfebfb8864f9aa9dcd114992965e74bd6a0670448af9390bfa02266fbd6"
+    },
+    {
+      "path": "packages/compare/src/profile.ts",
+      "sha256": "a28dc92332e33afb549956d92bb6242bfa460f6fbd62e3950072925e3957aecc"
+    },
+    {
+      "path": "packages/compare/src/types.ts",
+      "sha256": "700c17582b066b76aa153c1f8d449d477d845182e19b9be7c4218fffcf6bd8eb"
+    },
+    {
+      "path": "packages/compare/src/webp.ts",
+      "sha256": "2a174d16f3ab0ad243fd066af84a2badeb060691cf101b1f0ab71e918b51437a"
+    },
+    {
+      "path": "apps/web/migrations/0001_service.sql",
+      "sha256": "b73bbc00f554fb09b52a978ebe6668726b172282f2a07ca704dd6b649acd6096"
+    },
+    {
+      "path": "apps/web/migrations/0002_work.sql",
+      "sha256": "5366c884fe41f0135c0ce0b0d1834f26367f3284b4b109d5c3f4cf61e204e8e6"
+    },
+    {
+      "path": "apps/web/migrations/0003_auth.sql",
+      "sha256": "11955b0f6efc3f8d83608172aa9c4e96d63db8ba7048320fb706467524edb82c"
+    },
+    {
+      "path": "apps/web/migrations/0004_ingest.sql",
+      "sha256": "c6953700b16d2bde2db745588d4c871402e4c5e1d0c334e0947c64ba1abdd527"
+    },
+    {
+      "path": "apps/web/migrations/0005_operations.sql",
+      "sha256": "f44270a4453bcc121565feb9609442e3e4faf218bca6286e093687d700061db7"
+    },
+    {
+      "path": "apps/web/migrations/0006_acceptance.sql",
+      "sha256": "7ccebfb1004b4b1c073c85a252a64d7eb6b61f051cbc9102e2c381c0c544e7ec"
+    },
+    {
+      "path": "apps/web/migrations/0007_backup_inventory.sql",
+      "sha256": "fe28f1602a1708dde4c644c12fee7a49796536fd3fb01980804257533e4012b9"
+    },
+    {
+      "path": "apps/web/migrations/0008_capture_profiles.sql",
+      "sha256": "930a72f8c18a6e4506218c0e9c16a4fe46bebe7530914980020038b2e36df75c"
+    },
+    {
+      "path": "apps/web/migrations/0009_retention_history.sql",
+      "sha256": "a573ff14f758e093797508de71f469d980edce9886c0a49f5425a0673c85849f"
+    },
+    {
+      "path": "apps/web/migrations/0010_run_history.sql",
+      "sha256": "2d59b8ad67746dbce3654ef36ef88d10c634908c56034cd872ea7a97c39e8405"
+    },
+    {
+      "path": "apps/web/migrations/0011_backup_groups.sql",
+      "sha256": "96d5ec38c8196c8497ebd2f3276494b089fa90e31aa12b22bf4d1f1b870e707e"
+    },
+    {
+      "path": "apps/web/migrations/0012_historical_comparisons.sql",
+      "sha256": "53abe2d8ba1869c377ee6217e12351e8a4a9f43086b95442cce9e31ad4eb9859"
+    },
+    {
+      "path": "apps/web/migrations/0013_promotion_scans.sql",
+      "sha256": "643d6d7c728ffb01535f7a1b15c2fbd6bfc42e4cfae2a93aff4909f77c63b71d"
+    },
+    {
+      "path": "apps/web/migrations/0014_visonaut_brand.sql",
+      "sha256": "e1c786fe145cf19b5de97a888f30d277e44fbc8a71708bbb2a6b92023ed1774e"
+    },
+    {
+      "path": "apps/web/migrations/0015_run_original_bytes.sql",
+      "sha256": "f97d982b7aa6db303426bd81552802b4edc7441a0f0cd74d59c59b6172f72140"
+    },
+    {
+      "path": "apps/web/migrations/0016_comparison_publication.sql",
+      "sha256": "02f9e76951aea002f9fe6e0645a9631ca19d2267491512effcfc1cb98b99a5e1"
+    },
+    {
+      "path": "apps/web/migrations/0018_transfer_key_redemptions.sql",
+      "sha256": "9ae2d13c235a2a0d4bf8572f74c00d4aeabfa06fb4758ee71e29fd09e9599c79"
+    }
+  ],
+  "generatedAt": "2026-09-23T17:05:32.717Z"
+}

@@ -1,0 +1,189 @@
+[
+  {
+    "results": [
+      {
+        "object_key": "baselines/final20260923-acceptancestatus-seed/final20260923-acceptancestatus-image-seed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-atomiccommands-seed/final20260923-atomiccommands-image-seed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-atomiccommands-seed/final20260923-atomiccommands-image-seed-1",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-currentandstaleundo-green/final20260923-currentandstaleundo-image-green-0",
+        "digest": "619b0e8b0c8741604b8628c64323444df334846a0dfe13963662586a3603f14c",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-currentandstaleundo-red/final20260923-currentandstaleundo-image-red-0",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-currentandstaleundo-seed/final20260923-currentandstaleundo-image-seed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-restoration-removed/final20260923-restoration-image-removed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-restoration-seed/final20260923-restoration-image-seed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-restoration-seed/final20260923-restoration-image-seed-1",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-rollbackhistory-mixed/final20260923-rollbackhistory-image-mixed-0",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-rollbackhistory-mixed/final20260923-rollbackhistory-image-mixed-1",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "baselines/final20260923-rollbackhistory-seed/final20260923-rollbackhistory-image-seed-0",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-acceptancestatus-dependent/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-acceptancestatus-seed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-acceptancestatus-source/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-acceptancestatus-unrelated/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-atomiccommands-changed/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-atomiccommands-changed/1.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-atomiccommands-seed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-atomiccommands-seed/1.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-currentandstaleundo-green/0.png",
+        "digest": "619b0e8b0c8741604b8628c64323444df334846a0dfe13963662586a3603f14c",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-currentandstaleundo-red/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-currentandstaleundo-seed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-drifted/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-drifted/1.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-removed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-restored/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-restored/1.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-seed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-restoration-seed/1.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-rollbackhistory-mixed/0.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-rollbackhistory-mixed/1.png",
+        "digest": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5",
+        "bytes": 70
+      },
+      {
+        "object_key": "runs/final20260923-rollbackhistory-seed/0.png",
+        "digest": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+        "bytes": 70
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "MIA",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.324
+      },
+      "duration": 0.324,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 1028096,
+      "rows_read": 57,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]
