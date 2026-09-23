@@ -3,6 +3,7 @@ import { readArchivedComparison } from "./operations/history-supplement.ts";
 import { readArchivedCommand, readRunHistory } from "./operations/history.ts";
 import {
   createGitHubClient,
+  SecurityError,
   type AuthConfiguration,
   type GitHubAppConfiguration,
   type GitHubClient,
@@ -147,6 +148,26 @@ export async function assertOperationsProject(env: Env) {
   }
 }
 
+async function assertExportRunProject(env: Env, runId: string) {
+  const projectId = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
+  const run = await env.DB.prepare(
+    `SELECT run.id FROM visonaut_runs run
+    JOIN visonaut_projects project ON project.id=run.project_id
+    WHERE run.id=? AND project.id=? AND project.repository_id=?`,
+  )
+    .bind(runId, projectId, env.GITHUB_REPOSITORY_ID)
+    .first();
+  if (!run) throw new SecurityError("not_found", 404, "The run was not found.");
+}
+
+async function assertExportProject(env: Env, exportId: string) {
+  const exported = await env.DB.prepare("SELECT run_id FROM operations_exports WHERE id=?")
+    .bind(exportId)
+    .first<{ run_id: string }>();
+  if (!exported) throw new SecurityError("not_found", 404, "The export was not found.");
+  await assertExportRunProject(env, exported.run_id);
+}
+
 export function apiBindings(env: Env): ApiBindings {
   const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
   const auth = authConfiguration(env);
@@ -221,11 +242,11 @@ export function apiBindings(env: Env): ApiBindings {
     },
     exports: {
       async create(runId, actorId) {
-        await assertOperationsProject(env);
+        await assertExportRunProject(env, runId);
         return createRunExport(operationsContext(env), { runId, actorId });
       },
       async download(exportId) {
-        await assertOperationsProject(env);
+        await assertExportProject(env, exportId);
         return streamRunExport(operationsContext(env), exportId);
       },
     },

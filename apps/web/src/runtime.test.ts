@@ -7,7 +7,12 @@ import * as api from "./api/index.ts";
 import * as capacity from "./capacity.ts";
 import * as operations from "./operations/index.ts";
 import { recordEvent } from "./operations/common.ts";
-import { reportSchedulerFailure, runScheduledOperations } from "./runtime.ts";
+import {
+  apiBindings,
+  assertOperationsProject,
+  reportSchedulerFailure,
+  runScheduledOperations,
+} from "./runtime.ts";
 import server from "./server.ts";
 
 // These tests exercise Worker handlers without the application build's renderer.
@@ -66,9 +71,56 @@ beforeAll(async () => {
   ).run();
   await env.DB.prepare("CREATE TABLE operations_cursors(id TEXT PRIMARY KEY,value TEXT)").run();
   await env.DB.prepare("CREATE TABLE visonaut_projects(id TEXT, repository_id TEXT)").run();
+  await env.DB.prepare("CREATE TABLE operations_exports(id TEXT, run_id TEXT)").run();
   await env.DB.prepare("INSERT INTO visonaut_projects VALUES (?,?)")
     .bind(env.VISONAUT_PROJECT_ID, env.GITHUB_REPOSITORY_ID)
     .run();
+});
+
+it("keeps exports inside the configured project when a capacity probe shares D1", async () => {
+  const configuredRun = "configured-run";
+  const otherRun = "probe-run";
+  const configuredExport = crypto.randomUUID();
+  const otherExport = crypto.randomUUID();
+  await env.DB.prepare(
+    "INSERT INTO visonaut_projects VALUES('capacity-probe','other-repository')",
+  ).run();
+  await env.DB.prepare("INSERT INTO visonaut_runs VALUES(?, ?, ?, 1, 1, 'reviewing')")
+    .bind(configuredRun, env.VISONAUT_PROJECT_ID, configuredRun)
+    .run();
+  await env.DB.prepare(
+    "INSERT INTO visonaut_runs VALUES(?, 'capacity-probe', ?, 1, 1, 'reviewing')",
+  )
+    .bind(otherRun, otherRun)
+    .run();
+  await env.DB.prepare("INSERT INTO operations_exports VALUES(?, ?)")
+    .bind(configuredExport, configuredRun)
+    .run();
+  await env.DB.prepare("INSERT INTO operations_exports VALUES(?, ?)")
+    .bind(otherExport, otherRun)
+    .run();
+  try {
+    await expect(assertOperationsProject(env)).rejects.toThrow("one matching configured project");
+    vi.spyOn(operations, "createRunExport").mockResolvedValue({
+      exportId: configuredExport,
+      downloadPath: `/api/exports/${configuredExport}`,
+    });
+    vi.spyOn(operations, "streamRunExport").mockResolvedValue(new Response("archive"));
+    const exports = apiBindings(env).exports;
+    if (!exports) throw new Error("Export bindings are unavailable.");
+    await expect(exports.create(configuredRun, "maintainer")).resolves.toMatchObject({
+      exportId: configuredExport,
+    });
+    await expect(exports.download(configuredExport)).resolves.toBeInstanceOf(Response);
+    await expect(exports.create(otherRun, "maintainer")).rejects.toMatchObject({ status: 404 });
+    await expect(exports.download(otherExport)).rejects.toMatchObject({ status: 404 });
+    expect(operations.createRunExport).toHaveBeenCalledTimes(1);
+    expect(operations.streamRunExport).toHaveBeenCalledTimes(1);
+  } finally {
+    await env.DB.prepare("DELETE FROM operations_exports").run();
+    await env.DB.prepare("DELETE FROM visonaut_runs").run();
+    await env.DB.prepare("DELETE FROM visonaut_projects WHERE id='capacity-probe'").run();
+  }
 });
 
 afterAll(async () => {
