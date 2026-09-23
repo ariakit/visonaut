@@ -8,6 +8,7 @@ import {
 } from "@visonaut/security";
 import { Service, type CommandResult } from "@visonaut/service";
 import type { ArchivedRunHistory } from "../operations/history-format.ts";
+import { object, string } from "./input.js";
 
 export interface ApiConfiguration {
   origin: string;
@@ -49,6 +50,8 @@ export interface ApiBindings {
   database: D1Database;
   images: ObjectStorage;
   quarantine: ObjectStorage;
+  bootstrap?: Pick<ObjectStorage, "get">;
+  transferPrivateKey?: string;
   comparator: { fetch: typeof fetch };
   comparisons: { send(message: { taskId: string }): Promise<void> };
   configuration: ApiConfiguration;
@@ -84,6 +87,22 @@ export interface PrivateContext extends ApiContext {
 
 export function apiContext(bindings: ApiBindings): ApiContext {
   return { ...bindings, service: new Service(bindings.database) };
+}
+
+export async function loadVerifiedMergeGroup(context: ApiContext, testedSha: string) {
+  const row = await context.database
+    .prepare("SELECT metadata_json FROM ingest_merge_groups WHERE head_sha = ? AND active = 1")
+    .bind(testedSha)
+    .first<{ metadata_json: string }>();
+  if (!row) return null;
+  const group = object(JSON.parse(row.metadata_json));
+  return {
+    repositoryId: string(group.repositoryId),
+    headSha: string(group.headSha),
+    headRef: string(group.headRef),
+    baseSha: string(group.baseSha),
+    baseRef: string(group.baseRef),
+  };
 }
 
 export async function assertConfiguredProject(context: ApiContext) {

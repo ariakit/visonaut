@@ -37,7 +37,7 @@ import {
   statement,
   type RunRow,
 } from "@visonaut/service";
-import { assertConfiguredProject, type ApiContext } from "./context.js";
+import { assertConfiguredProject, loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { discoveryEvidence } from "./receipts.js";
 import { inheritedShards, verifiedInheritedShard, workflowAttempt, workflowJobs } from "./jobs.js";
@@ -228,23 +228,7 @@ export async function reserve(request: Request, context: ApiContext): Promise<Re
       reusableWorkflowSha: context.configuration.reusableWorkflowSha,
       planDigest,
       shards: plan.shards,
-      loadMergeGroup: async (testedSha) => {
-        const row = await context.database
-          .prepare(
-            "SELECT metadata_json FROM ingest_merge_groups WHERE head_sha = ? AND active = 1",
-          )
-          .bind(testedSha)
-          .first<{ metadata_json: string }>();
-        if (!row) return null;
-        const group = object(JSON.parse(row.metadata_json));
-        return {
-          repositoryId: string(group.repositoryId),
-          headSha: string(group.headSha),
-          headRef: string(group.headRef),
-          baseSha: string(group.baseSha),
-          baseRef: string(group.baseRef),
-        };
-      },
+      loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),
     },
   });
   const lineageKey =

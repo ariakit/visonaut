@@ -208,12 +208,20 @@ async function capturePrepared({
   }
   const deadline = performance.now() + timeout;
   await beforeDeadline(page.waitForLoadState("domcontentloaded", { timeout }), deadline);
-  await beforeDeadline(
-    page.evaluate(async () => {
-      await document.fonts.ready;
-    }),
+  // Firefox can leave fonts.ready pending after navigation even when no font
+  // face is loading. Observe the faces instead of waiting for that promise.
+  const fontWait = await beforeDeadline(
+    page.waitForFunction(
+      () => {
+        document.documentElement.getBoundingClientRect();
+        return [...document.fonts].every((face) => face.status !== "loading");
+      },
+      undefined,
+      { timeout: Math.max(1, deadline - performance.now()) },
+    ),
     deadline,
   );
+  await fontWait.dispose();
   const profile = await beforeDeadline(getProfile(page, options, info), deadline);
   const profileDigest = await digestJson(profile);
   let previous: ReturnType<typeof PNG.sync.read> | undefined;

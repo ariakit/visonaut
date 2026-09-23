@@ -10,6 +10,7 @@
   },
   "files": [
     "dist",
+    "ci",
     "README.md",
     "LICENSE"
   ],
@@ -24,6 +25,11 @@
       "types": "./dist/reporter.d.ts",
       "import": "./dist/reporter.js",
       "default": "./dist/reporter.js"
+    },
+    "./ci": {
+      "types": "./ci/index.d.mts",
+      "import": "./ci/index.mjs",
+      "default": "./ci/index.mjs"
     }
   },
   "publishConfig": {

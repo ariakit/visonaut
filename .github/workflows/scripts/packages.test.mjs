@@ -10,10 +10,25 @@ import { assertRelease, auditTarball, publicationNeeded, verifyPackages } from "
 const temporary = mkdtempSync(resolve(tmpdir(), "visonaut-release-test-"));
 after(() => rmSync(temporary, { recursive: true, force: true }));
 let fixtureId = 0;
+const ciFiles = [
+  "config.mjs",
+  "context.mjs",
+  "environment.mjs",
+  "identity.mjs",
+  "index.d.mts",
+  "index.mjs",
+  "plan.mjs",
+  "rebind.mjs",
+  "render-context.mjs",
+  "transfer.mjs",
+];
 
 function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
   const directory = resolve(temporary, `fixture-${fixtureId++}`);
   mkdirSync(resolve(directory, "dist"), { recursive: true });
+  if (name === "@visonaut/playwright") {
+    mkdirSync(resolve(directory, "ci"));
+  }
   const packageDirectory = name === "visonaut" ? "packages/cli" : "packages/playwright";
   const manifest = {
     name,
@@ -29,6 +44,16 @@ function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
     "dist/index.d.ts": "export declare const ready: true;",
     "dist/bin.js": "#!/usr/bin/env node\nconsole.log('visonaut');",
     "dist/reporter.js": "export default class Reporter {}",
+    ...(name === "@visonaut/playwright"
+      ? Object.fromEntries(
+          ciFiles.map((file) => [
+            `ci/${file}`,
+            file.endsWith(".d.mts")
+              ? "export declare const ready: true;"
+              : "export const ready = true;",
+          ]),
+        )
+      : {}),
     ...extraFiles,
   };
   for (const [name, contents] of Object.entries(files)) {
@@ -65,6 +90,13 @@ test("the public package audit accepts actual npm archives and rejects private f
   assert.throws(
     () => auditTarball(workspace.bytes, workspace.expected),
     /Local runtime dependency/,
+  );
+  const extraCi = packFixture("@visonaut/playwright", {
+    "ci/private-review.mjs": "export const privateReview = true;",
+  });
+  assert.throws(
+    () => auditTarball(extraCi.bytes, extraCi.expected),
+    /Unexpected public package file/,
   );
 });
 

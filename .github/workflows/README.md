@@ -43,16 +43,20 @@ The web build uses `CLOUDFLARE_ENV=production`. The [Vite plugin selects the env
 
 ## Private diagnostic package transport
 
-A token issued to the public Ariakit repository cannot download Actions artifacts or release assets from this private repository. Do not give the diagnostic workflow private source access. A maintainer downloads a successful, exact-commit package artifact, verifies it, then uploads only its two tarballs into the private `visonaut-bootstrap` R2 bucket under that commit's prefix. For example:
+A token issued to the public Ariakit repository cannot download Actions artifacts or release assets from this private repository. Do not give the diagnostic workflow private source access. A maintainer downloads a successful, exact-commit package artifact, verifies it, then uploads only its two tarballs into the private `visonaut-bootstrap` R2 bucket as `packages/<sha256>.tgz`. For example:
 
 ```sh
 gh run download <successful-run-id> --repo ariakit/visonaut \
   --name public-packages-<source-sha> --dir /tmp/visonaut-public-packages
 GITHUB_SHA=<source-sha> node .github/workflows/scripts/packages.mjs \
   verify /tmp/visonaut-public-packages
+pnpm exec wrangler r2 object put visonaut-bootstrap/packages/<playwright-sha256>.tgz \
+  --file /tmp/visonaut-public-packages/visonaut-playwright-<version>.tgz --remote
+pnpm exec wrangler r2 object put visonaut-bootstrap/packages/<cli-sha256>.tgz \
+  --file /tmp/visonaut-public-packages/visonaut-<version>.tgz --remote
 ```
 
-Issue short-lived, object-specific presigned GET URLs using a token scoped to that bucket. Put only those URLs and the manifest's SHA-256 hashes in the diagnostic configuration. The diagnostic download must verify each hash before installation. A presigned URL grants access to the intended public package bytes until expiry; it grants no list, write, source, or account access. Reissue URLs after expiry and remove the bootstrap objects after the test window. Keep signed URLs out of logs. The bucket remains private, and npm publication remains a separate launch action. See [R2 presigned URLs](https://developers.cloudflare.com/r2/api/s3/presigned-urls/).
+Put each tarball's SHA-256 and byte count from the verified manifest in Ariakit's reviewed `.github/visonaut/settings.json`. Regenerate its trusted plan after the pin changes. The pinned render and submission jobs request GitHub OIDC tokens to download the exact packages from `/v1/bootstrap/packages/playwright` and `/v1/bootstrap/packages/cli`. The service verifies the signed job, workflow and trusted-main plan, reads only the two pinned private objects, and checks each digest and byte count. Ariakit's bootstrap script checks the bytes again before installation. The public workflow receives no R2 token or presigned URL. Remove the bootstrap objects and endpoint after the public npm packages replace this temporary transport; npm publication remains a separate launch action.
 
 ## npm publication
 
