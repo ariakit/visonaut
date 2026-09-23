@@ -1,0 +1,763 @@
+{
+  "collectedAt": "2026-09-23",
+  "sourceDatabaseId": "0ff8f229-4a5a-42f5-a40b-619dd0fa1ff0",
+  "restoreDatabaseId": "76f6af6a-7a04-4d2a-ba68-ae02cd053a41",
+  "sourceExport": {
+    "sqlBytes": 3860404222,
+    "sqlSha256": "7a3b0f96462a01699d5729e857a622ee7b1319e5ffc5575c4a4159baf4e76805",
+    "readySeconds": 125.44802475,
+    "downloadSeconds": 793.2304964159999,
+    "totalSeconds": 918.678527083,
+    "peakClientRssBytes": 128761856
+  },
+  "restore": {
+    "schemaReceiptAt": "2026-09-23T01:04:47Z",
+    "tailCompletedAt": "2026-09-23T02:09:34Z",
+    "physicalBytes": 5937836032,
+    "fragments": [
+      {
+        "file": "data-01.sql",
+        "sqlBytes": 255999853,
+        "sqlSha256": "1628f3cc86862379442553d8320eb08886c32ba1d207784bfc13cc27ed50a9fa",
+        "elapsedSeconds": 129.497450583,
+        "sqlDurationMs": 91228.1977,
+        "rowsWritten": 2546243
+      },
+      {
+        "file": "data-02.sql",
+        "sqlBytes": 255999600,
+        "sqlSha256": "f734a15d3f0436580efeda65c5affa5059f3c5454ff33b7c6d00bf3d5635bcaf",
+        "elapsedSeconds": 184.8352835,
+        "sqlDurationMs": 152243.2381,
+        "rowsWritten": 2680493
+      },
+      {
+        "file": "data-03.sql",
+        "sqlBytes": 255999832,
+        "sqlSha256": "623d51cfcf0444c21c2295031e8e097c2e2b94cd6e2955c715752979044d11e2",
+        "elapsedSeconds": 224.315961334,
+        "sqlDurationMs": 195539.2146,
+        "rowsWritten": 2827555
+      },
+      {
+        "file": "data-04.sql",
+        "sqlBytes": 255999972,
+        "sqlSha256": "c54aa5450405de21368c8179f472941c9a3181eb084d759da518c6998713b9d8",
+        "elapsedSeconds": 236.27256062499998,
+        "sqlDurationMs": 201850.1679,
+        "rowsWritten": 2827565
+      },
+      {
+        "file": "data-05.sql",
+        "sqlBytes": 255999829,
+        "sqlSha256": "89c77fc3b09621c24dd9272f9eb4fc8cd9a4eda458a0c342a2263dcc65e11185",
+        "elapsedSeconds": 234.712697542,
+        "sqlDurationMs": 198061.6046,
+        "rowsWritten": 2827555
+      },
+      {
+        "file": "data-06.sql",
+        "sqlBytes": 255999956,
+        "sqlSha256": "dee953be8d21d3d57754b3168d8dbd7ae8dee5dd036b8ca24c949f744d98568a",
+        "elapsedSeconds": 223.47319229200002,
+        "sqlDurationMs": 195524.696,
+        "rowsWritten": 2827565
+      },
+      {
+        "file": "data-07-01.sql",
+        "sqlBytes": 31999684,
+        "sqlSha256": "17d79f5b70b611f349e998eac8af70bda9b26666cdb60d192f8f8d64b15c3b56",
+        "elapsedSeconds": 39.745084083,
+        "sqlDurationMs": 34474.5224,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-02.sql",
+        "sqlBytes": 31999674,
+        "sqlSha256": "cba58deb16847164628816fb07c913caad72c7b18364aa5695c28d33df74bec9",
+        "elapsedSeconds": 34.544315790999995,
+        "sqlDurationMs": 28808.0616,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-03.sql",
+        "sqlBytes": 31999674,
+        "sqlSha256": "e8e6c2d73bdfde4a05c9b0832769d3bd211feca9e25423de579a8c57b925fa3a",
+        "elapsedSeconds": 31.58035525,
+        "sqlDurationMs": 24855.0494,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-04.sql",
+        "sqlBytes": 31999668,
+        "sqlSha256": "b60040c747254de34629bf48babfd093ece6db5ee0448a8f932158957587b27f",
+        "elapsedSeconds": 33.420730458,
+        "sqlDurationMs": 27872.6302,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-05.sql",
+        "sqlBytes": 31999688,
+        "sqlSha256": "39f6ed2195e08bbd8b61877ca0e357e65a1c8d37c6b0d313c961954cc814459f",
+        "elapsedSeconds": 33.525281375,
+        "sqlDurationMs": 26259.3496,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-06.sql",
+        "sqlBytes": 31999824,
+        "sqlSha256": "d440d266457c4d17fe593e1092868597c4ac988b6b12834f286b68f744077c7a",
+        "elapsedSeconds": 34.53529225,
+        "sqlDurationMs": 27428.9805,
+        "rowsWritten": 353450
+      },
+      {
+        "file": "data-07-07.sql",
+        "sqlBytes": 31999659,
+        "sqlSha256": "f4eec537c7dd476ae5266de2655ab5103b0dabcee1d3ab1ee80b7c367b208391",
+        "elapsedSeconds": 30.077238333999997,
+        "sqlDurationMs": 24732.9634,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-08.sql",
+        "sqlBytes": 31999663,
+        "sqlSha256": "785fcb01f338a04cc4c82d59a11c1572c905363aa4c708da9a2cbd326a8a5b49",
+        "elapsedSeconds": 45.027742459,
+        "sqlDurationMs": 37703.7931,
+        "rowsWritten": 353440
+      },
+      {
+        "file": "data-07-09.sql",
+        "sqlBytes": 2291,
+        "sqlSha256": "cad72272bbb17a7e1d228afb329ad60bd0f8d779f7f389be1b5bb9bb4067c211",
+        "elapsedSeconds": 1.799308583,
+        "sqlDurationMs": 4.3849,
+        "rowsWritten": 25
+      },
+      {
+        "file": "data-08.sql",
+        "sqlBytes": 255999810,
+        "sqlSha256": "b60f0bffe9da291a1a9a87648a7c9820d0b1cd1912b21251da361d4b62a09da7",
+        "elapsedSeconds": 248.040179667,
+        "sqlDurationMs": 215472.4928,
+        "rowsWritten": 2827555
+      },
+      {
+        "file": "data-09.sql",
+        "sqlBytes": 255999992,
+        "sqlSha256": "93fc268a3d8bcb86781bf95c79e2db4f1cd3d51cb2af51216d4760df103c58b2",
+        "elapsedSeconds": 251.82067775000002,
+        "sqlDurationMs": 219683.0061,
+        "rowsWritten": 2827565
+      },
+      {
+        "file": "data-10.sql",
+        "sqlBytes": 255999809,
+        "sqlSha256": "af16ee9c30ae7183ec6a54c5a998684aa5e2f1de1a32d689d714ff76b4ead037",
+        "elapsedSeconds": 266.28950883400006,
+        "sqlDurationMs": 234382.8738,
+        "rowsWritten": 2827555
+      },
+      {
+        "file": "data-11.sql",
+        "sqlBytes": 255999971,
+        "sqlSha256": "ed2e5aa1af45d47725c7db9f41062411540dc976df5a6dafbe6789da8c106b87",
+        "elapsedSeconds": 292.998186041,
+        "sqlDurationMs": 253782.8728,
+        "rowsWritten": 2827565
+      },
+      {
+        "file": "data-12.sql",
+        "sqlBytes": 255999716,
+        "sqlSha256": "b8ce4a7dae4a33607de3e50b2bc72d602f87f9abf03d9d1156add6986aae696b",
+        "elapsedSeconds": 257.687316917,
+        "sqlDurationMs": 183583.8683,
+        "rowsWritten": 2795070
+      },
+      {
+        "file": "data-13.sql",
+        "sqlBytes": 255999954,
+        "sqlSha256": "031c542bd8fd8fd6e04e40c35892e0e4db0a31885780257df21b8238f067b5d4",
+        "elapsedSeconds": 196.915381917,
+        "sqlDurationMs": 168558.1102,
+        "rowsWritten": 3092472
+      },
+      {
+        "file": "data-14.sql",
+        "sqlBytes": 255999632,
+        "sqlSha256": "2f5494727dfee4fd4e30c0cd229ce5ebde1aa5c5d8b0ce357e08a3ba018b95f7",
+        "elapsedSeconds": 204.25593920899996,
+        "sqlDurationMs": 172509.5721,
+        "rowsWritten": 2496224
+      },
+      {
+        "file": "data-15.sql",
+        "sqlBytes": 255999940,
+        "sqlSha256": "8a889bab9ce454cba69419bc42f48220e5bd8bcb92eb51acf87c6a8b86f41124",
+        "elapsedSeconds": 214.565136084,
+        "sqlDurationMs": 184509.7824,
+        "rowsWritten": 2545826
+      },
+      {
+        "file": "data-16.sql",
+        "sqlBytes": 20379410,
+        "sqlSha256": "e1e9436c4272e23194f5cd324577e48f00256179e8e754a05f94b6127ebe3dcf",
+        "elapsedSeconds": 10.606251375,
+        "sqlDurationMs": 6009.5534,
+        "rowsWritten": 85804
+      },
+      {
+        "file": "indexes.sql",
+        "sqlBytes": 2906,
+        "sqlSha256": "08bdaaae05586323df9c139a96dc6755610cd231d8ab88121f616b825623ff92",
+        "elapsedSeconds": 2.421583375,
+        "sqlDurationMs": 12.7348,
+        "rowsWritten": 31
+      },
+      {
+        "file": "schema.sql",
+        "sqlBytes": 20856,
+        "sqlSha256": "842472738910d4965e2a3793d44a97aa254c1f841ceace1ee9a76d4e1b8b1913",
+        "elapsedSeconds": 2.673589708,
+        "sqlDurationMs": 23.866,
+        "rowsWritten": 193
+      },
+      {
+        "file": "tail.sql",
+        "sqlBytes": 3839,
+        "sqlSha256": "7e959cb2c6fc98bf158c85b80d3cf74c1205c32fe49399eb3029e9b09e341c39",
+        "elapsedSeconds": 1.853154125,
+        "sqlDurationMs": 5.2662,
+        "rowsWritten": 13
+      }
+    ],
+    "splitManifestSha256": "9181146b4f486cdd966cc33fea2ada617af35e129040441b3640c52c7bd33210"
+  },
+  "tableCounts": {
+    "tables": 59,
+    "rows": 9550015,
+    "mismatches": [],
+    "observed": {
+      "account": 1,
+      "visonaut_ancestry": 1548,
+      "visonaut_assertions": 0,
+      "visonaut_audit": 1620,
+      "visonaut_capture_profiles": 1,
+      "visonaut_captures": 791622,
+      "visonaut_checks": 1548,
+      "visonaut_commands": 55692,
+      "visonaut_comparison_rows": 66366,
+      "visonaut_comparisons": 1548,
+      "visonaut_decision_replacements": 0,
+      "visonaut_decisions": 59274,
+      "visonaut_historical_preparations": 0,
+      "visonaut_identity_history": 1984428,
+      "visonaut_images": 5572800,
+      "visonaut_lineage": 0,
+      "visonaut_lineage_edges": 1547,
+      "visonaut_pins": 774,
+      "visonaut_policies": 1,
+      "visonaut_projects": 1,
+      "visonaut_promotions": 221,
+      "visonaut_reservations": 3582,
+      "visonaut_runs": 1548,
+      "visonaut_shards": 1768,
+      "visonaut_snapshot_images": 791622,
+      "visonaut_snapshot_retention": 221,
+      "visonaut_snapshots": 221,
+      "visonaut_status_outbox": 173931,
+      "auth_audit": 0,
+      "github_webhook_delivery": 0,
+      "ingest_manifests": 12384,
+      "ingest_merge_groups": 0,
+      "ingest_review_sessions": 1,
+      "ingest_run_provenance": 1548,
+      "ingest_uploads": 7164,
+      "operations_backup_group_pages": 0,
+      "operations_backup_groups": 4087,
+      "operations_backup_inventory": 0,
+      "operations_backup_members": 0,
+      "operations_backup_objects": 0,
+      "operations_backup_pages": 300,
+      "operations_backup_required": 0,
+      "operations_backups": 60,
+      "operations_check_creations": 1548,
+      "operations_comparison_archives": 0,
+      "operations_cursors": 0,
+      "operations_events": 0,
+      "operations_exports": 0,
+      "operations_promotions": 0,
+      "operations_run_archives": 1546,
+      "rateLimit": 1,
+      "session": 1,
+      "user": 1,
+      "verification": 1,
+      "work_checks": 0,
+      "work_retained_runs": 1548,
+      "work_retention_pins": 776,
+      "work_status_outbox": 0,
+      "work_tasks": 7164
+    }
+  },
+  "foreignKeys": {
+    "pragmaPassedTables": [
+      "account",
+      "visonaut_ancestry",
+      "visonaut_assertions",
+      "visonaut_audit",
+      "visonaut_capture_profiles",
+      "visonaut_captures",
+      "visonaut_checks",
+      "visonaut_commands",
+      "visonaut_comparison_rows",
+      "visonaut_comparisons",
+      "visonaut_decision_replacements",
+      "visonaut_decisions",
+      "visonaut_historical_preparations",
+      "visonaut_identity_history",
+      "visonaut_lineage",
+      "visonaut_lineage_edges",
+      "visonaut_pins",
+      "visonaut_policies",
+      "visonaut_projects",
+      "visonaut_promotions",
+      "visonaut_reservations",
+      "visonaut_runs",
+      "visonaut_shards",
+      "visonaut_snapshot_images",
+      "visonaut_snapshot_retention",
+      "visonaut_snapshots",
+      "visonaut_status_outbox",
+      "auth_audit",
+      "github_webhook_delivery",
+      "ingest_manifests",
+      "ingest_merge_groups",
+      "ingest_review_sessions",
+      "ingest_run_provenance",
+      "ingest_uploads",
+      "operations_backup_group_pages",
+      "operations_backup_groups",
+      "operations_backup_inventory",
+      "operations_backup_members",
+      "operations_backup_objects",
+      "operations_backup_pages",
+      "operations_backup_required",
+      "operations_backups",
+      "operations_check_creations",
+      "operations_comparison_archives",
+      "operations_cursors",
+      "operations_events",
+      "operations_exports",
+      "operations_promotions",
+      "operations_run_archives",
+      "rateLimit",
+      "session",
+      "user",
+      "verification",
+      "work_checks",
+      "work_retained_runs",
+      "work_retention_pins",
+      "work_status_outbox",
+      "work_tasks"
+    ],
+    "pragmaImageError": "D1 DB exceeded its CPU time limit and was reset. [code: 7429]",
+    "imageForeignKey": "run_id -> visonaut_runs.id",
+    "imageRangeChecks": [
+      {
+        "start": 1,
+        "end": 100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 429.8101
+      },
+      {
+        "start": 100001,
+        "end": 200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 372.9087
+      },
+      {
+        "start": 200001,
+        "end": 300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 602.5971
+      },
+      {
+        "start": 300001,
+        "end": 400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 561.7226
+      },
+      {
+        "start": 400001,
+        "end": 500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 768.6779
+      },
+      {
+        "start": 500001,
+        "end": 600000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 505.2031
+      },
+      {
+        "start": 600001,
+        "end": 700000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 620.8267
+      },
+      {
+        "start": 700001,
+        "end": 800000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 580.8157
+      },
+      {
+        "start": 800001,
+        "end": 900000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 687.2507
+      },
+      {
+        "start": 900001,
+        "end": 1000000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 673.3395
+      },
+      {
+        "start": 1000001,
+        "end": 1100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 537.8724
+      },
+      {
+        "start": 1100001,
+        "end": 1200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 590.7517
+      },
+      {
+        "start": 1200001,
+        "end": 1300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 383.6676
+      },
+      {
+        "start": 1300001,
+        "end": 1400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 391.1747
+      },
+      {
+        "start": 1400001,
+        "end": 1500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 411.5254
+      },
+      {
+        "start": 1500001,
+        "end": 1600000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 514.1052
+      },
+      {
+        "start": 1600001,
+        "end": 1700000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 579.2109
+      },
+      {
+        "start": 1700001,
+        "end": 1800000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 423.544
+      },
+      {
+        "start": 1800001,
+        "end": 1900000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 479.2277
+      },
+      {
+        "start": 1900001,
+        "end": 2000000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 415.0867
+      },
+      {
+        "start": 2000001,
+        "end": 2100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 420.8373
+      },
+      {
+        "start": 2100001,
+        "end": 2200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 401.3644
+      },
+      {
+        "start": 2200001,
+        "end": 2300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 405.8748
+      },
+      {
+        "start": 2300001,
+        "end": 2400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 429.4504
+      },
+      {
+        "start": 2400001,
+        "end": 2500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 309.6175
+      },
+      {
+        "start": 2500001,
+        "end": 2600000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 379.6886
+      },
+      {
+        "start": 2600001,
+        "end": 2700000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 395.6601
+      },
+      {
+        "start": 2700001,
+        "end": 2800000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 515.7706
+      },
+      {
+        "start": 2800001,
+        "end": 2900000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 526.998
+      },
+      {
+        "start": 2900001,
+        "end": 3000000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 423.118
+      },
+      {
+        "start": 3000001,
+        "end": 3100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 486.1587
+      },
+      {
+        "start": 3100001,
+        "end": 3200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 442.3874
+      },
+      {
+        "start": 3200001,
+        "end": 3300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 352.2749
+      },
+      {
+        "start": 3300001,
+        "end": 3400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 489.9273
+      },
+      {
+        "start": 3400001,
+        "end": 3500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 390.1644
+      },
+      {
+        "start": 3500001,
+        "end": 3600000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 319.2338
+      },
+      {
+        "start": 3600001,
+        "end": 3700000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 496.0946
+      },
+      {
+        "start": 3700001,
+        "end": 3800000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 465.3686
+      },
+      {
+        "start": 3800001,
+        "end": 3900000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 486.8829
+      },
+      {
+        "start": 3900001,
+        "end": 4000000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 409.5275
+      },
+      {
+        "start": 4000001,
+        "end": 4100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 441.6387
+      },
+      {
+        "start": 4100001,
+        "end": 4200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 472.734
+      },
+      {
+        "start": 4200001,
+        "end": 4300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 501.4521
+      },
+      {
+        "start": 4300001,
+        "end": 4400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 482.026
+      },
+      {
+        "start": 4400001,
+        "end": 4500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 543.4801
+      },
+      {
+        "start": 4500001,
+        "end": 4600000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 712.1593
+      },
+      {
+        "start": 4600001,
+        "end": 4700000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 474.3004
+      },
+      {
+        "start": 4700001,
+        "end": 4800000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 967.4032
+      },
+      {
+        "start": 4800001,
+        "end": 4900000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 860.4988
+      },
+      {
+        "start": 4900001,
+        "end": 5000000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 871.9224
+      },
+      {
+        "start": 5000001,
+        "end": 5100000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 1419.3827
+      },
+      {
+        "start": 5100001,
+        "end": 5200000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 836.2533
+      },
+      {
+        "start": 5200001,
+        "end": 5300000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 709.3475
+      },
+      {
+        "start": 5300001,
+        "end": 5400000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 806.1668
+      },
+      {
+        "start": 5400001,
+        "end": 5500000,
+        "scanned": 100000,
+        "missing": 0,
+        "durationMs": 706.2893
+      },
+      {
+        "start": 5500001,
+        "end": 5572800,
+        "scanned": 72800,
+        "missing": 0,
+        "durationMs": 636.1111
+      }
+    ],
+    "imageRowsChecked": 5572800,
+    "missingImageRunReferences": 0
+  }
+}
