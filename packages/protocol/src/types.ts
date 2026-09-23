@@ -98,7 +98,14 @@ export interface PlannedTest {
 
 export interface PlannedShard {
   key: string;
-  jobName: string;
+  jobName:
+    | string
+    | {
+        push: string;
+        pull_request: string;
+        merge_group: string;
+        workflow_dispatch?: string;
+      };
   tests?: PlannedTest[];
   collection?: TrustedCollection;
   /** A trusted environment allow-list. Effective content clip bounds are excluded. */
@@ -148,7 +155,14 @@ export interface DiscoveryReceipt extends CandidateDiscovery {
 export interface TrustedPlan {
   schemaVersion: string;
   repositoryId: string;
-  workflow: string;
+  workflow:
+    | string
+    | {
+        push: string;
+        pull_request: string;
+        merge_group: string;
+        workflow_dispatch?: string;
+      };
   invocation: string[];
   discovery?: { executorDigest: string };
   shards: PlannedShard[];

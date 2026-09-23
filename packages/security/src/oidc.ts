@@ -4,7 +4,14 @@ import { type GitHubClient, requireRepositoryWrite } from "./github.js";
 
 export interface TrustedShardIdentity {
   key: string;
-  jobName: string;
+  jobName:
+    | string
+    | {
+        push: string;
+        pull_request: string;
+        merge_group: string;
+        workflow_dispatch?: string;
+      };
 }
 
 export interface MergeGroupIdentity {
@@ -20,7 +27,14 @@ export interface OidcConfiguration {
   /** Preview diagnostics only; still requires main and the immutable executor. */
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
-  workflowPath: string;
+  workflowPath:
+    | string
+    | {
+        push: string;
+        pull_request: string;
+        merge_group: string;
+        workflow_dispatch?: string;
+      };
   reusableWorkflowRef: string;
   reusableWorkflowSha: string;
   planDigest: string;
@@ -140,11 +154,6 @@ export async function verifyGitHubOidc({
   requireEqual(attemptNumber(claims.run_attempt), request.workflowAttempt, "claim.run_attempt");
   requireEqual(sha(claims.sha), sha(request.testedSha), "claim.sha");
   const ref = textField(claims.ref);
-  requireEqual(
-    claims.workflow_ref,
-    `${github.repository}/${configuration.workflowPath}@${ref}`,
-    "claim.workflow_ref",
-  );
   const event = claims.event_name;
   if (
     event !== "push" &&
@@ -154,6 +163,18 @@ export async function verifyGitHubOidc({
   ) {
     throw new SecurityError("unsupported_event", 403, "This workflow event is not supported.");
   }
+  const workflowPath =
+    typeof configuration.workflowPath === "string"
+      ? configuration.workflowPath
+      : configuration.workflowPath[event];
+  if (!workflowPath) {
+    throw new SecurityError("untrusted_run", 403, "The event has no trusted workflow.");
+  }
+  requireEqual(
+    claims.workflow_ref,
+    `${github.repository}/${workflowPath}@${ref}`,
+    "claim.workflow_ref",
+  );
   const [owner, repository] = github.repository.split("/");
   const subjectSuffix = event === "pull_request" ? "pull_request" : `ref:${ref}`;
   const legacySubject = `repo:${github.repository}:${subjectSuffix}`;
@@ -164,6 +185,10 @@ export async function verifyGitHubOidc({
   const shard = configuration.shards.find((entry) => entry.key === request.shardKey);
   if (!shard) {
     throw new SecurityError("unknown_shard", 403, "The shard is not in the trusted capture plan.");
+  }
+  const jobName = typeof shard.jobName === "string" ? shard.jobName : shard.jobName[event];
+  if (!jobName) {
+    throw new SecurityError("untrusted_job", 403, "The event has no trusted capture job.");
   }
   const root = `/repos/${github.repository}`;
   const current = record(await github.request(`${root}/actions/runs/${request.workflowRunId}`));
@@ -182,7 +207,7 @@ export async function verifyGitHubOidc({
     "rest.repository_owner_id",
   );
   requireEqual(run.event, event, "rest.event");
-  requireEqual(run.path, configuration.workflowPath, "rest.workflow_path");
+  requireEqual(run.path, workflowPath, "rest.workflow_path");
   if (run.status !== "in_progress" && run.conclusion !== "success") {
     throw new SecurityError(
       "inactive_run",
@@ -192,7 +217,7 @@ export async function verifyGitHubOidc({
   }
   const checkRunId = numericId(claims.check_run_id);
   const job = await findSignedJob(github, request, checkRunId);
-  requireEqual(job.name, shard.jobName, "rest.job_name");
+  requireEqual(job.name, jobName, "rest.job_name");
   requireEqual(attemptNumber(job.run_attempt), request.workflowAttempt, "rest.job_attempt");
   requireEqual(numericId(job.run_id), request.workflowRunId, "rest.job_run_id");
   if (job.status !== "in_progress" && job.conclusion !== "success") {

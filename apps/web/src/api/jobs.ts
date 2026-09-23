@@ -1,4 +1,4 @@
-import { digestJson, type TrustedPlan } from "@visonaut/protocol";
+import { digestJson, plannedJobName, type TrustedPlan } from "@visonaut/protocol";
 import { type GitHubClient, SecurityError, type VerifiedRun } from "@visonaut/security";
 import { IncompleteError } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
@@ -140,7 +140,7 @@ function execution(job: Record<string, unknown>) {
 
 interface InheritedShardParams {
   runId: string;
-  identity: RunIdentity;
+  identity: RunIdentity & Pick<VerifiedRun, "event">;
   shard: TrustedPlan["shards"][number];
   plan: TrustedPlan;
   job: Record<string, unknown>;
@@ -229,7 +229,7 @@ export async function verifiedInheritedShard(
       (entry) =>
         !Number.isSafeInteger(entry.run_id) ||
         String(entry.run_id) !== identity.workflowRunId ||
-        entry.name !== shard.jobName ||
+        entry.name !== plannedJobName(shard.jobName, identity.event) ||
         entry.head_sha !== identity.sourceHead,
     )
   ) {
@@ -294,7 +294,9 @@ export async function inheritedShards(
     .first<{ id: string }>();
   const verifiedInheritedShards: Array<Awaited<ReturnType<typeof verifiedInheritedShard>>> = [];
   for (const shard of plan.shards) {
-    const matching = jobs.filter((job) => job.name === shard.jobName);
+    const matching = jobs.filter(
+      (job) => job.name === plannedJobName(shard.jobName, verified.event),
+    );
     const job = matching[0];
     if (
       matching.length !== 1 ||

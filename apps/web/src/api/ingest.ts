@@ -3,6 +3,7 @@ import {
   digestJson,
   parseManifest,
   parseTrustedPlan,
+  plannedJobName,
   SCHEMA_VERSION,
   sha256,
   validateDigest,
@@ -931,13 +932,23 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
   }
   const plan = await storedPlan(context, planObjectKey);
   const github = await createGitHubClient(context.configuration.github);
+  const event = verified.event;
+  if (
+    event !== "push" &&
+    event !== "pull_request" &&
+    event !== "merge_group" &&
+    event !== "workflow_dispatch"
+  ) {
+    throw new IncompleteError("Trusted run event is unavailable.");
+  }
   const identity = {
     workflowRunId: run.external_run_id,
     workflowAttempt: run.attempt,
     testedSha: run.tested_sha,
     planDigest: run.plan_digest,
     sourceHead: string(verified.sourceHead, 40),
-  };
+    event,
+  } as const;
   const current = await workflowAttempt(github, identity, verifyHistorical);
   const metadata =
     run.attempt > 1 && !verifyHistorical ? await workflowAttempt(github, identity, true) : current;
@@ -953,7 +964,9 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
       .bind(run.id, shard.key)
       .first<{ state: string; source_attempt: number; manifest_digest: string }>();
     if (completed?.state === "complete" && completed.source_attempt < run.attempt) {
-      const matching = latestJobs.filter((job) => job.name === shard.jobName);
+      const matching = latestJobs.filter(
+        (job) => job.name === plannedJobName(shard.jobName, identity.event),
+      );
       const job = matching[0];
       if (matching.length !== 1 || !job) {
         throw new IncompleteError("The current inherited job is unavailable or ambiguous.");
@@ -978,7 +991,9 @@ export async function trySealRun(context: ApiContext, runId: string, verifyHisto
       incomplete = true;
       continue;
     }
-    const matching = jobs.filter((entry) => entry.name === shard.jobName);
+    const matching = jobs.filter(
+      (entry) => entry.name === plannedJobName(shard.jobName, identity.event),
+    );
     const job = matching[0];
     if (
       matching.length !== 1 ||

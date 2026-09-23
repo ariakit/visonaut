@@ -111,6 +111,17 @@ function first<T>(values: T[]): T {
 }
 
 describe("versioned manifests", () => {
+  it("accepts exact event-specific caller paths and rejects incomplete mappings", async () => {
+    const { plan } = await fixture();
+    const workflow = {
+      push: ".github/workflows/app.yml",
+      pull_request: ".github/workflows/ci.yml",
+      merge_group: ".github/workflows/app.yml",
+    };
+    expect(parseTrustedPlan({ ...plan, workflow })).toMatchObject({ workflow });
+    expect(() => parseTrustedPlan({ ...plan, workflow: { push: workflow.push } })).toThrow();
+    expect(() => parseTrustedPlan({ ...plan, workflow: { ...workflow, unknown: "x" } })).toThrow();
+  });
   it("accepts old clients and preserves optional additions from compatible clients", async () => {
     const { manifest } = await fixture();
     expect(parseManifest(manifest)).toEqual(manifest);

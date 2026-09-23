@@ -8,6 +8,7 @@ import {
 import type {
   CaptureProfile,
   Manifest,
+  PlannedShard,
   TrustedCollection,
   TrustedPlan,
   VerifiedDiscoveryEvidence,
@@ -377,7 +378,28 @@ function assertTrustedPlan(value: unknown): asserts value is TrustedPlan {
   object(value, "trusted plan");
   validateVersion(field(value, "schemaVersion"));
   string(field(value, "repositoryId"), "repositoryId", 32);
-  string(field(value, "workflow"), "workflow");
+  const workflow = field(value, "workflow");
+  if (typeof workflow === "string") {
+    string(workflow, "workflow");
+  } else {
+    object(workflow, "workflow");
+    for (const event of ["push", "pull_request", "merge_group"] as const) {
+      string(field(workflow, event), `workflow.${event}`);
+    }
+    if (Object.hasOwn(workflow, "workflow_dispatch")) {
+      string(field(workflow, "workflow_dispatch"), "workflow.workflow_dispatch");
+    }
+    for (const event of Object.keys(workflow)) {
+      if (
+        event !== "push" &&
+        event !== "pull_request" &&
+        event !== "merge_group" &&
+        event !== "workflow_dispatch"
+      ) {
+        fail("Trusted workflow has an unsupported event");
+      }
+    }
+  }
   const invocation = field(value, "invocation");
   list(invocation, "invocation", 1, 100);
   for (const argument of invocation) {
@@ -398,8 +420,33 @@ function assertTrustedPlan(value: unknown): asserts value is TrustedPlan {
     object(shard, "planned shard");
     required(shard, "key", validateKey);
     shardKeys.push(shard.key);
-    required(shard, "jobName", string);
-    jobNames.push(shard.jobName);
+    const jobName = field(shard, "jobName");
+    if (typeof jobName === "string") {
+      string(jobName, "jobName");
+      for (const event of ["push", "pull_request", "merge_group", "workflow_dispatch"]) {
+        jobNames.push(`${event}:${jobName}`);
+      }
+    } else {
+      object(jobName, "jobName");
+      for (const event of ["push", "pull_request", "merge_group"] as const) {
+        string(field(jobName, event), `jobName.${event}`);
+        jobNames.push(`${event}:${jobName[event]}`);
+      }
+      if (Object.hasOwn(jobName, "workflow_dispatch")) {
+        string(field(jobName, "workflow_dispatch"), "jobName.workflow_dispatch");
+        jobNames.push(`workflow_dispatch:${jobName.workflow_dispatch}`);
+      }
+      for (const event of Object.keys(jobName)) {
+        if (
+          event !== "push" &&
+          event !== "pull_request" &&
+          event !== "merge_group" &&
+          event !== "workflow_dispatch"
+        ) {
+          fail("Planned job has an unsupported event");
+        }
+      }
+    }
     const digests = field(shard, "environmentProfileDigests");
     list(digests, "environmentProfileDigests", 1, 10_000);
     for (const digest of digests) {
@@ -451,6 +498,18 @@ function assertTrustedPlan(value: unknown): asserts value is TrustedPlan {
   if (discovery === undefined && !captureKeys.length) {
     fail("A trusted plan must require captures");
   }
+}
+
+/** GitHub prefixes nested reusable jobs differently from direct main jobs. */
+export function plannedJobName(jobName: PlannedShard["jobName"], event: string): string {
+  if (typeof jobName === "string") return jobName;
+  if (event === "push") return jobName.push;
+  if (event === "pull_request") return jobName.pull_request;
+  if (event === "merge_group") return jobName.merge_group;
+  if (event === "workflow_dispatch" && jobName.workflow_dispatch) {
+    return jobName.workflow_dispatch;
+  }
+  return fail("The event has no planned capture job");
 }
 
 export function parseTrustedPlan(value: unknown): TrustedPlan {

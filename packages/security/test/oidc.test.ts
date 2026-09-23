@@ -8,10 +8,11 @@ const testedSha = "a".repeat(40);
 const sourceHead = "b".repeat(40);
 const targetHead = "c".repeat(40);
 const workflowSha = "d".repeat(40);
+const defaultWorkflowPath = ".github/workflows/visonaut.yml";
 const configuration: OidcConfiguration = {
   audience: "https://preview.example/ingest",
   repositoryOwnerId: "5",
-  workflowPath: ".github/workflows/visonaut.yml",
+  workflowPath: defaultWorkflowPath,
   reusableWorkflowSha: workflowSha,
   reusableWorkflowRef: `${repository}/.github/workflows/visonaut-capture.yml@${workflowSha}`,
   planDigest: "e".repeat(64),
@@ -42,7 +43,7 @@ async function token(overrides: Record<string, unknown> = {}) {
     check_run_id: "40",
     event_name: "push",
     ref: "refs/heads/main",
-    workflow_ref: `${repository}/${configuration.workflowPath}@refs/heads/main`,
+    workflow_ref: `${repository}/${defaultWorkflowPath}@refs/heads/main`,
     job_workflow_ref: configuration.reusableWorkflowRef,
     job_workflow_sha: workflowSha,
     ...overrides,
@@ -58,13 +59,16 @@ async function token(overrides: Record<string, unknown> = {}) {
     .sign(keys.privateKey);
 }
 
-function github(overrides: Record<string, unknown> = {}): GitHubClient {
+function github(
+  overrides: Record<string, unknown> = {},
+  jobName = "capture / chromium",
+): GitHubClient {
   const run = {
     id: 20,
     run_attempt: 2,
     repository: { id: 10, owner: { id: 5 } },
     event: "push",
-    path: configuration.workflowPath,
+    path: defaultWorkflowPath,
     status: "in_progress",
     conclusion: null,
     head_sha: testedSha,
@@ -83,7 +87,7 @@ function github(overrides: Record<string, unknown> = {}): GitHubClient {
               id: 30,
               run_id: 20,
               run_attempt: 2,
-              name: "capture / chromium",
+              name: jobName,
               check_run_url: `https://api.github.com/repos/${repository}/check-runs/40`,
               status: "in_progress",
               conclusion: null,
@@ -135,6 +139,74 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         keySet,
       }),
     ).toMatchObject({ jobId: "30" });
+  });
+  it("binds main and pull-request events to their exact caller and job", async () => {
+    const workflows = {
+      push: ".github/workflows/app.yml",
+      pull_request: ".github/workflows/ci.yml",
+      merge_group: ".github/workflows/app.yml",
+    };
+    const jobNames = {
+      push: "Visonaut / chromium",
+      pull_request: "App / Visonaut / chromium",
+      merge_group: "Visonaut / chromium",
+    };
+    const configured = {
+      ...configuration,
+      workflowPath: workflows,
+      shards: [{ key: "chromium", jobName: jobNames }],
+    };
+    const mainToken = await token({
+      workflow_ref: `${repository}/${workflows.push}@refs/heads/main`,
+    });
+    expect(
+      await verifyGitHubOidc({
+        token: mainToken,
+        request,
+        configuration: configured,
+        github: github({ path: workflows.push }, jobNames.push),
+        keySet,
+      }),
+    ).toMatchObject({ event: "push" });
+    await expect(
+      verifyGitHubOidc({
+        token: mainToken,
+        request,
+        configuration: configured,
+        github: github({ path: workflows.pull_request }, jobNames.push),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run" });
+    await expect(
+      verifyGitHubOidc({
+        token: mainToken,
+        request,
+        configuration: configured,
+        github: github({ path: workflows.push }, jobNames.pull_request),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run" });
+    const ref = "refs/pull/7/merge";
+    const pullToken = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${workflows.pull_request}@${ref}`,
+    });
+    expect(
+      await verifyGitHubOidc({
+        token: pullToken,
+        request,
+        configuration: configured,
+        github: github(
+          { event: "pull_request", path: workflows.pull_request, head_sha: sourceHead },
+          jobNames.pull_request,
+        ),
+        keySet,
+      }),
+    ).toMatchObject({ event: "pull_request", pullRequestNumber: 7 });
   });
   it.each([
     { repository_id: "11" },

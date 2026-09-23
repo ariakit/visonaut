@@ -35,13 +35,12 @@ export async function transferPrivateKey({
   const testedSha = string(body.testedSha, 40);
   const planSource = await loadTrustedMainFile(github, context.configuration.trustedPlanPath);
   const plan = parseTrustedPlan(JSON.parse(planSource.content));
-  const jobName = `capture / ${browser}`;
   const shard = plan.shards.find((entry) => entry.key === browser);
   if (
     plan.repositoryId !== context.configuration.github.repositoryId ||
     !plan.discovery ||
     plan.discovery.executorDigest !== context.configuration.trustedExecutorDigest ||
-    shard?.jobName !== jobName
+    !shard
   ) {
     throw new SecurityError("untrusted_executor", 403, "The capture executor is not trusted.");
   }
@@ -69,7 +68,7 @@ export async function transferPrivateKey({
       reusableWorkflowRef: context.configuration.reusableWorkflowRef,
       reusableWorkflowSha: context.configuration.reusableWorkflowSha,
       planDigest,
-      shards: [{ key: browser, jobName }],
+      shards: [shard],
       loadMergeGroup: (sha) => loadVerifiedMergeGroup(context, sha),
     },
   });
