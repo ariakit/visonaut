@@ -12,6 +12,18 @@ const packages = [
 ];
 const sourcePattern = /^[a-f0-9]{40}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const playwrightCiFiles = new Set([
+  "package/ci/config.mjs",
+  "package/ci/context.mjs",
+  "package/ci/environment.mjs",
+  "package/ci/identity.mjs",
+  "package/ci/index.d.mts",
+  "package/ci/index.mjs",
+  "package/ci/plan.mjs",
+  "package/ci/rebind.mjs",
+  "package/ci/render-context.mjs",
+  "package/ci/transfer.mjs",
+]);
 
 function hash(bytes, algorithm = "sha256", encoding = "hex") {
   return createHash(algorithm).update(bytes).digest(encoding);
@@ -43,12 +55,12 @@ export function auditTarball(bytes, expected) {
     );
     assert.equal(checksum, actualChecksum, "Invalid archive header checksum");
     assert(header[156] === 0 || header[156] === 48, "Only regular package files are allowed");
-    assert(
+    const commonFile =
       /^package\/(?:package\.json|README\.md|LICENSE|dist\/[A-Za-z0-9_.-]+\.(?:js|d\.ts))$/.test(
         name,
-      ),
-      `Unexpected public package file: ${name}`,
-    );
+      );
+    const ciFile = expected.name === "@visonaut/playwright" && playwrightCiFiles.has(name);
+    assert(commonFile || ciFile, `Unexpected public package file: ${name}`);
     assert(!files.has(name), "Duplicate package file");
     const sizeField = textField(header, 124, 12).trim();
     assert(/^[0-7]+$/.test(sizeField), "Invalid archive size");
@@ -80,7 +92,7 @@ export function auditTarball(bytes, expected) {
     }
   }
   for (const [name, content] of files) {
-    if (!name.startsWith("package/dist/")) {
+    if (!name.startsWith("package/dist/") && !name.startsWith("package/ci/")) {
       continue;
     }
     assert(
@@ -101,6 +113,9 @@ export function auditTarball(bytes, expected) {
     assert(files.has("package/dist/bin.js"), "CLI binary is missing");
   } else {
     assert(files.has("package/dist/reporter.js"), "Playwright reporter is missing");
+    for (const file of playwrightCiFiles) {
+      assert(files.has(file), `Trusted CI helper is missing: ${file}`);
+    }
   }
   return manifest;
 }

@@ -6,6 +6,7 @@ import { decodeImage, validateImage } from "@visonaut/compare";
 import { createCodecs } from "@visonaut/compare/jsquash";
 import {
   digestJson,
+  sha256,
   type CaptureProfile,
   type Manifest,
   type TrustedPlan,
@@ -106,6 +107,7 @@ beforeAll(async () => {
     new URL("../../migrations/0013_promotion_scans.sql", import.meta.url),
     new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
     new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
+    new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
@@ -1961,6 +1963,293 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         (await test.send("/v1/runs", test.json({ ...body, planDigest: "a".repeat(64) }, token)))
           .status,
       ).toBe(403);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("serves main-pinned clients and the transfer key only to their signed jobs", async () => {
+    const test = await fixture();
+    const configuration = test.bindings.configuration;
+    const executorDigest = "e".repeat(64);
+    configuration.trustedExecutorDigest = executorDigest;
+    const sourceShard = test.plan.shards[0];
+    if (!sourceShard) throw new Error("The test plan has no shard.");
+    const plan: TrustedPlan = {
+      ...test.plan,
+      discovery: { executorDigest },
+      shards: [
+        {
+          ...sourceShard,
+          key: "chromium",
+          jobName: "capture / chromium",
+          tests: undefined,
+          collection: {
+            projectName: "chrome",
+            testDir: "app/src",
+            testMatch: ["**/test-browser.ts"],
+            testIgnore: [],
+            grep: [{ source: "@visual", flags: "" }],
+            grepInvert: [],
+            shard: null,
+            repeatEach: 1,
+          },
+        },
+      ],
+    };
+    const archive = new TextEncoder().encode("audited future-public client archive");
+    const digest = await sha256(archive);
+    const cliArchive = new TextEncoder().encode("audited future-public command archive");
+    const cliDigest = await sha256(cliArchive);
+    const settings = {
+      packages: {
+        playwright: { sha256: digest, bytes: archive.byteLength },
+        cli: { sha256: cliDigest, bytes: cliArchive.byteLength },
+      },
+    };
+    const requestedKeys: string[] = [];
+    let storedBytes = archive;
+    test.bindings.bootstrap = {
+      async get(key) {
+        requestedKeys.push(key);
+        if (key === `packages/${cliDigest}.tgz`) {
+          return {
+            size: cliArchive.byteLength,
+            arrayBuffer: async () => cliArchive.slice().buffer,
+          };
+        }
+        if (key !== `packages/${digest}.tgz`) return null;
+        return {
+          size: storedBytes.byteLength,
+          arrayBuffer: async () => storedBytes.slice().buffer,
+        };
+      },
+    };
+    const original = configuration.github.fetch!;
+    let signedJobName = "capture / render-chromium";
+    let changeMainDuringLoad = false;
+    let mainRefCalls = 0;
+    configuration.github.fetch = async (input, init) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (url.pathname.endsWith("/git/ref/heads/main")) {
+        const sha =
+          changeMainDuringLoad && mainRefCalls++ % 2 === 1
+            ? "b".repeat(40)
+            : test.manifest.run.testedSha;
+        return Response.json({ object: { sha } });
+      }
+      if (url.pathname.includes("/contents/")) {
+        const value = url.pathname.endsWith("settings.json") ? settings : plan;
+        return Response.json({
+          type: "file",
+          encoding: "base64",
+          content: Buffer.from(JSON.stringify(value)).toString("base64"),
+        });
+      }
+      if (url.pathname.endsWith("/jobs")) {
+        return Response.json({
+          jobs: [
+            {
+              id: 890,
+              run_id: 457,
+              run_attempt: 1,
+              name: signedJobName,
+              check_run_url: "https://api.github.com/repos/ariakit/ariakit/check-runs/999",
+              status: "in_progress",
+              conclusion: null,
+            },
+          ],
+        });
+      }
+      if (url.pathname.includes("/actions/runs/457")) {
+        return Response.json({
+          id: 457,
+          run_attempt: 1,
+          repository: { id: Number(test.manifest.run.repositoryId), owner: { id: 5 } },
+          event: "push",
+          path: plan.workflow,
+          status: "in_progress",
+          conclusion: null,
+          head_sha: test.manifest.run.testedSha,
+          head_branch: "main",
+        });
+      }
+      return original(input, init);
+    };
+    const keys = await generateKeyPair("RS256");
+    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "bootstrap-test", alg: "RS256" };
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
+        throw new Error("Unexpected test network request");
+      }
+      return Response.json({ keys: [jwk] });
+    });
+    try {
+      const signed = async (
+        audience = "https://preview.example/bootstrap",
+        reusableWorkflowRef = configuration.reusableWorkflowRef,
+        callerWorkflowRef = `ariakit/ariakit/${plan.workflow}@refs/heads/main`,
+      ) =>
+        new SignJWT({
+          repository: test.manifest.run.repository,
+          repository_id: test.manifest.run.repositoryId,
+          repository_owner_id: "5",
+          run_id: "457",
+          run_attempt: "1",
+          sha: test.manifest.run.testedSha,
+          check_run_id: "999",
+          event_name: "push",
+          ref: "refs/heads/main",
+          workflow_ref: callerWorkflowRef,
+          job_workflow_ref: reusableWorkflowRef,
+          job_workflow_sha: configuration.reusableWorkflowSha,
+        })
+          .setProtectedHeader({ alg: "RS256", kid: "bootstrap-test" })
+          .setIssuer("https://token.actions.githubusercontent.com")
+          .setAudience(audience)
+          .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+          .setIssuedAt()
+          .setNotBefore("0s")
+          .setExpirationTime("5m")
+          .setJti(crypto.randomUUID())
+          .sign(keys.privateKey);
+      const body = {
+        browser: "chromium",
+        stage: "render",
+        workflowRunId: "457",
+        workflowAttempt: 1,
+        testedSha: test.manifest.run.testedSha,
+      };
+      const token = await signed();
+      const route = "/v1/bootstrap/packages/playwright";
+      const response = await test.send(route, test.json(body, token));
+      expect(response.status, response.status === 200 ? "" : await response.clone().text()).toBe(
+        200,
+      );
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(archive);
+      expect(requestedKeys).toEqual([`packages/${digest}.tgz`]);
+      const cliResponse = await test.send("/v1/bootstrap/packages/cli", test.json(body, token));
+      expect(cliResponse.status).toBe(200);
+      expect(new Uint8Array(await cliResponse.arrayBuffer())).toEqual(cliArchive);
+      expect(
+        (await test.send("/v1/bootstrap/packages/private", test.json(body, token))).status,
+      ).toBe(404);
+      expect(requestedKeys).toEqual([`packages/${digest}.tgz`, `packages/${cliDigest}.tgz`]);
+      expect(
+        (await test.send(route, test.json({ ...body, testedSha: "a".repeat(40) }, token))).status,
+      ).toBe(403);
+      expect(
+        (await test.send(route, test.json(body, await signed("https://preview.example")))).status,
+      ).toBe(401);
+      signedJobName = "capture / chromium";
+      expect((await test.send(route, test.json(body, token))).status).toBe(403);
+      signedJobName = "capture / render-chromium";
+      storedBytes = archive.slice();
+      storedBytes[0] = (storedBytes[0] ?? 0) ^ 1;
+      expect((await test.send(route, test.json(body, token))).status).toBe(503);
+      storedBytes = archive;
+      settings.packages.playwright.bytes += 1;
+      expect((await test.send(route, test.json(body, token))).status).toBe(503);
+      settings.packages.playwright.bytes -= 1;
+      configuration.trustedExecutorDigest = "f".repeat(64);
+      expect((await test.send(route, test.json(body, token))).status).toBe(403);
+      configuration.trustedExecutorDigest = executorDigest;
+      changeMainDuringLoad = true;
+      mainRefCalls = 0;
+      expect((await test.send(route, test.json(body, token))).status).toBe(409);
+
+      changeMainDuringLoad = false;
+      test.bindings.transferPrivateKey = privateKey;
+      signedJobName = "capture / chromium";
+      const transferRoute = "/v1/transfer/private-key";
+      const transferBody = {
+        browser: "chromium",
+        workflowRunId: "457",
+        workflowAttempt: 1,
+        testedSha: test.manifest.run.testedSha,
+      };
+      const transferToken = await signed("https://preview.example/transfer-key");
+      test.bindings.transferPrivateKey = undefined;
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        503,
+      );
+      test.bindings.transferPrivateKey = privateKey;
+      const transfers = await Promise.all([
+        test.send(transferRoute, test.json(transferBody, transferToken)),
+        test.send(transferRoute, test.json(transferBody, transferToken)),
+      ]);
+      expect(transfers.map((response) => response.status).sort()).toEqual([200, 409]);
+      const transferResponse = transfers.find((response) => response.status === 200);
+      if (!transferResponse) throw new Error("The transfer key was not redeemed.");
+      expect(transferResponse.headers.get("cache-control")).toContain("no-store");
+      expect(await transferResponse.text()).toBe(privateKey);
+      const replay = await test.send(transferRoute, test.json(transferBody, transferToken));
+      expect(replay.status).toBe(409);
+      expect(await replay.text()).not.toContain(privateKey);
+      expect(
+        (
+          await test.send(
+            transferRoute,
+            test.json(transferBody, await signed("https://preview.example/transfer-key")),
+          )
+        ).status,
+      ).toBe(409);
+      signedJobName = "capture / render-chromium";
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        403,
+      );
+      signedJobName = "capture / chromium";
+      expect((await test.send(transferRoute, test.json(transferBody, token))).status).toBe(401);
+      expect(
+        (
+          await test.send(
+            transferRoute,
+            test.json(
+              transferBody,
+              await signed(
+                "https://preview.example/transfer-key",
+                "ariakit/ariakit/.github/workflows/untrusted.yml@forged",
+              ),
+            ),
+          )
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await test.send(
+            transferRoute,
+            test.json(
+              transferBody,
+              await signed(
+                "https://preview.example/transfer-key",
+                configuration.reusableWorkflowRef,
+                "ariakit/ariakit/.github/workflows/untrusted.yml@refs/heads/main",
+              ),
+            ),
+          )
+        ).status,
+      ).toBe(403);
+      const trustedJobName = plan.shards[0]!.jobName;
+      plan.shards[0]!.jobName = "capture / untrusted";
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        403,
+      );
+      plan.shards[0]!.jobName = trustedJobName;
+      configuration.trustedExecutorDigest = "f".repeat(64);
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        403,
+      );
+      configuration.trustedExecutorDigest = executorDigest;
+      test.bindings.transferPrivateKey = undefined;
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        503,
+      );
+      test.bindings.transferPrivateKey = `-----BEGIN PRIVATE KEY-----\n${"a".repeat(4096)}\n-----END PRIVATE KEY-----`;
+      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
+        503,
+      );
     } finally {
       vi.unstubAllGlobals();
     }

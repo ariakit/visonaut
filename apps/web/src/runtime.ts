@@ -192,6 +192,8 @@ export function apiBindings(env: Env): ApiBindings {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
+    bootstrap: env.BOOTSTRAP,
+    transferPrivateKey: env.VISONAUT_TRANSFER_PRIVATE_KEY,
     comparator: { fetch: (request, init) => env.COMPARATOR.fetch(request, init) },
     comparisons: {
       async send(message) {

@@ -9,6 +9,8 @@ import {
 } from "@visonaut/security";
 import { ConflictError, IncompleteError } from "@visonaut/service";
 import { apiContext, assertConfiguredProject, type ApiBindings } from "./context.js";
+import { bootstrapPackage } from "./bootstrap.js";
+import { transferPrivateKey } from "./transfer-key.js";
 import { declareShard, finalize, reserve, runStatus, uploadImage } from "./ingest.js";
 import { uuid } from "./input.js";
 import { publicImage } from "./images.js";
@@ -103,6 +105,17 @@ export async function handleApi(
     }
     if (path === "/v1/runs" && request.method === "POST") {
       return privateResponse(await reserve(request, context));
+    }
+    const bootstrapMatch = /^\/v1\/bootstrap\/packages\/([a-z]+)$/.exec(path);
+    if (bootstrapMatch?.[1] && request.method === "POST") {
+      const github = await createGitHubClient(bindings.configuration.github);
+      return privateResponse(
+        await bootstrapPackage({ request, context, packageName: bootstrapMatch[1], github }),
+      );
+    }
+    if (path === "/v1/transfer/private-key" && request.method === "POST") {
+      const github = await createGitHubClient(bindings.configuration.github);
+      return privateResponse(await transferPrivateKey({ request, context, github }));
     }
     const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
     if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {

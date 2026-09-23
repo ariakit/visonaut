@@ -56,6 +56,10 @@
       "bucket_name": "visonaut-preview-backups",
       "binding": "BACKUPS",
     },
+    {
+      "bucket_name": "visonaut-bootstrap",
+      "binding": "BOOTSTRAP",
+    },
   ],
   "services": [
     {
@@ -140,6 +144,10 @@
           "bucket_name": "visonaut-production-backups",
           "binding": "BACKUPS",
         },
+        {
+          "bucket_name": "visonaut-bootstrap",
+          "binding": "BOOTSTRAP",
+        },
       ],
       "services": [
         {
@@ -181,6 +189,7 @@
           "GITHUB_APP_PRIVATE_KEY",
           "GITHUB_WEBHOOK_SECRET",
           "D1_BACKUP_API_TOKEN",
+          "VISONAUT_TRANSFER_PRIVATE_KEY",
         ],
       },
     },
@@ -229,6 +238,10 @@
         {
           "bucket_name": "visonaut-diagnostics-backups",
           "binding": "BACKUPS",
+        },
+        {
+          "bucket_name": "visonaut-bootstrap",
+          "binding": "BOOTSTRAP",
         },
       ],
       "services": [
@@ -283,6 +296,7 @@
       "GITHUB_APP_PRIVATE_KEY",
       "GITHUB_WEBHOOK_SECRET",
       "D1_BACKUP_API_TOKEN",
+      "VISONAUT_TRANSFER_PRIVATE_KEY",
     ],
   },
 }

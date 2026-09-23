@@ -169,6 +169,27 @@ async function manifestAt(directory: string) {
 }
 
 describe("published adapter and reporter", () => {
+  it("captures when fonts.ready stays pending but all font faces are settled", async () => {
+    await using fixture = await runFixture(`
+      test('settled font faces', async ({ page }) => {
+        await page.setContent('<p>Capture</p>');
+        await page.evaluate(() => {
+          Object.defineProperty(document.fonts, 'ready', {
+            value: new Promise(() => {}),
+          });
+        });
+        await visual(page, {
+          item: 'fonts/settled',
+          variant: { key: 'chromium', browser: 'chromium' },
+          timeout: 3000,
+        });
+      });
+    `);
+    expect(fixture.code, fixture.output).toBe(0);
+    const manifest = await manifestAt(fixture.directory);
+    expect(manifest.captures.map((capture) => capture.itemKey)).toEqual(["fonts/settled"]);
+  }, 20000);
+
   it("captures two prepared variants of one item and preserves caller page state", async () => {
     await using fixture = await runFixture(`
       test('prepared variants', async ({ page }) => {

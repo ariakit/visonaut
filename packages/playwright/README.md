@@ -1,6 +1,6 @@
 # @visonaut/playwright
 
-Capture one prepared page variant and write an Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
+Capture one prepared page variant and write a Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
 
 Launch support is limited to Node.js 24.18.0, pnpm 12.5.1, and Playwright 1.63.0. The adapter emits original PNG bytes. The ingest protocol also supports validated lossless WebP from other clients.
 
@@ -32,6 +32,8 @@ await visual(page, {
 
 The adapter waits for document and font readiness. It captures PNG images with animations disabled and requires two consecutive images with equal dimensions and equal decoded RGBA pixels. Captures are at least 100 ms apart. A deadline applies to the complete operation. The default is 5000 ms; a timeout is a capture failure, including for a new item. Pass the existing effective timeout and screenshot options when you replace another capture helper. The adapter does not read private Playwright assertion configuration. Capture limits are 20 MiB encoded and 32 million decoded pixels. These are defensive client limits, separate from the measured service policy.
 
+For the supported Playwright 1.63.0 Firefox path, set `PW_TEST_SCREENSHOT_NO_FONTS_READY=1` in the Playwright config before browsers launch. Playwright's own screenshot wait can remain pending after navigation even when all font faces have settled. The trusted CI config helper sets this value; the adapter then checks the font faces directly.
+
 Set the operating-system image digest, font digest, comparison-policy digest, and comparison-engine version in `project.metadata.visonaut.profile`, or pass them in `visual(..., { profile })`. Use real SHA-256 digests from the trusted capture configuration. Browser version, viewport, device scale, locale, time zone, media state, animation policy, and screenshot options are recorded from the prepared page. A variant's declared browser or media state must match that page.
 
 ```ts
@@ -53,6 +55,19 @@ export default defineConfig({
 ```
 
 The adapter does not set CI gates. Ariakit's integration must retain its `CI` and `VISUAL_TEST` checks before calling it.
+
+## Trusted CI helpers
+
+`@visonaut/playwright/ci` is an opt-in Node.js subpath for a pinned GitHub Actions capture executor. It does not add a CLI command. The caller still owns its fixed test collection, browser projects, web servers, runner allowlist, and trusted plan. Install this package and `visonaut` from an exact npm lockfile in a directory outside the candidate checkout. Bind the lockfile and caller configuration to the trusted plan's executor digest.
+
+```js
+import { verifyTrustedPlan, encryptTransfer } from "@visonaut/playwright/ci";
+
+await verifyTrustedPlan({ directory: trustedExecutor, planFile: trustedPlan });
+await encryptTransfer(results, browser, encryptedArtifact, publicKeyFile);
+```
+
+The render job uses GitHub OIDC to download the pinned packages, but the test process runs without OIDC credentials. It has no private key and uploads only the encrypted shard. A separate trusted submission job never checks out candidate code. It redeems the private key once with its signed GitHub identity, decrypts and verifies the shard, binds it to the current job, and runs the existing `visonaut upload` and `visonaut finalize` commands. The service independently checks the pinned reusable workflow SHA, exact tested commit, source plan, and completed job. The public repository artifact contains no plaintext screenshot or manifest.
 
 ## Reporter
 
