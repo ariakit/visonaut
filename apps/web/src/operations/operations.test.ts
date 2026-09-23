@@ -604,6 +604,36 @@ describe("daily backup and isolated recovery", () => {
 });
 
 describe("private streaming exports", () => {
+  it("expires a legacy export with no page objects when R2 rejects empty delete batches", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await reserve(fixture.context);
+    const exportId = "legacy-export";
+    await database
+      .prepare(
+        "INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,created_at) VALUES(?,?,?,'ready',?,?)",
+      )
+      .bind(exportId, "run", "maintainer", fixture.context.now() - 1, fixture.context.now() - 2)
+      .run();
+    await fixture.backups.put(`exports/${exportId}.json`, "legacy root");
+    const deleteObjects = fixture.backups.delete.bind(fixture.backups);
+    fixture.backups.delete = async (keys) => {
+      if (Array.isArray(keys) && keys.length === 0) {
+        throw new Error("R2 rejects empty delete batches");
+      }
+      await deleteObjects(keys);
+    };
+
+    await expect(expireExports(fixture.context)).resolves.toBe(1);
+    expect(
+      await database
+        .prepare("SELECT state FROM operations_exports WHERE id=?")
+        .bind(exportId)
+        .first(),
+    ).toEqual({ state: "expired" });
+    expect(fixture.backups.objects.has(`exports/${exportId}.json`)).toBe(false);
+  });
+
   it("streams exact original bytes with private metadata and a final integrity marker", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
