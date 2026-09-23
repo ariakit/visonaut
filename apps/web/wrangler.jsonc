@@ -56,10 +56,6 @@
       "bucket_name": "visonaut-preview-backups",
       "binding": "BACKUPS",
     },
-    {
-      "bucket_name": "visonaut-bootstrap",
-      "binding": "BOOTSTRAP",
-    },
   ],
   "services": [
     {
@@ -143,10 +139,6 @@
         {
           "bucket_name": "visonaut-production-backups",
           "binding": "BACKUPS",
-        },
-        {
-          "bucket_name": "visonaut-bootstrap",
-          "binding": "BOOTSTRAP",
         },
       ],
       "services": [
@@ -238,10 +230,6 @@
         {
           "bucket_name": "visonaut-diagnostics-backups",
           "binding": "BACKUPS",
-        },
-        {
-          "bucket_name": "visonaut-bootstrap",
-          "binding": "BOOTSTRAP",
         },
       ],
       "services": [

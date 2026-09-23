@@ -41,26 +41,13 @@ The App webhook points to `https://hooks.visonaut.com/webhooks/github`. That Wor
 
 The web build uses `CLOUDFLARE_ENV=production`. The [Vite plugin selects the environment at build time](https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/), so the final web version upload uses its generated configuration. Setting this variable only on the deploy command does not select production.
 
-## Private diagnostic package transport
+## Ariakit client packages
 
-A token issued to the public Ariakit repository cannot download Actions artifacts or release assets from this private repository. Do not give the diagnostic workflow private source access. A maintainer downloads a successful, exact-commit package artifact, verifies it, then uploads only its two tarballs into the private `visonaut-bootstrap` R2 bucket as `packages/<sha256>.tgz`. For example:
-
-```sh
-gh run download <successful-run-id> --repo ariakit/visonaut \
-  --name public-packages-<source-sha> --dir /tmp/visonaut-public-packages
-GITHUB_SHA=<source-sha> node .github/workflows/scripts/packages.mjs \
-  verify /tmp/visonaut-public-packages
-pnpm exec wrangler r2 object put visonaut-bootstrap/packages/<playwright-sha256>.tgz \
-  --file /tmp/visonaut-public-packages/visonaut-playwright-<version>.tgz --remote
-pnpm exec wrangler r2 object put visonaut-bootstrap/packages/<cli-sha256>.tgz \
-  --file /tmp/visonaut-public-packages/visonaut-<version>.tgz --remote
-```
-
-Put each tarball's SHA-256 and byte count from the verified manifest in Ariakit's reviewed `.github/visonaut/settings.json`. Regenerate its trusted plan after the pin changes. The pinned render and submission jobs request GitHub OIDC tokens to download the exact packages from `/v1/bootstrap/packages/playwright` and `/v1/bootstrap/packages/cli`. The service verifies the signed job, workflow and trusted-main plan, reads only the two pinned private objects, and checks each digest and byte count. Ariakit's bootstrap script checks the bytes again before installation. The public workflow receives no R2 token or presigned URL. Remove the bootstrap objects and endpoint after the public npm packages replace this temporary transport; npm publication remains a separate launch action.
+The public `visonaut` and `@visonaut/playwright` packages are available at version `0.1.0`. The Ariakit migration will pin them in its npm lockfile. The planned capture workflow will not need access to this private source repository or a package-download credential.
 
 ## npm publication
 
-`release.yml` is manual and runs only from `main`. It repeats all checks, downloads the tarballs from that same workflow run, verifies their source and hashes, and publishes those exact bytes. It never publishes from a push. Set the repository variable `VISONAUT_RELEASE_COMMIT` to the exact 40-character source SHA only after the issue's measured launch, restore, security, and Ariakit diagnostic checks pass. This is a record of the delegated launch decision; ordinary CI does not establish launch readiness. Clear the variable after the release. A different source commit requires new readiness evidence and a new value.
+`release.yml` is manual and runs only from `main`. It repeats all checks, downloads the tarballs from that same workflow run, verifies their source and hashes, and publishes those exact bytes. It never publishes from a push. Set the repository variable `VISONAUT_RELEASE_COMMIT` to the exact 40-character source SHA only after that version's checks and release decision. Clear the variable after the release. A different source commit requires new evidence and a new value. Production cutover has its own launch gates; a package release alone does not satisfy them.
 
 The maintainer bootstraps each new npm package once, then configures its GitHub trusted publisher: owner `ariakit`, repository `visonaut`, workflow filename `release.yml`, and environment `npm`. Allow direct publishing for that publisher. No npm token is stored in GitHub. Both package manifests must use repository URL `https://github.com/ariakit/visonaut` and their correct package directory. The workflow reads versions from the audited tarballs; use Changesets to set versions before the readiness commit.
 
