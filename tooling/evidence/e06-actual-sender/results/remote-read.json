@@ -1,0 +1,11 @@
+{
+  "app_id": 5028451,
+  "completed_at": "2026-09-23T17:54:37Z",
+  "conclusion": "failure",
+  "details_url": "https://diagnostics.visonaut.com/runs/e06-b2e89d29-cffa-4a3f-bbd6-f704b93e34c8",
+  "external_id": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8",
+  "head_sha": "24f508cc65c91867d747a8046d4aef6348418ced",
+  "id": 107309472830,
+  "name": "Visonaut",
+  "status": "completed"
+}

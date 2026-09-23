@@ -1,0 +1,187 @@
+{
+  "source": {
+    "commit": "a2e2d7940cbe85e2ca59a937ab04cdc68f03d840",
+    "files": {
+      "packages/security/src/checks.ts": "930a31ac48ee989f396e2de6c6b6fe49d0255e86dc6bf9e7466bc1e734418edd",
+      "packages/security/src/github.ts": "3f17729843efab65accb48176e2fd85b353e7f475b1210708ce6fac202675641",
+      "packages/service/src/work.ts": "a89eda546a30ae02bc3fdc3bad721998b1750eb20f21464c4e44e1cdd7d92f77",
+      "apps/web/src/operations/checks.ts": "2adbfe7ffc36a6a94005af71efb57be23cadd73d8d8bfe45101eeb2a4905c95b"
+    }
+  },
+  "mode": "local native D1, exact production sender, genuine GitHub App HTTPS",
+  "startedAt": "2026-09-23T17:54:33.728Z",
+  "repository": "ariakit/visonaut-diagnostics",
+  "repositoryId": "1380792062",
+  "testedSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+  "runId": "e06-b2e89d29-cffa-4a3f-bbd6-f704b93e34c8",
+  "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8",
+  "assertions": [
+    "Existing EU Infisical App key is present",
+    "GitHub request budget remains bounded",
+    "Scoped installation token has time to complete the probe",
+    "GitHub request budget remains bounded",
+    "App token resolves only the public synthetic repository",
+    "GitHub request budget remains bounded",
+    "At most one new synthetic check is created",
+    "GitHub request budget remains bounded",
+    "One new App-owned check was created on the historical commit",
+    "GitHub request budget remains bounded",
+    "Native D1 claimed revision-one success",
+    "GitHub request budget remains bounded",
+    "Obsolete in-flight success was refused",
+    "Native D1 freshness read saw the new desired revision",
+    "Obsolete in-flight success sent no GitHub PATCH",
+    "Native D1 claimed current revision-two failure",
+    "GitHub request budget remains bounded",
+    "At most one status PATCH reaches the synthetic check",
+    "GitHub request budget remains bounded",
+    "Current failure reached the exact production sender",
+    "Exactly one current status PATCH reached GitHub",
+    "GitHub request budget remains bounded",
+    "Final App check is completed with failure",
+    "Native desired and delivered revisions both finish at two",
+    "Native status lock and ambiguity are clear",
+    "Both synthetic status revisions remain auditable",
+    "Native D1 foreign keys remain valid"
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "target": "/app/installations/163661534/access_tokens",
+      "status": 201,
+      "requestId": "B03F:658FE:169C9B:18E8F1:6AB4125A",
+      "permissions": {
+        "checks": "write",
+        "metadata": "read"
+      },
+      "repositorySelection": "selected",
+      "expiresAt": "2026-09-23T18:54:34Z"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics",
+      "status": 200,
+      "requestId": "B03E:2EEC4C:16EC5B:193958:6AB4125A"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics/commits/24f508cc65c91867d747a8046d4aef6348418ced/check-runs",
+      "status": 200,
+      "requestId": "B03F:658FE:169DBB:18EA1E:6AB4125A"
+    },
+    {
+      "method": "POST",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs",
+      "status": 201,
+      "requestId": "B03F:658FE:169E54:18EABC:6AB4125B",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": null,
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs/107309472830",
+      "status": 200,
+      "requestId": "B03E:2EEC4C:16EDF0:193B2B:6AB4125A",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": null,
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs/107309472830",
+      "status": 200,
+      "requestId": "B03F:658FE:169F86:18EC0D:6AB4125C",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": null,
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs/107309472830",
+      "status": 200,
+      "requestId": "B03F:658FE:169FF6:18EC92:6AB4125C",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": null,
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    },
+    {
+      "method": "PATCH",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs/107309472830",
+      "status": 200,
+      "requestId": "B03F:658FE:16A05F:18ECF6:6AB4125D",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": "failure",
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    },
+    {
+      "method": "GET",
+      "target": "/repos/ariakit/visonaut-diagnostics/check-runs/107309472830",
+      "status": 200,
+      "requestId": "B03F:658FE:16A13E:18EE05:6AB4125D",
+      "checkId": 107309472830,
+      "name": "Visonaut",
+      "appId": 5028451,
+      "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+      "conclusion": "failure",
+      "externalId": "e06:b2e89d29-cffa-4a3f-bbd6-f704b93e34c8"
+    }
+  ],
+  "passed": true,
+  "checkId": "107309472830",
+  "checkUrl": "https://github.com/ariakit/visonaut-diagnostics/runs/107309472830",
+  "injectedRace": {
+    "point": "After genuine App GET response, before production sender's isCurrent read",
+    "oldRevision": 1,
+    "newRevision": 2
+  },
+  "finalNativeState": {
+    "check": {
+      "desired_revision": 2,
+      "delivered_revision": 2,
+      "lease_token": null,
+      "request_started": 0,
+      "ambiguous": 0
+    },
+    "outbox": [
+      {
+        "revision": 1,
+        "conclusion": "success",
+        "state": "obsolete",
+        "attempts": 1
+      },
+      {
+        "revision": 2,
+        "conclusion": "failure",
+        "state": "complete",
+        "attempts": 1
+      }
+    ]
+  },
+  "counts": {
+    "GET": 6,
+    "POST": 1,
+    "PATCH": 1
+  },
+  "tokenCleanup": {
+    "revoked": true,
+    "status": 204,
+    "at": "2026-09-23T17:54:38.400Z"
+  },
+  "completedAt": "2026-09-23T17:54:38.400Z"
+}
