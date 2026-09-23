@@ -1,0 +1,62 @@
+{
+  "date": "2026-09-23",
+  "productionSourceSha": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+  "botSessionCountsBeforeFollowUp": {
+    "production": 1,
+    "preview": 1,
+    "diagnostics": 1
+  },
+  "botSessionCountsAfterFollowUp": {
+    "production": 1,
+    "preview": 1,
+    "diagnostics": 1
+  },
+  "renewalCookieAttributes": ["httponly", "max-age", "path", "samesite", "secure"],
+  "getSessionStatusForEveryMatrixCell": 200,
+  "matrix": [
+    { "source": "production", "target": "production", "sessionCount": 1, "meStatus": 200 },
+    { "source": "production", "target": "preview", "sessionCount": 0, "meStatus": 401 },
+    { "source": "production", "target": "diagnostics", "sessionCount": 0, "meStatus": 401 },
+    { "source": "preview", "target": "production", "sessionCount": 0, "meStatus": 401 },
+    { "source": "preview", "target": "preview", "sessionCount": 1, "meStatus": 200 },
+    { "source": "preview", "target": "diagnostics", "sessionCount": 0, "meStatus": 401 },
+    { "source": "diagnostics", "target": "production", "sessionCount": 0, "meStatus": 401 },
+    { "source": "diagnostics", "target": "preview", "sessionCount": 0, "meStatus": 401 },
+    { "source": "diagnostics", "target": "diagnostics", "sessionCount": 1, "meStatus": 403 }
+  ],
+  "productionExpiry": {
+    "activeBotSessionsBefore": 2,
+    "activeBotSessionsAfter": 1,
+    "expiredGetSessionWasNull": true,
+    "expiredMeStatus": 401,
+    "survivorGetSessionWasPresent": true,
+    "survivorMeStatus": 200,
+    "oneUseProbeStoppedAfterAssertions": "production: inventory (second-row assertion bug)"
+  },
+  "githubGrantRevocation": {
+    "deleteStatus": 204,
+    "revokedTokenStatus": 401,
+    "deliverySha256Prefix": "f317f9cb448f4440",
+    "environments": {
+      "production": {
+        "receivedAt": "2026-09-23T07:09:32.411Z",
+        "processedAt": "2026-09-23T07:09:32.448Z",
+        "revocationAuditCount": 1,
+        "botSessionCountAfter": 0
+      },
+      "preview": {
+        "receivedAt": "2026-09-23T07:09:32.424Z",
+        "processedAt": "2026-09-23T07:09:32.514Z",
+        "revocationAuditCount": 1,
+        "botSessionCountAfter": 0
+      },
+      "diagnostics": {
+        "receivedAt": "2026-09-23T07:09:32.550Z",
+        "processedAt": "2026-09-23T07:09:32.599Z",
+        "revocationAuditCount": 1,
+        "botSessionCountAfter": 0
+      }
+    },
+    "nonBotSessionCountsUnchanged": true
+  }
+}
