@@ -1,12 +1,20 @@
 import { ImageValidationError } from "@visonaut/compare";
+import { Container } from "@cloudflare/containers";
 import { ConflictError, IncompleteError, reconcileWork, Service } from "@visonaut/service";
 import { codecsReady } from "./codecs.ts";
+import { processComparisonTaskInContainer } from "./container.ts";
 import { processComparisonTask } from "./process.ts";
 import { CodecBusyError, withCodecCapacity } from "./capacity.ts";
 import { validateRequest } from "./validate.ts";
 
 interface ComparisonMessage {
   taskId: string;
+}
+
+export class ComparisonContainer extends Container<Env> {
+  defaultPort = 8080;
+  sleepAfter = "30s";
+  enableInternet = false;
 }
 
 function validMessage(value: unknown): value is ComparisonMessage {
@@ -57,11 +65,18 @@ async function consume(message: Message<unknown>, env: Env) {
       }
       return;
     }
-    const { result, artifacts } = await processComparisonTask({
-      task,
-      images: env.IMAGES,
-      codecs: await codecsReady,
-    });
+    const { result, artifacts } =
+      env.VISONAUT_CODEC_BACKEND === "container"
+        ? await processComparisonTaskInContainer({
+            task,
+            images: env.IMAGES,
+            container: env.CODEC_CONTAINER.getByName("comparison"),
+          })
+        : await processComparisonTask({
+            task,
+            images: env.IMAGES,
+            codecs: await codecsReady,
+          });
     await service.commitComparisonResult({
       taskId,
       leaseOwner: owner,

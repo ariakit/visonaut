@@ -20,6 +20,21 @@
       "fallthrough": true,
     },
   ],
+  "vars": {
+    "VISONAUT_CODEC_BACKEND": "worker",
+  },
+  "containers": [
+    {
+      "class_name": "ComparisonContainer",
+      "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+      "max_instances": 1,
+      "instance_type": "basic",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+  },
+  "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
   "d1_databases": [
     {
       "binding": "DB",
@@ -57,6 +72,21 @@
   "preview_urls": false,
   "env": {
     "production": {
+      "vars": {
+        "VISONAUT_CODEC_BACKEND": "worker",
+      },
+      "containers": [
+        {
+          "class_name": "ComparisonContainer",
+          "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+      },
+      "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
       "d1_databases": [
         {
           "binding": "DB",
@@ -94,6 +124,21 @@
       "name": "visonaut-compare",
     },
     "diagnostics": {
+      "vars": {
+        "VISONAUT_CODEC_BACKEND": "container",
+      },
+      "containers": [
+        {
+          "class_name": "ComparisonContainer",
+          "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+      },
+      "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
       "d1_databases": [
         {
           "binding": "DB",

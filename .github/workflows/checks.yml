@@ -38,6 +38,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chrome chromium
       - run: pnpm check
+      - name: Test native comparison Container
+        run: |
+          npm ci --prefix apps/compare/container --ignore-scripts --no-audit --no-fund --os=linux --cpu=x64 --libc=glibc
+          npm test --prefix apps/compare/container
+      - name: Build pinned comparison Container image
+        run: docker build --platform linux/amd64 --file apps/compare/container/Dockerfile --tag visonaut-compare-check:${{ github.sha }} .
       - name: Test release guards
         run: node --test .github/workflows/scripts/*.test.mjs
       - name: Pack and audit public packages

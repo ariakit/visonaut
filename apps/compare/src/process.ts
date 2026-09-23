@@ -31,10 +31,9 @@ interface WriteArtifactParams extends ProcessTaskParams {
   id?: string;
 }
 
-async function readOriginal(
+export async function readOriginalValidated(
   image: NonNullable<ComparisonTask["candidate"]>,
   images: ArtifactStorage,
-  codecs: ImageCodecs,
 ) {
   if (image.bytes > imageLimits.maxEncodedBytes) {
     throw new ImageValidationError("encoded-size", "Stored image exceeds the decode byte limit.");
@@ -60,7 +59,15 @@ async function readOriginal(
       "Stored original differs from its validated record.",
     );
   }
-  return decodeImage(validated, codecs);
+  return validated;
+}
+
+async function readOriginal(
+  image: NonNullable<ComparisonTask["candidate"]>,
+  images: ArtifactStorage,
+  codecs: ImageCodecs,
+) {
+  return decodeImage(await readOriginalValidated(image, images), codecs);
 }
 
 async function writeArtifact({

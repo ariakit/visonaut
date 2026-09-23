@@ -7,7 +7,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const resourceTypes = new Set(["queue", "d1", "r2_bucket", "service"]);
+const resourceTypes = new Set(["queue", "d1", "r2_bucket", "service", "durable_object_namespace"]);
 
 export function resourceInventory(configuration) {
   return [
@@ -31,6 +31,13 @@ export function resourceInventory(configuration) {
       type: "service",
       target: binding.service,
     })),
+    ...(configuration.durable_objects?.bindings ?? []).map((binding) => ({
+      name: binding.name,
+      type: "durable_object_namespace",
+      target: binding.class_name,
+      scriptName: binding.script_name ?? null,
+      environment: binding.environment ?? null,
+    })),
   ].sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -41,8 +48,35 @@ function remoteInventory(settings) {
     .map((binding) => ({
       name: binding.name,
       type: binding.type,
-      target: binding.queue_name ?? binding.id ?? binding.bucket_name ?? binding.service,
+      target:
+        binding.queue_name ??
+        binding.id ??
+        binding.bucket_name ??
+        binding.service ??
+        binding.class_name,
+      ...(binding.type === "durable_object_namespace"
+        ? {
+            scriptName: binding.script_name ?? null,
+            environment: binding.environment ?? null,
+          }
+        : {}),
     }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Version uploads cannot create a Durable Object class; its namespace must exist.
+// https://developers.cloudflare.com/workers/versions-and-deployments/deployment-management/
+function selfDurableObjectNamespaces(configuration, settings) {
+  return (configuration.durable_objects?.bindings ?? [])
+    .filter((binding) => !binding.script_name && !binding.environment)
+    .map((binding) => {
+      const remote = settings.bindings.find((entry) => entry.name === binding.name);
+      assert(
+        /^[a-f0-9]{32}$/.test(remote?.namespace_id ?? ""),
+        `Durable Object namespace ID is unavailable for ${binding.name}`,
+      );
+      return { name: binding.name, namespaceId: remote.namespace_id };
+    })
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -69,6 +103,11 @@ export function assertInfrastructure(configuration, settings, schedules) {
       "Queue delivery delay needs separate infrastructure handling",
     );
   }
+  return selfDurableObjectNamespaces(configuration, settings);
+}
+
+export function assertStableDurableObjectNamespaces(before, after) {
+  assert.deepEqual(after, before, "Durable Object namespace IDs changed during version deployment");
 }
 
 export function versionConfiguration(configuration, propertyNames) {
@@ -141,7 +180,7 @@ export async function deployVersion(configPath, expectedName, environment) {
   }
   const beforeSettings = await inspect("/settings");
   const beforeSchedules = await inspect("/schedules");
-  assertInfrastructure(configuration, beforeSettings, beforeSchedules);
+  const beforeNamespaces = assertInfrastructure(configuration, beforeSettings, beforeSchedules);
   const wranglerDirectory = dirname(require.resolve("wrangler/package.json"));
   const schema = JSON.parse(
     await readFile(resolve(wranglerDirectory, "config-schema.json"), "utf8"),
@@ -191,7 +230,8 @@ export async function deployVersion(configPath, expectedName, environment) {
   wrangler(["versions", "deploy", `${version}@100`, "--yes", "--config", temporaryConfig]);
   const afterSettings = await inspect("/settings");
   const afterSchedules = await inspect("/schedules");
-  assertInfrastructure(configuration, afterSettings, afterSchedules);
+  const afterNamespaces = assertInfrastructure(configuration, afterSettings, afterSchedules);
+  assertStableDurableObjectNamespaces(beforeNamespaces, afterNamespaces);
   assert.deepEqual(afterSchedules, beforeSchedules, "Version deployment changed cron settings");
   console.log(
     JSON.stringify({
