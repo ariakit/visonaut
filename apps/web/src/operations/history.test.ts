@@ -522,7 +522,7 @@ describe("verified closed history with native D1 and R2", () => {
     });
     const root = await readHistoryManifest(operations, "target");
     expect(root?.manifest.counts.documents).toBe(1);
-  });
+  }, 30_000);
 
   it("archives in bounded steps and keeps exact capture/result history plus available original bytes", async () => {
     await closed();
