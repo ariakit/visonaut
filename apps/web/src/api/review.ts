@@ -8,7 +8,7 @@ import {
 } from "@visonaut/service";
 import type { HistoryRow } from "../operations/history-format.ts";
 import type { PrivateContext } from "./context.js";
-import { comparisonReference } from "./ingest.js";
+import { comparisonReference, startComparisonPublication } from "./ingest.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
 import { operationsStatus } from "./operations.js";
 
@@ -702,15 +702,7 @@ export async function handleReview(
         now: Date.now(),
         maxAttempts: context.configuration.comparisonMaxAttempts,
       });
-      const rows = await context.service.comparisonRows(comparison.id);
-      for (const row of rows) {
-        if (row.outcome === "pending") {
-          await context.comparisons.send({ taskId: row.id });
-        }
-      }
-      if (rows.every((row) => row.outcome !== "pending" && row.outcome !== "error")) {
-        await context.service.finalizeComparison({ comparisonId: comparison.id, now: Date.now() });
-      }
+      await startComparisonPublication(context, comparison.id);
       return Response.json(
         await reviewModel(context, run.id, historical ? comparison.id : undefined),
         { status: 202 },

@@ -1,10 +1,11 @@
 import { ImageValidationError } from "@visonaut/compare";
 import { Container } from "@cloudflare/containers";
-import { ConflictError, IncompleteError, reconcileWork, Service } from "@visonaut/service";
+import { ConflictError, IncompleteError, Service } from "@visonaut/service";
 import { codecsReady } from "./codecs.ts";
 import { processComparisonTaskInContainer } from "./container.ts";
 import { processComparisonTask } from "./process.ts";
 import { CodecBusyError, withCodecCapacity } from "./capacity.ts";
+import { runScheduledComparisons } from "./scheduled.ts";
 import { validateRequest } from "./validate.ts";
 
 interface ComparisonMessage {
@@ -127,20 +128,12 @@ export default {
     }
   },
   async scheduled(_controller: ScheduledController, env: Env) {
-    await reconcileWork(env.DB, {
-      now: Date.now(),
-      limit: 100,
-      kind: "compare",
-      publish: async (taskId) => {
+    await runScheduledComparisons(
+      env.DB,
+      async (taskId) => {
         await env.COMPARISONS.send({ taskId });
       },
-    });
-    const service = new Service(env.DB);
-    const recovered = await service.reconcileComparisons({ now: Date.now(), limit: 100 });
-    if (recovered.errors.length) {
-      console.error(
-        JSON.stringify({ event: "comparison-finalization-failed", count: recovered.errors.length }),
-      );
-    }
+      Date.now,
+    );
   },
 } satisfies ExportedHandler<Env>;

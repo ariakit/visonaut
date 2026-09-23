@@ -26,6 +26,7 @@ export async function runOperations(context: OperationsContext, exporter: Databa
   const reports: Record<string, OperationReport> = {};
   const publication = await reconcileWork(context.database, {
     kind: "compare",
+    scope: "current-comparison",
     now: context.now(),
     limit: context.budget.tasksPerStep,
     publish: (taskId) => context.comparisons.send({ taskId }),
@@ -34,9 +35,9 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     completed: publication.published,
     deferred: publication.failed,
     attention: [],
-    hasMore: false,
+    hasMore: publication.hasMore,
   };
-  // Re-publication is at least once. Consumer leases and result transactions own correctness.
+  // Queue receipts and bounded continuation feed the consumer without flooding it.
   const service = new Service(context.database);
   const finalized = await service.reconcileComparisons({
     now: context.now(),

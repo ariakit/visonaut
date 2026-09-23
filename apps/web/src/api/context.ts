@@ -53,7 +53,7 @@ export interface ApiBindings {
   bootstrap?: Pick<ObjectStorage, "get">;
   transferPrivateKey?: string;
   comparator: { fetch: typeof fetch };
-  comparisons: { send(message: { taskId: string }): Promise<void> };
+  operations: { send(message: { kind: "continue" }): Promise<void> };
   configuration: ApiConfiguration;
   admission?: (identity: {
     projectId: string;

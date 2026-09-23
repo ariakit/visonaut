@@ -20,6 +20,10 @@ export interface WorkTask {
   lease_until: number | null;
   result: string | null;
   last_error: string | null;
+  publication_attempts: number;
+  publication_due_at: number;
+  publication_token: string | null;
+  published_at: number | null;
 }
 
 export interface LeaseOwnerParams {
@@ -76,16 +80,28 @@ export async function claimWork(database: Database, params: LeaseParams) {
   `)
     .bind(params.now, params.id, params.now)
     .run();
+  // A delivery with an unsettled send confirms acceptance without restarting its receipt.
   return database
     .prepare(`
     UPDATE work_tasks SET state = 'leased', attempts = attempts + 1,
-      lease_token = ?, lease_until = ?, updated_at = ?
+      lease_token = ?, lease_until = ?, updated_at = ?,
+      published_at = CASE WHEN publication_token IS NOT NULL
+        THEN COALESCE(published_at, ?) ELSE published_at END,
+      publication_token = NULL
     WHERE id = ? AND attempts < max_attempts AND (
       (state = 'queued' AND available_at <= ?) OR
       (state = 'leased' AND lease_until <= ?)
     ) RETURNING *
   `)
-    .bind(params.token, params.now + params.leaseMs, params.now, params.id, params.now, params.now)
+    .bind(
+      params.token,
+      params.now + params.leaseMs,
+      params.now,
+      params.now,
+      params.id,
+      params.now,
+      params.now,
+    )
     .first<WorkTask>();
 }
 
@@ -141,13 +157,18 @@ export async function failWork(database: Database, params: FailWorkParams) {
   const result = await database
     .prepare(`
     UPDATE work_tasks SET state = CASE WHEN attempts >= max_attempts THEN 'dead' ELSE 'queued' END,
-      available_at = ?, last_error = ?, lease_token = NULL, lease_until = NULL, updated_at = ?
+      available_at = ?, last_error = ?, lease_token = NULL, lease_until = NULL, updated_at = ?,
+      publication_attempts = CASE WHEN published_at IS NULL THEN 0
+        ELSE publication_attempts END,
+      publication_due_at = CASE WHEN published_at IS NULL THEN ?
+        ELSE publication_due_at END, publication_token = NULL
     WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id
   `)
     .bind(
       Math.max(params.now, params.retryAt),
       params.error.slice(0, 4096),
       params.now,
+      Math.max(params.now, params.retryAt),
       params.id,
       params.token,
       params.now,
@@ -160,12 +181,45 @@ export interface ReconcileWorkParams {
   now: number;
   limit: number;
   kind?: string;
+  scope?: "current-comparison";
+  maxOutstanding?: number;
   publish: (taskId: string) => Promise<void>;
 }
 
-/** Publication may repeat: durable task identity, not queue delivery, owns results. */
+const publicationPageLimit = 32;
+// Cron refills this cap as consumers finish work; a full queue pauses continuation.
+const defaultMaxOutstanding = 1024;
+// Queue retention can reach 14 days; a final in-flight delivery can run 15 minutes.
+// https://developers.cloudflare.com/queues/platform/limits/
+const receiptMilliseconds = (14 * 24 + 1) * 60 * 60 * 1000;
+const rejectedSendRetryMilliseconds = 5 * 60 * 1000;
+
+function definiteQueueRejection(error: unknown) {
+  // Workers Queue errors append the code to message. These three codes mean
+  // overload, storage limit, disabled Queue, or free-tier quota; no message was accepted.
+  // https://developers.cloudflare.com/queues/reference/error-codes/
+  return error instanceof Error && /\b(?:10250|10251|10252|10253)\)?$/.test(error.message.trim());
+}
+
+/** Claim before Queue.send; an interrupted or ambiguous send becomes due again. */
 export async function reconcileWork(database: Database, params: ReconcileWorkParams) {
   positiveInteger(params.limit, "limit");
+  const maxOutstanding = params.maxOutstanding ?? defaultMaxOutstanding;
+  positiveInteger(maxOutstanding, "maxOutstanding");
+  if (params.scope && params.kind !== "compare") {
+    throw new Error("Current comparison publication requires compare tasks.");
+  }
+  // Superseded tasks can stay queued after their Queue messages are acknowledged.
+  const currentComparison = (taskTable: string) =>
+    params.scope
+      ? `AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
+      JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+      JOIN visonaut_runs run ON run.id = comparison.run_id
+      WHERE row.id = ${taskTable}.id AND comparison.state = 'comparing'
+        AND (comparison.purpose = 'historical'
+          OR (comparison.purpose = 'review' AND run.active = 1
+            AND run.comparison_id = comparison.id)))`
+      : "";
   await database
     .prepare(`
     UPDATE work_tasks SET state = 'dead', lease_token = NULL, lease_until = NULL,
@@ -176,27 +230,118 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   `)
     .bind(params.now, params.now, params.kind ?? null, params.kind ?? null, params.limit)
     .run();
+  const kind = params.kind ?? null;
+  // Superseded tasks can still have messages in Queue, so only candidate selection is scoped.
+  const outstandingSql = `SELECT COUNT(*) AS count FROM work_tasks AS admitted
+    WHERE admitted.publication_due_at > ?
+      AND admitted.state IN ('queued', 'leased')
+      AND (admitted.published_at IS NOT NULL
+        OR admitted.publication_token IS NOT NULL)
+      AND (? IS NULL OR admitted.kind = ?)`;
+  const limit = Math.min(params.limit, publicationPageLimit);
+  // Select only a bounded page. Do not reserve unsent candidates if an earlier send stops.
   const due = await database
     .prepare(`
-    SELECT id FROM work_tasks WHERE attempts < max_attempts AND
-      ((state = 'queued' AND available_at <= ?) OR (state = 'leased' AND lease_until <= ?))
-      AND (? IS NULL OR kind = ?)
-    ORDER BY available_at, id LIMIT ?
+    SELECT id FROM work_tasks WHERE attempts < max_attempts
+      AND publication_due_at <= ?
+      AND ((state = 'queued' AND available_at <= ?)
+        OR (state = 'leased' AND lease_until <= ?))
+      AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")}
+    ORDER BY CASE WHEN publication_attempts > 0 THEN 0 ELSE 1 END,
+      publication_due_at, available_at, id
+    LIMIT max(0, min(?, ? - (${outstandingSql})))
   `)
-    .bind(params.now, params.now, params.kind ?? null, params.kind ?? null, params.limit)
+    .bind(
+      params.now,
+      params.now,
+      params.now,
+      kind,
+      kind,
+      limit,
+      maxOutstanding,
+      params.now,
+      kind,
+      kind,
+    )
     .all<{ id: string }>();
   const published: string[] = [];
   const failed: string[] = [];
+  // Each send gets its own atomic cap check and receipt before it reaches Queue.
   for (const task of due.results ?? []) {
+    const publicationToken = crypto.randomUUID();
+    const claimed = await database
+      .prepare(`
+      UPDATE work_tasks SET publication_attempts = publication_attempts + 1,
+        publication_due_at = ? + ?, publication_token = ?, published_at = NULL,
+        updated_at = ?
+      WHERE id = ? AND attempts < max_attempts AND publication_due_at <= ?
+        AND ((state = 'queued' AND available_at <= ?)
+          OR (state = 'leased' AND lease_until <= ?))
+        AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")}
+        AND ? > (${outstandingSql})
+      RETURNING id
+    `)
+      .bind(
+        params.now,
+        receiptMilliseconds,
+        publicationToken,
+        params.now,
+        task.id,
+        params.now,
+        params.now,
+        params.now,
+        kind,
+        kind,
+        maxOutstanding,
+        params.now,
+        kind,
+        kind,
+      )
+      .first<{ id: string }>();
+    if (!claimed) continue;
     try {
       await params.publish(task.id);
+      await database
+        .prepare(`UPDATE work_tasks SET published_at = ?, publication_token = NULL,
+          publication_due_at = ? + ?,
+          updated_at = ? WHERE id = ? AND publication_token = ?
+          AND state IN ('queued', 'leased')`)
+        .bind(params.now, params.now, receiptMilliseconds, params.now, task.id, publicationToken)
+        .run();
       published.push(task.id);
-    } catch {
-      // The durable row remains due, including after ambiguous publication.
+    } catch (error) {
+      if (definiteQueueRejection(error)) {
+        // Keep the token until retry so a concurrent consumer claim still wins.
+        await database
+          .prepare(`UPDATE work_tasks SET publication_due_at = ?
+            WHERE id = ? AND publication_token = ? AND state IN ('queued', 'leased')`)
+          .bind(params.now + rejectedSendRetryMilliseconds, task.id, publicationToken)
+          .run();
+      }
+      // An ambiguous send keeps the full receipt in case Queue accepted it.
       failed.push(task.id);
+      break;
     }
   }
-  return { published, failed };
+  // Queue outages must not turn an operations continuation into a hot retry loop.
+  if (failed.length) return { published, failed, hasMore: false };
+  const pending = await database
+    .prepare(`SELECT 1 AS found FROM work_tasks WHERE attempts < max_attempts
+      AND publication_due_at <= ?
+      AND ((state = 'queued' AND available_at <= ?)
+        OR (state = 'leased' AND lease_until <= ?))
+      AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")} LIMIT 1`)
+    .bind(params.now, params.now, params.now, kind, kind)
+    .first<{ found: number }>();
+  const outstanding = await database
+    .prepare(outstandingSql)
+    .bind(params.now, kind, kind)
+    .first<{ count: number }>();
+  return {
+    published,
+    failed,
+    hasMore: pending !== null && (outstanding?.count ?? 0) < maxOutstanding,
+  };
 }
 
 export interface StatusIntent {
