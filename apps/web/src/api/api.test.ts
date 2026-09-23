@@ -313,7 +313,7 @@ async function fixture({
     database,
     images,
     quarantine,
-    comparisons: { async send() {} },
+    operations: { async send() {} },
     comparator: {
       async fetch(input, init) {
         const request = new Request(input, init);

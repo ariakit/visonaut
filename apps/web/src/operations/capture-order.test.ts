@@ -41,6 +41,7 @@ beforeEach(async () => {
     "0012_historical_comparisons",
     "0013_promotion_scans",
     "0014_visonaut_brand",
+    "0016_comparison_publication",
   ]) {
     const source = (
       await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")

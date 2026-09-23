@@ -36,7 +36,7 @@ Set the origin to the new disposable Worker, then run the controller:
 VISONAUT_PROBE_ORIGIN=https://YOUR-UNIQUE-PREFIX.YOUR-SUBDOMAIN.workers.dev node run.mjs
 ```
 
-The controller checks unauthenticated denial, durable work after lost publication, a real expired lease, duplicate delivery, three-attempt work failure, native dead-letter delivery, private alerts, stale completion rejection, and explicit replacement recovery. It stops on a failed assertion. The generic work results do not prove image or GitHub correctness.
+The controller checks unauthenticated denial, durable work after a failed publication, a real expired lease, duplicate delivery, three-attempt work failure, native dead-letter delivery, private alerts, stale completion rejection, and explicit replacement recovery. It stops on a failed assertion. The publisher outage is injected before `Queue.send`, so the disposable Worker releases only that known-unsent receipt before retrying. A real ambiguous send retains its receipt for the Queue retention window plus in-flight delivery time. The generic work results do not prove image or GitHub correctness.
 
 Inspect `results/events.jsonl` and `results/result.json`. Keep failed attempts as evidence. To rerun the full controller, create a fresh empty database and new resource names rather than deleting an existing project. The one-second queue delays are test parameters, not the production retry policy.
 

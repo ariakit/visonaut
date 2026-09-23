@@ -874,6 +874,25 @@ export async function comparisonReference(context: ApiContext, run: RunRow, hist
   };
 }
 
+export async function startComparisonPublication(context: ApiContext, comparisonId: string) {
+  const pending = await context.database
+    .prepare(
+      "SELECT 1 AS found FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error') LIMIT 1",
+    )
+    .bind(comparisonId)
+    .first();
+  if (!pending) {
+    await context.service.finalizeComparison({ comparisonId, now: Date.now() });
+    return;
+  }
+  try {
+    await context.operations.send({ kind: "continue" });
+  } catch {
+    // The durable task rows remain available to the five-minute scheduler.
+    console.error(JSON.stringify({ event: "comparison-publication-wakeup-failed" }));
+  }
+}
+
 export async function scheduleComparison(context: ApiContext, runId: string) {
   const run = await context.service.run(runId);
   if (run.comparison_id) return;
@@ -885,15 +904,7 @@ export async function scheduleComparison(context: ApiContext, runId: string) {
     now: Date.now(),
     maxAttempts: context.configuration.comparisonMaxAttempts,
   });
-  const rows = await context.service.comparisonRows(comparison.id);
-  for (const row of rows) {
-    if (row.outcome === "pending") {
-      await context.comparisons.send({ taskId: row.id });
-    }
-  }
-  if (rows.every((row) => row.outcome !== "pending" && row.outcome !== "error")) {
-    await context.service.finalizeComparison({ comparisonId: comparison.id, now: Date.now() });
-  }
+  await startComparisonPublication(context, comparison.id);
 }
 
 export async function trySealRun(context: ApiContext, runId: string, verifyHistorical = false) {

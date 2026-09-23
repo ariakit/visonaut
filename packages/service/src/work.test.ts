@@ -14,6 +14,7 @@ import {
   deliverStatus,
   enqueueWork,
   failWork,
+  getWork,
   reconcileStatus,
   reconcileWork,
   releasePromotionLeaseStatement,
@@ -128,6 +129,8 @@ function deferred() {
   return { promise, resolve };
 }
 
+const receiptLifetime = (14 * 24 + 1) * 60 * 60 * 1000;
+
 describe("durable comparison work", () => {
   it("keeps enqueue repeat-safe and rejects a conflicting identity", async () => {
     using database = new TestDatabase();
@@ -231,10 +234,22 @@ describe("durable comparison work", () => {
         throw new Error("queue");
       },
     });
-    expect(failed).toEqual({ published: [], failed: ["second"] });
+    expect(failed).toEqual({ published: [], failed: ["second"], hasMore: false });
+    expect((await getWork(database, "second"))?.publication_due_at).toBe(110 + receiptLifetime);
     const published: string[] = [];
+    expect(
+      (
+        await reconcileWork(database, {
+          now: 110 + receiptLifetime - 1,
+          limit: 5,
+          publish: async (id) => {
+            published.push(id);
+          },
+        })
+      ).published,
+    ).toEqual([]);
     await reconcileWork(database, {
-      now: 111,
+      now: 110 + receiptLifetime,
       limit: 5,
       publish: async (id) => {
         published.push(id);
@@ -257,6 +272,355 @@ describe("durable comparison work", () => {
       publish: async () => {},
     });
     expect(result.published).toEqual(["compare"]);
+  });
+
+  it("reserves the final outstanding slot across concurrent reconcilers", async () => {
+    using database = new TestDatabase();
+    const insert = database.connection.prepare(`
+      INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at,
+        created_at, updated_at, publication_due_at, published_at)
+      VALUES (?, 'compare', '{}', 2, 100, 100, 100, ?, 100)
+    `);
+    for (let index = 0; index < 1023; index++) {
+      insert.run(`outstanding-${index}`, 100 + receiptLifetime);
+    }
+    await enqueueWork(database, workInput("first"));
+    await enqueueWork(database, workInput("second"));
+    const entered = deferred();
+    const secondEntered = deferred();
+    const release = deferred();
+    let sends = 0;
+    const publish = async () => {
+      sends++;
+      entered.resolve();
+      if (sends === 2) {
+        secondEntered.resolve();
+      }
+      await release.promise;
+    };
+    const first = reconcileWork(database, { now: 100, limit: 1, maxOutstanding: 1024, publish });
+    await entered.promise;
+    expect(
+      await database
+        .prepare(`SELECT COUNT(*) AS count FROM work_tasks
+          WHERE publication_token IS NOT NULL AND publication_due_at > 100`)
+        .first(),
+    ).toEqual({ count: 1 });
+    const second = reconcileWork(database, { now: 100, limit: 1, maxOutstanding: 1024, publish });
+    try {
+      await Promise.race([second.then(() => {}), secondEntered.promise]);
+    } finally {
+      release.resolve();
+    }
+    const results = await Promise.all([first, second]);
+    const published = results.flatMap((result) => result.published);
+    expect(published).toHaveLength(1);
+    expect(sends).toBe(1);
+    expect(
+      await database
+        .prepare(`SELECT COUNT(*) AS count FROM work_tasks WHERE state = 'queued'
+          AND published_at IS NOT NULL AND publication_due_at > 100`)
+        .first(),
+    ).toEqual({ count: 1024 });
+    const admitted = published[0];
+    if (!admitted) {
+      throw new Error("Expected one published task");
+    }
+    const delayed = 100 + 4 * 60 * 60 * 1000;
+    expect(
+      (
+        await reconcileWork(database, {
+          now: delayed,
+          limit: 1,
+          maxOutstanding: 1024,
+          publish,
+        })
+      ).published,
+    ).toEqual([]);
+    await claimWork(database, { id: admitted, token: "consumer", now: delayed + 1, leaseMs: 100 });
+    expect(
+      (
+        await reconcileWork(database, {
+          now: delayed + 1,
+          limit: 1,
+          maxOutstanding: 1024,
+          publish,
+        })
+      ).published,
+    ).toEqual([]);
+    expect(
+      await completeWork(database, {
+        id: admitted,
+        token: "consumer",
+        now: delayed + 2,
+        result: "equal",
+      }),
+    ).toBe(true);
+    expect(
+      (
+        await reconcileWork(database, {
+          now: delayed + 2,
+          limit: 1,
+          maxOutstanding: 1024,
+          publish,
+        })
+      ).published,
+    ).toHaveLength(1);
+  });
+
+  it("leaves later tasks due if the first Queue send stops", async () => {
+    using database = new TestDatabase();
+    for (const id of ["first", "second", "third"]) {
+      await enqueueWork(database, workInput(id));
+    }
+    const entered = deferred();
+    const release = deferred();
+    const stopped = reconcileWork(database, {
+      now: 100,
+      limit: 3,
+      publish: async () => {
+        entered.resolve();
+        await release.promise;
+      },
+    });
+    await entered.promise;
+    try {
+      expect(
+        await database
+          .prepare("SELECT id FROM work_tasks WHERE publication_token IS NOT NULL ORDER BY id")
+          .all(),
+      ).toEqual({ results: [{ id: "first" }] });
+      const sent: string[] = [];
+      const continuation = await reconcileWork(database, {
+        now: 100,
+        limit: 3,
+        publish: async (id) => {
+          sent.push(id);
+        },
+      });
+      expect(continuation.published).toEqual(["second", "third"]);
+      expect(sent).toEqual(["second", "third"]);
+    } finally {
+      release.resolve();
+      await stopped;
+    }
+  });
+
+  it("recovers a crash or ambiguous Queue.send with delayed, bounded retry", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("crashed"));
+    database.connection
+      .prepare(
+        "UPDATE work_tasks SET publication_attempts=1,publication_due_at=300100,publication_token='lost' WHERE id='crashed'",
+      )
+      .run();
+    const sent: string[] = [];
+    const publish = async (id: string) => {
+      sent.push(id);
+      if (sent.length === 1) throw new Error("Queue accepted, response lost");
+    };
+    expect((await reconcileWork(database, { now: 300099, limit: 100, publish })).published).toEqual(
+      [],
+    );
+    expect(await reconcileWork(database, { now: 300100, limit: 100, publish })).toEqual({
+      published: [],
+      failed: ["crashed"],
+      hasMore: false,
+    });
+    expect(sent).toEqual(["crashed"]);
+    const due = 300100 + receiptLifetime;
+    expect((await getWork(database, "crashed"))?.publication_due_at).toBe(due);
+    expect(
+      (await reconcileWork(database, { now: due - 1, limit: 100, publish })).published,
+    ).toEqual([]);
+    expect((await reconcileWork(database, { now: due, limit: 100, publish })).published).toEqual([
+      "crashed",
+    ]);
+    expect(
+      (await reconcileWork(database, { now: due + 1, limit: 100, publish })).published,
+    ).toEqual([]);
+    expect(sent).toEqual(["crashed", "crashed"]);
+  });
+
+  it("retries a definite Queue rejection after a short delay", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("overloaded"));
+    const sent: string[] = [];
+    const publish = async (id: string) => {
+      sent.push(id);
+      if (sent.length === 1) throw new Error("Queue send failed: 10250");
+    };
+    expect(await reconcileWork(database, { now: 100, limit: 1, publish })).toEqual({
+      published: [],
+      failed: ["overloaded"],
+      hasMore: false,
+    });
+    const retryAt = 100 + 5 * 60 * 1000;
+    const task = await getWork(database, "overloaded");
+    expect(task?.publication_due_at).toBe(retryAt);
+    expect(task?.publication_token).not.toBeNull();
+    expect(
+      (await reconcileWork(database, { now: retryAt - 1, limit: 1, publish })).published,
+    ).toEqual([]);
+    expect((await reconcileWork(database, { now: retryAt, limit: 1, publish })).published).toEqual([
+      "overloaded",
+    ]);
+    expect(sent).toEqual(["overloaded", "overloaded"]);
+  });
+
+  it("treats a free-tier Queue limit as a definite rejection", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("quota"));
+    await reconcileWork(database, {
+      now: 100,
+      limit: 1,
+      publish: async () => {
+        throw new Error("Queue send failed: 10253");
+      },
+    });
+    expect((await getWork(database, "quota"))?.publication_due_at).toBe(100 + 5 * 60 * 1000);
+  });
+
+  it("does not shorten a rejected send after its consumer already claimed the task", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("claimed"));
+    await reconcileWork(database, {
+      now: 100,
+      limit: 1,
+      publish: async (id) => {
+        await claimWork(database, { id, token: "consumer", now: 101, leaseMs: 100 });
+        throw new Error("Queue send failed: 10250");
+      },
+    });
+    const task = await getWork(database, "claimed");
+    expect(task?.publication_token).toBeNull();
+    expect(task?.publication_due_at).toBe(100 + receiptLifetime);
+  });
+
+  it("keeps the receipt when a consumer runs before Queue.send settles", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("early", 3));
+    const result = await reconcileWork(database, {
+      now: 100,
+      limit: 1,
+      publish: async (id) => {
+        const claim = await claimWork(database, {
+          id,
+          token: "early-consumer",
+          now: 101,
+          leaseMs: 100,
+        });
+        expect(claim?.id).toBe(id);
+        expect(
+          await failWork(database, {
+            id,
+            token: "early-consumer",
+            now: 102,
+            retryAt: 162,
+            error: "transient",
+          }),
+        ).toBe(true);
+        throw new Error("Queue accepted, response lost");
+      },
+    });
+    expect(result).toEqual({ published: [], failed: ["early"], hasMore: false });
+    const task = await getWork(database, "early");
+    expect(task?.published_at).toBe(101);
+    expect(task?.publication_token).toBeNull();
+    expect(task?.publication_due_at).toBe(100 + receiptLifetime);
+    expect(
+      (
+        await reconcileWork(database, {
+          now: 162,
+          limit: 1,
+          publish: async () => {
+            throw new Error("Duplicate publication");
+          },
+        })
+      ).published,
+    ).toEqual([]);
+  });
+
+  it("keeps the original deadline when an ambiguous message is claimed late", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("late", 3));
+    const sent: string[] = [];
+    const publish = async (id: string) => {
+      sent.push(id);
+      if (sent.length === 1) throw new Error("Queue accepted, response lost");
+    };
+    expect(await reconcileWork(database, { now: 100, limit: 1, publish })).toEqual({
+      published: [],
+      failed: ["late"],
+      hasMore: false,
+    });
+    const originalDue = 100 + receiptLifetime;
+    const claimAt = 100 + 13 * 24 * 60 * 60 * 1000;
+    const claim = await claimWork(database, {
+      id: "late",
+      token: "consumer",
+      now: claimAt,
+      leaseMs: 100,
+    });
+    expect(claim?.publication_due_at).toBe(originalDue);
+    expect(
+      await failWork(database, {
+        id: "late",
+        token: "consumer",
+        now: claimAt + 1,
+        retryAt: claimAt + 60_000,
+        error: "transient",
+      }),
+    ).toBe(true);
+    expect((await getWork(database, "late"))?.publication_due_at).toBe(originalDue);
+    expect(
+      (await reconcileWork(database, { now: originalDue - 1, limit: 1, publish })).published,
+    ).toEqual([]);
+    expect(
+      (await reconcileWork(database, { now: originalDue, limit: 1, publish })).published,
+    ).toEqual(["late"]);
+    expect(sent).toEqual(["late", "late"]);
+  });
+
+  it("leaves a failed consumer's native Queue retry as the owner", async () => {
+    using database = new TestDatabase();
+    await enqueueWork(database, workInput("retry", 3));
+    const sent: string[] = [];
+    const publish = async (id: string) => {
+      sent.push(id);
+    };
+    await reconcileWork(database, { now: 100, limit: 10, publish });
+    await claimWork(database, { id: "retry", token: "first", now: 101, leaseMs: 100 });
+    await failWork(database, {
+      id: "retry",
+      token: "first",
+      now: 102,
+      retryAt: 200,
+      error: "transient",
+    });
+    expect((await getWork(database, "retry"))?.published_at).toBe(100);
+    expect((await getWork(database, "retry"))?.publication_due_at).toBe(100 + receiptLifetime);
+    expect((await reconcileWork(database, { now: 199, limit: 10, publish })).published).toEqual([]);
+    expect((await reconcileWork(database, { now: 200, limit: 10, publish })).published).toEqual([]);
+    const retried = await claimWork(database, {
+      id: "retry",
+      token: "native-retry",
+      now: 200,
+      leaseMs: 100,
+    });
+    expect(retried?.id).toBe("retry");
+    expect(
+      await completeWork(database, {
+        id: "retry",
+        token: "native-retry",
+        now: 201,
+        result: "equal",
+      }),
+    ).toBe(true);
+    expect(
+      (await reconcileWork(database, { now: 100 + receiptLifetime, limit: 10, publish })).published,
+    ).toEqual([]);
+    expect(sent).toEqual(["retry"]);
   });
 });
 

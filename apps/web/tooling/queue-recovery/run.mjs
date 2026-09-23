@@ -38,8 +38,8 @@ await new Promise((resolve) =>
   setTimeout(resolve, Math.max(0, prepared.abandonedLeaseUntil - Date.now() + 100)),
 );
 const lost = await call("/reconcile", { failPublication: true });
-if (lost.publication.failed.length !== 4 || lost.alerts.events.length !== 4)
-  throw new Error("Lost publications were not persisted and exposed privately");
+if (lost.publication.failed.length !== 1 || lost.alerts.events.length !== 1)
+  throw new Error("The first failed publication was not persisted and exposed privately");
 const finalization = await call("/finalize", { failCommit: true });
 if (finalization.finalization.errors.length !== 1)
   throw new Error("Injected finalization failure not observed");
@@ -50,6 +50,9 @@ if (
   )
 )
   throw new Error("Lost work did not remain durable");
+// The publisher failed before Queue.send, so this disposable control can release
+// its receipt. Production cannot assume an ambiguous send failed before Queue.
+await call("/release-unsent", {});
 await call("/reconcile", { failPublication: false });
 await call("/duplicates", {});
 await call("/poison", {});
@@ -114,6 +117,7 @@ await writeFile(
       limitations: [
         "Controlled queue work and empty-inventory finalization fixture; no comparator/capture correctness claim.",
         "Injected publisher and batch failures occur before external send/commit; durable state and real Queue/D1 delivery are measured.",
+        "The known-unsent fixture receipt is released explicitly; an ambiguous production send remains held until its safety deadline.",
         "Diagnostic Queue retries1s/max_retries2 and durableworkmaxAttempts3; production delay/lease policy differs.",
         "Explicit fixture supersession creates new replacement work; no production task is silently reactivated.",
       ],

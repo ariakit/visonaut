@@ -68,6 +68,7 @@ export class TestDatabase implements Database {
       "0012_historical_comparisons",
       "0013_promotion_scans",
       "0014_visonaut_brand",
+      "0016_comparison_publication",
     ]) {
       this.connection.exec(
         readFileSync(new URL(`../../migrations/${migration}.sql`, import.meta.url), "utf8"),

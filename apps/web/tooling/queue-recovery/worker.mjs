@@ -112,6 +112,17 @@ export default {
           }),
         });
       }
+      if (url.pathname === "/release-unsent" && request.method === "POST") {
+        // The probe injected a failure before Queue.send. Only that exact
+        // disposable receipt may be released without waiting for expiry.
+        const released = await env.DB.prepare(
+          "UPDATE work_tasks SET publication_due_at = 0, publication_token = NULL WHERE id = 'lost:row' AND state = 'queued' AND attempts = 0 AND published_at IS NULL AND publication_token IS NOT NULL RETURNING id",
+        ).first();
+        if (released?.id !== "lost:row") {
+          throw new Error("The unsent fixture receipt is unavailable");
+        }
+        return json({ released: released.id, basis: "injected before Queue.send" });
+      }
       if (url.pathname === "/finalize" && request.method === "POST") {
         const input = await request.json();
         const database = {

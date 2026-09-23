@@ -77,6 +77,7 @@ class TestDatabase implements Database {
       "0012_historical_comparisons.sql",
       "0013_promotion_scans.sql",
       "0014_visonaut_brand.sql",
+      "0016_comparison_publication.sql",
     ]) {
       this.connection.exec(
         readFileSync(new URL(`../../../apps/web/migrations/${name}`, import.meta.url), "utf8"),

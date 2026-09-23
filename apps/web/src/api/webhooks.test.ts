@@ -35,9 +35,9 @@ const bindings: ApiBindings = {
       throw new Error("Unexpected comparator call");
     },
   },
-  comparisons: {
+  operations: {
     async send() {
-      throw new Error("Unexpected queue publication");
+      throw new Error("Unexpected operations continuation");
     },
   },
   configuration: {
@@ -95,6 +95,7 @@ beforeAll(async () => {
     "0012_historical_comparisons",
     "0013_promotion_scans",
     "0014_visonaut_brand",
+    "0016_comparison_publication",
   ]) {
     const source = (
       await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")

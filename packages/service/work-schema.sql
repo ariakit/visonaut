@@ -10,10 +10,15 @@ CREATE TABLE IF NOT EXISTS work_tasks (
   lease_until INTEGER,
   result TEXT,
   last_error TEXT,
+  publication_attempts INTEGER NOT NULL DEFAULT 0,
+  publication_due_at INTEGER NOT NULL DEFAULT 0,
+  publication_token TEXT,
+  published_at INTEGER,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS work_tasks_due ON work_tasks(state, available_at, lease_until);
+CREATE INDEX IF NOT EXISTS work_tasks_publication ON work_tasks(kind, state, published_at, publication_due_at);
 CREATE TRIGGER IF NOT EXISTS work_tasks_identity BEFORE UPDATE ON work_tasks
 WHEN NEW.kind != OLD.kind OR NEW.payload != OLD.payload OR NEW.max_attempts != OLD.max_attempts
 BEGIN SELECT RAISE(ABORT, 'Work identity conflicts with stored task'); END;
