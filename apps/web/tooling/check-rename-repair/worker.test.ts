@@ -31,7 +31,7 @@ describe("one-time repair Worker deployment guard", () => {
       "https://api.cloudflare.com/client/v4/accounts/b04f3af3f0f10a6b9481bc23ba974eca/workers/scripts/visonaut-diagnostics/deployments",
       expect.objectContaining({
         headers: { Authorization: "Bearer scoped-token" },
-        redirect: "error",
+        redirect: "manual",
       }),
     );
   });
@@ -62,5 +62,19 @@ describe("one-time repair Worker deployment guard", () => {
     await expect(activeWorkerVersion("scoped-token")).rejects.toMatchObject({
       code: "deployment_not_exclusive",
     });
+  });
+
+  it("refuses redirects without forwarding the scoped Cloudflare token", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(Response.redirect("https://example.com/redirect", 302));
+
+    await expect(activeWorkerVersion("scoped-token")).rejects.toMatchObject({
+      code: "deployment_unavailable",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ redirect: "manual" }),
+    );
   });
 });

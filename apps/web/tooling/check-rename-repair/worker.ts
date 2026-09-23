@@ -19,7 +19,7 @@ export async function activeWorkerVersion(token: string) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${workerName}/deployments`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) {
@@ -54,7 +54,7 @@ async function readGitHubCheck(id: string) {
       Accept: "application/vnd.github+json",
       "User-Agent": "Visonaut-one-time-check-repair",
     },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) {
