@@ -1,0 +1,226 @@
+{
+  "date": "2026-09-22T03:00:29.440Z",
+  "endpoint": "http://127.0.0.1:8791/probe",
+  "node": "v24.18.0",
+  "results": [
+    {
+      "label": "rgba.png",
+      "status": 200,
+      "result": {
+        "format": "png",
+        "width": 3,
+        "height": 2,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "5306bae6fd14951e69298af0d76da7a282546bc669efe324ca54cff2f2ba5fcd",
+        "rgbaDigest": "ba55437d5e0f101d9f864700fe816e2a128ca2612e7693942cb21d7fe3c229a0",
+        "firstPixels": [
+          255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 123, 45, 67, 0, 10, 20, 30, 128, 255, 255,
+          255, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 94,
+        "maskBytes": 94,
+        "wasmMemoryBytes": 18153472,
+        "estimatedRgbaBytes": 72,
+        "elapsedWallMilliseconds": 6,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "rgba.webp",
+      "status": 200,
+      "result": {
+        "format": "webp",
+        "width": 3,
+        "height": 2,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "d58abffaf276ab48083aa60172f2247bfc9761b6d0a2bb27246b48276dc0aa8c",
+        "rgbaDigest": "ba55437d5e0f101d9f864700fe816e2a128ca2612e7693942cb21d7fe3c229a0",
+        "firstPixels": [
+          255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 123, 45, 67, 0, 10, 20, 30, 128, 255, 255,
+          255, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 94,
+        "maskBytes": 94,
+        "wasmMemoryBytes": 18153472,
+        "estimatedRgbaBytes": 72,
+        "elapsedWallMilliseconds": 2,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "rgba-profiled.png",
+      "status": 200,
+      "result": {
+        "format": "png",
+        "width": 3,
+        "height": 2,
+        "profile": "srgb-chromium-icc-v1",
+        "originalDigest": "1ff05c2a6aae79f092c2a4606328833b58c39ca23d6b8e9f965975efee3cb20b",
+        "rgbaDigest": "ba55437d5e0f101d9f864700fe816e2a128ca2612e7693942cb21d7fe3c229a0",
+        "firstPixels": [
+          255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 123, 45, 67, 0, 10, 20, 30, 128, 255, 255,
+          255, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 94,
+        "maskBytes": 94,
+        "wasmMemoryBytes": 18153472,
+        "estimatedRgbaBytes": 72,
+        "elapsedWallMilliseconds": 1,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "rgba-profiled.webp",
+      "status": 200,
+      "result": {
+        "format": "webp",
+        "width": 3,
+        "height": 2,
+        "profile": "srgb-chromium-icc-v1",
+        "originalDigest": "b66975913dbeb377b7a7f4f1b396ef0f3bf50d07cd98e1d6cceec601af3b18dd",
+        "rgbaDigest": "ba55437d5e0f101d9f864700fe816e2a128ca2612e7693942cb21d7fe3c229a0",
+        "firstPixels": [
+          255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 123, 45, 67, 0, 10, 20, 30, 128, 255, 255,
+          255, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 94,
+        "maskBytes": 94,
+        "wasmMemoryBytes": 18153472,
+        "estimatedRgbaBytes": 72,
+        "elapsedWallMilliseconds": 0,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "lossy-rejected",
+      "status": 422,
+      "result": {
+        "code": "lossy-webp",
+        "error": "Only lossless WebP is supported."
+      }
+    },
+    {
+      "label": "bad-crc-rejected",
+      "status": 422,
+      "result": {
+        "code": "png-crc",
+        "error": "PNG chunk checksum does not match."
+      }
+    },
+    {
+      "label": "unknown-profile-rejected",
+      "status": 422,
+      "result": {
+        "code": "unsupported-profile",
+        "error": "Only the verified Chromium sRGB ICC profile is supported."
+      }
+    },
+    {
+      "label": "oversized-rejected",
+      "status": 422,
+      "result": {
+        "code": "encoded-size",
+        "error": "Image bytes exceed the configured upload limit."
+      }
+    },
+    {
+      "label": "unauthenticated-rejected",
+      "status": 401
+    },
+    {
+      "label": "maximum-pair-1",
+      "status": 200,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 44,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "maximum-pair-2",
+      "status": 200,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 32,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    },
+    {
+      "label": "maximum-pair-3",
+      "status": 200,
+      "result": {
+        "format": "webp",
+        "width": 1248,
+        "height": 1650,
+        "profile": "srgb-unprofiled-v1",
+        "originalDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+        "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b",
+        "firstPixels": [
+          12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12, 14, 18, 255, 12,
+          14, 18, 255
+        ],
+        "outcome": "unchanged",
+        "changedPixels": 0,
+        "thumbnailBytes": 14527,
+        "maskBytes": 44355,
+        "wasmMemoryBytes": 29818880,
+        "estimatedRgbaBytes": 24710400,
+        "elapsedWallMilliseconds": 33,
+        "memoryNote": "WASM linear memory plus RGBA bytes is not peak isolate memory; use Worker traces for runtime CPU and resource failures.",
+        "engineVersion": "rgba-visible-1",
+        "codecVersion": "jsquash-png-3.1.1-webp-1.5.0"
+      }
+    }
+  ],
+  "limitation": "Elapsed wall time and WASM linear memory are not peak isolate memory or Worker CPU; attach deployed Worker trace measurements separately."
+}

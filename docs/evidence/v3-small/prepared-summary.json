@@ -1,0 +1,50 @@
+{
+  "capturesPerRun": 3582,
+  "captures": 7164,
+  "completedCandidateTasks": 3582,
+  "syntheticChangedCandidateCount": 36,
+  "syntheticChangedFraction": 0.010050251256281407,
+  "baselineHistory": "All-capture automatic+human decisions are retained as a fixed baseline stress case; do not multiply this one-time shape by every daily attempt.",
+  "candidateHistory": "Mostly unchanged inherited retry, with one synthetic changed/approved row every100captures, real Service.review and retireRun transitions.",
+  "captureIdLength": 101,
+  "rowIdLength": 138,
+  "beforeDecisionsDigest": "85144d414a7ba061c25114e07cdd3cd01d52daba10b06c32d2a68e05eb34085a",
+  "beforeReplacementsDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "originalObjects": 7164,
+  "originalBytes": 198078000,
+  "metadataBytes": 2066034,
+  "profiles": 1,
+  "normalizedCaptureProfiles": 7164,
+  "migrations": [
+    {
+      "name": "0007_backup_inventory.sql",
+      "digest": "fe28f1602a1708dde4c644c12fee7a49796536fd3fb01980804257533e4012b9"
+    },
+    {
+      "name": "0008_capture_profiles.sql",
+      "digest": "930a72f8c18a6e4506218c0e9c16a4fe46bebe7530914980020038b2e36df75c"
+    },
+    {
+      "name": "0009_retention_history.sql",
+      "digest": "a573ff14f758e093797508de71f469d980edce9886c0a49f5425a0673c85849f"
+    },
+    {
+      "name": "0010_run_history.sql",
+      "digest": "2d59b8ad67746dbce3654ef36ef88d10c634908c56034cd872ea7a97c39e8405"
+    },
+    {
+      "name": "0011_backup_groups.sql",
+      "digest": "96d5ec38c8196c8497ebd2f3276494b089fa90e31aa12b22bf4d1f1b870e707e"
+    },
+    {
+      "name": "0012_historical_comparisons.sql",
+      "digest": "53abe2d8ba1869c377ee6217e12351e8a4a9f43086b95442cce9e31ad4eb9859"
+    }
+  ],
+  "foreignKeyViolations": 0,
+  "caveats": [
+    "Replicated historical WebP corpus; no new capture/comparator evidence.",
+    "Direct seed records approximate complete ingestion storage; no live GitHub/OIDC claim.",
+    "Source original ownership is inherited in the retry, so it is not two fresh image-upload attempts."
+  ]
+}

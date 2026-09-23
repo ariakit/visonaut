@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.output/
+.tanstack/
+.wrangler/
+.dev.vars*
+.env*
+!.env.example
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.tgz
+.DS_Store
+*.pem
+.visonaut-app.json
+artifacts/
+
+# Generated from the committed Wrangler bindings before type checking.
+**/worker-configuration.d.ts

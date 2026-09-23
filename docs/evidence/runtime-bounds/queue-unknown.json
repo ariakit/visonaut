@@ -1,0 +1,17 @@
+{
+  "id": "961f384a-f4b2-488d-8810-fcecbcfafe3f",
+  "mode": "unknown",
+  "startedAt": 1790077774593,
+  "completedAt": 1790077946783,
+  "status": 200,
+  "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+  "bytes": 1182101421,
+  "milliseconds": 172190,
+  "counts": {
+    "get": 2,
+    "createMultipartUpload": 1,
+    "uploadPart": 141,
+    "complete": 1
+  },
+  "observedAt": 1790077948271
+}

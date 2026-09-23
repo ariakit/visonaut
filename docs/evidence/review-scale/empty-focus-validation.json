@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-09-22T08:51:26.117Z",
+  "change": "Explicit tabIndex=0 only when items.length is zero; nonempty behavior keeps undefined.",
+  "timedSourceSha256": "70ff33d1ef802226ba21ef7e8238f5f1c906722ec6bee4519378d5a25d182ea1",
+  "currentSourceSha256": "8c733914d823467e675a7894c9f7b0955b1a8b92a832f7e57c03722dcba2ff57",
+  "sourceWithoutEmptyConditionalMatchesTimedSource": true,
+  "otherTimedSourceHashesMatch": true,
+  "performanceRerun": false,
+  "reason": "The only product change since the measured source applies to zero-item lists. All performance fixtures contain 597 or more items.",
+  "regression": "Removing all items keeps focus on the empty list without adding a normal list tab stop.",
+  "redEvidence": "empty-focus-red/"
+}

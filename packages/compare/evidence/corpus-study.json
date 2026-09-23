@@ -1,0 +1,126 @@
+{
+  "date": "2026-09-22T02:49:43.124Z",
+  "node": "v24.18.0",
+  "platform": "darwin-arm64",
+  "files": 1058,
+  "corpusDigest": "3c63580787f4e39729deb3bb3a0812c3c4a8c257d0af833975ab56a411e7348f",
+  "profiled": 358,
+  "samples": 25,
+  "encodedBytes": {
+    "mean": 28292.12854442344,
+    "p95": 118366,
+    "maximum": 228576
+  },
+  "pixels": {
+    "mean": 540632.0775047259,
+    "p95": 1421472,
+    "maximum": 2059200
+  },
+  "decodeMilliseconds": {
+    "mean": 2.023959433837436,
+    "p95": 8.345084000000043,
+    "maximum": 13.772249999999985
+  },
+  "elapsedMilliseconds": 3355.099458,
+  "cpuMilliseconds": 3467.419,
+  "processMaximumResidentKilobytes": 527872,
+  "wasmLinearMemoryBytes": 21299200,
+  "deterministicRecomparisons": {
+    "passed": 25,
+    "total": 25
+  },
+  "policies": [
+    {
+      "id": "visible-exact-v1",
+      "channelThreshold": 0,
+      "maxChangedPixels": 0,
+      "maxChangedRatio": 0
+    },
+    {
+      "id": "study-one-level",
+      "channelThreshold": 1,
+      "maxChangedPixels": 0,
+      "maxChangedRatio": 0
+    },
+    {
+      "id": "study-legacy-ratio",
+      "channelThreshold": 0,
+      "maxChangedPixels": 9007199254740991,
+      "maxChangedRatio": 0.0005
+    }
+  ],
+  "outcomes": {
+    "visible-exact-v1": {
+      "one-level-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "one-pixel-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "missing-stroke-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "alpha-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "synthetic-antialias-noise": {
+        "total": 25,
+        "missed": 1
+      }
+    },
+    "study-one-level": {
+      "one-level-defect": {
+        "total": 25,
+        "missed": 25
+      },
+      "one-pixel-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "missing-stroke-defect": {
+        "total": 25,
+        "missed": 0
+      },
+      "alpha-defect": {
+        "total": 25,
+        "missed": 25
+      },
+      "synthetic-antialias-noise": {
+        "total": 25,
+        "missed": 25
+      }
+    },
+    "study-legacy-ratio": {
+      "one-level-defect": {
+        "total": 25,
+        "missed": 25
+      },
+      "one-pixel-defect": {
+        "total": 25,
+        "missed": 25
+      },
+      "missing-stroke-defect": {
+        "total": 25,
+        "missed": 23
+      },
+      "alpha-defect": {
+        "total": 25,
+        "missed": 25
+      },
+      "synthetic-antialias-noise": {
+        "total": 25,
+        "missed": 1
+      }
+    }
+  },
+  "limitations": [
+    "CPU and resident memory are Node measurements, not Cloudflare Worker measurements.",
+    "Synthetic pixel mutations characterize policy sensitivity, not real browser clean-capture noise.",
+    "Font/animation preparation and repeated clean browser captures require the Ariakit integration diagnostic.",
+    "Existing files contain composite screenshots; 10,580 separate variant captures need separate workload evidence."
+  ]
+}

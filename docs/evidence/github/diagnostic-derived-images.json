@@ -1,0 +1,70 @@
+{
+  "checkedAt": "2026-09-22T10:52:56.926Z",
+  "deployment": "a4892b15-7dbc-49aa-8511-6ccf08bd08c3",
+  "records": [
+    {
+      "role": "reference",
+      "path": "/images/d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+      "bytes": 752,
+      "digest": "cb22e7356d3ac660546cac07209af5ac2f8224002555b40794738319506f045c",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "candidate",
+      "path": "/images/03151384-7e60-4b4e-b05b-6f351faf5301",
+      "bytes": 769,
+      "digest": "9c7bc79a317fd2dbe8f0a1e860ce91888ceb8275d1a9f69fc9245b93c5f4d6af",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "diff",
+      "path": "/images/9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35",
+      "bytes": 1311,
+      "digest": "9ba1525ce749ffab323665c63e6134e7ab245103cff4e40fec8b273eb38c8ec7",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "thumbnail",
+      "path": "/images/cc1fa48ec856d60d4c03642c697375c81944cf85887c61cf453e962a88df41f7",
+      "bytes": 2360,
+      "digest": "b1a1dfe7cdd0fa73519ea011862455ef7579f14907f8b05466e5bf1a628649a4",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "reference",
+      "path": "/images/1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+      "bytes": 755,
+      "digest": "80f8915861c7e8ce84484ac87e16da486886660b04a0749c64276118f18ea832",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "candidate",
+      "path": "/images/0c731008-044c-4c64-9ff2-100daeceeeb3",
+      "bytes": 778,
+      "digest": "d29542ec3b3438ddac223b73c312c45868caf838bbeb41466d20ddb8814c748c",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "diff",
+      "path": "/images/341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901",
+      "bytes": 1311,
+      "digest": "8207d7cd1f50de4ca5bc330d5b28a049c602afdde677a4935a2cb4da2a653a87",
+      "status": 200,
+      "headStatus": 200
+    },
+    {
+      "role": "thumbnail",
+      "path": "/images/43ec85c35ddfd8ffb58c7a407bb02d27a3e2405300755f39c0cf04a498a3c899",
+      "bytes": 2360,
+      "digest": "4ef102233eaf83150bd6d9180c9f66670643a42513d8b5451a4e3b46cd8d65df",
+      "status": 200,
+      "headStatus": 200
+    }
+  ]
+}

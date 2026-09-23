@@ -1,0 +1,243 @@
+{
+  "recordedAt": "2026-09-22T11:21:22.897065+00:00",
+  "origin": "https://ariviso-diagnostics.ariakit.workers.dev",
+  "runId": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+  "authentication": "Existing synthetic diagnostic session, exact-origin API route continuation; no OAuth claim",
+  "stateUnchanged": true,
+  "checks": {
+    "browserVersion": "154.0.8037.44",
+    "viewport": {
+      "width": 1440,
+      "height": 1280
+    },
+    "at100": {
+      "naturalWidth": 160,
+      "renderedWidth": 160
+    },
+    "at200": {
+      "naturalWidth": 160,
+      "renderedWidth": 320
+    },
+    "focusStayed": true,
+    "evidenceStates": ["loading", "ready", "loading", "ready", "loading", "ready"],
+    "unexpectedWrites": [],
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/runs/7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "type": "document"
+      },
+      {
+        "method": "GET",
+        "path": "/assets/index-8OeFGY3u.css",
+        "type": "stylesheet"
+      },
+      {
+        "method": "GET",
+        "path": "/assets/index-51Bi9k9K.js",
+        "type": "script"
+      },
+      {
+        "method": "GET",
+        "path": "/assets/runs._runId-Bqd3T4Xu.js",
+        "type": "script"
+      },
+      {
+        "method": "GET",
+        "path": "/assets/button.ariakit.react-CMmRR6hZ.js",
+        "type": "script"
+      },
+      {
+        "method": "GET",
+        "path": "/api/me",
+        "type": "fetch"
+      },
+      {
+        "method": "POST",
+        "path": "/api/review-sessions",
+        "type": "fetch"
+      },
+      {
+        "method": "GET",
+        "path": "/api/runs/7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "type": "fetch"
+      },
+      {
+        "method": "GET",
+        "path": "/images/d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/03151384-7e60-4b4e-b05b-6f351faf5301",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/cc1fa48ec856d60d4c03642c697375c81944cf85887c61cf453e962a88df41f7",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/43ec85c35ddfd8ffb58c7a407bb02d27a3e2405300755f39c0cf04a498a3c899",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/0c731008-044c-4c64-9ff2-100daeceeeb3",
+        "type": "image"
+      },
+      {
+        "method": "GET",
+        "path": "/images/341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901",
+        "type": "image"
+      }
+    ],
+    "responses": [
+      {
+        "path": "/runs/7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "status": 200
+      },
+      {
+        "path": "/assets/index-8OeFGY3u.css",
+        "status": 200
+      },
+      {
+        "path": "/assets/button.ariakit.react-CMmRR6hZ.js",
+        "status": 200
+      },
+      {
+        "path": "/assets/runs._runId-Bqd3T4Xu.js",
+        "status": 200
+      },
+      {
+        "path": "/assets/index-51Bi9k9K.js",
+        "status": 200
+      },
+      {
+        "path": "/api/me",
+        "status": 200
+      },
+      {
+        "path": "/api/review-sessions",
+        "status": 201
+      },
+      {
+        "path": "/api/runs/7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "status": 200
+      },
+      {
+        "path": "/images/cc1fa48ec856d60d4c03642c697375c81944cf85887c61cf453e962a88df41f7",
+        "status": 200
+      },
+      {
+        "path": "/images/03151384-7e60-4b4e-b05b-6f351faf5301",
+        "status": 200
+      },
+      {
+        "path": "/images/9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35",
+        "status": 200
+      },
+      {
+        "path": "/images/d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+        "status": 200
+      },
+      {
+        "path": "/images/43ec85c35ddfd8ffb58c7a407bb02d27a3e2405300755f39c0cf04a498a3c899",
+        "status": 200
+      },
+      {
+        "path": "/images/1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+        "status": 200
+      },
+      {
+        "path": "/images/341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901",
+        "status": 200
+      },
+      {
+        "path": "/images/0c731008-044c-4c64-9ff2-100daeceeeb3",
+        "status": 200
+      }
+    ],
+    "errors": []
+  },
+  "state": {
+    "status": 200,
+    "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+    "comparisonRevision": 15,
+    "baselineRevision": 1,
+    "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+    "runStatus": "passed",
+    "reviewReady": true,
+    "items": [
+      {
+        "key": "synthetic/second",
+        "variants": [
+          {
+            "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+            "key": "chromium-light",
+            "revision": 5,
+            "verdict": "approved",
+            "source": "human"
+          }
+        ]
+      },
+      {
+        "key": "synthetic/first",
+        "variants": [
+          {
+            "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+            "key": "chromium-light",
+            "revision": 1,
+            "verdict": "approved",
+            "source": "human"
+          }
+        ]
+      }
+    ],
+    "displayedImages": [
+      {
+        "label": "Reference",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      },
+      {
+        "label": "New image",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      },
+      {
+        "label": "Pixel diff \u00b7 red pixels changed",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      }
+    ]
+  },
+  "artifacts": {
+    "deployed-review.png": {
+      "sha256": "7038d3b3c16bec7d61bdff4a65e1c12dec7eae8a8a26fbb78e2ce69a4f16b00e",
+      "bytes": 85143
+    },
+    "deployed-diff-200.png": {
+      "sha256": "15862bad4652a7a5f6dc6306291699f725f1ddb6cad1ada699f1ba21376e7b2f",
+      "bytes": 87003
+    },
+    "deployed-readonly-review.webm": {
+      "sha256": "ec21d5309a2de86c43e37ee41e7d65c3f3378bd9d31f4a37e959ef2c9d9d33f4",
+      "bytes": 2367927
+    }
+  }
+}

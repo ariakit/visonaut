@@ -1,0 +1,23 @@
+{
+  "apps/web/src/operations/history.ts": {
+    "baseSha256": "6004e8b39cf8c7f11f9218ff0e850cae2f6aeb264419d2a8900605b83ee5dc14",
+    "finalSha256": "dee859ddbc8cd305af3a7a28346b78f128e22c7a2f61ba16d45ac2c81e48f8bd",
+    "rootStillMatchesBase": true
+  },
+  "apps/web/src/operations/history-format.ts": {
+    "baseSha256": "fc34cc3a5d4847fb445c0341f086781eea94d0923568171a2a2602c66109f016",
+    "finalSha256": "dd140f05c8edf074e2bb4a3db49fe30f261ab16c6df7055711d8e1aff8adb17f",
+    "rootStillMatchesBase": true
+  },
+  "apps/web/src/operations/history-packing.test.ts": {
+    "baseSha256": "0bb324171adca35da4a5bf539bbbf9f1fe6c396e0281a64ae979510fd091bcd5",
+    "finalSha256": "94c662041795735f30dcb1ef72393e04f2dfbcbdbd2988229672c6948e31a5a8",
+    "rootStillMatchesBase": true
+  },
+  "apps/web/src/operations/history-format.test.ts": {
+    "baseSha256": "b350c8cf430b2a2edbde912e678e87b5f4bf4b8ac9ce7bf714631c4942b5908e",
+    "finalSha256": "7ee260ce0de80ecf235b30b4d0b77f20bdeb5da16b50193096594f7b62b5f75a",
+    "rootStillMatchesBase": true
+  },
+  "patchSha256": "a4573bbc2e1f964600dce93a74324755756a5c0eed70f3ac89d844550703bc50"
+}

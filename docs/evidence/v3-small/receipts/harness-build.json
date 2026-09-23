@@ -1,0 +1,40 @@
+{
+  "at": "2026-09-22T10:49:34.613792+00:00",
+  "files": [
+    {
+      "path": "worker.mjs",
+      "sha256": "526dea31fd9b65599984861724f2346f924a60e3c73d16b35dd7fadf9cf272b5",
+      "bytes": 18083
+    },
+    {
+      "path": "stores.mjs",
+      "sha256": "6b126fc30c19dffd0688a704aa811d797709b33a5e305b476243f1bf9cc3d69f",
+      "bytes": 3609
+    },
+    {
+      "path": "run.mjs",
+      "sha256": "0d03f0d26a468aa99480576a23b5dd2ffaef84dd5f459b7e659363c63579225d",
+      "bytes": 20376
+    },
+    {
+      "path": "smoke.mjs",
+      "sha256": "437acd1789e87478b65611289606db6e46ce7dfccd279f48b2df770d6cd3d2dd",
+      "bytes": 3377
+    },
+    {
+      "path": "results/bundle/worker.js",
+      "sha256": "25f53e92e9d3fa10e52451ceb565cdaed0826d4ee728e8a9972672c70bb34063",
+      "bytes": 269485
+    },
+    {
+      "path": "run.bundle.mjs",
+      "sha256": "86680aaf3d27b249f6a370df63a2064dd3b529017310c36f0a08258e230cc8ec",
+      "bytes": 31120
+    },
+    {
+      "path": "wrangler.jsonc",
+      "sha256": "cc63f0aee876017aadf58c31742dbeee30d7f6efba2404ab45afff220fa26d3e",
+      "bytes": 2384
+    }
+  ]
+}

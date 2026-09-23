@@ -1,0 +1,206 @@
+{
+  "origin": "https://ariviso-diagnostics.ariakit.workers.dev",
+  "runId": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+  "startedAt": "2026-09-22T11:25:45.922Z",
+  "finishedAt": "2026-09-22T11:25:52.091Z",
+  "tokenProvenance": "Locally minted diagnostic test capabilities using the public issueIngestCapability helper. Not credentials issued by a GitHub CI OIDC reservation.",
+  "ttlSeconds": 90,
+  "expiredTtlSeconds": 1,
+  "cases": [
+    {
+      "name": "expired-capability",
+      "method": "POST",
+      "route": "/v1/runs/:runId/finalize",
+      "status": 401,
+      "code": "invalid_capability",
+      "result": "PASS"
+    },
+    {
+      "name": "tampered-signature",
+      "method": "POST",
+      "route": "/v1/runs/:runId/finalize",
+      "status": 401,
+      "code": "invalid_capability",
+      "result": "PASS"
+    },
+    {
+      "name": "wrong-run-route",
+      "method": "POST",
+      "route": "/v1/runs/00000000-0000-4000-8000-000000000001/finalize",
+      "status": 403,
+      "code": "wrong_run",
+      "result": "PASS"
+    },
+    {
+      "name": "wrong-shard-finalize",
+      "method": "POST",
+      "route": "/v1/runs/:runId/finalize",
+      "status": 403,
+      "code": "wrong_shard",
+      "result": "PASS"
+    },
+    {
+      "name": "wrong-environment",
+      "method": "POST",
+      "route": "/v1/runs/:runId/finalize",
+      "status": 401,
+      "code": "invalid_capability",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-read-status",
+      "method": "GET",
+      "route": "/v1/runs/:runId",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-list-private-runs",
+      "method": "GET",
+      "route": "/api/runs",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-read-review",
+      "method": "GET",
+      "route": "/api/runs/:runId",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-create-review-session",
+      "method": "POST",
+      "route": "/api/review-sessions",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-approve",
+      "method": "POST",
+      "route": "/api/comparisons/:comparisonId/commands",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-recompare",
+      "method": "POST",
+      "route": "/api/runs/:runId/recompare",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    },
+    {
+      "name": "capability-cannot-export",
+      "method": "POST",
+      "route": "/api/runs/:runId/export",
+      "status": 401,
+      "code": "sign_in_required",
+      "result": "PASS"
+    }
+  ],
+  "promotionBoundary": "No public promotion route exists. The real approval command endpoint rejected this capability. Promotion and baseline state are checked separately before and after.",
+  "stateProof": [
+    {
+      "scope": "project-baseline-promotion",
+      "rows": 1,
+      "beforeSha256": "8703b866e2ebb092aa3e9ad787689e4a2f48d82f51a84a22361802bf5e430428",
+      "afterSha256": "8703b866e2ebb092aa3e9ad787689e4a2f48d82f51a84a22361802bf5e430428",
+      "unchanged": true
+    },
+    {
+      "scope": "run",
+      "rows": 1,
+      "beforeSha256": "7963dbe7d6dccb8ee5a1bd38d40d6a98e65d61b217f17347727bc9497099ff88",
+      "afterSha256": "7963dbe7d6dccb8ee5a1bd38d40d6a98e65d61b217f17347727bc9497099ff88",
+      "unchanged": true
+    },
+    {
+      "scope": "shards",
+      "rows": 2,
+      "beforeSha256": "cbc92d66ed6dcd99c1fe014697905ddca6f8baac04412d9974eb1c6cedb4d38c",
+      "afterSha256": "cbc92d66ed6dcd99c1fe014697905ddca6f8baac04412d9974eb1c6cedb4d38c",
+      "unchanged": true
+    },
+    {
+      "scope": "manifests",
+      "rows": 2,
+      "beforeSha256": "03bfdb1dd071f35e07327da27add13c48ce8478eda56d1d4bcdff5e3ca1df581",
+      "afterSha256": "03bfdb1dd071f35e07327da27add13c48ce8478eda56d1d4bcdff5e3ca1df581",
+      "unchanged": true
+    },
+    {
+      "scope": "uploads",
+      "rows": 2,
+      "beforeSha256": "ab81dbc61d7f9875f05734aa48649e83cee3f2149545b6e23705334c4f0abcbf",
+      "afterSha256": "ab81dbc61d7f9875f05734aa48649e83cee3f2149545b6e23705334c4f0abcbf",
+      "unchanged": true
+    },
+    {
+      "scope": "captures",
+      "rows": 2,
+      "beforeSha256": "eb7269c9b08775a4942788c8fc6c093b305caeea7afd642d65fcb5bfdf9916cc",
+      "afterSha256": "eb7269c9b08775a4942788c8fc6c093b305caeea7afd642d65fcb5bfdf9916cc",
+      "unchanged": true
+    },
+    {
+      "scope": "comparisons",
+      "rows": 1,
+      "beforeSha256": "aaa0b093a558e34779b2f2262b7d585fdc4d68c0b77b18a767d207b065108b89",
+      "afterSha256": "aaa0b093a558e34779b2f2262b7d585fdc4d68c0b77b18a767d207b065108b89",
+      "unchanged": true
+    },
+    {
+      "scope": "comparison-rows",
+      "rows": 2,
+      "beforeSha256": "3a82e3fb78bd5050e6dfa2f1da998f3b7b93397643d029d104c8d983d58cdf94",
+      "afterSha256": "3a82e3fb78bd5050e6dfa2f1da998f3b7b93397643d029d104c8d983d58cdf94",
+      "unchanged": true
+    },
+    {
+      "scope": "commands",
+      "rows": 6,
+      "beforeSha256": "148d436e3de2b0dae926e9d43bf21d1a808e9a8746a089263cfe0608d43f152d",
+      "afterSha256": "148d436e3de2b0dae926e9d43bf21d1a808e9a8746a089263cfe0608d43f152d",
+      "unchanged": true
+    },
+    {
+      "scope": "decisions",
+      "rows": 4,
+      "beforeSha256": "5aeb960506521f82a088d88333095b9f5b3d90015f792d3d10ae2fd2a4025734",
+      "afterSha256": "5aeb960506521f82a088d88333095b9f5b3d90015f792d3d10ae2fd2a4025734",
+      "unchanged": true
+    },
+    {
+      "scope": "promotions",
+      "rows": 1,
+      "beforeSha256": "859c8140b0f6931a4dbec53d4a600e61cec625efa79ead23f34b18e0908039ed",
+      "afterSha256": "859c8140b0f6931a4dbec53d4a600e61cec625efa79ead23f34b18e0908039ed",
+      "unchanged": true
+    },
+    {
+      "scope": "global-resource-session-counts",
+      "rows": 1,
+      "beforeSha256": "2cced0bbfb376d579b9bfcdda8b9538191eae49dfdc4cfc223871a46b40b087d",
+      "afterSha256": "2cced0bbfb376d579b9bfcdda8b9538191eae49dfdc4cfc223871a46b40b087d",
+      "unchanged": true
+    }
+  ],
+  "snapshotQueryRowsWritten": {
+    "before": 0,
+    "after": 0
+  },
+  "limits": [
+    "Capabilities were locally signed diagnostic fixtures, not acquired through OIDC.",
+    "The existing sealed active run was used. Wrong-shard was tested on finalize before the manifest lookup, so sealed state did not mask the shard guard.",
+    "No image bytes or upload tickets were sent.",
+    "No public promotion route exists. Approval endpoint refusal and unchanged promotion/baseline state are the measured evidence.",
+    "The state proof covers the listed application records and resource counts; it excludes logs and scheduled operation bookkeeping. Root independently redelivered a genuine GitHub ping during the wider task; webhook deliveries are not capability state.",
+    "Cross-origin cookie/CSRF guards were not tested here. Private requests used the allowed Origin so the live-session boundary was the rejecting guard."
+  ]
+}

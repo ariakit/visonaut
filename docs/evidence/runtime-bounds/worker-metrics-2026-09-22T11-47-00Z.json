@@ -1,0 +1,3026 @@
+{
+  "source": "https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-workers-metrics/",
+  "start": "2026-09-22T11:47:00Z",
+  "end": "2026-09-22T11:53:00Z",
+  "status": 200,
+  "result": {
+    "data": {
+      "viewer": {
+        "accounts": [
+          {
+            "workersInvocationsAdaptive": [
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:26Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 566,
+                  "memoryUsageBytes": 2106548,
+                  "wallTime": 40562,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 566,
+                  "cpuTimeP95": 566,
+                  "cpuTimeP99": 566,
+                  "memoryUsageBytesP50": 2106548,
+                  "memoryUsageBytesP99": 2106548,
+                  "wallTimeP50": 40562,
+                  "wallTimeP95": 40562
+                },
+                "sum": {
+                  "cpuTimeUs": 566,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:32Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2242,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 45772,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 2242,
+                  "cpuTimeP95": 2242,
+                  "cpuTimeP99": 2242,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 45772,
+                  "wallTimeP95": 45772
+                },
+                "sum": {
+                  "cpuTimeUs": 2242,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:49Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 852,
+                  "memoryUsageBytes": 1841434,
+                  "wallTime": 40635,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 852,
+                  "cpuTimeP95": 852,
+                  "cpuTimeP99": 852,
+                  "memoryUsageBytesP50": 1841434,
+                  "memoryUsageBytesP99": 1841434,
+                  "wallTimeP50": 40635,
+                  "wallTimeP95": 40635
+                },
+                "sum": {
+                  "cpuTimeUs": 852,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:54Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 794,
+                  "memoryUsageBytes": 2104388,
+                  "wallTime": 37150,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 794,
+                  "cpuTimeP95": 794,
+                  "cpuTimeP99": 794,
+                  "memoryUsageBytesP50": 2104388,
+                  "memoryUsageBytesP99": 2104388,
+                  "wallTimeP50": 37150,
+                  "wallTimeP95": 37150
+                },
+                "sum": {
+                  "cpuTimeUs": 794,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:18Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 517,
+                  "memoryUsageBytes": 2370312,
+                  "wallTime": 38316,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 517,
+                  "cpuTimeP95": 517,
+                  "cpuTimeP99": 517,
+                  "memoryUsageBytesP50": 2370312,
+                  "memoryUsageBytesP99": 2370312,
+                  "wallTimeP50": 38316,
+                  "wallTimeP95": 38316
+                },
+                "sum": {
+                  "cpuTimeUs": 517,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:13Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 502,
+                  "memoryUsageBytes": 2105198,
+                  "wallTime": 43681,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 502,
+                  "cpuTimeP95": 502,
+                  "cpuTimeP99": 502,
+                  "memoryUsageBytesP50": 2105198,
+                  "memoryUsageBytesP99": 2105198,
+                  "wallTimeP50": 43681,
+                  "wallTimeP95": 43681
+                },
+                "sum": {
+                  "cpuTimeUs": 502,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:01Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 560,
+                  "memoryUsageBytes": 1842514,
+                  "wallTime": 44543,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 560,
+                  "cpuTimeP95": 560,
+                  "cpuTimeP99": 560,
+                  "memoryUsageBytesP50": 1842514,
+                  "memoryUsageBytesP99": 1842514,
+                  "wallTimeP50": 44543,
+                  "wallTimeP95": 44543
+                },
+                "sum": {
+                  "cpuTimeUs": 560,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:26Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 66389749,
+                  "memoryUsageBytes": 22239308,
+                  "wallTime": 127168636,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 66389748,
+                  "cpuTimeP95": 66389748,
+                  "cpuTimeP99": 66389748,
+                  "memoryUsageBytesP50": 22239308,
+                  "memoryUsageBytesP99": 22239308,
+                  "wallTimeP50": 127168640,
+                  "wallTimeP95": 127168640
+                },
+                "sum": {
+                  "cpuTimeUs": 66389749,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:34Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 857,
+                  "memoryUsageBytes": 2104658,
+                  "wallTime": 42400,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 857,
+                  "cpuTimeP95": 857,
+                  "cpuTimeP99": 857,
+                  "memoryUsageBytesP50": 2104658,
+                  "memoryUsageBytesP99": 2104658,
+                  "wallTimeP50": 42400,
+                  "wallTimeP95": 42400
+                },
+                "sum": {
+                  "cpuTimeUs": 857,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:30Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 610,
+                  "memoryUsageBytes": 1843864,
+                  "wallTime": 39088,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 610,
+                  "cpuTimeP95": 610,
+                  "cpuTimeP99": 610,
+                  "memoryUsageBytesP50": 1843864,
+                  "memoryUsageBytesP99": 1843864,
+                  "wallTimeP50": 39088,
+                  "wallTimeP95": 39088
+                },
+                "sum": {
+                  "cpuTimeUs": 610,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:06Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 750,
+                  "memoryUsageBytes": 2104658,
+                  "wallTime": 33894,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 750,
+                  "cpuTimeP95": 750,
+                  "cpuTimeP99": 750,
+                  "memoryUsageBytesP50": 2104658,
+                  "memoryUsageBytesP99": 2104658,
+                  "wallTimeP50": 33894,
+                  "wallTimeP95": 33894
+                },
+                "sum": {
+                  "cpuTimeUs": 750,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:17Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 724,
+                  "memoryUsageBytes": 2105468,
+                  "wallTime": 35499,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 724,
+                  "cpuTimeP95": 724,
+                  "cpuTimeP99": 724,
+                  "memoryUsageBytesP50": 2105468,
+                  "memoryUsageBytesP99": 2105468,
+                  "wallTimeP50": 35499,
+                  "wallTimeP95": 35499
+                },
+                "sum": {
+                  "cpuTimeUs": 724,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:23Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2379,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 138386,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 975,
+                  "cpuTimeP95": 2379,
+                  "cpuTimeP99": 2379,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 46455,
+                  "wallTimeP95": 138386
+                },
+                "sum": {
+                  "cpuTimeUs": 3354,
+                  "errors": 0,
+                  "requests": 2,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:04Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 849,
+                  "memoryUsageBytes": 2105738,
+                  "wallTime": 44808,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 849,
+                  "cpuTimeP95": 849,
+                  "cpuTimeP99": 849,
+                  "memoryUsageBytesP50": 2105738,
+                  "memoryUsageBytesP99": 2105738,
+                  "wallTimeP50": 44808,
+                  "wallTimeP95": 44808
+                },
+                "sum": {
+                  "cpuTimeUs": 849,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:44Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 659,
+                  "memoryUsageBytes": 2105198,
+                  "wallTime": 36958,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 659,
+                  "cpuTimeP95": 659,
+                  "cpuTimeP99": 659,
+                  "memoryUsageBytesP50": 2105198,
+                  "memoryUsageBytesP99": 2105198,
+                  "wallTimeP50": 36958,
+                  "wallTimeP95": 36958
+                },
+                "sum": {
+                  "cpuTimeUs": 659,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 10
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:49Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 685,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 39802,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 685,
+                  "cpuTimeP95": 685,
+                  "cpuTimeP99": 685,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 39802,
+                  "wallTimeP95": 39802
+                },
+                "sum": {
+                  "cpuTimeUs": 6850,
+                  "errors": 0,
+                  "requests": 10,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:36Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 494,
+                  "memoryUsageBytes": 2104928,
+                  "wallTime": 36987,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 494,
+                  "cpuTimeP95": 494,
+                  "cpuTimeP99": 494,
+                  "memoryUsageBytesP50": 2104928,
+                  "memoryUsageBytesP99": 2104928,
+                  "wallTimeP50": 36987,
+                  "wallTimeP95": 36987
+                },
+                "sum": {
+                  "cpuTimeUs": 494,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:31Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 623,
+                  "memoryUsageBytes": 2105738,
+                  "wallTime": 46443,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 623,
+                  "cpuTimeP95": 623,
+                  "cpuTimeP99": 623,
+                  "memoryUsageBytesP50": 2105738,
+                  "memoryUsageBytesP99": 2105738,
+                  "wallTimeP50": 46443,
+                  "wallTimeP95": 46443
+                },
+                "sum": {
+                  "cpuTimeUs": 623,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:35Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1452,
+                  "memoryUsageBytes": 1841434,
+                  "wallTime": 40102,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1452,
+                  "cpuTimeP95": 1452,
+                  "cpuTimeP99": 1452,
+                  "memoryUsageBytesP50": 1841434,
+                  "memoryUsageBytesP99": 1841434,
+                  "wallTimeP50": 40102,
+                  "wallTimeP95": 40102
+                },
+                "sum": {
+                  "cpuTimeUs": 1452,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:52Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 499,
+                  "memoryUsageBytes": 1841974,
+                  "wallTime": 41900,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 499,
+                  "cpuTimeP95": 499,
+                  "cpuTimeP99": 499,
+                  "memoryUsageBytesP50": 1841974,
+                  "memoryUsageBytesP99": 1841974,
+                  "wallTimeP50": 41900,
+                  "wallTimeP95": 41900
+                },
+                "sum": {
+                  "cpuTimeUs": 499,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:28Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 602,
+                  "memoryUsageBytes": 1843864,
+                  "wallTime": 48013,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 602,
+                  "cpuTimeP95": 602,
+                  "cpuTimeP99": 602,
+                  "memoryUsageBytesP50": 1843864,
+                  "memoryUsageBytesP99": 1843864,
+                  "wallTimeP50": 48013,
+                  "wallTimeP95": 48013
+                },
+                "sum": {
+                  "cpuTimeUs": 602,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:24Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 457,
+                  "memoryUsageBytes": 1843594,
+                  "wallTime": 40958,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 457,
+                  "cpuTimeP95": 457,
+                  "cpuTimeP99": 457,
+                  "memoryUsageBytesP50": 1843594,
+                  "memoryUsageBytesP99": 1843594,
+                  "wallTimeP50": 40958,
+                  "wallTimeP95": 40958
+                },
+                "sum": {
+                  "cpuTimeUs": 457,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:23Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 604,
+                  "memoryUsageBytes": 1842514,
+                  "wallTime": 35027,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 604,
+                  "cpuTimeP95": 604,
+                  "cpuTimeP99": 604,
+                  "memoryUsageBytesP50": 1842514,
+                  "memoryUsageBytesP99": 1842514,
+                  "wallTimeP50": 35027,
+                  "wallTimeP95": 35027
+                },
+                "sum": {
+                  "cpuTimeUs": 604,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:09Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1481,
+                  "memoryUsageBytes": 2104658,
+                  "wallTime": 39450,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1481,
+                  "cpuTimeP95": 1481,
+                  "cpuTimeP99": 1481,
+                  "memoryUsageBytesP50": 2104658,
+                  "memoryUsageBytesP99": 2104658,
+                  "wallTimeP50": 39450,
+                  "wallTimeP95": 39450
+                },
+                "sum": {
+                  "cpuTimeUs": 1481,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:08Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 555,
+                  "memoryUsageBytes": 1842784,
+                  "wallTime": 53243,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 555,
+                  "cpuTimeP95": 555,
+                  "cpuTimeP99": 555,
+                  "memoryUsageBytesP50": 1842784,
+                  "memoryUsageBytesP99": 1842784,
+                  "wallTimeP50": 53243,
+                  "wallTimeP95": 53243
+                },
+                "sum": {
+                  "cpuTimeUs": 555,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:40Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1212,
+                  "memoryUsageBytes": 2104658,
+                  "wallTime": 44219,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1212,
+                  "cpuTimeP95": 1212,
+                  "cpuTimeP99": 1212,
+                  "memoryUsageBytesP50": 2104658,
+                  "memoryUsageBytesP99": 2104658,
+                  "wallTimeP50": 44219,
+                  "wallTimeP95": 44219
+                },
+                "sum": {
+                  "cpuTimeUs": 1212,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:02Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 551,
+                  "memoryUsageBytes": 1842784,
+                  "wallTime": 44054,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 551,
+                  "cpuTimeP95": 551,
+                  "cpuTimeP99": 551,
+                  "memoryUsageBytesP50": 1842784,
+                  "memoryUsageBytesP99": 1842784,
+                  "wallTimeP50": 44054,
+                  "wallTimeP95": 44054
+                },
+                "sum": {
+                  "cpuTimeUs": 551,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:22Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 497,
+                  "memoryUsageBytes": 1843324,
+                  "wallTime": 38852,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 497,
+                  "cpuTimeP95": 497,
+                  "cpuTimeP99": 497,
+                  "memoryUsageBytesP50": 1843324,
+                  "memoryUsageBytesP99": 1843324,
+                  "wallTimeP50": 38852,
+                  "wallTimeP95": 38852
+                },
+                "sum": {
+                  "cpuTimeUs": 497,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:22Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 678,
+                  "memoryUsageBytes": 2106008,
+                  "wallTime": 39846,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 678,
+                  "cpuTimeP95": 678,
+                  "cpuTimeP99": 678,
+                  "memoryUsageBytesP50": 2106008,
+                  "memoryUsageBytesP99": 2106008,
+                  "wallTimeP50": 39846,
+                  "wallTimeP95": 39846
+                },
+                "sum": {
+                  "cpuTimeUs": 678,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:35Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2245,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 46894,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 2245,
+                  "cpuTimeP95": 2245,
+                  "cpuTimeP99": 2245,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 46894,
+                  "wallTimeP95": 46894
+                },
+                "sum": {
+                  "cpuTimeUs": 2245,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:38Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 603,
+                  "memoryUsageBytes": 2105198,
+                  "wallTime": 37498,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 603,
+                  "cpuTimeP95": 603,
+                  "cpuTimeP99": 603,
+                  "memoryUsageBytesP50": 2105198,
+                  "memoryUsageBytesP99": 2105198,
+                  "wallTimeP50": 37498,
+                  "wallTimeP95": 37498
+                },
+                "sum": {
+                  "cpuTimeUs": 603,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:41Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 990,
+                  "memoryUsageBytes": 1841434,
+                  "wallTime": 41780,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 990,
+                  "cpuTimeP95": 990,
+                  "cpuTimeP99": 990,
+                  "memoryUsageBytesP50": 1841434,
+                  "memoryUsageBytesP99": 1841434,
+                  "wallTimeP50": 41780,
+                  "wallTimeP95": 41780
+                },
+                "sum": {
+                  "cpuTimeUs": 990,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:20Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 640,
+                  "memoryUsageBytes": 2104928,
+                  "wallTime": 43885,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 640,
+                  "cpuTimeP95": 640,
+                  "cpuTimeP99": 640,
+                  "memoryUsageBytesP50": 2104928,
+                  "memoryUsageBytesP99": 2104928,
+                  "wallTimeP50": 43885,
+                  "wallTimeP95": 43885
+                },
+                "sum": {
+                  "cpuTimeUs": 640,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:19Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 853,
+                  "memoryUsageBytes": 1842244,
+                  "wallTime": 45913,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 853,
+                  "cpuTimeP95": 853,
+                  "cpuTimeP99": 853,
+                  "memoryUsageBytesP50": 1842244,
+                  "memoryUsageBytesP99": 1842244,
+                  "wallTimeP50": 45913,
+                  "wallTimeP95": 45913
+                },
+                "sum": {
+                  "cpuTimeUs": 853,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:57Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 533,
+                  "memoryUsageBytes": 1841974,
+                  "wallTime": 39316,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 533,
+                  "cpuTimeP95": 533,
+                  "cpuTimeP99": 533,
+                  "memoryUsageBytesP50": 1841974,
+                  "memoryUsageBytesP99": 1841974,
+                  "wallTimeP50": 39316,
+                  "wallTimeP95": 39316
+                },
+                "sum": {
+                  "cpuTimeUs": 533,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:33Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1010,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 197244,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 983,
+                  "cpuTimeP95": 1010,
+                  "cpuTimeP99": 1010,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 69864,
+                  "wallTimeP95": 197244
+                },
+                "sum": {
+                  "cpuTimeUs": 2847,
+                  "errors": 0,
+                  "requests": 3,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:05Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 552,
+                  "memoryUsageBytes": 2107088,
+                  "wallTime": 34033,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 552,
+                  "cpuTimeP95": 552,
+                  "cpuTimeP99": 552,
+                  "memoryUsageBytesP50": 2107088,
+                  "memoryUsageBytesP99": 2107088,
+                  "wallTimeP50": 34033,
+                  "wallTimeP95": 34033
+                },
+                "sum": {
+                  "cpuTimeUs": 552,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:39Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 701,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 50495,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 701,
+                  "cpuTimeP95": 701,
+                  "cpuTimeP99": 701,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 50495,
+                  "wallTimeP95": 50495
+                },
+                "sum": {
+                  "cpuTimeUs": 701,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:15Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 676,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 34364,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 676,
+                  "cpuTimeP95": 676,
+                  "cpuTimeP99": 676,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 34364,
+                  "wallTimeP95": 34364
+                },
+                "sum": {
+                  "cpuTimeUs": 676,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:10Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 566,
+                  "memoryUsageBytes": 1843054,
+                  "wallTime": 44385,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 566,
+                  "cpuTimeP95": 566,
+                  "cpuTimeP99": 566,
+                  "memoryUsageBytesP50": 1843054,
+                  "memoryUsageBytesP99": 1843054,
+                  "wallTimeP50": 44385,
+                  "wallTimeP95": 44385
+                },
+                "sum": {
+                  "cpuTimeUs": 566,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:11Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 644,
+                  "memoryUsageBytes": 1843324,
+                  "wallTime": 52115,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 644,
+                  "cpuTimeP95": 644,
+                  "cpuTimeP99": 644,
+                  "memoryUsageBytesP50": 1843324,
+                  "memoryUsageBytesP99": 1843324,
+                  "wallTimeP50": 52115,
+                  "wallTimeP95": 52115
+                },
+                "sum": {
+                  "cpuTimeUs": 644,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:04Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 723,
+                  "memoryUsageBytes": 1843054,
+                  "wallTime": 35444,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 723,
+                  "cpuTimeP95": 723,
+                  "cpuTimeP99": 723,
+                  "memoryUsageBytesP50": 1843054,
+                  "memoryUsageBytesP99": 1843054,
+                  "wallTimeP50": 35444,
+                  "wallTimeP95": 35444
+                },
+                "sum": {
+                  "cpuTimeUs": 723,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:28Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 708,
+                  "memoryUsageBytes": 2106818,
+                  "wallTime": 38491,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 708,
+                  "cpuTimeP95": 708,
+                  "cpuTimeP99": 708,
+                  "memoryUsageBytesP50": 2106818,
+                  "memoryUsageBytesP99": 2106818,
+                  "wallTimeP50": 38491,
+                  "wallTimeP95": 38491
+                },
+                "sum": {
+                  "cpuTimeUs": 708,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:27Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 836,
+                  "memoryUsageBytes": 2105198,
+                  "wallTime": 53889,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 836,
+                  "cpuTimeP95": 836,
+                  "cpuTimeP99": 836,
+                  "memoryUsageBytesP50": 2105198,
+                  "memoryUsageBytesP99": 2105198,
+                  "wallTimeP50": 53889,
+                  "wallTimeP95": 53889
+                },
+                "sum": {
+                  "cpuTimeUs": 836,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:36Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 673,
+                  "memoryUsageBytes": 2104388,
+                  "wallTime": 44497,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 673,
+                  "cpuTimeP95": 673,
+                  "cpuTimeP99": 673,
+                  "memoryUsageBytesP50": 2104388,
+                  "memoryUsageBytesP99": 2104388,
+                  "wallTimeP50": 44497,
+                  "wallTimeP95": 44497
+                },
+                "sum": {
+                  "cpuTimeUs": 673,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:03Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1163,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 52727,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1163,
+                  "cpuTimeP95": 1163,
+                  "cpuTimeP99": 1163,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 52727,
+                  "wallTimeP95": 52727
+                },
+                "sum": {
+                  "cpuTimeUs": 1163,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:13Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1994,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 39405,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1994,
+                  "cpuTimeP95": 1994,
+                  "cpuTimeP99": 1994,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 39405,
+                  "wallTimeP95": 39405
+                },
+                "sum": {
+                  "cpuTimeUs": 1994,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:06Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 553,
+                  "memoryUsageBytes": 1842784,
+                  "wallTime": 40968,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 553,
+                  "cpuTimeP95": 553,
+                  "cpuTimeP99": 553,
+                  "memoryUsageBytesP50": 1842784,
+                  "memoryUsageBytesP99": 1842784,
+                  "wallTimeP50": 40968,
+                  "wallTimeP95": 40968
+                },
+                "sum": {
+                  "cpuTimeUs": 553,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:55Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 665,
+                  "memoryUsageBytes": 1842514,
+                  "wallTime": 39206,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 665,
+                  "cpuTimeP95": 665,
+                  "cpuTimeP99": 665,
+                  "memoryUsageBytesP50": 1842514,
+                  "memoryUsageBytesP99": 1842514,
+                  "wallTimeP50": 39206,
+                  "wallTimeP95": 39206
+                },
+                "sum": {
+                  "cpuTimeUs": 665,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:55Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 693,
+                  "memoryUsageBytes": 1841704,
+                  "wallTime": 42956,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 693,
+                  "cpuTimeP95": 693,
+                  "cpuTimeP99": 693,
+                  "memoryUsageBytesP50": 1841704,
+                  "memoryUsageBytesP99": 1841704,
+                  "wallTimeP50": 42956,
+                  "wallTimeP95": 42956
+                },
+                "sum": {
+                  "cpuTimeUs": 693,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:59Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2688,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 37903,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 2688,
+                  "cpuTimeP95": 2688,
+                  "cpuTimeP99": 2688,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 37903,
+                  "wallTimeP95": 37903
+                },
+                "sum": {
+                  "cpuTimeUs": 2688,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:42Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 686,
+                  "memoryUsageBytes": 2104928,
+                  "wallTime": 38855,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 686,
+                  "cpuTimeP95": 686,
+                  "cpuTimeP99": 686,
+                  "memoryUsageBytesP50": 2104928,
+                  "memoryUsageBytesP99": 2104928,
+                  "wallTimeP50": 38855,
+                  "wallTimeP95": 38855
+                },
+                "sum": {
+                  "cpuTimeUs": 686,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:38Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2574,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 50676,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 2574,
+                  "cpuTimeP95": 2574,
+                  "cpuTimeP99": 2574,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 50676,
+                  "wallTimeP95": 50676
+                },
+                "sum": {
+                  "cpuTimeUs": 2574,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:08Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 609,
+                  "memoryUsageBytes": 2104928,
+                  "wallTime": 37835,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 609,
+                  "cpuTimeP95": 609,
+                  "cpuTimeP99": 609,
+                  "memoryUsageBytesP50": 2104928,
+                  "memoryUsageBytesP99": 2104928,
+                  "wallTimeP50": 37835,
+                  "wallTimeP95": 37835
+                },
+                "sum": {
+                  "cpuTimeUs": 609,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:24Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 673,
+                  "memoryUsageBytes": 2106278,
+                  "wallTime": 41664,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 673,
+                  "cpuTimeP95": 673,
+                  "cpuTimeP99": 673,
+                  "memoryUsageBytesP50": 2106278,
+                  "memoryUsageBytesP99": 2106278,
+                  "wallTimeP50": 41664,
+                  "wallTimeP95": 41664
+                },
+                "sum": {
+                  "cpuTimeUs": 673,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:29Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 606,
+                  "memoryUsageBytes": 2105468,
+                  "wallTime": 31372,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 606,
+                  "cpuTimeP95": 606,
+                  "cpuTimeP99": 606,
+                  "memoryUsageBytesP50": 2105468,
+                  "memoryUsageBytesP99": 2105468,
+                  "wallTimeP50": 31372,
+                  "wallTimeP95": 31372
+                },
+                "sum": {
+                  "cpuTimeUs": 606,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:14Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1069,
+                  "memoryUsageBytes": 2107628,
+                  "wallTime": 49813,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1069,
+                  "cpuTimeP95": 1069,
+                  "cpuTimeP99": 1069,
+                  "memoryUsageBytesP50": 2107628,
+                  "memoryUsageBytesP99": 2107628,
+                  "wallTimeP50": 49813,
+                  "wallTimeP95": 49813
+                },
+                "sum": {
+                  "cpuTimeUs": 1069,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:06Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 707,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 45342,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 707,
+                  "cpuTimeP95": 707,
+                  "cpuTimeP99": 707,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 45342,
+                  "wallTimeP95": 45342
+                },
+                "sum": {
+                  "cpuTimeUs": 707,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:51Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 662,
+                  "memoryUsageBytes": 1842244,
+                  "wallTime": 65503,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 662,
+                  "cpuTimeP95": 662,
+                  "cpuTimeP99": 662,
+                  "memoryUsageBytesP50": 1842244,
+                  "memoryUsageBytesP99": 1842244,
+                  "wallTimeP50": 65503,
+                  "wallTimeP95": 65503
+                },
+                "sum": {
+                  "cpuTimeUs": 662,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:46Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1093,
+                  "memoryUsageBytes": 1841434,
+                  "wallTime": 43895,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1093,
+                  "cpuTimeP95": 1093,
+                  "cpuTimeP99": 1093,
+                  "memoryUsageBytesP50": 1841434,
+                  "memoryUsageBytesP99": 1841434,
+                  "wallTimeP50": 43895,
+                  "wallTimeP95": 43895
+                },
+                "sum": {
+                  "cpuTimeUs": 1093,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:53Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 563,
+                  "memoryUsageBytes": 1841704,
+                  "wallTime": 40455,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 563,
+                  "cpuTimeP95": 563,
+                  "cpuTimeP99": 563,
+                  "memoryUsageBytesP50": 1841704,
+                  "memoryUsageBytesP99": 1841704,
+                  "wallTimeP50": 40455,
+                  "wallTimeP95": 40455
+                },
+                "sum": {
+                  "cpuTimeUs": 563,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:47Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1014,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 39770,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1014,
+                  "cpuTimeP95": 1014,
+                  "cpuTimeP99": 1014,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 39770,
+                  "wallTimeP95": 39770
+                },
+                "sum": {
+                  "cpuTimeUs": 1014,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:51Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 596,
+                  "memoryUsageBytes": 2105468,
+                  "wallTime": 45462,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 596,
+                  "cpuTimeP95": 596,
+                  "cpuTimeP99": 596,
+                  "memoryUsageBytesP50": 2105468,
+                  "memoryUsageBytesP99": 2105468,
+                  "wallTimeP50": 45462,
+                  "wallTimeP95": 45462
+                },
+                "sum": {
+                  "cpuTimeUs": 596,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:51:21Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 678,
+                  "memoryUsageBytes": 1843594,
+                  "wallTime": 37370,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 678,
+                  "cpuTimeP95": 678,
+                  "cpuTimeP99": 678,
+                  "memoryUsageBytesP50": 1843594,
+                  "memoryUsageBytesP99": 1843594,
+                  "wallTimeP50": 37370,
+                  "wallTimeP95": 37370
+                },
+                "sum": {
+                  "cpuTimeUs": 678,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:50Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1025,
+                  "memoryUsageBytes": 1841704,
+                  "wallTime": 43577,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1025,
+                  "cpuTimeP95": 1025,
+                  "cpuTimeP99": 1025,
+                  "memoryUsageBytesP50": 1841704,
+                  "memoryUsageBytesP99": 1841704,
+                  "wallTimeP50": 43577,
+                  "wallTimeP95": 43577
+                },
+                "sum": {
+                  "cpuTimeUs": 1025,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:49Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1079,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 45931,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1079,
+                  "cpuTimeP95": 1079,
+                  "cpuTimeP99": 1079,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 45931,
+                  "wallTimeP95": 45931
+                },
+                "sum": {
+                  "cpuTimeUs": 1079,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:16Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 647,
+                  "memoryUsageBytes": 2370042,
+                  "wallTime": 84085,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 647,
+                  "cpuTimeP95": 647,
+                  "cpuTimeP99": 647,
+                  "memoryUsageBytesP50": 2370042,
+                  "memoryUsageBytesP99": 2370042,
+                  "wallTimeP50": 84085,
+                  "wallTimeP95": 84085
+                },
+                "sum": {
+                  "cpuTimeUs": 647,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:58Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 653,
+                  "memoryUsageBytes": 2104388,
+                  "wallTime": 35540,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 653,
+                  "cpuTimeP95": 653,
+                  "cpuTimeP99": 653,
+                  "memoryUsageBytesP50": 2104388,
+                  "memoryUsageBytesP99": 2104388,
+                  "wallTimeP50": 35540,
+                  "wallTimeP95": 35540
+                },
+                "sum": {
+                  "cpuTimeUs": 653,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:44Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1375,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 83513,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1375,
+                  "cpuTimeP95": 1375,
+                  "cpuTimeP99": 1375,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 83513,
+                  "wallTimeP95": 83513
+                },
+                "sum": {
+                  "cpuTimeUs": 1375,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:52Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 645,
+                  "memoryUsageBytes": 2106008,
+                  "wallTime": 45106,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 645,
+                  "cpuTimeP95": 645,
+                  "cpuTimeP99": 645,
+                  "memoryUsageBytesP50": 2106008,
+                  "memoryUsageBytesP99": 2106008,
+                  "wallTimeP50": 45106,
+                  "wallTimeP95": 45106
+                },
+                "sum": {
+                  "cpuTimeUs": 645,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:41Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 772,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 40112,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 772,
+                  "cpuTimeP95": 772,
+                  "cpuTimeP99": 772,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 40112,
+                  "wallTimeP95": 40112
+                },
+                "sum": {
+                  "cpuTimeUs": 772,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:29Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 2163,
+                  "memoryUsageBytes": 2103578,
+                  "wallTime": 198156,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 2163,
+                  "cpuTimeP95": 2163,
+                  "cpuTimeP99": 2163,
+                  "memoryUsageBytesP50": 2103578,
+                  "memoryUsageBytesP99": 2103578,
+                  "wallTimeP50": 198156,
+                  "wallTimeP95": 198156
+                },
+                "sum": {
+                  "cpuTimeUs": 2163,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:45Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 935,
+                  "memoryUsageBytes": 2105738,
+                  "wallTime": 48051,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 935,
+                  "cpuTimeP95": 935,
+                  "cpuTimeP99": 935,
+                  "memoryUsageBytesP50": 2105738,
+                  "memoryUsageBytesP99": 2105738,
+                  "wallTimeP50": 48051,
+                  "wallTimeP95": 48051
+                },
+                "sum": {
+                  "cpuTimeUs": 935,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:22Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1506,
+                  "memoryUsageBytes": 2104658,
+                  "wallTime": 43149,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1506,
+                  "cpuTimeP95": 1506,
+                  "cpuTimeP99": 1506,
+                  "memoryUsageBytesP50": 2104658,
+                  "memoryUsageBytesP99": 2104658,
+                  "wallTimeP50": 43149,
+                  "wallTimeP95": 43149
+                },
+                "sum": {
+                  "cpuTimeUs": 1506,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:19Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 716,
+                  "memoryUsageBytes": 2105738,
+                  "wallTime": 46205,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 716,
+                  "cpuTimeP95": 716,
+                  "cpuTimeP99": 716,
+                  "memoryUsageBytesP50": 2105738,
+                  "memoryUsageBytesP99": 2105738,
+                  "wallTimeP50": 46205,
+                  "wallTimeP95": 46205
+                },
+                "sum": {
+                  "cpuTimeUs": 716,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:11Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 517,
+                  "memoryUsageBytes": 2106278,
+                  "wallTime": 41899,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 517,
+                  "cpuTimeP95": 517,
+                  "cpuTimeP99": 517,
+                  "memoryUsageBytesP50": 2106278,
+                  "memoryUsageBytesP99": 2106278,
+                  "wallTimeP50": 41899,
+                  "wallTimeP95": 41899
+                },
+                "sum": {
+                  "cpuTimeUs": 517,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:40Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 707,
+                  "memoryUsageBytes": 2103848,
+                  "wallTime": 43312,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 707,
+                  "cpuTimeP95": 707,
+                  "cpuTimeP99": 707,
+                  "memoryUsageBytesP50": 2103848,
+                  "memoryUsageBytesP99": 2103848,
+                  "wallTimeP50": 43312,
+                  "wallTimeP95": 43312
+                },
+                "sum": {
+                  "cpuTimeUs": 707,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:55Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 718,
+                  "memoryUsageBytes": 1841704,
+                  "wallTime": 41062,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 718,
+                  "cpuTimeP95": 718,
+                  "cpuTimeP99": 718,
+                  "memoryUsageBytesP50": 1841704,
+                  "memoryUsageBytesP99": 1841704,
+                  "wallTimeP50": 41062,
+                  "wallTimeP95": 41062
+                },
+                "sum": {
+                  "cpuTimeUs": 718,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:19Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 1140,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 40357,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 1140,
+                  "cpuTimeP95": 1140,
+                  "cpuTimeP99": 1140,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 40357,
+                  "wallTimeP95": 40357
+                },
+                "sum": {
+                  "cpuTimeUs": 1140,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:37Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 566,
+                  "memoryUsageBytes": 1844404,
+                  "wallTime": 44660,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 566,
+                  "cpuTimeP95": 566,
+                  "cpuTimeP99": 566,
+                  "memoryUsageBytesP50": 1844404,
+                  "memoryUsageBytesP99": 1844404,
+                  "wallTimeP50": 44660,
+                  "wallTimeP95": 44660
+                },
+                "sum": {
+                  "cpuTimeUs": 566,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:00Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 617,
+                  "memoryUsageBytes": 1842244,
+                  "wallTime": 38900,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 617,
+                  "cpuTimeP95": 617,
+                  "cpuTimeP99": 617,
+                  "memoryUsageBytesP50": 1842244,
+                  "memoryUsageBytesP99": 1842244,
+                  "wallTimeP50": 38900,
+                  "wallTimeP95": 38900
+                },
+                "sum": {
+                  "cpuTimeUs": 617,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:08Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 664,
+                  "memoryUsageBytes": 2106008,
+                  "wallTime": 38851,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 664,
+                  "cpuTimeP95": 664,
+                  "cpuTimeP99": 664,
+                  "memoryUsageBytesP50": 2106008,
+                  "memoryUsageBytesP99": 2106008,
+                  "wallTimeP50": 38851,
+                  "wallTimeP95": 38851
+                },
+                "sum": {
+                  "cpuTimeUs": 664,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:11Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 597,
+                  "memoryUsageBytes": 2104388,
+                  "wallTime": 37780,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 597,
+                  "cpuTimeP95": 597,
+                  "cpuTimeP99": 597,
+                  "memoryUsageBytesP50": 2104388,
+                  "memoryUsageBytesP99": 2104388,
+                  "wallTimeP50": 37780,
+                  "wallTimeP95": 37780
+                },
+                "sum": {
+                  "cpuTimeUs": 597,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:42Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 817,
+                  "memoryUsageBytes": 1841704,
+                  "wallTime": 42414,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 817,
+                  "cpuTimeP95": 817,
+                  "cpuTimeP99": 817,
+                  "memoryUsageBytesP50": 1841704,
+                  "memoryUsageBytesP99": 1841704,
+                  "wallTimeP50": 42414,
+                  "wallTimeP95": 42414
+                },
+                "sum": {
+                  "cpuTimeUs": 817,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:44Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 557,
+                  "memoryUsageBytes": 1841974,
+                  "wallTime": 79536,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 557,
+                  "cpuTimeP95": 557,
+                  "cpuTimeP99": 557,
+                  "memoryUsageBytesP50": 1841974,
+                  "memoryUsageBytesP99": 1841974,
+                  "wallTimeP50": 79536,
+                  "wallTimeP95": 79536
+                },
+                "sum": {
+                  "cpuTimeUs": 557,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:33Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 550,
+                  "memoryUsageBytes": 1844134,
+                  "wallTime": 36653,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 550,
+                  "cpuTimeP95": 550,
+                  "cpuTimeP99": 550,
+                  "memoryUsageBytesP50": 1844134,
+                  "memoryUsageBytesP99": 1844134,
+                  "wallTimeP50": 36653,
+                  "wallTimeP95": 36653
+                },
+                "sum": {
+                  "cpuTimeUs": 550,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:57Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 660,
+                  "memoryUsageBytes": 1842244,
+                  "wallTime": 46232,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 660,
+                  "cpuTimeP95": 660,
+                  "cpuTimeP99": 660,
+                  "memoryUsageBytesP50": 1842244,
+                  "memoryUsageBytesP99": 1842244,
+                  "wallTimeP50": 46232,
+                  "wallTimeP95": 46232
+                },
+                "sum": {
+                  "cpuTimeUs": 660,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:38Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 532,
+                  "memoryUsageBytes": 2106548,
+                  "wallTime": 37453,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 532,
+                  "cpuTimeP95": 532,
+                  "cpuTimeP99": 532,
+                  "memoryUsageBytesP50": 2106548,
+                  "memoryUsageBytesP99": 2106548,
+                  "wallTimeP50": 37453,
+                  "wallTimeP95": 37453
+                },
+                "sum": {
+                  "cpuTimeUs": 532,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 10
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:43Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 541,
+                  "memoryUsageBytes": 2105468,
+                  "wallTime": 40842,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 541,
+                  "cpuTimeP95": 541,
+                  "cpuTimeP99": 541,
+                  "memoryUsageBytesP50": 2105468,
+                  "memoryUsageBytesP99": 2105468,
+                  "wallTimeP50": 40842,
+                  "wallTimeP95": 40842
+                },
+                "sum": {
+                  "cpuTimeUs": 5410,
+                  "errors": 0,
+                  "requests": 10,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:15Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 771,
+                  "memoryUsageBytes": 1843594,
+                  "wallTime": 47722,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 771,
+                  "cpuTimeP95": 771,
+                  "cpuTimeP99": 771,
+                  "memoryUsageBytesP50": 1843594,
+                  "memoryUsageBytesP99": 1843594,
+                  "wallTimeP50": 47722,
+                  "wallTimeP95": 47722
+                },
+                "sum": {
+                  "cpuTimeUs": 771,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:30Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 617,
+                  "memoryUsageBytes": 1844134,
+                  "wallTime": 38562,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 617,
+                  "cpuTimeP95": 617,
+                  "cpuTimeP99": 617,
+                  "memoryUsageBytesP50": 1844134,
+                  "memoryUsageBytesP99": 1844134,
+                  "wallTimeP50": 38562,
+                  "wallTimeP95": 38562
+                },
+                "sum": {
+                  "cpuTimeUs": 617,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:48:07Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 563,
+                  "memoryUsageBytes": 2107358,
+                  "wallTime": 36460,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 563,
+                  "cpuTimeP95": 563,
+                  "cpuTimeP99": 563,
+                  "memoryUsageBytesP50": 2107358,
+                  "memoryUsageBytesP99": 2107358,
+                  "wallTimeP50": 36460,
+                  "wallTimeP95": 36460
+                },
+                "sum": {
+                  "cpuTimeUs": 563,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 10
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:49:00Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 746,
+                  "memoryUsageBytes": 1842244,
+                  "wallTime": 50348,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 746,
+                  "cpuTimeP95": 746,
+                  "cpuTimeP99": 746,
+                  "memoryUsageBytesP50": 1842244,
+                  "memoryUsageBytesP99": 1842244,
+                  "wallTimeP50": 50348,
+                  "wallTimeP95": 50348
+                },
+                "sum": {
+                  "cpuTimeUs": 7460,
+                  "errors": 0,
+                  "requests": 10,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:17Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 545,
+                  "memoryUsageBytes": 1843054,
+                  "wallTime": 37038,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 545,
+                  "cpuTimeP95": 545,
+                  "cpuTimeP99": 545,
+                  "memoryUsageBytesP50": 1843054,
+                  "memoryUsageBytesP99": 1843054,
+                  "wallTimeP50": 37038,
+                  "wallTimeP95": 37038
+                },
+                "sum": {
+                  "cpuTimeUs": 545,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:25Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 931,
+                  "memoryUsageBytes": 2104118,
+                  "wallTime": 41069,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 931,
+                  "cpuTimeP95": 931,
+                  "cpuTimeP99": 931,
+                  "memoryUsageBytesP50": 2104118,
+                  "memoryUsageBytesP99": 2104118,
+                  "wallTimeP50": 41069,
+                  "wallTimeP95": 41069
+                },
+                "sum": {
+                  "cpuTimeUs": 931,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:47:27Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 611,
+                  "memoryUsageBytes": 2104388,
+                  "wallTime": 37366,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 611,
+                  "cpuTimeP95": 611,
+                  "cpuTimeP99": 611,
+                  "memoryUsageBytesP50": 2104388,
+                  "memoryUsageBytesP99": 2104388,
+                  "wallTimeP50": 37366,
+                  "wallTimeP95": 37366
+                },
+                "sum": {
+                  "cpuTimeUs": 611,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              },
+              {
+                "avg": {
+                  "sampleInterval": 1
+                },
+                "dimensions": {
+                  "datetime": "2026-09-22T11:50:02Z",
+                  "scriptName": "ariviso-v3-sql-stream-20260922",
+                  "status": "success"
+                },
+                "max": {
+                  "cpuTime": 700,
+                  "memoryUsageBytes": 1842514,
+                  "wallTime": 42798,
+                  "wasmMemoryBytes": 0
+                },
+                "quantiles": {
+                  "cpuTimeP50": 700,
+                  "cpuTimeP95": 700,
+                  "cpuTimeP99": 700,
+                  "memoryUsageBytesP50": 1842514,
+                  "memoryUsageBytesP99": 1842514,
+                  "wallTimeP50": 42798,
+                  "wallTimeP95": 42798
+                },
+                "sum": {
+                  "cpuTimeUs": 700,
+                  "errors": 0,
+                  "requests": 1,
+                  "subrequests": 0
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "errors": null
+  }
+}

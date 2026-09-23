@@ -1,0 +1,12 @@
+{
+  "ignorePatterns": [
+    "docs/design-r9.html",
+    "docs/design-r9.json",
+    "pnpm-lock.yaml",
+    "**/worker-configuration.d.ts",
+    "**/routeTree.gen.ts",
+    "docs/design-verification.md",
+  ],
+  "printWidth": 100,
+  "proseWrap": "preserve",
+}

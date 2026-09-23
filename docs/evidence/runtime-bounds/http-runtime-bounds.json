@@ -1,0 +1,93 @@
+{
+  "measured_at": "2026-09-22",
+  "status": "runtime limits selected; overall capacity and launch readiness pending",
+  "limits": {
+    "webCpuMilliseconds": 120000,
+    "maximumDatabaseBytes": 2147483648,
+    "exportDeadlineMilliseconds": 300000,
+    "leaseMilliseconds": 600000
+  },
+  "source": {
+    "objects": "SQL-only image ownership rows; no corresponding R2 bytes",
+    "runs": 774,
+    "imageRows": 2772468,
+    "sqlBytes": 1182101421,
+    "sqlDigest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "exportReadySeconds": 28.095219167,
+    "downloadHashSeconds": 82.479778,
+    "exportTotalSeconds": 110.57500599999999
+  },
+  "nativeHttp": {
+    "known": {
+      "startedAt": 1790076506925,
+      "completedAt": 1790076586933,
+      "mode": "known",
+      "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+      "bytes": 1182101421,
+      "milliseconds": 79170,
+      "counts": {
+        "get": 2,
+        "put": 1
+      }
+    },
+    "unknown": {
+      "startedAt": 1790076586933,
+      "completedAt": 1790076689260,
+      "mode": "unknown",
+      "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+      "bytes": 1182101421,
+      "milliseconds": 101500,
+      "counts": {
+        "get": 2,
+        "createMultipartUpload": 1,
+        "uploadPart": 141,
+        "complete": 1
+      }
+    },
+    "knownSample": [
+      {
+        "avg": {
+          "sampleInterval": 1
+        },
+        "dimensions": {
+          "datetime": "2026-09-22T11:28:27Z",
+          "scriptName": "ariviso-v3-sql-stream-20260922",
+          "status": "success"
+        },
+        "max": {
+          "cpuTime": 40195446,
+          "memoryUsageBytes": 30660684,
+          "wallTime": 79766063,
+          "wasmMemoryBytes": 0
+        },
+        "quantiles": {
+          "cpuTimeP50": 40195450,
+          "cpuTimeP95": 40195450,
+          "cpuTimeP99": 40195450,
+          "memoryUsageBytesP50": 30660684,
+          "memoryUsageBytesP99": 30660684,
+          "wallTimeP50": 79766060,
+          "wallTimeP95": 79766060
+        },
+        "sum": {
+          "cpuTimeUs": 40195446,
+          "errors": 0,
+          "requests": 1,
+          "subrequests": 0
+        }
+      }
+    ]
+  },
+  "inference": {
+    "knownCpuAt2GiBSeconds": 73.02170649287038,
+    "linearExportAt2GiBSeconds": 200.87787142800656,
+    "unknownWallAt2GiBSeconds": 184.39161513536493
+  },
+  "limitsOfEvidence": [
+    "Native full-body1.182GB copy/hash measured in HTTP events; dedicated real queue event measurement is running.",
+    "2GiB is a selected conservative ceiling using linear headroom, not a measured2GiB input.",
+    "The120sCPU limit must apply to the queue consumer; cron running every5minutes has a platform30sCPU cap and must only enqueue.",
+    "Source SQL is a lower-bound774x3582ownership fixture, not the full30-day application database.",
+    "No sustained traffic, fullretainedobjectRTO, admissionquota or launchpass is claimed."
+  ]
+}

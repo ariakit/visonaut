@@ -1,0 +1,130 @@
+{
+  "date": "2026-09-22T03:09:20.056Z",
+  "node": "v24.18.0",
+  "platform": "darwin-arm64",
+  "playwright": "1.63.0",
+  "policy": {
+    "id": "visible-exact-v1",
+    "channelThreshold": 0,
+    "maxChangedPixels": 0,
+    "maxChangedRatio": 0
+  },
+  "options": {
+    "viewport": "640x360",
+    "deviceScaleFactor": 1,
+    "colorScheme": "light",
+    "reducedMotion": "reduce",
+    "animations": "disabled",
+    "caret": "hide",
+    "scale": "css",
+    "fontReadiness": "document.fonts.ready",
+    "font": "Arial",
+    "locale": "en-US",
+    "timezone": "UTC"
+  },
+  "results": [
+    {
+      "browser": "chromium",
+      "version": "153.0.8010.12",
+      "cleanCaptures": 20,
+      "comparedCleanCaptures": 19,
+      "unchanged": 19,
+      "cleanRatios": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "defects": [
+        {
+          "kind": "border-removal",
+          "changedPixels": 368,
+          "ratio": 0.0015972222222222223,
+          "detected": true
+        },
+        {
+          "kind": "one-pixel-layout",
+          "changedPixels": 1008,
+          "ratio": 0.004375,
+          "detected": true
+        },
+        {
+          "kind": "font-weight",
+          "changedPixels": 2164,
+          "ratio": 0.009392361111111112,
+          "detected": true
+        },
+        {
+          "kind": "subtle-alpha",
+          "changedPixels": 1144,
+          "ratio": 0.004965277777777778,
+          "detected": true
+        }
+      ]
+    },
+    {
+      "browser": "firefox",
+      "version": "155.0",
+      "cleanCaptures": 20,
+      "comparedCleanCaptures": 19,
+      "unchanged": 19,
+      "cleanRatios": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "defects": [
+        {
+          "kind": "border-removal",
+          "changedPixels": 368,
+          "ratio": 0.0015972222222222223,
+          "detected": true
+        },
+        {
+          "kind": "one-pixel-layout",
+          "changedPixels": 1010,
+          "ratio": 0.004383680555555556,
+          "detected": true
+        },
+        {
+          "kind": "font-weight",
+          "changedPixels": 2155,
+          "ratio": 0.00935329861111111,
+          "detected": true
+        },
+        {
+          "kind": "subtle-alpha",
+          "changedPixels": 1157,
+          "ratio": 0.005021701388888889,
+          "detected": true
+        }
+      ]
+    },
+    {
+      "browser": "webkit",
+      "version": "26.6",
+      "cleanCaptures": 20,
+      "comparedCleanCaptures": 19,
+      "unchanged": 19,
+      "cleanRatios": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      "defects": [
+        {
+          "kind": "border-removal",
+          "changedPixels": 376,
+          "ratio": 0.0016319444444444445,
+          "detected": true
+        },
+        {
+          "kind": "one-pixel-layout",
+          "changedPixels": 1054,
+          "ratio": 0.004574652777777778,
+          "detected": true
+        },
+        {
+          "kind": "font-weight",
+          "changedPixels": 2238,
+          "ratio": 0.009713541666666667,
+          "detected": true
+        },
+        {
+          "kind": "subtle-alpha",
+          "changedPixels": 1181,
+          "ratio": 0.005125868055555555,
+          "detected": true
+        }
+      ]
+    }
+  ],
+  "limitation": "Prepared synthetic browser fixture on macOS. This does not establish clean-repeat noise for Ariakit pages, Ubuntu runners, environment drift, or the full capture matrix."
+}

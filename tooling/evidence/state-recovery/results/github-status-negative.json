@@ -1,0 +1,155 @@
+{
+  "passed": true,
+  "mode": "local injected HTTP boundary checks",
+  "runtime": "v24.18.0",
+  "completedAt": "2026-09-22T14:00:00.624Z",
+  "adapterSha256": "77c16835a392e6fc83904db7d879fc228af525f645a4a9c0cf530e5c2d6d1a52",
+  "caseCount": 8,
+  "outboundRequests": 0,
+  "d1Calls": 0,
+  "boundaries": "No native D1 or live GitHub coverage; the separate githubStatusLocal suite supplies native D1 coverage",
+  "cases": [
+    {
+      "name": "missing-token-stops-before-http",
+      "passed": true,
+      "mockHttpCalls": [],
+      "publicEvents": []
+    },
+    {
+      "name": "wrong-repository-stops-before-create",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": [
+        {
+          "name": "github-status.http",
+          "receipt": {
+            "method": "GET",
+            "status": 200,
+            "requestId": null,
+            "checkId": null,
+            "name": null,
+            "appId": null,
+            "headSha": null,
+            "conclusion": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-app-stops-after-single-mocked-create",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        },
+        {
+          "method": "POST",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs"
+        }
+      ],
+      "publicEvents": [
+        {
+          "name": "github-status.http",
+          "receipt": {
+            "method": "GET",
+            "status": 200,
+            "requestId": null,
+            "checkId": null,
+            "name": null,
+            "appId": null,
+            "headSha": null,
+            "conclusion": null
+          }
+        },
+        {
+          "name": "github-status.http",
+          "receipt": {
+            "method": "POST",
+            "status": 201,
+            "requestId": null,
+            "checkId": 123,
+            "name": "Ariviso status race fixture",
+            "appId": null,
+            "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+            "conclusion": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "streamed-response-over-64kib-aborts",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": []
+    },
+    {
+      "name": "content-length-over-64kib-aborts",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": []
+    },
+    {
+      "name": "fetch-error-cannot-disclose-canary",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": []
+    },
+    {
+      "name": "redirect-refused-without-follow-up",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": []
+    },
+    {
+      "name": "request-id-cannot-disclose-canary",
+      "passed": true,
+      "mockHttpCalls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics"
+        }
+      ],
+      "publicEvents": [
+        {
+          "name": "github-status.http",
+          "receipt": {
+            "method": "GET",
+            "status": 200,
+            "requestId": null,
+            "checkId": null,
+            "name": null,
+            "appId": null,
+            "headSha": null,
+            "conclusion": null
+          }
+        }
+      ]
+    }
+  ]
+}

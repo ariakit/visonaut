@@ -1,0 +1,1312 @@
+{
+  "scenario": "statusScenarios",
+  "prefix": "hosted1-statusscenarios",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "deployment": {
+    "id": "5073224a-6204-461a-b768-178ec22339f6",
+    "tag": "",
+    "timestamp": "2026-09-22T14:01:29.591747Z"
+  },
+  "startedAt": "2026-09-22T14:07:02.031Z",
+  "completedAt": "2026-09-22T14:07:14.896Z",
+  "durationMs": 12865,
+  "passed": true,
+  "result": {
+    "scope": "Standalone work.ts status delivery state transitions on the supplied native D1 database",
+    "githubTransport": "mocked; no GitHub HTTP requests or credential requests are performed",
+    "domainStatusPreparation": "Not exercised here; prepareStatusIntent is covered by the parent fixture",
+    "invocation": "97d190a0-0c06-410a-823f-78f8bf506535",
+    "scenarioCount": 5,
+    "assertionCount": 79,
+    "assertions": [
+      {
+        "name": "stale-success-refusal: old claimed revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "stale-success: obsolete success refused",
+        "passed": true,
+        "actual": "stale",
+        "expected": "stale"
+      },
+      {
+        "name": "stale-success: obsolete success made no transport call",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "stale-success: old outbox row obsolete",
+        "passed": true,
+        "actual": "obsolete",
+        "expected": "obsolete"
+      },
+      {
+        "name": "stale-success-refusal: current claimed revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "stale-success-refusal: current immediately before mocked PATCH",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "stale-success: failure delivered",
+        "passed": true,
+        "actual": "delivered",
+        "expected": "delivered"
+      },
+      {
+        "name": "stale-success: only current failure reached mocked remote",
+        "passed": true,
+        "actual": ["failure"],
+        "expected": ["failure"]
+      },
+      {
+        "name": "stale-success-refusal: final lease released",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "stale-success-refusal: final request flag cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "stale-success-refusal: final ambiguity cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "stale-success-refusal: final delivered revision matches desired revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "stale-success-refusal: no mocked requests remain in flight",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: old claimed revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "delayed: old request was current before transport",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "delayed: expired in-flight request needs attention",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "delayed: expired in-flight lock retained",
+        "passed": true,
+        "actual": "old",
+        "expected": "old"
+      },
+      {
+        "name": "delayed: request remains marked as started",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: premature-current claimed revision",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "delayed: duplicate old send refused",
+        "passed": true,
+        "actual": "stale",
+        "expected": "stale"
+      },
+      {
+        "name": "delayed: exactly one request started during pause",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "delayed: mocked response has not yet applied",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "delayed: old request settles after response barrier",
+        "passed": true,
+        "actual": "delivered",
+        "expected": "delivered"
+      },
+      {
+        "name": "delayed: old response records revision one",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "delayed: old response is obsolete locally",
+        "passed": true,
+        "actual": "obsolete",
+        "expected": "obsolete"
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: current claimed revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: current immediately before mocked PATCH",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "delayed: current failure delivered",
+        "passed": true,
+        "actual": "delivered",
+        "expected": "delivered"
+      },
+      {
+        "name": "delayed: current failure follows the settled old success",
+        "passed": true,
+        "actual": ["success", "failure"],
+        "expected": ["success", "failure"]
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: final lease released",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: final request flag cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: final ambiguity cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: final delivered revision matches desired revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure: no mocked requests remain in flight",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: ambiguous-owner claimed revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "ambiguous: intent current before mocked request",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "ambiguous: uncertain response recorded",
+        "passed": true,
+        "actual": "ambiguous",
+        "expected": "ambiguous"
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: lease-expiry-cannot-recover claimed revision",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "ambiguous: wrong token cannot settle lock",
+        "passed": true,
+        "actual": false,
+        "expected": false
+      },
+      {
+        "name": "ambiguous: attention flag survives lease expiry",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "ambiguous: owner lock survives expiry",
+        "passed": true,
+        "actual": "ambiguous-owner",
+        "expected": "ambiguous-owner"
+      },
+      {
+        "name": "ambiguous: old outbox remains sending",
+        "passed": true,
+        "actual": "sending",
+        "expected": "sending"
+      },
+      {
+        "name": "ambiguous: owning token explicitly settles stopped transport",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: recovered-current claimed revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: current immediately before mocked PATCH",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "ambiguous: current failure delivered after explicit settlement",
+        "passed": true,
+        "actual": "delivered",
+        "expected": "delivered"
+      },
+      {
+        "name": "ambiguous: only current failure applied in the controlled transport",
+        "passed": true,
+        "actual": ["failure"],
+        "expected": ["failure"]
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: final lease released",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: final request flag cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: final ambiguity cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: final delivered revision matches desired revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement: no mocked requests remain in flight",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "current-check-after-credential-pause: credential-owner claimed revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "credentials: old success refused after credentials return",
+        "passed": true,
+        "actual": "stale",
+        "expected": "stale"
+      },
+      {
+        "name": "credentials: current check changes while credentials are paused",
+        "passed": true,
+        "actual": [true, false],
+        "expected": [true, false]
+      },
+      {
+        "name": "credentials: invalidated success never starts mocked PATCH",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "current-check-after-credential-pause: current claimed revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "current-check-after-credential-pause: current immediately before mocked PATCH",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "credentials: current failure delivered",
+        "passed": true,
+        "actual": "delivered",
+        "expected": "delivered"
+      },
+      {
+        "name": "current-check-after-credential-pause: final lease released",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "current-check-after-credential-pause: final request flag cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "current-check-after-credential-pause: final ambiguity cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "current-check-after-credential-pause: final delivered revision matches desired revision",
+        "passed": true,
+        "actual": 2,
+        "expected": 2
+      },
+      {
+        "name": "current-check-after-credential-pause: no mocked requests remain in flight",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "duplicate-serialized-sends: shared-owner claimed revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate: winning intent current before mocked PATCH",
+        "passed": true,
+        "actual": true,
+        "expected": true
+      },
+      {
+        "name": "duplicate: competing call refuses before winner responds",
+        "passed": true,
+        "actual": "stale",
+        "expected": "stale"
+      },
+      {
+        "name": "duplicate: only one sender callback enters transport",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate-serialized-sends: competing-owner claimed revision",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "duplicate: winning request remains started",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate: one outbox delivery attempt consumed",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate: one delivery and one refusal",
+        "passed": true,
+        "actual": ["delivered", "stale"],
+        "expected": ["delivered", "stale"]
+      },
+      {
+        "name": "duplicate: completed delivery cannot replay with old token",
+        "passed": true,
+        "actual": "stale",
+        "expected": "stale"
+      },
+      {
+        "name": "duplicate: repeated calls produce one mocked write",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate-serialized-sends: final lease released",
+        "passed": true,
+        "actual": null,
+        "expected": null
+      },
+      {
+        "name": "duplicate-serialized-sends: final request flag cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "duplicate-serialized-sends: final ambiguity cleared",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      },
+      {
+        "name": "duplicate-serialized-sends: final delivered revision matches desired revision",
+        "passed": true,
+        "actual": 1,
+        "expected": 1
+      },
+      {
+        "name": "duplicate-serialized-sends: no mocked requests remain in flight",
+        "passed": true,
+        "actual": 0,
+        "expected": 0
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "stale-success-refusal",
+        "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+        "githubTransport": "mocked",
+        "clock": "injected logical milliseconds; no wall-clock lease wait",
+        "measurements": {
+          "staleOutcome": "stale",
+          "refusedBeforeTransport": true,
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        "calls": [
+          {
+            "sequence": 1,
+            "revision": 2,
+            "conclusion": "failure",
+            "startedAt": 101,
+            "completedAt": 101,
+            "outcome": "delivered"
+          }
+        ],
+        "applied": [
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "at": 101
+          }
+        ],
+        "checkpoints": [
+          {
+            "label": "obsolete-success-refused",
+            "logicalNow": 101,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+              "desired_revision": 2,
+              "delivered_revision": null,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "state": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "final",
+            "logicalNow": 101,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+              "desired_revision": 2,
+              "delivered_revision": 2,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                "state": "complete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "delayed-in-flight-then-current-failure",
+        "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+        "githubTransport": "mocked",
+        "clock": "injected logical milliseconds; no wall-clock lease wait",
+        "measurements": {
+          "oldOutcome": "delivered",
+          "duplicateOutcome": "stale",
+          "currentClaimBlockedDuringOldRequest": true,
+          "injectedLeaseExpiryAt": 110,
+          "injectedReconciliationAt": 120,
+          "transportCalls": 2,
+          "appliedWrites": 2,
+          "maximumConcurrentRequests": 1
+        },
+        "calls": [
+          {
+            "sequence": 1,
+            "revision": 1,
+            "conclusion": "success",
+            "startedAt": 101,
+            "completedAt": 120,
+            "outcome": "delivered"
+          },
+          {
+            "sequence": 2,
+            "revision": 2,
+            "conclusion": "failure",
+            "startedAt": 120,
+            "completedAt": 120,
+            "outcome": "delivered"
+          }
+        ],
+        "applied": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "at": 120
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "at": 120
+          }
+        ],
+        "checkpoints": [
+          {
+            "label": "expired-in-flight-lock-held",
+            "logicalNow": 120,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+              "desired_revision": 2,
+              "delivered_revision": null,
+              "lease_token": "old",
+              "lease_until": 110,
+              "lease_revision": 1,
+              "request_started": 1,
+              "ambiguous": 1
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "sending",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 100,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "old-response-settled",
+            "logicalNow": 120,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+              "desired_revision": 2,
+              "delivered_revision": 1,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 120,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "final",
+            "logicalNow": 120,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+              "desired_revision": 2,
+              "delivered_revision": 2,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 120,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                "state": "complete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 120,
+                "last_error": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "ambiguous-transport-explicit-settlement",
+        "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+        "githubTransport": "mocked",
+        "clock": "injected logical milliseconds; no wall-clock lease wait",
+        "measurements": {
+          "ambiguousOutcome": "ambiguous",
+          "settlementProof": {
+            "source": "injected mocked transport terminal state",
+            "cannotWriteAgain": true,
+            "remoteWasReadToInferSettlement": false,
+            "appliesToRealGitHubTransport": false
+          },
+          "leaseExpiryAloneRecovered": false,
+          "wrongTokenSettled": false,
+          "ownerSettled": true,
+          "transportCalls": 2,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        "calls": [
+          {
+            "sequence": 1,
+            "revision": 1,
+            "conclusion": "success",
+            "startedAt": 101,
+            "completedAt": 101,
+            "outcome": "connection-reset-without-confirmation"
+          },
+          {
+            "sequence": 2,
+            "revision": 2,
+            "conclusion": "failure",
+            "startedAt": 1000,
+            "completedAt": 1000,
+            "outcome": "delivered"
+          }
+        ],
+        "applied": [
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "at": 1000
+          }
+        ],
+        "checkpoints": [
+          {
+            "label": "ambiguous-after-expiry-and-wrong-token",
+            "logicalNow": 1000,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+              "desired_revision": 2,
+              "delivered_revision": null,
+              "lease_token": "ambiguous-owner",
+              "lease_until": 110,
+              "lease_revision": 1,
+              "request_started": 1,
+              "ambiguous": 1
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "state": "sending",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 100,
+                "last_error": "Error: Injected mocked GitHub transport connection reset"
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "state": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "final",
+            "logicalNow": 1000,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+              "desired_revision": 2,
+              "delivered_revision": 2,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 1000,
+                "last_error": "Error: Injected mocked GitHub transport connection reset"
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                "state": "complete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 1000,
+                "last_error": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "current-check-after-credential-pause",
+        "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+        "githubTransport": "mocked",
+        "clock": "injected logical milliseconds; no wall-clock lease wait",
+        "measurements": {
+          "oldOutcome": "stale",
+          "credentialLookups": 1,
+          "currentChecks": [
+            {
+              "phase": "before-credentials",
+              "current": true
+            },
+            {
+              "phase": "after-credentials-before-patch",
+              "current": false
+            }
+          ],
+          "credentialTransport": "injected Promise barrier; no real credential request",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        "calls": [
+          {
+            "sequence": 1,
+            "revision": 2,
+            "conclusion": "failure",
+            "startedAt": 102,
+            "completedAt": 102,
+            "outcome": "delivered"
+          }
+        ],
+        "applied": [
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "at": 102
+          }
+        ],
+        "checkpoints": [
+          {
+            "label": "new-intent-during-credential-pause",
+            "logicalNow": 102,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+              "desired_revision": 2,
+              "delivered_revision": null,
+              "lease_token": "credential-owner",
+              "lease_until": 110,
+              "lease_revision": 1,
+              "request_started": 1,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "state": "sending",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 100,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "state": "pending",
+                "attempts": 0,
+                "max_attempts": 3,
+                "available_at": 102,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "final",
+            "logicalNow": 102,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+              "desired_revision": 2,
+              "delivered_revision": 2,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "state": "obsolete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 102,
+                "last_error": null
+              },
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "revision": 2,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "attempt": 1,
+                "comparison_revision": 2,
+                "source_revision": 2,
+                "conclusion": "failure",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                "state": "complete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 102,
+                "last_error": null
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "duplicate-serialized-sends",
+        "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+        "githubTransport": "mocked",
+        "clock": "injected logical milliseconds; no wall-clock lease wait",
+        "measurements": {
+          "concurrentCalls": 2,
+          "firstOutcome": "stale",
+          "outcomes": ["delivered", "stale"],
+          "replayOutcome": "stale",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        "calls": [
+          {
+            "sequence": 1,
+            "revision": 1,
+            "conclusion": "success",
+            "startedAt": 101,
+            "completedAt": 101,
+            "outcome": "delivered"
+          }
+        ],
+        "applied": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "at": 101
+          }
+        ],
+        "checkpoints": [
+          {
+            "label": "duplicate-refused-while-winner-in-flight",
+            "logicalNow": 101,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+              "desired_revision": 1,
+              "delivered_revision": null,
+              "lease_token": "shared-owner",
+              "lease_until": 110,
+              "lease_revision": 1,
+              "request_started": 1,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "state": "sending",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 100,
+                "last_error": null
+              }
+            ]
+          },
+          {
+            "label": "final",
+            "logicalNow": 101,
+            "check": {
+              "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+              "desired_revision": 1,
+              "delivered_revision": 1,
+              "lease_token": null,
+              "lease_until": null,
+              "lease_revision": null,
+              "request_started": 0,
+              "ambiguous": 0
+            },
+            "outbox": [
+              {
+                "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "revision": 1,
+                "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "attempt": 1,
+                "comparison_revision": 1,
+                "source_revision": 1,
+                "conclusion": "success",
+                "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                "state": "complete",
+                "attempts": 1,
+                "max_attempts": 3,
+                "available_at": 101,
+                "last_error": null
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "events": [
+    {
+      "name": "status.stale-success-refusal.start",
+      "wallTime": "2026-09-22T14:07:02.177Z",
+      "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+      "githubTransport": "mocked"
+    },
+    {
+      "name": "status.stale-success-refusal.complete",
+      "wallTime": "2026-09-22T14:07:04.273Z",
+      "staleOutcome": "stale",
+      "refusedBeforeTransport": true,
+      "transportCalls": 1,
+      "appliedWrites": 1,
+      "maximumConcurrentRequests": 1
+    },
+    {
+      "name": "status.delayed-in-flight-then-current-failure.start",
+      "wallTime": "2026-09-22T14:07:04.273Z",
+      "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+      "githubTransport": "mocked"
+    },
+    {
+      "name": "status.delayed-in-flight-then-current-failure.complete",
+      "wallTime": "2026-09-22T14:07:07.588Z",
+      "oldOutcome": "delivered",
+      "duplicateOutcome": "stale",
+      "currentClaimBlockedDuringOldRequest": true,
+      "injectedLeaseExpiryAt": 110,
+      "injectedReconciliationAt": 120,
+      "transportCalls": 2,
+      "appliedWrites": 2,
+      "maximumConcurrentRequests": 1
+    },
+    {
+      "name": "status.ambiguous-transport-explicit-settlement.start",
+      "wallTime": "2026-09-22T14:07:07.588Z",
+      "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+      "githubTransport": "mocked"
+    },
+    {
+      "name": "status.ambiguous-transport-explicit-settlement.complete",
+      "wallTime": "2026-09-22T14:07:10.917Z",
+      "ambiguousOutcome": "ambiguous",
+      "settlementProof": {
+        "source": "injected mocked transport terminal state",
+        "cannotWriteAgain": true,
+        "remoteWasReadToInferSettlement": false,
+        "appliesToRealGitHubTransport": false
+      },
+      "leaseExpiryAloneRecovered": false,
+      "wrongTokenSettled": false,
+      "ownerSettled": true,
+      "transportCalls": 2,
+      "appliedWrites": 1,
+      "maximumConcurrentRequests": 1
+    },
+    {
+      "name": "status.current-check-after-credential-pause.start",
+      "wallTime": "2026-09-22T14:07:10.917Z",
+      "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+      "githubTransport": "mocked"
+    },
+    {
+      "name": "status.current-check-after-credential-pause.complete",
+      "wallTime": "2026-09-22T14:07:13.321Z",
+      "oldOutcome": "stale",
+      "credentialLookups": 1,
+      "currentChecks": [
+        {
+          "phase": "before-credentials",
+          "current": true
+        },
+        {
+          "phase": "after-credentials-before-patch",
+          "current": false
+        }
+      ],
+      "credentialTransport": "injected Promise barrier; no real credential request",
+      "transportCalls": 1,
+      "appliedWrites": 1,
+      "maximumConcurrentRequests": 1
+    },
+    {
+      "name": "status.duplicate-serialized-sends.start",
+      "wallTime": "2026-09-22T14:07:13.321Z",
+      "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+      "githubTransport": "mocked"
+    },
+    {
+      "name": "status.duplicate-serialized-sends.complete",
+      "wallTime": "2026-09-22T14:07:14.896Z",
+      "concurrentCalls": 2,
+      "firstOutcome": "stale",
+      "outcomes": ["delivered", "stale"],
+      "replayOutcome": "stale",
+      "transportCalls": 1,
+      "appliedWrites": 1,
+      "maximumConcurrentRequests": 1
+    }
+  ],
+  "assertions": [],
+  "d1": {
+    "calls": 104,
+    "attemptedStatements": 124,
+    "statements": 124,
+    "rowsRead": 334,
+    "rowsWritten": 107,
+    "nativeDurationMs": 34.117699999999985
+  },
+  "r2": {
+    "puts": 0,
+    "gets": 0,
+    "deletes": 0,
+    "bytesWritten": 0
+  },
+  "boundaries": {
+    "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+    "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+    "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+    "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+    "clock": "explicit injected logical clocks; wall time measured separately",
+    "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+    "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+  },
+  "controller": {
+    "durationMs": 13085.833500000008,
+    "httpStatus": 200,
+    "ray": "a3f1dfa5abbc625e-GRU",
+    "date": "Tue, 22 Sep 2026 14:07:15 GMT"
+  }
+}

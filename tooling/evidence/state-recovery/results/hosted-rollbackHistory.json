@@ -1,0 +1,1309 @@
+{
+  "scenario": "rollbackHistory",
+  "prefix": "hosted1-rollbackhistory",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "deployment": {
+    "id": "5073224a-6204-461a-b768-178ec22339f6",
+    "tag": "",
+    "timestamp": "2026-09-22T14:01:29.591747Z"
+  },
+  "startedAt": "2026-09-22T14:04:02.622Z",
+  "completedAt": "2026-09-22T14:05:05.032Z",
+  "durationMs": 62410,
+  "passed": true,
+  "result": {
+    "mixedTargets": 2,
+    "finalBaselineRevision": 4,
+    "protectedNativeCopiesVerified": 1,
+    "guards": [
+      "automatic history",
+      "whole-item protection",
+      "D26 rollback",
+      "D26 Undo new promotion",
+      "stale promotion and Undo",
+      "native R2 rollback pin"
+    ]
+  },
+  "events": [
+    {
+      "name": "protected automatic target refuses whole-item rejection",
+      "wallTime": "2026-09-22T14:04:35.468Z",
+      "code": "CONFLICT",
+      "message": "Automatically accepted promoted history is protected. Capture a correction in a new main run."
+    },
+    {
+      "name": "current snapshot retirement is refused",
+      "wallTime": "2026-09-22T14:04:48.565Z",
+      "code": "CONFLICT",
+      "message": "State changed. Refresh the comparison before trying again."
+    },
+    {
+      "name": "rollback predecessor retirement is refused",
+      "wallTime": "2026-09-22T14:04:48.803Z",
+      "code": "CONFLICT",
+      "message": "State changed. Refresh the comparison before trying again."
+    },
+    {
+      "name": "injected native GC claim immediately before D26 rollback batch",
+      "wallTime": "2026-09-22T14:04:50.009Z",
+      "claim": null
+    },
+    {
+      "name": "restoring a snapshot does not revive its old promotion guard",
+      "wallTime": "2026-09-22T14:04:58.751Z",
+      "code": "CONFLICT",
+      "message": "This promotion is no longer current. Use explicit recovery."
+    },
+    {
+      "name": "completed rejection Undo cannot be revived with a new command ID",
+      "wallTime": "2026-09-22T14:04:59.109Z",
+      "code": "CONFLICT",
+      "message": "Only your saved command in this review session can be undone."
+    }
+  ],
+  "assertions": [
+    {
+      "message": "mixed fixture has human change and automatic addition",
+      "passed": true
+    },
+    {
+      "message": "protected whole-item rejection makes no partial writes",
+      "actual": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 34,
+          "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 7,
+          "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 11,
+          "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+        },
+        "ariviso_promotions": {
+          "rows": 6,
+          "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 54,
+          "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "expected": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 34,
+          "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 7,
+          "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 11,
+          "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+        },
+        "ariviso_promotions": {
+          "rows": 6,
+          "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 54,
+          "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "passed": true
+    },
+    {
+      "message": "protected rejection preserves current baseline",
+      "actual": "hosted1-rollbackhistory-snapshot-mixed",
+      "expected": "hosted1-rollbackhistory-snapshot-mixed",
+      "passed": true
+    },
+    {
+      "message": "approval of accepted history is a no-op",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "message": "accepted-history approval creates no Undo/audit/outbox work",
+      "actual": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 34,
+          "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 7,
+          "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 11,
+          "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+        },
+        "ariviso_promotions": {
+          "rows": 6,
+          "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 54,
+          "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "expected": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 34,
+          "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 7,
+          "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 11,
+          "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+        },
+        "ariviso_promotions": {
+          "rows": 6,
+          "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 54,
+          "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "passed": true
+    },
+    {
+      "message": "GC cannot claim rollback predecessor during review save",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "D26 rollback restores complete prior baseline",
+      "actual": "hosted1-rollbackhistory-snapshot-seed",
+      "expected": "hosted1-rollbackhistory-snapshot-seed",
+      "passed": true
+    },
+    {
+      "message": "rollback advances baseline revision",
+      "actual": 3,
+      "expected": 3,
+      "passed": true
+    },
+    {
+      "message": "mixed rollback preserves automatic acceptance",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "message": "rollback predecessor native R2 bytes remain intact",
+      "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "passed": true
+    },
+    {
+      "message": "Undo D26 restores snapshot",
+      "actual": "hosted1-rollbackhistory-snapshot-mixed",
+      "expected": "hosted1-rollbackhistory-snapshot-mixed",
+      "passed": true
+    },
+    {
+      "message": "Undo D26 advances revision",
+      "actual": 4,
+      "expected": 4,
+      "passed": true
+    },
+    {
+      "message": "Undo D26 creates new promotion identity",
+      "passed": true
+    },
+    {
+      "message": "stale history commands make no partial writes",
+      "actual": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 36,
+          "sha256": "d77428a061b4d0bf211ef88e6e202cdddd074a0a4ce5f45bc05f9a978a7bcce3"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 9,
+          "sha256": "3dacb22d487bdc5c0fa1f0d37458c4bdfd415d76d50c8d0eb80ab9f59144ff59"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "2728fe7f49b90f76177fd20b8bb9a3bfdc3540650d2e416cf0a975945324d61b"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 12,
+          "sha256": "22fa386d594f3d1159a07538b5f015e7f5aeaaf420535c3e42f8ee978b4b61de"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "82fef8e2bc3fe25c291b5ea72ecba153c343901c2fb0b8ba8778d2d17af4e990"
+        },
+        "ariviso_promotions": {
+          "rows": 7,
+          "sha256": "766da94f0e92943cf2e51d93e83cdbcae2f8edf3acfe11754c661d199905494b"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "caeaddba5702af5aacb8eb5c47d3fee1eb5b8d8fc64f30fa615fd17ce1379038"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 59,
+          "sha256": "b130bbb02cd0eea467df6ecb2c41926c89d84de4bab0fc54870226bc73accf14"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "expected": {
+        "ariviso_ancestry": {
+          "rows": 4,
+          "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+        },
+        "ariviso_assertions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_audit": {
+          "rows": 36,
+          "sha256": "d77428a061b4d0bf211ef88e6e202cdddd074a0a4ce5f45bc05f9a978a7bcce3"
+        },
+        "ariviso_capture_profiles": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_captures": {
+          "rows": 10,
+          "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+        },
+        "ariviso_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_commands": {
+          "rows": 9,
+          "sha256": "3dacb22d487bdc5c0fa1f0d37458c4bdfd415d76d50c8d0eb80ab9f59144ff59"
+        },
+        "ariviso_comparison_rows": {
+          "rows": 10,
+          "sha256": "2728fe7f49b90f76177fd20b8bb9a3bfdc3540650d2e416cf0a975945324d61b"
+        },
+        "ariviso_comparisons": {
+          "rows": 7,
+          "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+        },
+        "ariviso_decision_replacements": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_decisions": {
+          "rows": 12,
+          "sha256": "22fa386d594f3d1159a07538b5f015e7f5aeaaf420535c3e42f8ee978b4b61de"
+        },
+        "ariviso_historical_preparations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_identity_history": {
+          "rows": 5,
+          "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+        },
+        "ariviso_images": {
+          "rows": 10,
+          "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+        },
+        "ariviso_lineage": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_lineage_edges": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "ariviso_pins": {
+          "rows": 13,
+          "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+        },
+        "ariviso_policies": {
+          "rows": 3,
+          "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+        },
+        "ariviso_projects": {
+          "rows": 3,
+          "sha256": "82fef8e2bc3fe25c291b5ea72ecba153c343901c2fb0b8ba8778d2d17af4e990"
+        },
+        "ariviso_promotions": {
+          "rows": 7,
+          "sha256": "766da94f0e92943cf2e51d93e83cdbcae2f8edf3acfe11754c661d199905494b"
+        },
+        "ariviso_reservations": {
+          "rows": 5,
+          "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+        },
+        "ariviso_runs": {
+          "rows": 7,
+          "sha256": "caeaddba5702af5aacb8eb5c47d3fee1eb5b8d8fc64f30fa615fd17ce1379038"
+        },
+        "ariviso_shards": {
+          "rows": 7,
+          "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+        },
+        "ariviso_snapshot_images": {
+          "rows": 8,
+          "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+        },
+        "ariviso_snapshot_retention": {
+          "rows": 6,
+          "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+        },
+        "ariviso_snapshots": {
+          "rows": 6,
+          "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+        },
+        "ariviso_status_outbox": {
+          "rows": 59,
+          "sha256": "b130bbb02cd0eea467df6ecb2c41926c89d84de4bab0fc54870226bc73accf14"
+        },
+        "operations_backup_group_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_groups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_inventory": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_members": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_objects": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_pages": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backup_required": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_backups": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_check_creations": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_comparison_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_cursors": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_events": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_exports": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_promotions": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "operations_run_archives": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_checks": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_retained_runs": {
+          "rows": 7,
+          "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+        },
+        "work_retention_pins": {
+          "rows": 14,
+          "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+        },
+        "work_status_outbox": {
+          "rows": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "work_tasks": {
+          "rows": 5,
+          "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+        }
+      },
+      "passed": true
+    }
+  ],
+  "d1": {
+    "calls": 417,
+    "attemptedStatements": 743,
+    "statements": 721,
+    "rowsRead": 3437,
+    "rowsWritten": 555,
+    "nativeDurationMs": 129.74550000000005
+  },
+  "r2": {
+    "puts": 6,
+    "gets": 12,
+    "deletes": 0,
+    "bytesWritten": 420
+  },
+  "boundaries": {
+    "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+    "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+    "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+    "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+    "clock": "explicit injected logical clocks; wall time measured separately",
+    "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+    "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+  },
+  "controller": {
+    "durationMs": 62645.223792000004,
+    "httpStatus": 200,
+    "ray": "a3f1db445c40625e-GRU",
+    "date": "Tue, 22 Sep 2026 14:05:05 GMT"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "originalManifestSha256": "806c527a6cafd02e53da59f0206f6438d1897d1f6644b49d3ddcb8e042a0b49b",
+  "portableManifestChange": "Only sourcePath relocated for local private metadata; unused original local paths removed. Object keys, hashes and byte counts unchanged.",
+  "preparedSqlSha256": "78d6063f58381cde397017f3d7c372a1ad90a79363aef3d73a061dba70357e93",
+  "preparedSqlBytes": 25190422
+}

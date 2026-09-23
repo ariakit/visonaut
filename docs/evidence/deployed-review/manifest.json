@@ -1,0 +1,128 @@
+{
+  "createdAt": "2026-09-22T12:05:08.804651+00:00",
+  "origin": "https://ariviso-diagnostics.ariakit.workers.dev",
+  "runId": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+  "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+  "deploymentVersionsProvidedByRoot": {
+    "web": "3b60f5b7-c6a9-4412-b9ad-e420cd79f020",
+    "comparator": "8753ea45-fc1f-47af-a5ad-599aa3063c85"
+  },
+  "browser": "Chrome 154.0.8037.44",
+  "authentication": "Authorized seeded diagnostic session with real GitHub permission checks; not OAuth evidence.",
+  "results": {
+    "browserRejectUndo": "passed",
+    "staleConflictAndRefresh": "passed",
+    "imageFailureRecovery": "passed"
+  },
+  "finalState": {
+    "runStatus": "passed",
+    "selectedVariantRevision": 9,
+    "otherVariantRevision": 1,
+    "bothApproved": true,
+    "liveComparisonRevision": 23,
+    "baselineRevision": 1,
+    "promotionUnchanged": true
+  },
+  "visualInspection": {
+    "allVideoFrames": 1081,
+    "contactSheets": 11,
+    "fullFramesAtSeconds": [2, 12, 42],
+    "screenshots": 6,
+    "provenance": "Reported by the capture agent; this documentation pass verified hashes and did not repeat visual inspection."
+  },
+  "cleanup": {
+    "ownBrowserClosed": true,
+    "ownDisposableBrowserMetadataRemoved": true,
+    "sharedCredentialUnchanged": true,
+    "remainingRestoration": false
+  },
+  "captureBundle": {
+    "name": "ariviso-deployed-mutation-evidence",
+    "availability": "Local capture bundle. Media and raw harness files are not stored in the repository. Artifact names below are bundle members, not repository-relative links."
+  },
+  "sourceBundleManifest": {
+    "name": "manifest.json",
+    "bytes": 4453,
+    "sha256": "f52483a476894dc9768ba7369e247198ab85b7384b23c6f3bd4492f398dd5f49",
+    "verification": "All 21 source-bundle entries matched their byte counts and SHA-256 hashes before this portable record was prepared."
+  },
+  "conflictIdentity": "The same synthetic GitHub identity used separate review sessions; distinct-user conflict behavior was not tested.",
+  "deploymentScope": "Deployment IDs were supplied by the coordinating task and were not independently queried by the browser task. This capture does not establish equivalence to the later local round 3 source.",
+  "sourceReceipt": {
+    "name": "receipts.json",
+    "bytes": 25868,
+    "sha256": "4623b7ca859c0562b053b0e5e6846dee87753495597541249b9a7d076347962e",
+    "transfer": "JSON values preserved exactly; repository formatting only. Structural sanitation review found no credential, header, session ID, private email or capability URL."
+  },
+  "sourceReport": {
+    "name": "REPORT.md",
+    "bytes": 6859,
+    "sha256": "632bef3cf9a8badb7a2f38ac66b8a55a6aa911cfcdb67aa5d9c05951f1b05f01",
+    "transfer": "Adapted for portable repository links and explicit capture limits."
+  },
+  "video": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "vp8",
+        "width": 1440,
+        "height": 1280,
+        "r_frame_rate": "25/1",
+        "nb_read_frames": "1081"
+      }
+    ],
+    "format": {
+      "duration": "43.240000",
+      "size": "3622702"
+    }
+  },
+  "artifacts": {
+    "reject-undo.webm": {
+      "bytes": 3622702,
+      "sha256": "81af49d6173c56e4b062e70c2b2a6d9d0c0e418d93f922940deebc969b3dddd2"
+    },
+    "rejected.png": {
+      "bytes": 87705,
+      "sha256": "c8587c1314976d09f14eafd801b8d4d407947595fee6e2f69308dbb4d227f027"
+    },
+    "undo-restored.png": {
+      "bytes": 90336,
+      "sha256": "87afc91cfb4c76ec533a2836eb95502029286dbc4c0e7400ba90cbfd7c6cd861"
+    },
+    "conflict.png": {
+      "bytes": 94038,
+      "sha256": "f410071a4bc49e5475309c1d1d1a8ed5481d3abe6bf2271c27115fb1c4b4c52d"
+    },
+    "conflict-restored.png": {
+      "bytes": 86241,
+      "sha256": "01a9e6354d85349756707eee2ffde420a1292bfe52b2172f3834de446d27180b"
+    },
+    "image-error.png": {
+      "bytes": 92678,
+      "sha256": "cd7de97fcd715e76c781c63e29945a35afb9a6743a62a24ede70aae475bc1161"
+    },
+    "image-recovered.png": {
+      "bytes": 86219,
+      "sha256": "5a898317958ab375c3246ba6e44aed6f55ff1842d27f04da092c43854a2131ae"
+    }
+  },
+  "publication": {
+    "status": "pending",
+    "location": "Private pull request attachments; no media binaries are stored in the repository.",
+    "requiredCheck": "Verify rendered images and video playback after publication.",
+    "attachmentUrls": {}
+  },
+  "files": [
+    {
+      "path": "REPORT.md",
+      "bytes": 8788,
+      "sha256": "fb96809514fde5d5e253427aedf1d22adf919ba0789448d419fe15cfad732468"
+    },
+    {
+      "path": "receipts.json",
+      "bytes": 25792,
+      "sha256": "f184fec6314ba740e6d41308904da5e13898c0f84bb7b14c1f9175285c1383fa"
+    }
+  ]
+}

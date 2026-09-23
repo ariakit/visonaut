@@ -1,0 +1,86 @@
+{
+  "collectedAt": "2026-09-22T04:17:57.133Z",
+  "endpoint": "https://ariviso-codec-probe.ariakit.workers.dev/probe",
+  "fixture": {
+    "width": 1248,
+    "height": 1650,
+    "pngBytes": 368370,
+    "webpBytes": 35796,
+    "pngDigest": "6cf623e18ebe893be933acc19f1066d1fbf3dea3dc4b6bc0622fc98641ad299b",
+    "webpDigest": "f9322d788e992cf3e9d12579f2be0fd5e0910e3238162e6fca425b9f48471404",
+    "rgbaDigest": "a25aae65f6149aa2cd362e337061f37a693c6722a0a7f856f2097a304b80e90b"
+  },
+  "sequential": true,
+  "measurements": [
+    {
+      "format": "webp",
+      "issued": 25,
+      "parityPassed": 25,
+      "indexedRequests": 25,
+      "invocationErrors": 0,
+      "sampleInterval": 1,
+      "cpuMilliseconds": {
+        "p50": 199.335,
+        "p90": 245.758,
+        "p99": 301.31,
+        "max": 301.31
+      },
+      "isolateMemoryBytes": {
+        "p50": 67025430,
+        "p90": 67033624,
+        "p99": 67033624,
+        "max": 67033622
+      },
+      "wasmMemoryBytes": {
+        "p50": 29818880,
+        "p90": 29818880,
+        "p99": 29818880,
+        "max": 29818880
+      },
+      "workerVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4"
+    },
+    {
+      "format": "png",
+      "issued": 25,
+      "parityPassed": 25,
+      "indexedRequests": 23,
+      "invocationErrors": 0,
+      "sampleInterval": 1,
+      "cpuMilliseconds": {
+        "p50": 291.906,
+        "p90": 398.906,
+        "p99": 431.753,
+        "max": 431.753
+      },
+      "isolateMemoryBytes": {
+        "p50": 101049660,
+        "p90": 101049660,
+        "p99": 101049660,
+        "max": 101049668
+      },
+      "wasmMemoryBytes": {
+        "p50": 38076416,
+        "p90": 38076416,
+        "p99": 38076416,
+        "max": 38076416
+      },
+      "workerVersion": "347d78ef-9909-4478-87ce-03bfbf35e1a4"
+    }
+  ],
+  "filteredTailEvents": 10,
+  "notes": [
+    "Cloudflare GraphQL CPU fields are in microseconds; summary converts to milliseconds.",
+    "Memory values are measured V8 isolate memory across invocations. They do not establish the peak within an invocation.",
+    "Cloudflare quantiles use reservoir sampling and can differ by a few bytes from an exact maximum due to quantile representation.",
+    "All requests were sequential. Cloudflare does not expose an isolate identifier here, so single-isolate affinity is not claimed.",
+    "The probe validates, decodes twice, compares, encodes a thumbnail, and encodes a full-sized mask for every request. The production comparator omits unchanged masks.",
+    "Probe performance.now() values and modeled RGBA byte totals are not used as resource measurements.",
+    "No request headers, credentials, IP addresses, or cookies were retained in tail evidence.",
+    "A first tail attempt rejected sampling-rate=1 before connection. The default-rate follow-up collected all ten events.",
+    "At collection time the API indexed fewer requests than the client received. The report preserves the exact indexed count; it does not fill missing measurements or treat them as zero."
+  ],
+  "sources": [
+    "https://developers.cloudflare.com/workers/observability/metrics-and-analytics/",
+    "https://developers.cloudflare.com/analytics/graphql-api/tutorials/querying-workers-metrics/"
+  ]
+}

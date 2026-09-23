@@ -1,0 +1,290 @@
+[
+  {
+    "sourcePath": "receipts/after-archive-fingerprints.json",
+    "path": "receipts/after-archive-fingerprints.json",
+    "bytes": 43390,
+    "sha256": "8b33699748b73ea1a77732d605bdf1ceb761179bd06bc82d1dbe105e1af7397f",
+    "originalBytes": 43390,
+    "originalSha256": "8b33699748b73ea1a77732d605bdf1ceb761179bd06bc82d1dbe105e1af7397f",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/after-archive-sql.json",
+    "path": "receipts/after-archive-sql.json",
+    "bytes": 166,
+    "sha256": "643e3f21e411ef33d0629df2d1f180d0c8e59fb35c25b4dd6e83f3cdc24a1ca6",
+    "originalBytes": 166,
+    "originalSha256": "643e3f21e411ef33d0629df2d1f180d0c8e59fb35c25b4dd6e83f3cdc24a1ca6",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/archive-root.json",
+    "path": "receipts/archive-root.json",
+    "bytes": 194698,
+    "sha256": "9a4d5459ed9be510c82b8163641a9e25536126b147d1fec000852f0bacad2057",
+    "originalBytes": 194698,
+    "originalSha256": "9a4d5459ed9be510c82b8163641a9e25536126b147d1fec000852f0bacad2057",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/archive-summary.json",
+    "path": "receipts/archive-summary.json",
+    "bytes": 2654,
+    "sha256": "18e148bc314d1e4621a3f80941f7c63e2e156417b310f4f9714cdba6defbca67",
+    "originalBytes": 2654,
+    "originalSha256": "18e148bc314d1e4621a3f80941f7c63e2e156417b310f4f9714cdba6defbca67",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/before-archive-fingerprints.json",
+    "path": "receipts/before-archive-fingerprints.json",
+    "bytes": 43275,
+    "sha256": "4dccc1d8f132a7d2a76b8b6af6cbda431c333f4b99e7bc4832513f135b087573",
+    "originalBytes": 43275,
+    "originalSha256": "4dccc1d8f132a7d2a76b8b6af6cbda431c333f4b99e7bc4832513f135b087573",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/before-archive-sql.json",
+    "path": "receipts/before-archive-sql.json",
+    "bytes": 166,
+    "sha256": "0b14ece2d9ed49b8ea6250c21f3b88daa5d0f60776ad7a91b671b4b5a30ba904",
+    "originalBytes": 166,
+    "originalSha256": "0b14ece2d9ed49b8ea6250c21f3b88daa5d0f60776ad7a91b671b4b5a30ba904",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/before-archive-summary.json",
+    "path": "receipts/before-archive-summary.json",
+    "bytes": 1070,
+    "sha256": "c7a0f6f740d4b782a493c9ca13895d8c2c81b16ab3efd576858e3f1bcbdce7ff",
+    "originalBytes": 1070,
+    "originalSha256": "c7a0f6f740d4b782a493c9ca13895d8c2c81b16ab3efd576858e3f1bcbdce7ff",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/cold-backup-manifest.json",
+    "path": "receipts/cold-backup-manifest.json",
+    "bytes": 640,
+    "sha256": "201eb7f03416464c9cb711b039d15f4eae699bb024158fe39a76831e22640789",
+    "originalBytes": 640,
+    "originalSha256": "201eb7f03416464c9cb711b039d15f4eae699bb024158fe39a76831e22640789",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/cold-checkpoint.json",
+    "path": "receipts/cold-checkpoint.json",
+    "bytes": 71,
+    "sha256": "aad388404bbca046be5aca0f1a81faf2edc1b54a2584a5be55519efee4e3cac6",
+    "originalBytes": 71,
+    "originalSha256": "aad388404bbca046be5aca0f1a81faf2edc1b54a2584a5be55519efee4e3cac6",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/cold-source-snapshot.json",
+    "path": "receipts/cold-source-snapshot.json",
+    "bytes": 242,
+    "sha256": "6f18bb23918edf2a39826feeed43c1dd80a40dbb54d91409f2a56be7a6a1ec2e",
+    "originalBytes": 242,
+    "originalSha256": "6f18bb23918edf2a39826feeed43c1dd80a40dbb54d91409f2a56be7a6a1ec2e",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/cold-staging.json",
+    "path": "receipts/cold-staging.json",
+    "bytes": 386,
+    "sha256": "487bcd2cde446e7f48b0cb4f029541cb7f99a55a7e73cf497f5819d03c3aee3c",
+    "originalBytes": 386,
+    "originalSha256": "487bcd2cde446e7f48b0cb4f029541cb7f99a55a7e73cf497f5819d03c3aee3c",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/cold-summary.json",
+    "path": "receipts/cold-summary.json",
+    "bytes": 800,
+    "sha256": "8cab23e9732d31a676c658c3c297964ff616118f81ceb7cfd61fb20968c9a247",
+    "originalBytes": 800,
+    "originalSha256": "8cab23e9732d31a676c658c3c297964ff616118f81ceb7cfd61fb20968c9a247",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/events.jsonl",
+    "path": "receipts/events.jsonl.gz",
+    "bytes": 65419,
+    "sha256": "6dd2f6000883774f98fc76565d0553b39f6c6040f568c2076da544e64ffcdf51",
+    "originalBytes": 1733717,
+    "originalSha256": "ea8aeeabea4437abe00f38c860594f2153b4d10f2dd708a0980d95a642b241af",
+    "compression": "gzip"
+  },
+  {
+    "sourcePath": "receipts/frozen-implementation.json",
+    "path": "receipts/frozen-implementation.json",
+    "bytes": 8565,
+    "sha256": "654fef2ee830652d50425033940451ea2816daa1ca1e1b1c6c533ee5f63228e5",
+    "originalBytes": 8565,
+    "originalSha256": "654fef2ee830652d50425033940451ea2816daa1ca1e1b1c6c533ee5f63228e5",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/harness-build.json",
+    "path": "receipts/harness-build.json",
+    "bytes": 1102,
+    "sha256": "20c78c8d2249e905bac9979b0d44123732c1707ffe64e7389391a1b9a9602432",
+    "originalBytes": 1102,
+    "originalSha256": "20c78c8d2249e905bac9979b0d44123732c1707ffe64e7389391a1b9a9602432",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/import-state-after-failure.json",
+    "path": "receipts/import-state-after-failure.json",
+    "bytes": 459,
+    "sha256": "d2881a4e7e749c31cb339234671350e6d235d936734534662f741ae03628285f",
+    "originalBytes": 459,
+    "originalSha256": "d2881a4e7e749c31cb339234671350e6d235d936734534662f741ae03628285f",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/import-state-after-failure2.json",
+    "path": "receipts/import-state-after-failure2.json",
+    "bytes": 459,
+    "sha256": "982b852e3bed4621a5423f7a0763366310401041cbda76f53c16cddf7b1907ef",
+    "originalBytes": 459,
+    "originalSha256": "982b852e3bed4621a5423f7a0763366310401041cbda76f53c16cddf7b1907ef",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/phase-timings.jsonl",
+    "path": "receipts/phase-timings.jsonl",
+    "bytes": 740,
+    "sha256": "48aebde52b801700271287947e3250abc6662182788d802f9c10ecc9099a17e0",
+    "originalBytes": 740,
+    "originalSha256": "48aebde52b801700271287947e3250abc6662182788d802f9c10ecc9099a17e0",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/restore-checkpoint.json",
+    "path": "receipts/restore-checkpoint.json",
+    "bytes": 2324,
+    "sha256": "fd8449e24dc07acacecfe2217192c700474395b8504656d556faedcee9ecfd0c",
+    "originalBytes": 2324,
+    "originalSha256": "fd8449e24dc07acacecfe2217192c700474395b8504656d556faedcee9ecfd0c",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/restore-summary.json",
+    "path": "receipts/restore-summary.json",
+    "bytes": 6169,
+    "sha256": "2d845d44dbc519432042049366ce62068f825e03f5c38bf098a0ec57f2e03bdf",
+    "originalBytes": 6169,
+    "originalSha256": "2d845d44dbc519432042049366ce62068f825e03f5c38bf098a0ec57f2e03bdf",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/restored-fingerprints.json",
+    "path": "receipts/restored-fingerprints.json",
+    "bytes": 92439,
+    "sha256": "a983b6aee82f511a559d98c9f5e4ad928acfc865c634463eea1d7c5987d8f92b",
+    "originalBytes": 92439,
+    "originalSha256": "a983b6aee82f511a559d98c9f5e4ad928acfc865c634463eea1d7c5987d8f92b",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/restored-history-equivalence.json",
+    "path": "receipts/restored-history-equivalence.json",
+    "bytes": 49126,
+    "sha256": "ef5af04476200dd2e823f7130d024102da6e350e282b3221fc1e8783982cfdbc",
+    "originalBytes": 49126,
+    "originalSha256": "ef5af04476200dd2e823f7130d024102da6e350e282b3221fc1e8783982cfdbc",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/rotation-result.json",
+    "path": "receipts/rotation-result.json",
+    "bytes": 746,
+    "sha256": "7a9534e04b4a7bdd4c56d7e23dcd4577125c56b5b0515f5e5505edde1fd9b5fa",
+    "originalBytes": 746,
+    "originalSha256": "7a9534e04b4a7bdd4c56d7e23dcd4577125c56b5b0515f5e5505edde1fd9b5fa",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/seed-summary.json",
+    "path": "receipts/seed-summary.json",
+    "bytes": 1075,
+    "sha256": "ce10fc9d39644aa46165596a29ad3a68dcd468affe1896b6359b4387aa6c5ef1",
+    "originalBytes": 1075,
+    "originalSha256": "ce10fc9d39644aa46165596a29ad3a68dcd468affe1896b6359b4387aa6c5ef1",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/source-verified.json",
+    "path": "receipts/source-verified.json",
+    "bytes": 76,
+    "sha256": "295f9bb62170ff321013b3566d71660560fd71ceaebdb0a62414c2e7798845d0",
+    "originalBytes": 76,
+    "originalSha256": "295f9bb62170ff321013b3566d71660560fd71ceaebdb0a62414c2e7798845d0",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/warm-backup-manifest.json",
+    "path": "receipts/warm-backup-manifest.json",
+    "bytes": 640,
+    "sha256": "c292772176d18ba654d81ad65d86856ffcc8e1cba7500822c6129bbb786fb12d",
+    "originalBytes": 640,
+    "originalSha256": "c292772176d18ba654d81ad65d86856ffcc8e1cba7500822c6129bbb786fb12d",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/warm-checkpoint.json",
+    "path": "receipts/warm-checkpoint.json",
+    "bytes": 70,
+    "sha256": "39124b1adeba300c9d3632a64a68d648e2463dbcecb1bd1b65dd9142b4009184",
+    "originalBytes": 70,
+    "originalSha256": "39124b1adeba300c9d3632a64a68d648e2463dbcecb1bd1b65dd9142b4009184",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/warm-source-snapshot.json",
+    "path": "receipts/warm-source-snapshot.json",
+    "bytes": 242,
+    "sha256": "ce687e79792ba2a94b38854a5a9f4379d39e91d04e28695a86deb559f1a17b66",
+    "originalBytes": 242,
+    "originalSha256": "ce687e79792ba2a94b38854a5a9f4379d39e91d04e28695a86deb559f1a17b66",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/warm-staging.json",
+    "path": "receipts/warm-staging.json",
+    "bytes": 386,
+    "sha256": "3244bcc454af3ad1d9ebfdec3913f8411a0972a518f7f5532d70ce3e4d70977c",
+    "originalBytes": 386,
+    "originalSha256": "3244bcc454af3ad1d9ebfdec3913f8411a0972a518f7f5532d70ce3e4d70977c",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/warm-summary.json",
+    "path": "receipts/warm-summary.json",
+    "bytes": 799,
+    "sha256": "59d2f797e6d482a97e54cd492ea4e3d1cf9830b18ed9d1cf224af0bc65af17d5",
+    "originalBytes": 799,
+    "originalSha256": "59d2f797e6d482a97e54cd492ea4e3d1cf9830b18ed9d1cf224af0bc65af17d5",
+    "compression": null
+  },
+  {
+    "sourcePath": "receipts/worker-metrics-2026-09-22T10-50-00Z.json",
+    "path": "receipts/worker-metrics-2026-09-22T10-50-00Z.json.gz",
+    "bytes": 885,
+    "sha256": "f722b3551a963c8828f95fdc766f4191e02205e32e2536f3d8e4fa926f892828",
+    "originalBytes": 17105,
+    "originalSha256": "250f8b38487b7ada26650d457ea18b3c8521c1fc6b982d3ec0655281867d529a",
+    "compression": "gzip"
+  },
+  {
+    "sourcePath": "receipts/worker-metrics-2026-09-22T10-58-41Z.json",
+    "path": "receipts/worker-metrics-2026-09-22T10-58-41Z.json.gz",
+    "bytes": 2643,
+    "sha256": "036cff970b95dc6b17f99f375d3acb50da9d68bcb534cbd7dd3b3cf34c043af1",
+    "originalBytes": 38442,
+    "originalSha256": "4739b959a842a956ef7d1b6fe3ffe1fb725903b8ce57b1637821578c0e8638d7",
+    "compression": "gzip"
+  }
+]

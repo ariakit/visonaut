@@ -1,0 +1,14 @@
+{
+  "startedAt": 1790076586933,
+  "completedAt": 1790076689260,
+  "mode": "unknown",
+  "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+  "bytes": 1182101421,
+  "milliseconds": 101500,
+  "counts": {
+    "get": 2,
+    "createMultipartUpload": 1,
+    "uploadPart": 141,
+    "complete": 1
+  }
+}

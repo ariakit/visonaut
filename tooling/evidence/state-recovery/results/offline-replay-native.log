@@ -1,0 +1,8 @@
+{"scenario":"githubStatusLocal","status":200,"passed":true,"durationMs":20,"d1":{"calls":67,"attemptedStatements":80,"statements":80,"rowsRead":220,"rowsWritten":70,"nativeDurationMs":1}}
+{"scenario":"atomicCommands","status":200,"passed":true,"durationMs":88,"d1":{"calls":355,"attemptedStatements":650,"statements":628,"rowsRead":2062,"rowsWritten":528,"nativeDurationMs":12}}
+{"scenario":"currentAndStaleUndo","status":200,"passed":true,"durationMs":73,"d1":{"calls":314,"attemptedStatements":729,"statements":729,"rowsRead":1883,"rowsWritten":716,"nativeDurationMs":11}}
+{"scenario":"rollbackHistory","status":200,"passed":true,"durationMs":84,"d1":{"calls":417,"attemptedStatements":743,"statements":721,"rowsRead":3447,"rowsWritten":555,"nativeDurationMs":16}}
+{"scenario":"acceptanceStatus","status":200,"passed":true,"durationMs":63,"d1":{"calls":281,"attemptedStatements":719,"statements":709,"rowsRead":1411,"rowsWritten":775,"nativeDurationMs":11}}
+{"scenario":"restoration","status":200,"passed":true,"durationMs":76,"d1":{"calls":334,"attemptedStatements":759,"statements":759,"rowsRead":2756,"rowsWritten":823,"nativeDurationMs":13}}
+{"scenario":"retentionRaces","status":200,"passed":true,"durationMs":7,"d1":{"calls":20,"attemptedStatements":20,"statements":19,"rowsRead":55,"rowsWritten":21,"nativeDurationMs":2}}
+{"scenario":"statusScenarios","status":200,"passed":true,"durationMs":18,"d1":{"calls":104,"attemptedStatements":124,"statements":124,"rowsRead":342,"rowsWritten":107,"nativeDurationMs":2}}

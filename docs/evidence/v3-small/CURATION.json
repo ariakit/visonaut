@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "scope": "Local curation checks only; no new hosted or browser run.",
+  "reconstructedOriginalFiles": 134,
+  "allOriginalFileHashesMatch": true,
+  "preparedSql": {
+    "integrityCheck": "ok",
+    "foreignKeyViolations": 0,
+    "captures": 7164,
+    "images": 3582,
+    "completedTasks": 3582
+  },
+  "credentialScan": {
+    "textFilesScanned": 143,
+    "scope": [
+      "all reconstructed original handoff files, including decompressed SQL, metadata, receipts, frozen source, and executable bundles",
+      "E01 receipts including decompressed Playwright results",
+      "E01 reproduction source"
+    ],
+    "patterns": ["privateKey", "githubCredential", "jwt", "signedUrl"],
+    "matches": {
+      "privateKey": 0,
+      "githubCredential": 0,
+      "jwt": 0,
+      "signedUrl": 0
+    },
+    "sourceAuthFields": {
+      "syntheticSessionToken": 1,
+      "syntheticAccountTokens": 3,
+      "passwordValues": 0
+    },
+    "syntheticValuesMatchGenerator": {
+      "generator": "tooling/v3/generate-base.mjs from original private drill source",
+      "sha256": "da13cb3aee399a68b4d9e3b78f9307f421a08ff8dd86c0ffba5f49ffd6536a2c",
+      "lines": [470, 482, 483, 484],
+      "valuesPrinted": false
+    },
+    "credentialNamedJsonFields": "Eight nonempty string fields are SHA-256 rotation proof digests; no token or secret value fields found.",
+    "result": "No real credential or private-key material found. Four deliberately invalid diagnostic tokens are retained for recovery sanitation."
+  },
+  "preparationControls": {
+    "corruptPackedInput": "rejected before destination creation",
+    "existingDestination": "rejected without overwrite"
+  },
+  "syntaxChecks": [
+    "Python AST parse",
+    "node --check E01 run.mjs",
+    "node --check E01 capture.spec.ts"
+  ],
+  "relativeMarkdownLinks": "all resolve",
+  "e01RecordedHarnessHashes": "both match"
+}

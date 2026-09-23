@@ -1,0 +1,125 @@
+{
+  "measuredAt": "2026-09-22",
+  "status": "selected runtime limits; complete workload/admission/launch readiness remains pending",
+  "limits": {
+    "webCpuMilliseconds": 240000,
+    "maximumDatabaseBytes": 2147483648,
+    "exportDeadlineMilliseconds": 420000,
+    "leaseMilliseconds": 720000
+  },
+  "previousRecommendation": "Supersedes HTTP-derived120sCPU/300sdeadline/600slease. RealqueueCPU is higher, and unknownmultipart wall needs more margin.",
+  "probe": {
+    "worker": "ariviso-v3-sql-stream-20260922",
+    "version": "1e110b40-a294-44a5-94cb-60bc1fcf70b5",
+    "event": "queue",
+    "batchSize": 1,
+    "maxConcurrency": 1,
+    "configuredCpuMillisecondsDuringMeasurement": 120000,
+    "sqlBytes": 1182101421,
+    "sqlDigest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "sourceFixture": {
+      "runs": 774,
+      "imageRows": 2772468,
+      "scope": "SQL-only imageownership lowerbound; no corresponding2.77mR2objects"
+    },
+    "samples": [
+      {
+        "avg": {
+          "sampleInterval": 1
+        },
+        "dimensions": {
+          "datetime": "2026-09-22T11:47:26Z",
+          "scriptName": "ariviso-v3-sql-stream-20260922",
+          "status": "success"
+        },
+        "max": {
+          "cpuTime": 66389749,
+          "memoryUsageBytes": 22239308,
+          "wallTime": 127168636,
+          "wasmMemoryBytes": 0
+        },
+        "quantiles": {
+          "cpuTimeP50": 66389748,
+          "cpuTimeP95": 66389748,
+          "cpuTimeP99": 66389748,
+          "memoryUsageBytesP50": 22239308,
+          "memoryUsageBytesP99": 22239308,
+          "wallTimeP50": 127168640,
+          "wallTimeP95": 127168640
+        },
+        "sum": {
+          "cpuTimeUs": 66389749,
+          "errors": 0,
+          "requests": 1,
+          "subrequests": 0
+        }
+      },
+      {
+        "avg": {
+          "sampleInterval": 1
+        },
+        "dimensions": {
+          "datetime": "2026-09-22T11:49:34Z",
+          "scriptName": "ariviso-v3-sql-stream-20260922",
+          "status": "success"
+        },
+        "max": {
+          "cpuTime": 35156691,
+          "memoryUsageBytes": 30718028,
+          "wallTime": 173064392,
+          "wasmMemoryBytes": 0
+        },
+        "quantiles": {
+          "cpuTimeP50": 35156692,
+          "cpuTimeP95": 35156692,
+          "cpuTimeP99": 35156692,
+          "memoryUsageBytesP50": 30718028,
+          "memoryUsageBytesP99": 30718028,
+          "wallTimeP50": 173064380,
+          "wallTimeP95": 173064380
+        },
+        "sum": {
+          "cpuTimeUs": 35156691,
+          "errors": 0,
+          "requests": 1,
+          "subrequests": 0
+        }
+      }
+    ],
+    "memoryLabel": "Memory values are max fields of the one sampled queue invocation; not a continuous peak-memory trace."
+  },
+  "sourceExport": {
+    "database_id": "74ad10df-191d-4815-90f9-79aa51eb4e41",
+    "polls": 12,
+    "export_ready_seconds": 28.095219167,
+    "download_seconds": 82.479778,
+    "total_seconds": 110.57500599999999,
+    "sql_bytes": 1182101421,
+    "sql_sha256": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "content_length_header": "1182101421",
+    "content_encoding_header": null,
+    "peak_rss_bytes": 110952448
+  },
+  "inference": {
+    "scaleFactorTo2GiB": 1.8166661589691127,
+    "worstQueueCpuAt2GiBSeconds": 120.60801031075349,
+    "worstQueueFullStreamAndVerifyWallAt2GiBSeconds": 314.40022426896485,
+    "conservativeSerializedExportPlusQueueWallAt2GiBSeconds": 515.2780956969714,
+    "cpuHeadroomSeconds": 119.39198968924651,
+    "leaseHeadroomSeconds": 204.72190430302862
+  },
+  "basis": [
+    "The queued known-size path reads source, streams to R2 with bounded hashing, then reads and hashes stored bytes.",
+    "The queued unknown-size path uses the same production helper, one reusable8MiBbuffer and141multipartparts, then reads and hashes stored bytes.",
+    "The controller validates jobID,streammode,status200,exactlengthandSHA256 for each durable receipt.",
+    "Cron must only enqueue because a5minutecronhas30sCPUcap; heavy work uses the queueconsumer with900smaximumwall.",
+    "The420s exporter deadline includes its polling, signedURLdownloadandstream backpressure. The720slease leaves space below900squeuewall."
+  ],
+  "limitations": [
+    "2GiB is a selected limit with linear measured headroom, not an actual2GiB input measurement.",
+    "One sample per queue mode cannot establish all future regional/network variance. Timeout/lease failures stay visible and recoverable.",
+    "No sustainedworkload, admissionquota, fullretainedobjectRTO, costbudget or launchpass is claimed.",
+    "The SQL ownershipfixture omits detail/history/snapshotrows; it is a lowerbound for the fullapplication database."
+  ],
+  "officialLimits": "https://developers.cloudflare.com/workers/platform/limits/"
+}

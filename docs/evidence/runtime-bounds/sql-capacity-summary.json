@@ -1,0 +1,89 @@
+{
+  "scope": "SQL-only lower-bound capacity fixture. No R2 image object copy, no sustained throughput or RTO/RPO claim.",
+  "image_rows": 2772468,
+  "runs": 774,
+  "captures_per_run": 3582,
+  "source_physical_bytes": 1804353536,
+  "restore_physical_bytes": 1737814016,
+  "sql_export_bytes": 1182101421,
+  "sql_export_sha256": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+  "source_restore_full_sql_hash_equal": true,
+  "source_restore_verification_equal": true,
+  "all_exported_image_rows_match_generator": true,
+  "logical_image_sha256": "4ea444997f07db5322d60b67b6b0b0467aead8f44e85790ae06f694ee9016d41",
+  "source_import_wall_seconds": 187.68355703353882,
+  "source_import_sql_ms": 101408.3857,
+  "source_import_rows_read": 2774908,
+  "source_import_rows_written": 13867998,
+  "source_import_cli_peak_rss_bytes": 1121239040,
+  "source_export": {
+    "database_id": "74ad10df-191d-4815-90f9-79aa51eb4e41",
+    "polls": 12,
+    "export_ready_seconds": 28.095219167,
+    "download_seconds": 82.479778,
+    "total_seconds": 110.57500599999999,
+    "sql_bytes": 1182101421,
+    "sql_sha256": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "content_length_header": "1182101421",
+    "content_encoding_header": null,
+    "peak_rss_bytes": 110952448
+  },
+  "restore_import": {
+    "database_id": "ab0adb72-62b0-4ce2-8e99-7972759da58e",
+    "sql_bytes": 1182101421,
+    "sql_sha256": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "prepared_seconds": 2.398066625,
+    "upload_required": true,
+    "upload_seconds": 122.94262233299999,
+    "elapsed_seconds": 372.50360075,
+    "polls": 71,
+    "peak_rss_bytes": 187564032,
+    "result": {
+      "final_bookmark": "00000002-0006b753-000050ee-b964b1e8b96de4169c98258c3bb7d002",
+      "num_queries": 2774119,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "ENAM",
+        "served_by_colo": "IAD",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 244220.7188
+        },
+        "duration": 244220.7188,
+        "changes": 2774028,
+        "last_row_id": 774,
+        "changed_db": true,
+        "size_after": 1737814016,
+        "rows_read": 14118456,
+        "rows_written": 13867998,
+        "num_tables": 59,
+        "total_attempts": 1
+      }
+    }
+  },
+  "restore_export": {
+    "database_id": "ab0adb72-62b0-4ce2-8e99-7972759da58e",
+    "polls": 14,
+    "export_ready_seconds": 33.581413,
+    "download_seconds": 91.057986083,
+    "total_seconds": 124.639404042,
+    "sql_bytes": 1182101421,
+    "sql_sha256": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+    "content_length_header": "1182101421",
+    "content_encoding_header": null,
+    "peak_rss_bytes": 111591424
+  },
+  "resources": {
+    "account_id": "b04f3af3f0f10a6b9481bc23ba974eca",
+    "location_hint": "enam",
+    "source": {
+      "name": "ariviso-v3-capacity-source-20260922",
+      "id": "74ad10df-191d-4815-90f9-79aa51eb4e41"
+    },
+    "restore": {
+      "name": "ariviso-v3-capacity-restore-20260922",
+      "id": "ab0adb72-62b0-4ce2-8e99-7972759da58e"
+    }
+  },
+  "resource_cleanup": "Resources retained for root evidence review and optional large-SQL Worker backup validation; only these two resources are within this agent benchmark scope."
+}

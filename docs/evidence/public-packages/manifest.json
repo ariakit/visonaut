@@ -1,0 +1,401 @@
+{
+  "createdAt": "2026-09-22T13:10:22.623965+00:00",
+  "scope": "Local public-package verification from the frozen uncommitted working tree. No publication, release readiness, npm scope ownership, OAuth or hosted status claim.",
+  "source": {
+    "baseCommit": "c8c465cedd8318b1bbe4b99baec1757ec02347c6",
+    "baseCommitIsInformational": true,
+    "capturedBefore": "2026-09-22T13:00:57.067933+00:00",
+    "capturedAfter": "2026-09-22T13:09:05.174642+00:00",
+    "fileCount": 43,
+    "changedDuringVerification": [],
+    "digestAlgorithm": "SHA-256 of UTF-8 JSON source.files sorted by key with compact separators",
+    "digest": "adb6ac9b7cfed5b08ed91e38f341c37ab018f3fc9e254c53cc450f6346249383",
+    "files": {
+      ".github/workflows/README.md": "6f92e77b896d1b06c0d4e388d9738218791030f085771ce8655cac08698c4454",
+      ".github/workflows/checks.yml": "4265cd8d0f3e86357a1e3ac1f890329c4ba0bdcaefc3d887180b109d583a5d31",
+      ".github/workflows/release.yml": "cf892ce4de9e4592421356ed37702c0897703c178517ad744b386d1f98343696",
+      ".github/workflows/scripts/packages.mjs": "70de900f773c9462a4f04e844586cbff643da758bed7f5fcf1f7728e3445f9b2",
+      ".github/workflows/scripts/packages.test.mjs": "8601813cc1afbdb5f20c23b2f391b32cb0fa472ec9c6ea0beb7a11b1e4002ec9",
+      "package.json": "087fb8699537a1d148a6b2cb01fcf7a255a1176fc7a98c963b3a4c78979aaf68",
+      "packages/cli/LICENSE": "c0b3619ef2aeca0cc5b44b312a0130e6febf019ecfb946771a04bd148eaa55aa",
+      "packages/cli/README.md": "958a363dfc7da26034bf79d1c9cb282210535922aa5b10ac2e932d5e4b1d28a6",
+      "packages/cli/package.json": "d84abfaef0f4f0d4e3240ccffbe8ae9a6e6ef953f110c56196304d86bbc9a8f0",
+      "packages/cli/src/bin.ts": "786fd8121c618df09a48f819c091e3ed3183be4f85ed0981c8e67a9499e1242e",
+      "packages/cli/src/errors.ts": "60372bdf2b90276060bc6611872e1531f2847038c6349ff508d5d0d0cce463d4",
+      "packages/cli/src/files.ts": "75d732eb84b0807ce1b96e267e698795924952ac527fc2a36443c30ca17cd399",
+      "packages/cli/src/http.ts": "2369e79db30296a8d88399ee9e1a7d392448124da72fcc85fb542c986fa2aa55",
+      "packages/cli/src/index.ts": "70143f6faced41e2b68ae68097ec23fc5269fa0f5ba5d85b98b2a7f8f7d7a682",
+      "packages/cli/test/binary.test.ts": "c37f128d55c776d1639527750960783c622d60f15e272c38432c2c79cce6a1ae",
+      "packages/cli/test/cli.test.ts": "36254793e3018bca7665426a4bb5f026f549e6fb41247486aa970b108e96aa50",
+      "packages/cli/test/declaration.test.ts": "52ae9b17d08ec55c3dcb65765b0096cd4ddd7e92abedbbead778478cddf36717",
+      "packages/cli/test/fixture.ts": "52a5740aab573438cff91350faa53b8cc7461f68b9f2335f01b30b9a7500e84e",
+      "packages/cli/test/retry.test.ts": "64c6c4c5469ada5e6bf341257bd793c2c0474a5df0c729acee3565fb8cefefa7",
+      "packages/cli/tsconfig.json": "23f2fc124862d4ec81acde56ab913b590fa17af0b95837de51dcbc0db374ce00",
+      "packages/cli/tsup.config.ts": "912a6dc6e7ab53ed42977fff2f751e77f845f42c1fc2f1b897f60fb3b2476bdd",
+      "packages/playwright/LICENSE": "82c3da4c9a559c869a48cf31be41df8a9a07252b28ca0f102bfa7afe8f0bfe54",
+      "packages/playwright/README.md": "de7bd478513f32e258f90d276d97c755432154e1078b99c69399bdd9a6b46947",
+      "packages/playwright/package.json": "9d52a5933edde23f2bdcdbefc07f50be5b71e0d8640ad441d83334b2c86374ef",
+      "packages/playwright/src/discovery.ts": "11e9c6fbe4e92593cdfd0c85c67f6274565b72c5e90cc6a36b36ca6823e26e32",
+      "packages/playwright/src/index.ts": "882899681d551ffb4f9ef46cc3bc980a5a4d9cf9cb5bfddeb1e932585765507c",
+      "packages/playwright/src/reporter.ts": "4ab916e1d4987863086f9be6cd0e66dcac02286eddd39089b6e67f186b37ceb9",
+      "packages/playwright/src/visual.ts": "dc311968651272e8c4c4026350b82891563f64972c2bfe49b7cd23e459a86c56",
+      "packages/playwright/test/clients.test.ts": "5aa963d7f3ab294c8d6e12079ca80bf6efa3395213d017f9b5e2e7cda18bd6e0",
+      "packages/playwright/tsconfig.json": "7fb047655810d78a357836f8ce12c9cd9c2c04b8e2f9df110b17f83467ffb3cf",
+      "packages/playwright/tsup.config.ts": "644cc8b83577a979ed885b7c6e2da15453923022bf36b1f214011d642b216f16",
+      "packages/protocol/README.md": "8a6cfabdb4e45776b377745bd8ac7b6654fddd6c7c1a9b381d0ce98e8faa6c1b",
+      "packages/protocol/package.json": "80c01cf79af5ddc2ddab80dd080e723c89f4854d34ecd001dbf8a6fd8a2bc0a3",
+      "packages/protocol/src/hash.ts": "31e8f9992d083952b395b4f39994c93ca3231c5cf6ffd208a4877ac889b1ea76",
+      "packages/protocol/src/index.ts": "65f10f41fb1ac4982549cde75bac56b694f9e0b89fac751667203321f442eafe",
+      "packages/protocol/src/types.ts": "2549f4a03ea729690e00fc2df91e0cef3b53ce71da33f9480ee9a95cf73521dd",
+      "packages/protocol/src/validate.ts": "30b13782c646039caa9af2f349a0e60c81f1a937db1b79fc270784b227d6c327",
+      "packages/protocol/test/protocol.test.ts": "952a92d52223852af7ac5494c6b3c26e35a7736e816a45449ab7219b1c749e8f",
+      "packages/protocol/tsconfig.json": "cc5a9d1daa7ac4e6a9665e86a3da2cab4ce71ea2b4096503da2c70f10d88d315",
+      "pnpm-lock.yaml": "cec439b57ffba441dde5d3e546db7c2eaadd81a2564a7d0e60e65e8b0eb4b14a",
+      "pnpm-workspace.yaml": "0e26c80778ae241df87017867a81a41cd9c99ed0ea927e8af4fa2ce845fdea99",
+      "tsconfig.json": "056bfe56ad1864924f6e428940d4f429b3d7579bfbbe0cc356ce0ab9d0d73bed",
+      "vitest.config.ts": "9617ee5ecfc7cae9c9d01c97e861c44075a4116333c66a936b7b03c1b0dfcb8a"
+    },
+    "verifiedAgainstRootAt": "2026-09-22T13:14:30.012016+00:00"
+  },
+  "runtime": {
+    "node": {
+      "version": "v24.18.0",
+      "sha256": "ee6fb0e015284d83a91e8ec5213f43a157f8a392b58555301682892ba928c04a"
+    },
+    "pnpm": {
+      "version": "12.5.1",
+      "sha256": "5536a147bd5fbbb969def2588333eebf5cb31a2784f433923275b5a64792256b"
+    },
+    "npm": {
+      "version": "12.0.1",
+      "sha256": "ad45eb51803ed27537cb76007d5a13bf01701ffd878ab5c4f7604a54fca42d05",
+      "cliSha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7"
+    },
+    "typescript": {
+      "version": "6.0.2",
+      "packageManifestSha256": "d9b8fb53c67c947fece83bcb73fa8512227ea6a12b110e096fdab8ecdc02b655"
+    },
+    "playwright": {
+      "version": "1.63.0",
+      "packageManifestSha256": "5587f932b8979b6889654b60e3c28aeb7ca0abbac00eec8c176c939a16149536"
+    },
+    "pngjs": {
+      "version": "7.0.0",
+      "packageManifestSha256": "85b17f2f852aece03e71edb4ed4d9fddf6a0a8f0b69ac75d7f00b6592d62d37c"
+    },
+    "tsup": {
+      "version": "8.5.1",
+      "packageManifestSha256": "420725303bff2abcaa95fa33d68b8f11cb974b640c8c0bae8c15863ed5125ec4"
+    },
+    "chrome": {
+      "version": "154.0.8037.44",
+      "platform": "macOS",
+      "architecture": "arm64"
+    }
+  },
+  "packages": [
+    {
+      "name": "ariviso",
+      "version": "0.1.0",
+      "filename": "ariviso-0.1.0.tgz",
+      "bytes": 14497,
+      "sha256": "fe1ebe3218280f29aac903b1c51c3ce4145d8519605ef0e5a4b8eef1e3d6be9e",
+      "integrity": "sha512-wHwMWouGRTn7TWr1WDemsBjlsnHwPV6h8oHMWvDGzLzHQ3cdgPKjpyGawJWnqhTEAUTsczKxw/3sDBmNqi/zjw==",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
+      },
+      "bin": {
+        "ariviso": "./dist/bin.js"
+      },
+      "engines": {
+        "node": ">=24.18.0 <25"
+      },
+      "dependencies": {},
+      "peerDependencies": {},
+      "devDependencies": {
+        "@ariviso/protocol": "0.1.0",
+        "@types/node": "24.13.6",
+        "tsup": "8.5.1",
+        "typescript": "npm:@typescript/typescript6@6.0.2",
+        "vitest": "5.0.1"
+      },
+      "fileListMatchesNpmDryRun": true,
+      "workspaceDevDependencyRewritten": "@ariviso/protocol: 0.1.0"
+    },
+    {
+      "name": "@ariviso/playwright",
+      "version": "0.1.0",
+      "filename": "ariviso-playwright-0.1.0.tgz",
+      "bytes": 16092,
+      "sha256": "87b4489bb643404a0b761237aac37e4ef35342bcd0fcb67729c4c5c11075734d",
+      "integrity": "sha512-HtZaJJeW5h1fSG93xUb2C4ReCirRkkww0J6Bw/hLgDybReeahTCgG6NF85MLIuv7MvJXx1jFxElrVySL4yvF/Q==",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js",
+          "default": "./dist/index.js"
+        },
+        "./reporter": {
+          "types": "./dist/reporter.d.ts",
+          "import": "./dist/reporter.js",
+          "default": "./dist/reporter.js"
+        }
+      },
+      "engines": {
+        "node": "24.18.0"
+      },
+      "dependencies": {
+        "pngjs": "^7.0.0"
+      },
+      "peerDependencies": {
+        "@playwright/test": "1.63.0"
+      },
+      "devDependencies": {
+        "@ariviso/protocol": "0.1.0",
+        "@playwright/test": "1.63.0",
+        "@types/node": "24.13.6",
+        "@types/pngjs": "6.0.5",
+        "tsup": "8.5.1",
+        "typescript": "npm:@typescript/typescript6@6.0.2",
+        "vitest": "5.0.1"
+      },
+      "fileListMatchesNpmDryRun": true,
+      "workspaceDevDependencyRewritten": "@ariviso/protocol: 0.1.0"
+    }
+  ],
+  "checks": {
+    "isolatedBuilds": 2,
+    "isolatedBuildOutputEqualsRootDist": true,
+    "npmPackDryRun": 2,
+    "productionAuditTarball": 2,
+    "allowlistedFilesPerPackage": 8,
+    "freshInstall": {
+      "pnpm": "12.5.1",
+      "packages": 10,
+      "reused": 0,
+      "downloaded": 10,
+      "scripts": "disabled",
+      "store": "isolated temporary directory",
+      "credentialConfig": "empty user and global npm files; child environment contains no inherited credentials"
+    },
+    "installedConsumerChecks": 11,
+    "typeModes": ["NodeNext", "Bundler"],
+    "declarationOptions": "TypeScript 6.0.2 strict, target ES2024, explicit Node types, no skipLibCheck",
+    "importModes": ["ESM", "Node 24 require", "ESM with source condition resolving dist"],
+    "cliExitCodes": {
+      "help": 0,
+      "unsupportedCommand": 2,
+      "missingCredential": 4,
+      "localPassedStatusText": 0,
+      "localNeedsReviewStatusJson": 3,
+      "localForbiddenStatus": 4,
+      "localInvalidProtocolStatus": 1
+    },
+    "localStatusFixtureRequests": 4,
+    "adapterBrowserSmoke": {
+      "scope": "Installed adapter and reporter, synthetic local page and provenance fields, no upload.",
+      "captures": 1,
+      "testRetry": 1,
+      "selectedPixels": [0, 128, 0, 255],
+      "dimensions": [32, 32],
+      "imageDigest": "740de9a9ad8cc8da944a4311d2a8aa5f436796d565971c3271fbdcc377b43ff8",
+      "producer": {
+        "name": "@ariviso/playwright",
+        "version": "0.1.0",
+        "nodeVersion": "24.18.0",
+        "playwrightVersion": "1.63.0"
+      },
+      "profile": {
+        "osImageDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "fontsDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "comparisonPolicyDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "comparisonEngineVersion": "1",
+        "browser": "chromium",
+        "browserVersion": "154.0.8037.44",
+        "viewport": {
+          "width": 32,
+          "height": 32
+        },
+        "deviceScaleFactor": 1,
+        "locale": "en-US",
+        "timezone": "UTC",
+        "reducedMotion": "reduce",
+        "colorScheme": "light",
+        "contrast": "no-preference",
+        "forcedColors": "none",
+        "animationPolicy": "disabled",
+        "captureOptions": {
+          "type": "png",
+          "animations": "disabled",
+          "caret": "hide",
+          "scale": "css",
+          "fullPage": false,
+          "omitBackground": false
+        }
+      },
+      "browserTestClassification": "One intentional first-attempt failure followed by success; Playwright reports one flaky test by design."
+    },
+    "releaseGuardTests": {
+      "passed": 4,
+      "failed": 0
+    }
+  },
+  "harnessNotes": [
+    "The first isolated build followed a root protocol symlink and added absolute source-path comments. The isolated dependency link was corrected to the copied protocol. Final builds match every root dist byte and contain no local absolute paths. Only the final rebuilt tarballs are retained.",
+    "The first TypeScript consumer command omitted explicit Node types. TypeScript 6 requires this consumer setting for Playwright declarations. The final NodeNext and Bundler checks pass with --types node and without skipLibCheck.",
+    "npm 12 emits a warning for the pnpm-only manage-package-manager-versions environment setting in dry-run and release-guard probes; both return success.",
+    "The browser smoke intentionally fails once after a blue capture, then succeeds with green. Playwright reports one flaky test by design. The final manifest contains only the green retry."
+  ],
+  "limitations": [
+    "The source is an uncommitted working-tree snapshot. The release workflow must regenerate and bind audited tarballs to the final release commit after readiness gates pass.",
+    "The status server and browser provenance fields are explicit local fixtures. No remote authentication, upload/finalize, publication, or live-status claim is made.",
+    "Only the pinned Node 24.18.0, pnpm 12.5.1, TypeScript 6.0.2 and Playwright 1.63.0 environment was tested.",
+    "A successful package verification does not complete the other launch gates."
+  ],
+  "sourceIdentityCorrection": {
+    "removedPath": "packages/playwright/test-results/.last-run.json",
+    "removedSha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea",
+    "reason": "Ignored test output was incorrectly included in the original source identity map. It is not a source input.",
+    "originalFileCount": 44,
+    "originalDigest": "331c07f1472f5b281cf57650265d3a605209dca929f4b6b3d9b1add292eee6d0",
+    "correctedFileCount": 43,
+    "correctedDigest": "adb6ac9b7cfed5b08ed91e38f341c37ab018f3fc9e254c53cc450f6346249383",
+    "effect": "Source inputs and tarball bytes are unchanged. The completed tests were not rerun for this documentation correction. All 43 remaining hashes were reverified against the root working tree."
+  },
+  "runtimePathNote": "Machine-specific executable paths were omitted. Original version and executable/package-manifest hashes are preserved.",
+  "originalResultRecords": [
+    {
+      "path": "source-before.json",
+      "bytes": 4740,
+      "sha256": "182b0d04df78278f0aa61701a49b2a9ec44af0f5ba39f4bdfe6006f97de0b2c2"
+    },
+    {
+      "path": "source-after.json",
+      "bytes": 4740,
+      "sha256": "80b49158c58fbd42d51a9dc8e55b8226621f4995d1b7ed1d31c4a42d1e245dc9"
+    },
+    {
+      "path": "built-output.json",
+      "bytes": 1249,
+      "sha256": "314c8536659955f6d7ec929bcb7d07883383b7b892bb05c06306fc10f4ab160f"
+    },
+    {
+      "path": "package-audit.json",
+      "bytes": 7071,
+      "sha256": "4d0091ab244b07e2a60b18b2674142cfe144eb6fa95cf4a559300141f3967ec0"
+    },
+    {
+      "path": "clean-install.log",
+      "bytes": 657,
+      "sha256": "c27082293afc3998b74fa92c8345b9790e4b392dffaf7e29c0674d87cc75010a"
+    },
+    {
+      "path": "consumer/package.json",
+      "bytes": 421,
+      "sha256": "f24ec0f3489ef24e1369c798debc0d5c5baeb94c0ae92778890e21999e105bfa"
+    },
+    {
+      "path": "consumer/pnpm-lock.yaml",
+      "bytes": 7995,
+      "sha256": "1ae70b32f2ae820f118e2dce2d8e314f34ef4a710931ad8c3b2b64cb3f7d58e5"
+    },
+    {
+      "path": "consumer-checks.json",
+      "bytes": 6238,
+      "sha256": "34e2b0c8b47c31730fca8fd4de0ff91f4e812ae97e7cc87bdf62a7382189d5bf"
+    },
+    {
+      "path": "installed-playwright-smoke.log",
+      "bytes": 1305,
+      "sha256": "fac12ea955e71c6440c806b4faca8076832d8e126e38a70c25dfadb38ff1d1fa"
+    },
+    {
+      "path": "installed-capture-validation.json",
+      "bytes": 1473,
+      "sha256": "fead1ab1f024ff3c084e72770b4cfbfa0581408f1834eae98d56e0bdd56238fc"
+    },
+    {
+      "path": "consumer/capture-evidence/manifest.json",
+      "bytes": 2666,
+      "sha256": "c5697bdbc44ade8e7a695c1aadde723fda33ad811d9b6f0322a9ee1945a3dbf2"
+    },
+    {
+      "path": "consumer/playwright-result.json",
+      "bytes": 14277,
+      "sha256": "7be637f736ca5f564b35f0332bfe050341618c2abf94d33cebaa719e3da0dc3a"
+    },
+    {
+      "path": "release-guard-tests.log",
+      "bytes": 1484,
+      "sha256": "a801d3dfd6718fd454b7315ba12b429f411d3431f80a16ee37b5e478efa85a34"
+    },
+    {
+      "path": "cli-build.log",
+      "bytes": 751,
+      "sha256": "fa1a19597b04a54fd3ba9a2fb5c43a02b0240f77ef039c8ce5fae8f34ee1d79c"
+    },
+    {
+      "path": "playwright-build.log",
+      "bytes": 771,
+      "sha256": "8cd96ac12f1b443aa1733c02666775e7984e1d1d4c35d710fb7471019b46b3cd"
+    },
+    {
+      "path": "cli-dry-run.log",
+      "bytes": 1306,
+      "sha256": "b406abaf2ca147e2409d64537ee2ab55426c5eac870400561cc1a2c3cebccf29"
+    },
+    {
+      "path": "playwright-dry-run.log",
+      "bytes": 1372,
+      "sha256": "092a663a44debe1d56535ad6fc905818d0a6d23c722f1015b7b33f8a48e941fd"
+    },
+    {
+      "path": "cli-pack.log",
+      "bytes": 230,
+      "sha256": "bab80ca17c85fcab45366d08e0769b554cd29fac90c18a17d690f97fffd172d3"
+    },
+    {
+      "path": "playwright-pack.log",
+      "bytes": 265,
+      "sha256": "ae2dbe4f3bb39059e3daada13ea8020407b671a09d1c515f8843aff63a6d75b1"
+    }
+  ],
+  "originalResultRecordScope": "The paths in originalResultRecords identify members of the external ariviso-release-verification-r3 capture bundle, not repository-relative links. Every original byte count and hash is preserved, including the original 44-file source snapshots. Some curated files below have new hashes due to portability and formatting changes.",
+  "originalManifest": {
+    "captureBundle": "ariviso-release-verification-r3",
+    "filename": "manifest.json",
+    "bytes": 16618,
+    "sha256": "ba7f31a607b27251e024adbdf414ce0f39f4cc613d3a58747c50d0556f35964e"
+  },
+  "tarballAvailability": "Tarballs are retained outside the repository in the original local verification bundle. Package filenames and checksum records are identifiers, not repository-relative links. These are not final commit-bound CI release artifacts.",
+  "repositoryRecords": [
+    {
+      "path": "REPORT.md",
+      "bytes": 6882,
+      "sha256": "46472661a7a577721105868db0c735186408f460b648d6ab9be1a504d9e36d65"
+    },
+    {
+      "path": "package-audit.json",
+      "bytes": 7071,
+      "sha256": "4d0091ab244b07e2a60b18b2674142cfe144eb6fa95cf4a559300141f3967ec0"
+    },
+    {
+      "path": "consumer-checks.json",
+      "bytes": 5959,
+      "sha256": "3d21a432eacaac845271b2f2c7f6114fb0c9ae0b16c466892662d611d8c3e8b1"
+    },
+    {
+      "path": "installed-capture-validation.json",
+      "bytes": 1441,
+      "sha256": "1bd74872786a4beab7be59963a806517bd0832aaa93cf980357d9ca55b7a9b48"
+    },
+    {
+      "path": "SHA256SUMS",
+      "bytes": 197,
+      "sha256": "05f885e1f6b3b8a6413c3af54b076b4dc3143bd75d027b18403d34cabb84398b"
+    }
+  ]
+}

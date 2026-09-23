@@ -1,0 +1,12 @@
+*
+!apps/
+!apps/compare/
+!apps/compare/container/
+!apps/compare/container/Dockerfile
+!apps/compare/container/package.json
+!apps/compare/container/package-lock.json
+!apps/compare/container/server.mjs
+!packages/
+!packages/compare/
+!packages/compare/src/
+!packages/compare/src/**

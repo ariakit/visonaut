@@ -1,0 +1,246 @@
+{
+  "auditTarball": "passed for both exact tarballs",
+  "npmPackDryRun": "passed for both packages",
+  "sourceState": "Uncommitted working-tree snapshot; these are local verification artifacts, not release-workflow commit-bound artifacts.",
+  "packages": [
+    {
+      "name": "ariviso",
+      "version": "0.1.0",
+      "filename": "ariviso-0.1.0.tgz",
+      "bytes": 14497,
+      "sha256": "fe1ebe3218280f29aac903b1c51c3ce4145d8519605ef0e5a4b8eef1e3d6be9e",
+      "integrity": "sha512-wHwMWouGRTn7TWr1WDemsBjlsnHwPV6h8oHMWvDGzLzHQ3cdgPKjpyGawJWnqhTEAUTsczKxw/3sDBmNqi/zjw==",
+      "files": [
+        {
+          "path": "LICENSE",
+          "size": 1059,
+          "mode": 420
+        },
+        {
+          "path": "README.md",
+          "size": 6328,
+          "mode": 420
+        },
+        {
+          "path": "dist/bin.d.ts",
+          "size": 20,
+          "mode": 420
+        },
+        {
+          "path": "dist/bin.js",
+          "size": 149,
+          "mode": 493
+        },
+        {
+          "path": "dist/chunk-O4ANNNM6.js",
+          "size": 39062,
+          "mode": 420
+        },
+        {
+          "path": "dist/index.d.ts",
+          "size": 515,
+          "mode": 420
+        },
+        {
+          "path": "dist/index.js",
+          "size": 69,
+          "mode": 420
+        },
+        {
+          "path": "package.json",
+          "size": 895,
+          "mode": 420
+        }
+      ],
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
+      },
+      "bin": {
+        "ariviso": "./dist/bin.js"
+      },
+      "engines": {
+        "node": ">=24.18.0 <25"
+      },
+      "dependencies": {},
+      "peerDependencies": {},
+      "devDependencies": {
+        "@ariviso/protocol": "0.1.0",
+        "@types/node": "24.13.6",
+        "tsup": "8.5.1",
+        "typescript": "npm:@typescript/typescript6@6.0.2",
+        "vitest": "5.0.1"
+      },
+      "packedFiles": {
+        "LICENSE": {
+          "bytes": 1059,
+          "mode": "0o644",
+          "sha256": "c0b3619ef2aeca0cc5b44b312a0130e6febf019ecfb946771a04bd148eaa55aa"
+        },
+        "dist/bin.js": {
+          "bytes": 149,
+          "mode": "0o755",
+          "sha256": "ea58122245ee6a72fff20163fb8472da3925592a93f958029e8271b127467399"
+        },
+        "dist/chunk-O4ANNNM6.js": {
+          "bytes": 39062,
+          "mode": "0o644",
+          "sha256": "9c080d7474a8bbb2d278b2b597e93855200d1e69daad211c1f09771e4aca8248"
+        },
+        "dist/index.js": {
+          "bytes": 69,
+          "mode": "0o644",
+          "sha256": "28503fa589b8e060aa3bc1232d5ff4bac3d237d0e9ba269b0d61c2b551ee0bff"
+        },
+        "package.json": {
+          "bytes": 888,
+          "mode": "0o644",
+          "sha256": "753962104ab27c6ca5f951ba7b02ddaf293f6bfd4d4592a6f3175e8cefabe01f"
+        },
+        "README.md": {
+          "bytes": 6328,
+          "mode": "0o644",
+          "sha256": "958a363dfc7da26034bf79d1c9cb282210535922aa5b10ac2e932d5e4b1d28a6"
+        },
+        "dist/bin.d.ts": {
+          "bytes": 20,
+          "mode": "0o644",
+          "sha256": "a59c47872b71f12589942892464e764c0db350c20b72228645615cc36e0a0725"
+        },
+        "dist/index.d.ts": {
+          "bytes": 515,
+          "mode": "0o644",
+          "sha256": "b99e6d5af289abe420a4e4f47a2c9611795a6d27236ef214470f37dc48b0cce1"
+        }
+      },
+      "fileListMatchesNpmDryRun": true,
+      "workspaceDevDependencyRewritten": "@ariviso/protocol: 0.1.0"
+    },
+    {
+      "name": "@ariviso/playwright",
+      "version": "0.1.0",
+      "filename": "ariviso-playwright-0.1.0.tgz",
+      "bytes": 16092,
+      "sha256": "87b4489bb643404a0b761237aac37e4ef35342bcd0fcb67729c4c5c11075734d",
+      "integrity": "sha512-HtZaJJeW5h1fSG93xUb2C4ReCirRkkww0J6Bw/hLgDybReeahTCgG6NF85MLIuv7MvJXx1jFxElrVySL4yvF/Q==",
+      "files": [
+        {
+          "path": "LICENSE",
+          "size": 1064,
+          "mode": 420
+        },
+        {
+          "path": "README.md",
+          "size": 6406,
+          "mode": 420
+        },
+        {
+          "path": "dist/index.d.ts",
+          "size": 909,
+          "mode": 420
+        },
+        {
+          "path": "dist/index.js",
+          "size": 13803,
+          "mode": 420
+        },
+        {
+          "path": "dist/reporter.d.ts",
+          "size": 1176,
+          "mode": 420
+        },
+        {
+          "path": "dist/reporter.js",
+          "size": 33534,
+          "mode": 420
+        },
+        {
+          "path": "dist/types-B6qrLc7U.d.ts",
+          "size": 3610,
+          "mode": 420
+        },
+        {
+          "path": "package.json",
+          "size": 1233,
+          "mode": 420
+        }
+      ],
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "import": "./dist/index.js",
+          "default": "./dist/index.js"
+        },
+        "./reporter": {
+          "types": "./dist/reporter.d.ts",
+          "import": "./dist/reporter.js",
+          "default": "./dist/reporter.js"
+        }
+      },
+      "engines": {
+        "node": "24.18.0"
+      },
+      "dependencies": {
+        "pngjs": "^7.0.0"
+      },
+      "peerDependencies": {
+        "@playwright/test": "1.63.0"
+      },
+      "devDependencies": {
+        "@ariviso/protocol": "0.1.0",
+        "@playwright/test": "1.63.0",
+        "@types/node": "24.13.6",
+        "@types/pngjs": "6.0.5",
+        "tsup": "8.5.1",
+        "typescript": "npm:@typescript/typescript6@6.0.2",
+        "vitest": "5.0.1"
+      },
+      "packedFiles": {
+        "LICENSE": {
+          "bytes": 1064,
+          "mode": "0o644",
+          "sha256": "82c3da4c9a559c869a48cf31be41df8a9a07252b28ca0f102bfa7afe8f0bfe54"
+        },
+        "dist/index.js": {
+          "bytes": 13803,
+          "mode": "0o644",
+          "sha256": "cd401d2a8f2d486123140ad0da9a5905f0c3730cda4daee3505534a6a6e2f1ba"
+        },
+        "dist/reporter.js": {
+          "bytes": 33534,
+          "mode": "0o644",
+          "sha256": "bd951ab61d95c68fed93672cff3bf27554d99f20c8a69460d4cd31f73a21e485"
+        },
+        "package.json": {
+          "bytes": 1226,
+          "mode": "0o644",
+          "sha256": "32cdef438638d050904b120dacb2ff96b72059919d67cc25ca61d63d96dea990"
+        },
+        "README.md": {
+          "bytes": 6406,
+          "mode": "0o644",
+          "sha256": "de7bd478513f32e258f90d276d97c755432154e1078b99c69399bdd9a6b46947"
+        },
+        "dist/index.d.ts": {
+          "bytes": 909,
+          "mode": "0o644",
+          "sha256": "ae23d90ade148e9be2dbf1d1f94c06346199c7f922a1b50f236ccbb223dc5dad"
+        },
+        "dist/reporter.d.ts": {
+          "bytes": 1176,
+          "mode": "0o644",
+          "sha256": "f26aaf800b3f36e2d445209e0474fb22ed77b252241eedcc2569112f0d808df1"
+        },
+        "dist/types-B6qrLc7U.d.ts": {
+          "bytes": 3610,
+          "mode": "0o644",
+          "sha256": "c1471404a8e870c6c3a0bfd00f9b2c701a10305145ed3d7687c08c3ff0707bfd"
+        }
+      },
+      "fileListMatchesNpmDryRun": true,
+      "workspaceDevDependencyRewritten": "@ariviso/protocol: 0.1.0"
+    }
+  ]
+}

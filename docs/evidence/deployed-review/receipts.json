@@ -1,0 +1,676 @@
+{
+  "preflight": {
+    "browserVersion": "154.0.8037.44",
+    "state": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 15,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 5,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "targetId": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+    "ready": true,
+    "authentication": "synthetic diagnostic session; not OAuth evidence"
+  },
+  "reject-undo": {
+    "before": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 15,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 5,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "commands": [
+      {
+        "status": 200,
+        "commandId": "33e52a79-f8f3-4962-8ca9-c4ede8fb8cd0",
+        "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+        "verdict": "rejected",
+        "targets": [
+          {
+            "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+            "expectedRevision": 5
+          }
+        ],
+        "selection": {
+          "itemKey": "synthetic/second",
+          "variantKey": "chromium-light"
+        },
+        "expectedBaselineRevision": 1,
+        "expectedPromotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def"
+      },
+      {
+        "status": 200,
+        "commandId": "347a9fb4-3143-4bc0-8fcd-e538c8918919",
+        "expectedBaselineRevision": 1
+      }
+    ],
+    "errors": ["Review state did not restore the expected verdicts and identities."],
+    "cleanup": null,
+    "attemptedCommand": {
+      "commandId": "33e52a79-f8f3-4962-8ca9-c4ede8fb8cd0",
+      "targets": [
+        {
+          "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+          "expectedRevision": 5
+        }
+      ],
+      "verdict": "rejected"
+    },
+    "rejected": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "rejected",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 17,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 6,
+              "verdict": "rejected",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "afterCleanup": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 19,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 7,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "validation": {
+      "passed": true,
+      "browserRejectStatus": 200,
+      "browserUndoStatus": 200,
+      "cleanupApiUsed": false,
+      "targetRevision": [5, 6, 7],
+      "liveRunRevision": [15, 17, 19],
+      "comparisonIdUnchanged": true,
+      "baselineUnchanged": true,
+      "promotionUnchanged": true,
+      "otherRowUnchanged": true,
+      "bothApproved": true,
+      "initialHarnessAssertion": "The first checker incorrectly required the live run revision to remain constant. It is expected to advance for review commands. All remaining before/after fields match after the selected row revision increases by2. The original raw result is retained."
+    }
+  },
+  "conflict": {
+    "before": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 19,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 7,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "commands": [
+      {
+        "actor": "second-review-session",
+        "status": 200,
+        "commandId": "e03d8659-b112-4a96-b776-cc051af958f5",
+        "verdict": "rejected",
+        "targets": [
+          {
+            "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+            "expectedRevision": 7
+          }
+        ],
+        "expectedBaselineRevision": 1
+      },
+      {
+        "actor": "stale-browser",
+        "status": 409,
+        "commandId": "bf168d8a-5c79-47d2-a4b5-3352ebb6e504",
+        "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+        "verdict": "rejected",
+        "targets": [
+          {
+            "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+            "expectedRevision": 7
+          }
+        ],
+        "selection": {
+          "itemKey": "synthetic/second",
+          "variantKey": "chromium-light"
+        },
+        "expectedBaselineRevision": 1,
+        "expectedPromotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def"
+      },
+      {
+        "actor": "second-review-session",
+        "action": "undo",
+        "commandId": "6809bf78-e2be-4738-8cee-548e4469c6da",
+        "undoes": "e03d8659-b112-4a96-b776-cc051af958f5",
+        "status": 200
+      }
+    ],
+    "errors": [],
+    "secondarySessionIdentity": "same synthetic GitHub identity, separate review session",
+    "afterActor": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "rejected",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 21,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 8,
+              "verdict": "rejected",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "afterConflict": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "rejected",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 21,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 8,
+              "verdict": "rejected",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "conflictMessage": "Conflict. A target changed or belongs to another comparison. Updated by 3068563.\nRefresh current state",
+    "refreshed": true,
+    "after": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 23,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 9,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "restored": true
+  },
+  "image-recovery": {
+    "before": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 23,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 9,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "imagePath": "/images/03151384-7e60-4b4e-b05b-6f351faf5301",
+    "blockedImageRequests": 1,
+    "unexpectedCommands": [],
+    "errors": [],
+    "failedState": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 23,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 9,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "after": {
+      "run": {
+        "id": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+        "kind": "pull_request",
+        "status": "passed",
+        "testedSha": "b68da87fd96aee172a1fa691c5b0cbea9f444d42",
+        "attempt": 3
+      },
+      "comparisonId": "2ad5f602-7769-4a38-999a-a51db3689329",
+      "comparisonRevision": 23,
+      "baselineRevision": 1,
+      "promotionId": "promotion-d6a95e35aed3f340f30a4c5df61418e1238ba553856fffd3acd488d5caf45def",
+      "archived": false,
+      "reviewReady": true,
+      "items": [
+        {
+          "key": "synthetic/second",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:204092431315a761147c665b49382d8d41a32e662b4ace617607d4521085a6f6",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 9,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "d2d8ba60-8a61-4243-aa80-1c56cf2793e6",
+              "candidateId": "03151384-7e60-4b4e-b05b-6f351faf5301",
+              "diffId": "9bbf9ad2dee908c854b54ed726757697526deab9a990a42fd084f7ee5f033b35"
+            }
+          ]
+        },
+        {
+          "key": "synthetic/first",
+          "variants": [
+            {
+              "id": "2ad5f602-7769-4a38-999a-a51db3689329:7f114089-e7e9-41be-bb3a-977d5fa88eec:dd6daf357130b3c46070eecf97e4fd3681048ef9d5cba7d23b3b46a252554567",
+              "key": "chromium-light",
+              "kind": "changed",
+              "revision": 1,
+              "verdict": "approved",
+              "source": "human",
+              "referenceId": "1db8fcc0-28e5-424e-a520-d7e402f7f3da",
+              "candidateId": "0c731008-044c-4c64-9ff2-100daeceeeb3",
+              "diffId": "341b7da5be950fb86aa96a94e1565d1621f93fd63adf4823da661c3280962901"
+            }
+          ]
+        }
+      ]
+    },
+    "restored": true,
+    "rejectEnabled": true,
+    "imageDimensions": [
+      {
+        "label": "Reference",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      },
+      {
+        "label": "New image",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      },
+      {
+        "label": "Pixel diff \u00b7 red pixels changed",
+        "width": 160,
+        "height": 120,
+        "complete": true
+      }
+    ]
+  }
+}

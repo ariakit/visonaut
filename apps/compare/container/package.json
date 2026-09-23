@@ -1,0 +1,14 @@
+{
+  "name": "@visonaut/compare-container",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test server.test.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.35.4"
+  },
+  "engines": {
+    "node": "24.18.0"
+  }
+}

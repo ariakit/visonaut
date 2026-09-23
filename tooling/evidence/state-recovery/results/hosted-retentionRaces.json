@@ -1,0 +1,157 @@
+{
+  "scenario": "retentionRaces",
+  "prefix": "hosted1-retentionraces",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "deployment": {
+    "id": "5073224a-6204-461a-b768-178ec22339f6",
+    "tag": "",
+    "timestamp": "2026-09-22T14:01:29.591747Z"
+  },
+  "startedAt": "2026-09-22T14:06:53.920Z",
+  "completedAt": "2026-09-22T14:07:01.489Z",
+  "durationMs": 7569,
+  "passed": true,
+  "result": {
+    "injectedClock": 2592000100,
+    "boundary": "synthetic retained-run rows; exact native D1 lease/pin algorithms plus native R2 bytes",
+    "guards": [
+      "promotion-first",
+      "expired promotion pin",
+      "GC-first",
+      "late rollback refusal",
+      "stale deletion token",
+      "rollback-first"
+    ]
+  },
+  "events": [
+    {
+      "name": "injected 30-day elapsed clock with expired promotion lease",
+      "wallTime": "2026-09-22T14:06:55.353Z",
+      "now": 2592000100
+    },
+    {
+      "name": "injected GC pause after native claim and before R2 delete",
+      "wallTime": "2026-09-22T14:06:58.096Z",
+      "runId": "hosted1-retentionraces-gc-first",
+      "latePromotion": false,
+      "lateRollback": "refused"
+    }
+  ],
+  "assertions": [
+    {
+      "message": "promotion obtains native retained-byte lease",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "message": "expired promotion lease still pins bytes against GC",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "stale owner cannot release promotion pin",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "fresh owner recovers expired promotion lease",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "message": "promotion-first R2 bytes remain",
+      "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "passed": true
+    },
+    {
+      "message": "GC becomes eligible only after explicit promotion settlement",
+      "passed": true
+    },
+    {
+      "message": "GC wins native claim",
+      "passed": true
+    },
+    {
+      "message": "GC-first blocks late promotion",
+      "actual": false,
+      "expected": false,
+      "passed": true
+    },
+    {
+      "message": "GC-first refuses late rollback reference",
+      "passed": true
+    },
+    {
+      "message": "new deletion token recovers expired native lease",
+      "passed": true
+    },
+    {
+      "message": "stale deletion token cannot settle",
+      "actual": false,
+      "expected": false,
+      "passed": true
+    },
+    {
+      "message": "native R2 object was deleted",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "current token settles deleted bytes",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "message": "existing rollback pin blocks GC",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "message": "rollback R2 bytes remain",
+      "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+      "passed": true
+    },
+    {
+      "message": "released rollback pin permits GC",
+      "passed": true
+    }
+  ],
+  "d1": {
+    "calls": 20,
+    "attemptedStatements": 20,
+    "statements": 19,
+    "rowsRead": 55,
+    "rowsWritten": 21,
+    "nativeDurationMs": 6.835699999999999
+  },
+  "r2": {
+    "puts": 3,
+    "gets": 2,
+    "deletes": 1,
+    "bytesWritten": 210
+  },
+  "boundaries": {
+    "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+    "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+    "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+    "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+    "clock": "explicit injected logical clocks; wall time measured separately",
+    "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+    "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+  },
+  "controller": {
+    "durationMs": 7767.888083000027,
+    "httpStatus": 200,
+    "ray": "a3f1df72fa87625e-GRU",
+    "date": "Tue, 22 Sep 2026 14:07:01 GMT"
+  }
+}

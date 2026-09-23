@@ -1,0 +1,26 @@
+{
+  "nativeQueueStream": "passed",
+  "expected": {
+    "bytes": 9437195,
+    "digest": "237ae5c915ff4518c8127537a88800becd3531c6ff5ecb27074cf633678037dc"
+  },
+  "modes": [
+    {
+      "mode": "known",
+      "counts": {
+        "get": 2,
+        "put": 1
+      }
+    },
+    {
+      "mode": "unknown",
+      "counts": {
+        "get": 2,
+        "createMultipartUpload": 1,
+        "uploadPart": 2,
+        "complete": 1
+      }
+    }
+  ],
+  "failedSourceRecorded": true
+}

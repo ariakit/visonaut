@@ -1,0 +1,179 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "visonaut-preview-compare",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-22",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true,
+    },
+  },
+  "limits": {
+    "cpu_ms": 30000,
+  },
+  "rules": [
+    {
+      "type": "CompiledWasm",
+      "globs": ["**/*.wasm"],
+      "fallthrough": true,
+    },
+  ],
+  "vars": {
+    "VISONAUT_CODEC_BACKEND": "worker",
+  },
+  "containers": [
+    {
+      "class_name": "ComparisonContainer",
+      "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+      "max_instances": 1,
+      "instance_type": "basic",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+  },
+  "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "visonaut-preview",
+      "database_id": "395b539c-c423-4ce4-887c-a5792792a63b",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "visonaut-preview-images",
+    },
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "COMPARISONS",
+        "queue": "visonaut-preview-comparisons",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "visonaut-preview-comparisons",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_concurrency": 1,
+        "max_retries": 5,
+        "dead_letter_queue": "visonaut-preview-dead-letter",
+      },
+    ],
+  },
+  "triggers": {
+    "crons": ["*/5 * * * *"],
+  },
+  "preview_urls": false,
+  "env": {
+    "production": {
+      "vars": {
+        "VISONAUT_CODEC_BACKEND": "worker",
+      },
+      "containers": [
+        {
+          "class_name": "ComparisonContainer",
+          "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+      },
+      "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "visonaut-production",
+          "database_id": "15fcd402-dccb-4359-a1ce-280ff67ca596",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "IMAGES",
+          "bucket_name": "visonaut-production-images",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "visonaut-production-comparisons",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "visonaut-production-comparisons",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "visonaut-production-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "visonaut-compare",
+    },
+    "diagnostics": {
+      "vars": {
+        "VISONAUT_CODEC_BACKEND": "container",
+      },
+      "containers": [
+        {
+          "class_name": "ComparisonContainer",
+          "image": "registry.cloudflare.com/b04f3af3f0f10a6b9481bc23ba974eca/visonaut-compare@sha256:1e66a2ca2e144fe4e5a2526e70c03624b5bf9fd2f73a99e34023ac99fd9840a3",
+          "max_instances": 1,
+          "instance_type": "basic",
+        },
+      ],
+      "durable_objects": {
+        "bindings": [{ "name": "CODEC_CONTAINER", "class_name": "ComparisonContainer" }],
+      },
+      "migrations": [{ "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] }],
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "visonaut-diagnostics",
+          "database_id": "6d68da10-2754-433f-99d1-fdfc080dfe11",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "IMAGES",
+          "bucket_name": "visonaut-diagnostics-images",
+        },
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "COMPARISONS",
+            "queue": "visonaut-diagnostics-comparisons",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "visonaut-diagnostics-comparisons",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 5,
+            "dead_letter_queue": "visonaut-diagnostics-dead-letter",
+          },
+        ],
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"],
+      },
+      "name": "visonaut-diagnostics-compare",
+    },
+  },
+}

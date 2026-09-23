@@ -1,0 +1,18 @@
+[
+  {
+    "app": "ariviso",
+    "conclusion": "success",
+    "details_url": "https://ariviso-diagnostics.ariakit.workers.dev/runs/f308fcb5-145e-4019-b192-721b32b2afc1",
+    "head_sha": "24f508cc65c91867d747a8046d4aef6348418ced",
+    "id": 106695088379,
+    "name": "Ariviso",
+    "output": {
+      "annotations_count": 0,
+      "annotations_url": "https://api.github.com/repos/ariakit/ariviso-diagnostics/check-runs/106695088379/annotations",
+      "summary": "Sign in to Ariviso to view this run.",
+      "text": null,
+      "title": "Visual review passed"
+    },
+    "status": "completed"
+  }
+]

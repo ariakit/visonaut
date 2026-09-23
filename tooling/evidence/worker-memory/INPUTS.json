@@ -1,0 +1,10 @@
+{
+  "archive": "frozen-evidence.tar.gz",
+  "sha256": "6e95b8bdc4190740061c56ecb79cacdef0aa99a00f1de31a04d451fff27ffa9c",
+  "bytes": 22288,
+  "tarBytes": 389120,
+  "files": 15,
+  "originalBytes": 372351,
+  "normalization": "Sorted regular-file paths, uid/gid/mtime zero, mode 0644, gzip mtime zero",
+  "readableWrapperSha256": "5c882a60504989e9965c2360f23e1cbc8f54d6033c23494974045d3ce385d297"
+}

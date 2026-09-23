@@ -1,0 +1,47 @@
+{
+  "scope": "Local frozen-file and recorded-count curation; no hosted replay or omitted private byte validation",
+  "archiveSha256": "3b538e16dce5b583c6180ef670bd51ba370709945d7bab6c560e1b4ea2379186",
+  "portableVerifierSha256": "cfec0bf5fb4b1455272f9c4abf711a6b13463cefce4c5e89f62330130a996380",
+  "portableTestsSha256": "f54e21ebf7389b4cc741608fb14227b0162813692ee3cb42d013aba3470f882e",
+  "originalFilesPreserved": 28,
+  "originalFileBytes": 153972,
+  "originalManifestSha256": "3f6e072f3b8df520645b15cb1c4dd767183fe46d7338c42c9c7e655662651e2a",
+  "positiveCheck": {
+    "exactExtractedFileBytesEqualArchive": true,
+    "recordedCountsConsistent": true,
+    "privateInputsRequired": false
+  },
+  "negativeChecks": {
+    "unittestMethodsPassed": 7,
+    "innerArchiveMutationCasesPassed": 10,
+    "existingOutputUntouched": true,
+    "outputInsideRepositoryRefused": true,
+    "sameSizeCorruptArchiveRefusedBeforeOutput": true,
+    "unsafePathsLinksDuplicatesRefused": true,
+    "missingMemberChangedSizeManifestAndFileHashRefused": true,
+    "changedRecordedCaptureTotalRefused": true,
+    "innerMutationTestsReplaceOuterHashAndSizePinsInMemoryOnly": true
+  },
+  "toolchain": {
+    "node": "24.18.0",
+    "configuredPnpm": "12.5.1",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "python": "3.13.5"
+  },
+  "repositoryChecks": {
+    "isolatedOverlayBaseHead": "1465ca260fb13582cb4fdda614e55b4c404e1ea1",
+    "copiedWorkingTreeFiles": 497,
+    "oxlint": "pass",
+    "oxfmtCheck": "pass",
+    "formattedFiles": 422,
+    "newHistoricalFileFormatterExceptions": false,
+    "commandNote": "Installed pinned oxlint and oxfmt binaries run directly, matching the lint script; pnpm wrapper was stopped after stalling before its version output"
+  },
+  "historicalIndependentAuditReexecuted": false,
+  "independentCurationReview": false,
+  "privateImagesRevalidated": false,
+  "sourceAndCodecBodiesRevalidated": false,
+  "recordedQuantilesRecalculated": false,
+  "hostedReplay": false
+}

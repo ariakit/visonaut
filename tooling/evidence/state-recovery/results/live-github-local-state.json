@@ -1,0 +1,1895 @@
+{
+  "mode": "genuine-github-https-with-local-native-d1",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "startedAt": "2026-09-22T14:13:39.544Z",
+  "passed": true,
+  "events": [
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:1",
+        "checkId": null,
+        "name": null,
+        "appId": null,
+        "headSha": null,
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "POST",
+        "status": 201,
+        "requestId": "LOCAL:2",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.created",
+      "checkId": 2397253620,
+      "repository": "ariakit/ariviso-diagnostics",
+      "checkName": "Ariviso status race fixture"
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:3",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:4",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:5",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:6",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:7",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:8",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:9",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:10",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:11",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:12",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:13",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:14",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C625A:DD3B5:6AB28D15",
+        "checkId": null,
+        "name": null,
+        "appId": null,
+        "headSha": null,
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "POST",
+        "status": 201,
+        "requestId": "A5AA:22BC70:C62D0:DD423:6AB28D15",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.created",
+      "checkId": 106782938500,
+      "repository": "ariakit/ariviso-diagnostics",
+      "checkName": "Ariviso status race fixture"
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6389:DD4F6:6AB28D16",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C640F:DD57E:6AB28D16",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C646E:DD5E4:6AB28D17",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6509:DD691:6AB28D17",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C655D:DD703:6AB28D18",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6612:DD7C3:6AB28D18",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C665D:DD807:6AB28D19",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C66EF:DD8AC:6AB28D19",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C673D:DD91A:6AB28D1A",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6803:DDA0E:6AB28D1A",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6849:DDA5E:6AB28D1B",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    },
+    {
+      "name": "github-status.http",
+      "receipt": {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C68C3:DDAF1:6AB28D1B",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    }
+  ],
+  "boundaries": {
+    "state": "Local native Miniflare D1, not hosted D1",
+    "transport": "Genuine GitHub HTTPS from local Node; token never uploaded to Cloudflare",
+    "sender": "Reviewed diagnostic sender with custom check name; production sendGitHubCheck is not exercised",
+    "hostedEvidence": "Separate hosted state fixtures; this is not a combined hosted-state/actual-sender result",
+    "blockedUpload": "Automatic approval review rejected the separate GitHub credential upload command before execution. That command never read, copied, or uploaded the installation-token payload. No equivalent upload was retried."
+  },
+  "localMock": {
+    "repository": "ariakit/ariviso-diagnostics",
+    "repositoryId": 1380792062,
+    "appId": 5028451,
+    "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+    "checkName": "Ariviso status race fixture",
+    "checkId": 2397253620,
+    "checkUrl": "https://github.com/ariakit/ariviso-diagnostics/runs/2397253620",
+    "transport": "Strict local HTTP mock; no outbound GitHub requests",
+    "boundaries": {
+      "sender": "Diagnostic adapter with a custom check name; production sendGitHubCheck is not exercised",
+      "state": "Exact work.ts lease and status APIs on supplied native D1; synthetic domain intents",
+      "clocks": "Injected logical lease clocks; GitHub completed_at uses wall time",
+      "delay": "Known HTTP 200 is fully read before callback completion is withheld",
+      "ambiguity": "Injected callback exception after a known HTTP 200; no claim of actual network response loss",
+      "creation": "One new check only; no adoption of existing IDs, search, or retry",
+      "parent": "Caller must durably reserve its probe prefix before invoking the adapter"
+    },
+    "limits": {
+      "requests": {
+        "GET": 10,
+        "POST": 1,
+        "PATCH": 5
+      },
+      "responseBytes": 65536,
+      "requestTimeoutMs": 15000,
+      "redirects": "refused",
+      "retries": 0
+    },
+    "measurements": {
+      "requests": {
+        "GET": 8,
+        "POST": 1,
+        "PATCH": 5
+      },
+      "maximumActiveHttp": 1,
+      "maximumActiveCallbacks": 1,
+      "assertionCount": 48
+    },
+    "receipts": [
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:1",
+        "checkId": null,
+        "name": null,
+        "appId": null,
+        "headSha": null,
+        "conclusion": null
+      },
+      {
+        "method": "POST",
+        "status": 201,
+        "requestId": "LOCAL:2",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:3",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:4",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:5",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:6",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:7",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:8",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:9",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:10",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:11",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:12",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "LOCAL:13",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "LOCAL:14",
+        "checkId": 2397253620,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    ],
+    "assertions": [
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Obsolete success is refused after remote metadata lookup",
+        "actual": "stale",
+        "expected": "stale",
+        "passed": true
+      },
+      {
+        "message": "isCurrent is false after the injected revision change",
+        "actual": false,
+        "expected": false,
+        "passed": true
+      },
+      {
+        "message": "Obsolete success made zero PATCH requests",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 2,
+        "expected": 2,
+        "passed": true
+      },
+      {
+        "message": "Current revision two failure is delivered",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "First case makes one current failure PATCH",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 3,
+        "expected": 3,
+        "passed": true
+      },
+      {
+        "message": "Delayed callback already has a complete HTTP 200 receipt",
+        "actual": 200,
+        "expected": 200,
+        "passed": true
+      },
+      {
+        "message": "No HTTP request remains active at the response-withholding barrier",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Delivery callback remains pending after HTTP completion",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Expired pending callback requires explicit attention",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Expired held revision is not current",
+        "actual": false,
+        "expected": false,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Duplicate delivery is refused while callback is held",
+        "actual": "stale",
+        "expected": "stale",
+        "passed": true
+      },
+      {
+        "message": "Held callback blocks all later PATCH requests",
+        "actual": 2,
+        "expected": 2,
+        "passed": true
+      },
+      {
+        "message": "Held confirmed response settles after barrier release",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 4,
+        "expected": 4,
+        "passed": true
+      },
+      {
+        "message": "Revision four failure follows settled revision three success",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Second case ends with the third PATCH",
+        "actual": 3,
+        "expected": 3,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 5,
+        "expected": 5,
+        "passed": true
+      },
+      {
+        "message": "Injected response loss marks status delivery ambiguous",
+        "actual": "ambiguous",
+        "expected": "ambiguous",
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Ambiguous lock persists after logical expiry",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Settlement proof is the saved PATCH receipt",
+        "actual": "PATCH",
+        "expected": "PATCH",
+        "passed": true
+      },
+      {
+        "message": "Settlement proof confirms HTTP 200",
+        "actual": 200,
+        "expected": 200,
+        "passed": true
+      },
+      {
+        "message": "Settlement receipt belongs to the created check",
+        "actual": 2397253620,
+        "expected": 2397253620,
+        "passed": true
+      },
+      {
+        "message": "Settlement receipt confirms revision five success",
+        "actual": "success",
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "message": "Saved verified response belongs to revision five",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "No request remains active before explicit settlement",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "No sender callback remains active before explicit settlement",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "No new PATCH starts before explicit settlement",
+        "actual": 4,
+        "expected": 4,
+        "passed": true
+      },
+      {
+        "message": "Known completed HTTP request explicitly settles as delivered",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Current revision six failure follows explicit settlement",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Final remote state has the revision six marker",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "Final remote check conclusion is failure",
+        "actual": "failure",
+        "expected": "failure",
+        "passed": true
+      },
+      {
+        "message": "Final remote check is completed",
+        "actual": "completed",
+        "expected": "completed",
+        "passed": true
+      },
+      {
+        "message": "Final native desired revision is six",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Final native delivered revision is six",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Final native status lease is released",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Final native ambiguity is cleared",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Final native request-started flag is cleared",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Exactly one new diagnostic check was created",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Exactly five PATCH requests were made",
+        "actual": 5,
+        "expected": 5,
+        "passed": true
+      },
+      {
+        "message": "Exactly eight bounded metadata GET requests were made",
+        "actual": 8,
+        "expected": 8,
+        "passed": true
+      },
+      {
+        "message": "At most one HTTP request was active",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "At most one status sender callback was active",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      }
+    ],
+    "checkpoints": [
+      {
+        "label": "metadata-pause-refused-obsolete-success",
+        "logicalNow": 101,
+        "check": {
+          "desired_revision": 2,
+          "delivered_revision": 2,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      },
+      {
+        "label": "http-complete-callback-withheld-after-lease-expiry",
+        "logicalNow": 220,
+        "check": {
+          "desired_revision": 4,
+          "delivered_revision": 2,
+          "lease_token": "held-response",
+          "lease_until": 210,
+          "lease_revision": 3,
+          "request_started": 1,
+          "ambiguous": 1
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "sending",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "pending",
+            "attempts": 0
+          }
+        ]
+      },
+      {
+        "label": "held-response-settled-then-current-failure",
+        "logicalNow": 220,
+        "check": {
+          "desired_revision": 4,
+          "delivered_revision": 4,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      },
+      {
+        "label": "response-loss-awaiting-receipt-based-settlement",
+        "logicalNow": 320,
+        "check": {
+          "desired_revision": 6,
+          "delivered_revision": 4,
+          "lease_token": "response-loss",
+          "lease_until": 310,
+          "lease_revision": 5,
+          "request_started": 1,
+          "ambiguous": 1
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 5,
+            "conclusion": "success",
+            "state": "sending",
+            "attempts": 1
+          },
+          {
+            "revision": 6,
+            "conclusion": "failure",
+            "state": "pending",
+            "attempts": 0
+          }
+        ]
+      },
+      {
+        "label": "final-remote-and-native-state-confirmed",
+        "logicalNow": 320,
+        "check": {
+          "desired_revision": 6,
+          "delivered_revision": 6,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 5,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 6,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "metadata-get-before-patch",
+        "obsoleteOutcome": "stale",
+        "obsoletePatches": 0,
+        "currentRevision": 2
+      },
+      {
+        "name": "complete-http-response-withheld",
+        "injection": "HTTP 200 body fully read; only callback resolution was delayed",
+        "heldRevision": 3,
+        "currentRevision": 4,
+        "laterClaimBlocked": true,
+        "duplicateSendRefused": true
+      },
+      {
+        "name": "known-receipt-response-loss",
+        "injection": "Exception after a fully read and verified PATCH 200 receipt",
+        "ambiguousRevision": 5,
+        "currentRevision": 6,
+        "settlementProof": "Saved HTTP 200 receipt plus no active request or callback; no GET-based settlement inference",
+        "finalMarkerVerified": true
+      }
+    ],
+    "localHttp": {
+      "posts": 1,
+      "patches": 5,
+      "calls": [
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics",
+          "status": 200
+        },
+        {
+          "method": "POST",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs",
+          "status": 201
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/repos/ariakit/ariviso-diagnostics/check-runs/2397253620",
+          "status": 200
+        }
+      ]
+    }
+  },
+  "credential": {
+    "repositoryId": 1380792062,
+    "expiresAt": "2026-09-22T14:50:38Z",
+    "permissions": {
+      "checks": "write",
+      "metadata": "read"
+    },
+    "uploadedToWorker": false
+  },
+  "live": {
+    "repository": "ariakit/ariviso-diagnostics",
+    "repositoryId": 1380792062,
+    "appId": 5028451,
+    "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+    "checkName": "Ariviso status race fixture",
+    "checkId": 106782938500,
+    "checkUrl": "https://github.com/ariakit/ariviso-diagnostics/runs/106782938500",
+    "transport": "Live GitHub HTTPS",
+    "boundaries": {
+      "sender": "Diagnostic adapter with a custom check name; production sendGitHubCheck is not exercised",
+      "state": "Exact work.ts lease and status APIs on supplied native D1; synthetic domain intents",
+      "clocks": "Injected logical lease clocks; GitHub completed_at uses wall time",
+      "delay": "Known HTTP 200 is fully read before callback completion is withheld",
+      "ambiguity": "Injected callback exception after a known HTTP 200; no claim of actual network response loss",
+      "creation": "One new check only; no adoption of existing IDs, search, or retry",
+      "parent": "Caller must durably reserve its probe prefix before invoking the adapter"
+    },
+    "limits": {
+      "requests": {
+        "GET": 10,
+        "POST": 1,
+        "PATCH": 5
+      },
+      "responseBytes": 65536,
+      "requestTimeoutMs": 15000,
+      "redirects": "refused",
+      "retries": 0
+    },
+    "measurements": {
+      "requests": {
+        "GET": 8,
+        "POST": 1,
+        "PATCH": 5
+      },
+      "maximumActiveHttp": 1,
+      "maximumActiveCallbacks": 1,
+      "assertionCount": 48
+    },
+    "receipts": [
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C625A:DD3B5:6AB28D15",
+        "checkId": null,
+        "name": null,
+        "appId": null,
+        "headSha": null,
+        "conclusion": null
+      },
+      {
+        "method": "POST",
+        "status": 201,
+        "requestId": "A5AA:22BC70:C62D0:DD423:6AB28D15",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6389:DD4F6:6AB28D16",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C640F:DD57E:6AB28D16",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": null
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C646E:DD5E4:6AB28D17",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6509:DD691:6AB28D17",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C655D:DD703:6AB28D18",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6612:DD7C3:6AB28D18",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C665D:DD807:6AB28D19",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C66EF:DD8AC:6AB28D19",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C673D:DD91A:6AB28D1A",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6803:DDA0E:6AB28D1A",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "success"
+      },
+      {
+        "method": "PATCH",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C6849:DDA5E:6AB28D1B",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      },
+      {
+        "method": "GET",
+        "status": 200,
+        "requestId": "A5AA:22BC70:C68C3:DDAF1:6AB28D1B",
+        "checkId": 106782938500,
+        "name": "Ariviso status race fixture",
+        "appId": 5028451,
+        "headSha": "24f508cc65c91867d747a8046d4aef6348418ced",
+        "conclusion": "failure"
+      }
+    ],
+    "assertions": [
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Obsolete success is refused after remote metadata lookup",
+        "actual": "stale",
+        "expected": "stale",
+        "passed": true
+      },
+      {
+        "message": "isCurrent is false after the injected revision change",
+        "actual": false,
+        "expected": false,
+        "passed": true
+      },
+      {
+        "message": "Obsolete success made zero PATCH requests",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 2,
+        "expected": 2,
+        "passed": true
+      },
+      {
+        "message": "Current revision two failure is delivered",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "First case makes one current failure PATCH",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 3,
+        "expected": 3,
+        "passed": true
+      },
+      {
+        "message": "Delayed callback already has a complete HTTP 200 receipt",
+        "actual": 200,
+        "expected": 200,
+        "passed": true
+      },
+      {
+        "message": "No HTTP request remains active at the response-withholding barrier",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Delivery callback remains pending after HTTP completion",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Expired pending callback requires explicit attention",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Expired held revision is not current",
+        "actual": false,
+        "expected": false,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Duplicate delivery is refused while callback is held",
+        "actual": "stale",
+        "expected": "stale",
+        "passed": true
+      },
+      {
+        "message": "Held callback blocks all later PATCH requests",
+        "actual": 2,
+        "expected": 2,
+        "passed": true
+      },
+      {
+        "message": "Held confirmed response settles after barrier release",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 4,
+        "expected": 4,
+        "passed": true
+      },
+      {
+        "message": "Revision four failure follows settled revision three success",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Second case ends with the third PATCH",
+        "actual": 3,
+        "expected": 3,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 5,
+        "expected": 5,
+        "passed": true
+      },
+      {
+        "message": "Injected response loss marks status delivery ambiguous",
+        "actual": "ambiguous",
+        "expected": "ambiguous",
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Ambiguous lock persists after logical expiry",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Settlement proof is the saved PATCH receipt",
+        "actual": "PATCH",
+        "expected": "PATCH",
+        "passed": true
+      },
+      {
+        "message": "Settlement proof confirms HTTP 200",
+        "actual": 200,
+        "expected": 200,
+        "passed": true
+      },
+      {
+        "message": "Settlement receipt belongs to the created check",
+        "actual": 106782938500,
+        "expected": 106782938500,
+        "passed": true
+      },
+      {
+        "message": "Settlement receipt confirms revision five success",
+        "actual": "success",
+        "expected": "success",
+        "passed": true
+      },
+      {
+        "message": "Saved verified response belongs to revision five",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "No request remains active before explicit settlement",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "No sender callback remains active before explicit settlement",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "No new PATCH starts before explicit settlement",
+        "actual": 4,
+        "expected": 4,
+        "passed": true
+      },
+      {
+        "message": "Known completed HTTP request explicitly settles as delivered",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "Status claim matches the expected revision or refusal",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Current revision six failure follows explicit settlement",
+        "actual": "delivered",
+        "expected": "delivered",
+        "passed": true
+      },
+      {
+        "message": "Final remote state has the revision six marker",
+        "actual": true,
+        "expected": true,
+        "passed": true
+      },
+      {
+        "message": "Final remote check conclusion is failure",
+        "actual": "failure",
+        "expected": "failure",
+        "passed": true
+      },
+      {
+        "message": "Final remote check is completed",
+        "actual": "completed",
+        "expected": "completed",
+        "passed": true
+      },
+      {
+        "message": "Final native desired revision is six",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Final native delivered revision is six",
+        "actual": 6,
+        "expected": 6,
+        "passed": true
+      },
+      {
+        "message": "Final native status lease is released",
+        "actual": null,
+        "expected": null,
+        "passed": true
+      },
+      {
+        "message": "Final native ambiguity is cleared",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Final native request-started flag is cleared",
+        "actual": 0,
+        "expected": 0,
+        "passed": true
+      },
+      {
+        "message": "Exactly one new diagnostic check was created",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "Exactly five PATCH requests were made",
+        "actual": 5,
+        "expected": 5,
+        "passed": true
+      },
+      {
+        "message": "Exactly eight bounded metadata GET requests were made",
+        "actual": 8,
+        "expected": 8,
+        "passed": true
+      },
+      {
+        "message": "At most one HTTP request was active",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      },
+      {
+        "message": "At most one status sender callback was active",
+        "actual": 1,
+        "expected": 1,
+        "passed": true
+      }
+    ],
+    "checkpoints": [
+      {
+        "label": "metadata-pause-refused-obsolete-success",
+        "logicalNow": 101,
+        "check": {
+          "desired_revision": 2,
+          "delivered_revision": 2,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      },
+      {
+        "label": "http-complete-callback-withheld-after-lease-expiry",
+        "logicalNow": 220,
+        "check": {
+          "desired_revision": 4,
+          "delivered_revision": 2,
+          "lease_token": "held-response",
+          "lease_until": 210,
+          "lease_revision": 3,
+          "request_started": 1,
+          "ambiguous": 1
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "sending",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "pending",
+            "attempts": 0
+          }
+        ]
+      },
+      {
+        "label": "held-response-settled-then-current-failure",
+        "logicalNow": 220,
+        "check": {
+          "desired_revision": 4,
+          "delivered_revision": 4,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      },
+      {
+        "label": "response-loss-awaiting-receipt-based-settlement",
+        "logicalNow": 320,
+        "check": {
+          "desired_revision": 6,
+          "delivered_revision": 4,
+          "lease_token": "response-loss",
+          "lease_until": 310,
+          "lease_revision": 5,
+          "request_started": 1,
+          "ambiguous": 1
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 5,
+            "conclusion": "success",
+            "state": "sending",
+            "attempts": 1
+          },
+          {
+            "revision": 6,
+            "conclusion": "failure",
+            "state": "pending",
+            "attempts": 0
+          }
+        ]
+      },
+      {
+        "label": "final-remote-and-native-state-confirmed",
+        "logicalNow": 320,
+        "check": {
+          "desired_revision": 6,
+          "delivered_revision": 6,
+          "lease_token": null,
+          "lease_until": null,
+          "lease_revision": null,
+          "request_started": 0,
+          "ambiguous": 0
+        },
+        "outbox": [
+          {
+            "revision": 1,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 2,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 3,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 4,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          },
+          {
+            "revision": 5,
+            "conclusion": "success",
+            "state": "obsolete",
+            "attempts": 1
+          },
+          {
+            "revision": 6,
+            "conclusion": "failure",
+            "state": "complete",
+            "attempts": 1
+          }
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "name": "metadata-get-before-patch",
+        "obsoleteOutcome": "stale",
+        "obsoletePatches": 0,
+        "currentRevision": 2
+      },
+      {
+        "name": "complete-http-response-withheld",
+        "injection": "HTTP 200 body fully read; only callback resolution was delayed",
+        "heldRevision": 3,
+        "currentRevision": 4,
+        "laterClaimBlocked": true,
+        "duplicateSendRefused": true
+      },
+      {
+        "name": "known-receipt-response-loss",
+        "injection": "Exception after a fully read and verified PATCH 200 receipt",
+        "ambiguousRevision": 5,
+        "currentRevision": 6,
+        "settlementProof": "Saved HTTP 200 receipt plus no active request or callback; no GET-based settlement inference",
+        "finalMarkerVerified": true
+      }
+    ]
+  },
+  "foreignKeyCheck": [],
+  "tokenCleanup": {
+    "status": 204,
+    "revoked": true,
+    "at": "2026-09-22T14:13:48.509Z",
+    "valueRecorded": false,
+    "protectedFileRemoved": true
+  },
+  "completedAt": "2026-09-22T14:13:48.511Z"
+}

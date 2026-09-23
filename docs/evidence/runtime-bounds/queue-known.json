@@ -1,0 +1,15 @@
+{
+  "id": "fd6d4d45-1f51-4cf7-9b42-219757537ce3",
+  "mode": "known",
+  "startedAt": 1790077646158,
+  "completedAt": 1790077771332,
+  "status": 200,
+  "digest": "1c86a661baf3cc75c9a893909f3dd491d6f09fa3483d2603d8f43488b2e43491",
+  "bytes": 1182101421,
+  "milliseconds": 125174,
+  "counts": {
+    "get": 2,
+    "put": 1
+  },
+  "observedAt": 1790077773348
+}

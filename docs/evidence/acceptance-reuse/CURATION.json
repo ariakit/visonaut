@@ -1,0 +1,49 @@
+{
+  "kind": "Independent local curation of saved hosted receipts, with seven read-only GitHub GETs; no runtime mutations",
+  "archiveSha256": "c7f5410ef906df79d85f643c08759029f1b9cf2c0f3c92114d57fdf09c1b1251",
+  "originalFiles": 39,
+  "originalBytesUnchanged": true,
+  "verification": {
+    "status": "Local receipt consistency passed; no runtime replay",
+    "sourceCommit": "43552ce5196448f6dee82da665c5b06863638b08",
+    "sourceTree": "e06628954290ccdbf3792edf5497cdf64af68c09",
+    "webVersion": "9ea84f79-9a30-46d4-81ab-5bea048cbd76",
+    "compareVersion": "09893c22-08b0-4ef1-ba39-6f44ae670298",
+    "sourceRun": "7f114089-e7e9-41be-bb3a-977d5fa88eec",
+    "supersededRun": "59564c70-8706-4a27-803e-86fd4561a258",
+    "activeRun": "1c3414ed-f934-4b4c-9089-dac42094915a",
+    "jobIds": {
+      "source-attempt3": [106708397861, 106708397873],
+      "dependent-attempt1": [106802857715, 106802858084],
+      "dependent-attempt2": [106805660017, 106805660398]
+    },
+    "sourceDecisionIds": [
+      "8efa8cd0-54dd-4306-b4f9-a09e66185d01",
+      "e42b01ab-a2cd-4532-ab82-4131105a0ad5"
+    ],
+    "journalOperations": 4,
+    "firstIterationEstablishesCheckInvalidation": false,
+    "secondFailureCompletedAt": "2026-09-22T15:21:22Z",
+    "secondUndoAt": "2026-09-22T15:22:48.002Z",
+    "dependentSuccessCompletedAt": "2026-09-22T15:26:23Z",
+    "sourceSuccessCompletedAt": "2026-09-22T15:26:17Z",
+    "baselineRevision": 1,
+    "cleanupVerifiedAt": "2026-09-22T15:32:08.427Z",
+    "hostedMutationDuringVerification": false,
+    "networkRequestsDuringVerification": 0,
+    "oauthProved": false,
+    "completeE03OrE06Claimed": false,
+    "deploymentLimit": "Version labels agree with saved deployment logs and build manifest; omitted artifact bodies are not rehashed or fetched."
+  },
+  "semanticNegativeChecks": [
+    "wrong-source-decision",
+    "missing-actual-failure",
+    "cleanup-not-complete"
+  ],
+  "credentialScan": {
+    "files": 39,
+    "patterns": ["literalBearer", "privateKey", "signedUrl", "tokenLiteral", "credentialJsonValue"],
+    "matches": [],
+    "limitation": "Targeted pattern scan, not a general absence-of-secrets guarantee. Archived scripts reference credential-file paths but contain no credential payload."
+  }
+}

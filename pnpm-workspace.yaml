@@ -1,0 +1,21 @@
+packages:
+  - apps/*
+  - packages/*
+
+saveExact: true
+
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  workerd: true
+  sharp: true
+
+minimumReleaseAgeExclude:
+  - "@cloudflare/unenv-preset@2.16.2"
+  - miniflare@5.20260921.0-alpha
+  - wrangler@4.136.1
+  - "@cloudflare/vite-plugin@1.57.1"
+  - "@tanstack/react-start-rsc@0.1.56"
+  - "@tanstack/react-start@1.168.57"
+  - "@tanstack/start-plugin-core@1.171.47"
+  - "@cloudflare/workers-types@5.20260922.1"

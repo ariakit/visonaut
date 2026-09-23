@@ -1,0 +1,4836 @@
+{
+  "mode": "hosted-cloudflare-native",
+  "origin": "https://ariviso-e03-state-20260922.ariakit.workers.dev",
+  "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+  "bundle": {
+    "path": "dist/worker.js",
+    "sha256": "675edc6b735823821ee7893fa5fb99d34be35b23b875b3dd3c50b49a902b3e13"
+  },
+  "startedAt": "2026-09-22T14:02:13.092Z",
+  "passed": true,
+  "scenarios": [
+    {
+      "scenario": "atomicCommands",
+      "prefix": "hosted1-atomiccommands",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:02:13.371Z",
+      "completedAt": "2026-09-22T14:03:11.663Z",
+      "durationMs": 58292,
+      "passed": true,
+      "result": {
+        "targets": 2,
+        "guards": [
+          "real competing command before native batch",
+          "zero partial writes",
+          "idempotent replay",
+          "whole-item prior verdict restoration"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected competing native D1 review immediately before whole-item atomic batch",
+          "wallTime": "2026-09-22T14:02:49.248Z",
+          "target": "hosted1-atomiccommands-comparison-changed:hosted1-atomiccommands-capture-changed-1"
+        },
+        {
+          "name": "stale whole-item command refuses all writes",
+          "wallTime": "2026-09-22T14:02:49.526Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "whole-item atomic save, replay and Undo passed",
+          "wallTime": "2026-09-22T14:03:11.663Z",
+          "targets": 2
+        }
+      ],
+      "assertions": [
+        {
+          "message": "stale command leaves audit, outbox, decisions, commands, promotions unchanged",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 1,
+              "sha256": "e5438225d104d9ea54d9b6e8cb5244eed237c9286a718ac07926fe08ace61079"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 8,
+              "sha256": "5a8b6d340955743f1c2b7b992648667a206df2a3e8030d59aa7d95a2ed165b8a"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 4,
+              "sha256": "eb5fae10ec6b2948a7668018016906b574984f0f96078d07f659b282ec5963ab"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 1,
+              "sha256": "2c1c63ea10b01443b2c67165b1c9bd99e511131ea2072a6e7828d190fd17d79c"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 4,
+              "sha256": "a4c3bdadef98bf6c3a37b3858794271c4b4a585970f74e5a718eb562a0400c6c"
+            },
+            "ariviso_comparisons": {
+              "rows": 2,
+              "sha256": "f63bc2b2402eadebc2168065c4ecb8e5fd0bccd8ee1ed98e9a64775a56759bc1"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 3,
+              "sha256": "591ee08b33d67bbc0bbbbd007d70a221e5e68e709a24e1928a3e6e797580ea21"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 2,
+              "sha256": "25d2afaf2e00f4d6d5adf7440fa14d1cc11224dbf7cfca618dd4dbe91e694979"
+            },
+            "ariviso_images": {
+              "rows": 4,
+              "sha256": "be7f00d28d837277a2b0fa61ba2d554c3cd859eb65c08829abae6c9a1bdc2d37"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 2,
+              "sha256": "d652749189ca9b47dd88d323bdb6739e8b462b19b9f140e95dd5d82ebbadd2dd"
+            },
+            "ariviso_policies": {
+              "rows": 1,
+              "sha256": "41a850704ebb59032af6c3f1144a523eecefc6430db341e52ea63d4a26d83461"
+            },
+            "ariviso_projects": {
+              "rows": 1,
+              "sha256": "fb9af59111a27d685fe5cb47250acd1c903582d88baabdd2a0f34e3ca77eabce"
+            },
+            "ariviso_promotions": {
+              "rows": 1,
+              "sha256": "bd3892821531e82dd663b75649e103ca6196806f76285b65d8a518daeb6f8d64"
+            },
+            "ariviso_reservations": {
+              "rows": 2,
+              "sha256": "15b2780f7bb32b5255c4dd3111ab542ded6d75ef11a113a409be390f521c9068"
+            },
+            "ariviso_runs": {
+              "rows": 2,
+              "sha256": "fa288db4a3045d6931d78aded8fcf05202216667469ceb92521c6627ed35a1c8"
+            },
+            "ariviso_shards": {
+              "rows": 2,
+              "sha256": "931ebb7239682654b5ea58bfb33af3bfdd58d803c6a9f1a44964d9975f76fa0d"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 2,
+              "sha256": "3f6dad485bdd1357d3a3c5ff8d370342d6e50b7e191965aeaf27600d9e314b6b"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 1,
+              "sha256": "8593d66c5279625e78b398c3f237534d2956f66c269d063e03d4667c6539cc92"
+            },
+            "ariviso_snapshots": {
+              "rows": 1,
+              "sha256": "741914729fdb08310e2c630a4ea663247e8a791c55583be839c30268fd1be0c9"
+            },
+            "ariviso_status_outbox": {
+              "rows": 11,
+              "sha256": "a59bc669dad925915a3e7136e26b663ea87d9b23da38e61a230ad26bd00ff4c1"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "1cbcbbba68401ccc9f75e46fd1fcecedc7a5d2162f57fce1e63687b8952aa371"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "0886c9d65dd29b279fd6449fb94d0d0ea7c88422774ba03a7dd5972dc0f4997c"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "21882551356c374b780f74f8a4d832137ba858613611dcba531b2da387bff7ca"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 1,
+              "sha256": "e5438225d104d9ea54d9b6e8cb5244eed237c9286a718ac07926fe08ace61079"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 8,
+              "sha256": "5a8b6d340955743f1c2b7b992648667a206df2a3e8030d59aa7d95a2ed165b8a"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 4,
+              "sha256": "eb5fae10ec6b2948a7668018016906b574984f0f96078d07f659b282ec5963ab"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 1,
+              "sha256": "2c1c63ea10b01443b2c67165b1c9bd99e511131ea2072a6e7828d190fd17d79c"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 4,
+              "sha256": "a4c3bdadef98bf6c3a37b3858794271c4b4a585970f74e5a718eb562a0400c6c"
+            },
+            "ariviso_comparisons": {
+              "rows": 2,
+              "sha256": "f63bc2b2402eadebc2168065c4ecb8e5fd0bccd8ee1ed98e9a64775a56759bc1"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 3,
+              "sha256": "591ee08b33d67bbc0bbbbd007d70a221e5e68e709a24e1928a3e6e797580ea21"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 2,
+              "sha256": "25d2afaf2e00f4d6d5adf7440fa14d1cc11224dbf7cfca618dd4dbe91e694979"
+            },
+            "ariviso_images": {
+              "rows": 4,
+              "sha256": "be7f00d28d837277a2b0fa61ba2d554c3cd859eb65c08829abae6c9a1bdc2d37"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 2,
+              "sha256": "d652749189ca9b47dd88d323bdb6739e8b462b19b9f140e95dd5d82ebbadd2dd"
+            },
+            "ariviso_policies": {
+              "rows": 1,
+              "sha256": "41a850704ebb59032af6c3f1144a523eecefc6430db341e52ea63d4a26d83461"
+            },
+            "ariviso_projects": {
+              "rows": 1,
+              "sha256": "fb9af59111a27d685fe5cb47250acd1c903582d88baabdd2a0f34e3ca77eabce"
+            },
+            "ariviso_promotions": {
+              "rows": 1,
+              "sha256": "bd3892821531e82dd663b75649e103ca6196806f76285b65d8a518daeb6f8d64"
+            },
+            "ariviso_reservations": {
+              "rows": 2,
+              "sha256": "15b2780f7bb32b5255c4dd3111ab542ded6d75ef11a113a409be390f521c9068"
+            },
+            "ariviso_runs": {
+              "rows": 2,
+              "sha256": "fa288db4a3045d6931d78aded8fcf05202216667469ceb92521c6627ed35a1c8"
+            },
+            "ariviso_shards": {
+              "rows": 2,
+              "sha256": "931ebb7239682654b5ea58bfb33af3bfdd58d803c6a9f1a44964d9975f76fa0d"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 2,
+              "sha256": "3f6dad485bdd1357d3a3c5ff8d370342d6e50b7e191965aeaf27600d9e314b6b"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 1,
+              "sha256": "8593d66c5279625e78b398c3f237534d2956f66c269d063e03d4667c6539cc92"
+            },
+            "ariviso_snapshots": {
+              "rows": 1,
+              "sha256": "741914729fdb08310e2c630a4ea663247e8a791c55583be839c30268fd1be0c9"
+            },
+            "ariviso_status_outbox": {
+              "rows": 11,
+              "sha256": "a59bc669dad925915a3e7136e26b663ea87d9b23da38e61a230ad26bd00ff4c1"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "1cbcbbba68401ccc9f75e46fd1fcecedc7a5d2162f57fce1e63687b8952aa371"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "0886c9d65dd29b279fd6449fb94d0d0ea7c88422774ba03a7dd5972dc0f4997c"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "21882551356c374b780f74f8a4d832137ba858613611dcba531b2da387bff7ca"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "untouched variant receives no partial decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact command replay returns same saved result",
+          "actual": {
+            "commandId": "hosted1-atomiccommands-whole-approve",
+            "revisions": [
+              {
+                "id": "hosted1-atomiccommands-comparison-changed:hosted1-atomiccommands-capture-changed-0",
+                "expectedRevision": 1
+              },
+              {
+                "id": "hosted1-atomiccommands-comparison-changed:hosted1-atomiccommands-capture-changed-1",
+                "expectedRevision": 2
+              }
+            ],
+            "selection": {
+              "itemKey": "dialog",
+              "variantKey": "light"
+            },
+            "baselineRevision": 1,
+            "promotionId": "hosted1-atomiccommands-promotion-seed"
+          },
+          "expected": {
+            "commandId": "hosted1-atomiccommands-whole-approve",
+            "revisions": [
+              {
+                "id": "hosted1-atomiccommands-comparison-changed:hosted1-atomiccommands-capture-changed-0",
+                "expectedRevision": 1
+              },
+              {
+                "id": "hosted1-atomiccommands-comparison-changed:hosted1-atomiccommands-capture-changed-1",
+                "expectedRevision": 2
+              }
+            ],
+            "selection": {
+              "itemKey": "dialog",
+              "variantKey": "light"
+            },
+            "baselineRevision": 1,
+            "promotionId": "hosted1-atomiccommands-promotion-seed"
+          },
+          "passed": true
+        },
+        {
+          "message": "command replay makes no writes",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 1,
+              "sha256": "e5438225d104d9ea54d9b6e8cb5244eed237c9286a718ac07926fe08ace61079"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 9,
+              "sha256": "949bb1df0df8d725eaba1b3261978377be6e318c6e5fc01beb3f0eb37f52418b"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 4,
+              "sha256": "eb5fae10ec6b2948a7668018016906b574984f0f96078d07f659b282ec5963ab"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 2,
+              "sha256": "eccc4bf1873f797cc4d6314cb49d440988392e9f57ea8b02d0e3b64d9243b557"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 4,
+              "sha256": "a4514605d274ad1a41048aa88ac26fa61835fd76c30f220282a10aff6567171a"
+            },
+            "ariviso_comparisons": {
+              "rows": 2,
+              "sha256": "f63bc2b2402eadebc2168065c4ecb8e5fd0bccd8ee1ed98e9a64775a56759bc1"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 5,
+              "sha256": "26abb6c9ecf74b401b81041f85438319ffc8ab2dea04905831bcf97b84157baf"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 2,
+              "sha256": "25d2afaf2e00f4d6d5adf7440fa14d1cc11224dbf7cfca618dd4dbe91e694979"
+            },
+            "ariviso_images": {
+              "rows": 4,
+              "sha256": "be7f00d28d837277a2b0fa61ba2d554c3cd859eb65c08829abae6c9a1bdc2d37"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 2,
+              "sha256": "d652749189ca9b47dd88d323bdb6739e8b462b19b9f140e95dd5d82ebbadd2dd"
+            },
+            "ariviso_policies": {
+              "rows": 1,
+              "sha256": "41a850704ebb59032af6c3f1144a523eecefc6430db341e52ea63d4a26d83461"
+            },
+            "ariviso_projects": {
+              "rows": 1,
+              "sha256": "69d50c59e53c66ac0ac18d293fc676d6752cbea856f40c806b8c740fa0242eb2"
+            },
+            "ariviso_promotions": {
+              "rows": 1,
+              "sha256": "bd3892821531e82dd663b75649e103ca6196806f76285b65d8a518daeb6f8d64"
+            },
+            "ariviso_reservations": {
+              "rows": 2,
+              "sha256": "15b2780f7bb32b5255c4dd3111ab542ded6d75ef11a113a409be390f521c9068"
+            },
+            "ariviso_runs": {
+              "rows": 2,
+              "sha256": "9d0000cc354c2a3ca9e83e661003fa8c108878b8cf356f89d81e3dc0bb792fe5"
+            },
+            "ariviso_shards": {
+              "rows": 2,
+              "sha256": "931ebb7239682654b5ea58bfb33af3bfdd58d803c6a9f1a44964d9975f76fa0d"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 2,
+              "sha256": "3f6dad485bdd1357d3a3c5ff8d370342d6e50b7e191965aeaf27600d9e314b6b"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 1,
+              "sha256": "8593d66c5279625e78b398c3f237534d2956f66c269d063e03d4667c6539cc92"
+            },
+            "ariviso_snapshots": {
+              "rows": 1,
+              "sha256": "741914729fdb08310e2c630a4ea663247e8a791c55583be839c30268fd1be0c9"
+            },
+            "ariviso_status_outbox": {
+              "rows": 14,
+              "sha256": "24f81d869abf35e629bdaac9336d95aa059646e40c8299955cae788f562202f7"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "1cbcbbba68401ccc9f75e46fd1fcecedc7a5d2162f57fce1e63687b8952aa371"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "0886c9d65dd29b279fd6449fb94d0d0ea7c88422774ba03a7dd5972dc0f4997c"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "21882551356c374b780f74f8a4d832137ba858613611dcba531b2da387bff7ca"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 1,
+              "sha256": "e5438225d104d9ea54d9b6e8cb5244eed237c9286a718ac07926fe08ace61079"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 9,
+              "sha256": "949bb1df0df8d725eaba1b3261978377be6e318c6e5fc01beb3f0eb37f52418b"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 4,
+              "sha256": "eb5fae10ec6b2948a7668018016906b574984f0f96078d07f659b282ec5963ab"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 2,
+              "sha256": "eccc4bf1873f797cc4d6314cb49d440988392e9f57ea8b02d0e3b64d9243b557"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 4,
+              "sha256": "a4514605d274ad1a41048aa88ac26fa61835fd76c30f220282a10aff6567171a"
+            },
+            "ariviso_comparisons": {
+              "rows": 2,
+              "sha256": "f63bc2b2402eadebc2168065c4ecb8e5fd0bccd8ee1ed98e9a64775a56759bc1"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 5,
+              "sha256": "26abb6c9ecf74b401b81041f85438319ffc8ab2dea04905831bcf97b84157baf"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 2,
+              "sha256": "25d2afaf2e00f4d6d5adf7440fa14d1cc11224dbf7cfca618dd4dbe91e694979"
+            },
+            "ariviso_images": {
+              "rows": 4,
+              "sha256": "be7f00d28d837277a2b0fa61ba2d554c3cd859eb65c08829abae6c9a1bdc2d37"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 2,
+              "sha256": "d652749189ca9b47dd88d323bdb6739e8b462b19b9f140e95dd5d82ebbadd2dd"
+            },
+            "ariviso_policies": {
+              "rows": 1,
+              "sha256": "41a850704ebb59032af6c3f1144a523eecefc6430db341e52ea63d4a26d83461"
+            },
+            "ariviso_projects": {
+              "rows": 1,
+              "sha256": "69d50c59e53c66ac0ac18d293fc676d6752cbea856f40c806b8c740fa0242eb2"
+            },
+            "ariviso_promotions": {
+              "rows": 1,
+              "sha256": "bd3892821531e82dd663b75649e103ca6196806f76285b65d8a518daeb6f8d64"
+            },
+            "ariviso_reservations": {
+              "rows": 2,
+              "sha256": "15b2780f7bb32b5255c4dd3111ab542ded6d75ef11a113a409be390f521c9068"
+            },
+            "ariviso_runs": {
+              "rows": 2,
+              "sha256": "9d0000cc354c2a3ca9e83e661003fa8c108878b8cf356f89d81e3dc0bb792fe5"
+            },
+            "ariviso_shards": {
+              "rows": 2,
+              "sha256": "931ebb7239682654b5ea58bfb33af3bfdd58d803c6a9f1a44964d9975f76fa0d"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 2,
+              "sha256": "3f6dad485bdd1357d3a3c5ff8d370342d6e50b7e191965aeaf27600d9e314b6b"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 1,
+              "sha256": "8593d66c5279625e78b398c3f237534d2956f66c269d063e03d4667c6539cc92"
+            },
+            "ariviso_snapshots": {
+              "rows": 1,
+              "sha256": "741914729fdb08310e2c630a4ea663247e8a791c55583be839c30268fd1be0c9"
+            },
+            "ariviso_status_outbox": {
+              "rows": 14,
+              "sha256": "24f81d869abf35e629bdaac9336d95aa059646e40c8299955cae788f562202f7"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 2,
+              "sha256": "1cbcbbba68401ccc9f75e46fd1fcecedc7a5d2162f57fce1e63687b8952aa371"
+            },
+            "work_retention_pins": {
+              "rows": 4,
+              "sha256": "0886c9d65dd29b279fd6449fb94d0d0ea7c88422774ba03a7dd5972dc0f4997c"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 2,
+              "sha256": "21882551356c374b780f74f8a4d832137ba858613611dcba531b2da387bff7ca"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores prior rejection",
+          "actual": "rejected",
+          "expected": "rejected",
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores first unreviewed target",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "whole-item Undo restores competing target decision",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 355,
+        "attemptedStatements": 650,
+        "statements": 628,
+        "rowsRead": 2054,
+        "rowsWritten": 528,
+        "nativeDurationMs": 111.29340000000002
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 58542.790416,
+        "httpStatus": 200,
+        "ray": "a3f1d8998916a4ab-GRU",
+        "date": "Tue, 22 Sep 2026 14:03:11 GMT"
+      }
+    },
+    {
+      "scenario": "currentAndStaleUndo",
+      "prefix": "hosted1-currentandstaleundo",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:03:12.325Z",
+      "completedAt": "2026-09-22T14:04:02.037Z",
+      "durationMs": 49712,
+      "passed": true,
+      "result": {
+        "finalBaselineRevision": 4,
+        "guards": [
+          "stale D22 Undo",
+          "stale D26 rejection",
+          "current D22 rollback",
+          "complete native D1 state hashes"
+        ]
+      },
+      "events": [
+        {
+          "name": "D22 old approval Undo refuses after later promotion",
+          "wallTime": "2026-09-22T14:03:53.216Z",
+          "code": "CONFLICT",
+          "message": "The command no longer targets the active comparison."
+        },
+        {
+          "name": "D26 old human rejection refuses after later promotion",
+          "wallTime": "2026-09-22T14:03:54.059Z",
+          "code": "CONFLICT",
+          "message": "This promotion is no longer current. Use explicit recovery."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "stale D22/D26 leave every production table unchanged",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 3,
+              "sha256": "cd6a8c0ed6eadfb144f41a3ed8b4a95aeef776d8f2c53b66e8b0553e089ea6d2"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 24,
+              "sha256": "35d2c40214862c4f50a5fc4ad0cd3a72c318490c57d39fb489fc82e1b90f4b0c"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 7,
+              "sha256": "faf54ef8b8e09adfcb9a052f80f92bb56965cf68f4809f52b41e796e4777c58f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 5,
+              "sha256": "6808e274b8b68e237279f43283666963a09678f2b74abfd019d66233e6145d63"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 7,
+              "sha256": "f795e46b7bdacb177a3a5568c7d36c084ac09e4c57a0d2e12a83909a5e3606f1"
+            },
+            "ariviso_comparisons": {
+              "rows": 5,
+              "sha256": "f19adeb27c2d2f01f22efff5821142f48cdc9679d8a3f2f91c9e473a2d6e879e"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 8,
+              "sha256": "8946ea950dbc05828c8fcbeef3f420b82e35f9e82a0973ef44fad891c3d32825"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 3,
+              "sha256": "354a16f7066342cc30f5365d988e19df248d4f4c860f093162a05f9746feb9d3"
+            },
+            "ariviso_images": {
+              "rows": 7,
+              "sha256": "579e069dc0c09656bc3ffbd8067f66cfa4b36ac638d970b2132b0f3f9621396d"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 9,
+              "sha256": "24c5ef22c799f05e8d756323134c3059ea52081bee841d33362f81b6bb2486f2"
+            },
+            "ariviso_policies": {
+              "rows": 2,
+              "sha256": "a04f26fa25c188867169062d0206f02aa2bd15bb67bdacdb513624f706423c6c"
+            },
+            "ariviso_projects": {
+              "rows": 2,
+              "sha256": "4838396e564621ec8df1a399cfd4720a56ea0614aa44870efb1304fcf6b58a28"
+            },
+            "ariviso_promotions": {
+              "rows": 4,
+              "sha256": "3cb55f9780eefbefce36f93ede71ad986aafc53c24523a6fdca42e3bbebe1171"
+            },
+            "ariviso_reservations": {
+              "rows": 3,
+              "sha256": "180d3fe52db3a653e59e43589930f202e96f4add3860f2ddd56e797452d8bf11"
+            },
+            "ariviso_runs": {
+              "rows": 5,
+              "sha256": "51767cd10ee5ce9d294f8c58450e254e22cd76eaeea60cb432feb611eb04f682"
+            },
+            "ariviso_shards": {
+              "rows": 5,
+              "sha256": "8090b7acea2f3a9b659f45389331fbeb2a6764e2b31fe3fa71eb2efea7bec020"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 5,
+              "sha256": "a813912959f8036fd7b95afd455fbbe1a74ac3bb2579cbe7dabe53e0fb98561e"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 4,
+              "sha256": "4adbd8032111d1154ac721107e86ebaa487f43491f3d6563f973515e3400a011"
+            },
+            "ariviso_snapshots": {
+              "rows": 4,
+              "sha256": "5afc376f7f92659a468b0e76ab1624946324b707f86fcd5a0ffbc12ff9d62eda"
+            },
+            "ariviso_status_outbox": {
+              "rows": 38,
+              "sha256": "80e5f65a72602363ff7375f5c39b2696f80e2f4d675f5d725bca9c733dab0093"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 5,
+              "sha256": "45afe137856d18ff2d0bad76c21a9dbe92a4e98f61f77ce97bc79e1fed557562"
+            },
+            "work_retention_pins": {
+              "rows": 10,
+              "sha256": "5d36d83a6ed733d14b34d34950a9916630d9fb9afae051fba87c0d87a17f6e34"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 4,
+              "sha256": "418834a6dcb6997187d29395554ae57b2a97a6f5ba3f8e49e1c894abdb6d6123"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 3,
+              "sha256": "cd6a8c0ed6eadfb144f41a3ed8b4a95aeef776d8f2c53b66e8b0553e089ea6d2"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 24,
+              "sha256": "35d2c40214862c4f50a5fc4ad0cd3a72c318490c57d39fb489fc82e1b90f4b0c"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 7,
+              "sha256": "faf54ef8b8e09adfcb9a052f80f92bb56965cf68f4809f52b41e796e4777c58f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 5,
+              "sha256": "6808e274b8b68e237279f43283666963a09678f2b74abfd019d66233e6145d63"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 7,
+              "sha256": "f795e46b7bdacb177a3a5568c7d36c084ac09e4c57a0d2e12a83909a5e3606f1"
+            },
+            "ariviso_comparisons": {
+              "rows": 5,
+              "sha256": "f19adeb27c2d2f01f22efff5821142f48cdc9679d8a3f2f91c9e473a2d6e879e"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 8,
+              "sha256": "8946ea950dbc05828c8fcbeef3f420b82e35f9e82a0973ef44fad891c3d32825"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 3,
+              "sha256": "354a16f7066342cc30f5365d988e19df248d4f4c860f093162a05f9746feb9d3"
+            },
+            "ariviso_images": {
+              "rows": 7,
+              "sha256": "579e069dc0c09656bc3ffbd8067f66cfa4b36ac638d970b2132b0f3f9621396d"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 9,
+              "sha256": "24c5ef22c799f05e8d756323134c3059ea52081bee841d33362f81b6bb2486f2"
+            },
+            "ariviso_policies": {
+              "rows": 2,
+              "sha256": "a04f26fa25c188867169062d0206f02aa2bd15bb67bdacdb513624f706423c6c"
+            },
+            "ariviso_projects": {
+              "rows": 2,
+              "sha256": "4838396e564621ec8df1a399cfd4720a56ea0614aa44870efb1304fcf6b58a28"
+            },
+            "ariviso_promotions": {
+              "rows": 4,
+              "sha256": "3cb55f9780eefbefce36f93ede71ad986aafc53c24523a6fdca42e3bbebe1171"
+            },
+            "ariviso_reservations": {
+              "rows": 3,
+              "sha256": "180d3fe52db3a653e59e43589930f202e96f4add3860f2ddd56e797452d8bf11"
+            },
+            "ariviso_runs": {
+              "rows": 5,
+              "sha256": "51767cd10ee5ce9d294f8c58450e254e22cd76eaeea60cb432feb611eb04f682"
+            },
+            "ariviso_shards": {
+              "rows": 5,
+              "sha256": "8090b7acea2f3a9b659f45389331fbeb2a6764e2b31fe3fa71eb2efea7bec020"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 5,
+              "sha256": "a813912959f8036fd7b95afd455fbbe1a74ac3bb2579cbe7dabe53e0fb98561e"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 4,
+              "sha256": "4adbd8032111d1154ac721107e86ebaa487f43491f3d6563f973515e3400a011"
+            },
+            "ariviso_snapshots": {
+              "rows": 4,
+              "sha256": "5afc376f7f92659a468b0e76ab1624946324b707f86fcd5a0ffbc12ff9d62eda"
+            },
+            "ariviso_status_outbox": {
+              "rows": 38,
+              "sha256": "80e5f65a72602363ff7375f5c39b2696f80e2f4d675f5d725bca9c733dab0093"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 5,
+              "sha256": "45afe137856d18ff2d0bad76c21a9dbe92a4e98f61f77ce97bc79e1fed557562"
+            },
+            "work_retention_pins": {
+              "rows": 10,
+              "sha256": "5d36d83a6ed733d14b34d34950a9916630d9fb9afae051fba87c0d87a17f6e34"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 4,
+              "sha256": "418834a6dcb6997187d29395554ae57b2a97a6f5ba3f8e49e1c894abdb6d6123"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "stale commands preserve later baseline",
+          "actual": "hosted1-currentandstaleundo-snapshot-green",
+          "expected": "hosted1-currentandstaleundo-snapshot-green",
+          "passed": true
+        },
+        {
+          "message": "D22 current approval Undo restores predecessor",
+          "actual": "hosted1-currentandstaleundo-snapshot-red",
+          "expected": "hosted1-currentandstaleundo-snapshot-red",
+          "passed": true
+        },
+        {
+          "message": "D22 current Undo increments baseline revision",
+          "actual": 4,
+          "expected": 4,
+          "passed": true
+        },
+        {
+          "message": "D22 revokes effective approval",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "D22 revokes snapshot reference eligibility",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 314,
+        "attemptedStatements": 729,
+        "statements": 729,
+        "rowsRead": 1879,
+        "rowsWritten": 716,
+        "nativeDurationMs": 121.04909999999992
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 13,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 50000.693875000004,
+        "httpStatus": 200,
+        "ray": "a3f1da09ee64625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:04:02 GMT"
+      }
+    },
+    {
+      "scenario": "rollbackHistory",
+      "prefix": "hosted1-rollbackhistory",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:04:02.622Z",
+      "completedAt": "2026-09-22T14:05:05.032Z",
+      "durationMs": 62410,
+      "passed": true,
+      "result": {
+        "mixedTargets": 2,
+        "finalBaselineRevision": 4,
+        "protectedNativeCopiesVerified": 1,
+        "guards": [
+          "automatic history",
+          "whole-item protection",
+          "D26 rollback",
+          "D26 Undo new promotion",
+          "stale promotion and Undo",
+          "native R2 rollback pin"
+        ]
+      },
+      "events": [
+        {
+          "name": "protected automatic target refuses whole-item rejection",
+          "wallTime": "2026-09-22T14:04:35.468Z",
+          "code": "CONFLICT",
+          "message": "Automatically accepted promoted history is protected. Capture a correction in a new main run."
+        },
+        {
+          "name": "current snapshot retirement is refused",
+          "wallTime": "2026-09-22T14:04:48.565Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "rollback predecessor retirement is refused",
+          "wallTime": "2026-09-22T14:04:48.803Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        },
+        {
+          "name": "injected native GC claim immediately before D26 rollback batch",
+          "wallTime": "2026-09-22T14:04:50.009Z",
+          "claim": null
+        },
+        {
+          "name": "restoring a snapshot does not revive its old promotion guard",
+          "wallTime": "2026-09-22T14:04:58.751Z",
+          "code": "CONFLICT",
+          "message": "This promotion is no longer current. Use explicit recovery."
+        },
+        {
+          "name": "completed rejection Undo cannot be revived with a new command ID",
+          "wallTime": "2026-09-22T14:04:59.109Z",
+          "code": "CONFLICT",
+          "message": "Only your saved command in this review session can be undone."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "mixed fixture has human change and automatic addition",
+          "passed": true
+        },
+        {
+          "message": "protected whole-item rejection makes no partial writes",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 34,
+              "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 7,
+              "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 11,
+              "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+            },
+            "ariviso_promotions": {
+              "rows": 6,
+              "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 54,
+              "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 34,
+              "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 7,
+              "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 11,
+              "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+            },
+            "ariviso_promotions": {
+              "rows": 6,
+              "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 54,
+              "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "protected rejection preserves current baseline",
+          "actual": "hosted1-rollbackhistory-snapshot-mixed",
+          "expected": "hosted1-rollbackhistory-snapshot-mixed",
+          "passed": true
+        },
+        {
+          "message": "approval of accepted history is a no-op",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "accepted-history approval creates no Undo/audit/outbox work",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 34,
+              "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 7,
+              "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 11,
+              "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+            },
+            "ariviso_promotions": {
+              "rows": 6,
+              "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 54,
+              "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 34,
+              "sha256": "21e3b57b0164d705b95d77272ec13bc4a514a5ee484ec4fac85effc972ae3417"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 7,
+              "sha256": "1ea822b4b19a2a513950487ba84d42eac37b69cebb00b52e8132d26ed380a5d0"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "108270ffdb86e2c7c9b147ec53e40cc144a29726063b8266a2666bb8488acaf2"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 11,
+              "sha256": "b45cd4446d93f32c37580247585dbe1111ba14c6cacad4fc5221c3c41f74acdc"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "e490209a2b0ba6ac9bf4e098be2ee7a0343cee9da951461773f5844d90553b95"
+            },
+            "ariviso_promotions": {
+              "rows": 6,
+              "sha256": "286f4cf623d305d1e8a2283831464e4ea41da4c5e24385bbc86058d0fdfdb1f0"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "f7ee3a56ac1e2978b5e0d8c0b169b9669c68a74a9438ba68fb057088907b3f0e"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 54,
+              "sha256": "7614a9cab48156a773b0844d017565e3c27163bf2f349eee0cc67255906760fc"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "GC cannot claim rollback predecessor during review save",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "D26 rollback restores complete prior baseline",
+          "actual": "hosted1-rollbackhistory-snapshot-seed",
+          "expected": "hosted1-rollbackhistory-snapshot-seed",
+          "passed": true
+        },
+        {
+          "message": "rollback advances baseline revision",
+          "actual": 3,
+          "expected": 3,
+          "passed": true
+        },
+        {
+          "message": "mixed rollback preserves automatic acceptance",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        },
+        {
+          "message": "rollback predecessor native R2 bytes remain intact",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "Undo D26 restores snapshot",
+          "actual": "hosted1-rollbackhistory-snapshot-mixed",
+          "expected": "hosted1-rollbackhistory-snapshot-mixed",
+          "passed": true
+        },
+        {
+          "message": "Undo D26 advances revision",
+          "actual": 4,
+          "expected": 4,
+          "passed": true
+        },
+        {
+          "message": "Undo D26 creates new promotion identity",
+          "passed": true
+        },
+        {
+          "message": "stale history commands make no partial writes",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 36,
+              "sha256": "d77428a061b4d0bf211ef88e6e202cdddd074a0a4ce5f45bc05f9a978a7bcce3"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 9,
+              "sha256": "3dacb22d487bdc5c0fa1f0d37458c4bdfd415d76d50c8d0eb80ab9f59144ff59"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "2728fe7f49b90f76177fd20b8bb9a3bfdc3540650d2e416cf0a975945324d61b"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 12,
+              "sha256": "22fa386d594f3d1159a07538b5f015e7f5aeaaf420535c3e42f8ee978b4b61de"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "82fef8e2bc3fe25c291b5ea72ecba153c343901c2fb0b8ba8778d2d17af4e990"
+            },
+            "ariviso_promotions": {
+              "rows": 7,
+              "sha256": "766da94f0e92943cf2e51d93e83cdbcae2f8edf3acfe11754c661d199905494b"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "caeaddba5702af5aacb8eb5c47d3fee1eb5b8d8fc64f30fa615fd17ce1379038"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 59,
+              "sha256": "b130bbb02cd0eea467df6ecb2c41926c89d84de4bab0fc54870226bc73accf14"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 4,
+              "sha256": "f8be622faaa3a01306a70ef735f76a84f3032a8fc6eb27e6afcb216091dad01f"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 36,
+              "sha256": "d77428a061b4d0bf211ef88e6e202cdddd074a0a4ce5f45bc05f9a978a7bcce3"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 10,
+              "sha256": "b899577ae2714d03076a40fc0c91bd8b4e6c178b8b148305e2e0d9db00971b8f"
+            },
+            "ariviso_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_commands": {
+              "rows": 9,
+              "sha256": "3dacb22d487bdc5c0fa1f0d37458c4bdfd415d76d50c8d0eb80ab9f59144ff59"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 10,
+              "sha256": "2728fe7f49b90f76177fd20b8bb9a3bfdc3540650d2e416cf0a975945324d61b"
+            },
+            "ariviso_comparisons": {
+              "rows": 7,
+              "sha256": "bac6a31d9ae05306e68386b7b13b002793bb580b15a38fe35cd6cf0ff2d31abf"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 12,
+              "sha256": "22fa386d594f3d1159a07538b5f015e7f5aeaaf420535c3e42f8ee978b4b61de"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 5,
+              "sha256": "069795550295f2e75ba028b4e548457843cf2d37ce31cddb1044a1a57fd8ffbe"
+            },
+            "ariviso_images": {
+              "rows": 10,
+              "sha256": "74f73488ca13295d542564c2cd0f78d5a2b3316a6b342ba2d74ab1a05c4953fb"
+            },
+            "ariviso_lineage": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_pins": {
+              "rows": 13,
+              "sha256": "1b1e08923a44539bbc5851fa5a26423fc68471a788b8d325b1c860642ecb9ccd"
+            },
+            "ariviso_policies": {
+              "rows": 3,
+              "sha256": "c73358a8cff492b55c27084ab33a3f39dc5e9ddd3032c506fac3ec55992e2684"
+            },
+            "ariviso_projects": {
+              "rows": 3,
+              "sha256": "82fef8e2bc3fe25c291b5ea72ecba153c343901c2fb0b8ba8778d2d17af4e990"
+            },
+            "ariviso_promotions": {
+              "rows": 7,
+              "sha256": "766da94f0e92943cf2e51d93e83cdbcae2f8edf3acfe11754c661d199905494b"
+            },
+            "ariviso_reservations": {
+              "rows": 5,
+              "sha256": "717e28e7e309d398fd732c00bae5b1e8e4be2c29ef5afeb1c919a4338ec45cd8"
+            },
+            "ariviso_runs": {
+              "rows": 7,
+              "sha256": "caeaddba5702af5aacb8eb5c47d3fee1eb5b8d8fc64f30fa615fd17ce1379038"
+            },
+            "ariviso_shards": {
+              "rows": 7,
+              "sha256": "6cf5ac699486e093c77919d7ed31b01c999d02cfacb283f820b9213c50fd25a3"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 8,
+              "sha256": "bd1c132bc006aa72a50c070a7273675841154bf43080318eaabe886cd77ff9a6"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 6,
+              "sha256": "e1e55da171bec22ae7a0d228d36cc04efa17faedfd7f23009cd0402263132b84"
+            },
+            "ariviso_snapshots": {
+              "rows": 6,
+              "sha256": "261c36c200b519f45c0e858b0b434e03b93a537f79093a8f459f4999e5d826dc"
+            },
+            "ariviso_status_outbox": {
+              "rows": 59,
+              "sha256": "b130bbb02cd0eea467df6ecb2c41926c89d84de4bab0fc54870226bc73accf14"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_retained_runs": {
+              "rows": 7,
+              "sha256": "b8ba79eb0c4f9f5c0dece9572187aba08740916022f542a919846af3d1f4e8f0"
+            },
+            "work_retention_pins": {
+              "rows": 14,
+              "sha256": "6554137a8e53676d7ada62af6ccffff1631f23c0e79afb54810d22020729d370"
+            },
+            "work_status_outbox": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_tasks": {
+              "rows": 5,
+              "sha256": "2df9d1ea2ccbaf0aa3308a5679ed8d6ebc1a2a8cba2299d6015cb009419650fa"
+            }
+          },
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 417,
+        "attemptedStatements": 743,
+        "statements": 721,
+        "rowsRead": 3437,
+        "rowsWritten": 555,
+        "nativeDurationMs": 129.74550000000005
+      },
+      "r2": {
+        "puts": 6,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 420
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 62645.223792000004,
+        "httpStatus": 200,
+        "ray": "a3f1db445c40625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:05:05 GMT"
+      }
+    },
+    {
+      "scenario": "acceptanceStatus",
+      "prefix": "hosted1-acceptancestatus",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:05:05.617Z",
+      "completedAt": "2026-09-22T14:05:51.773Z",
+      "durationMs": 46156,
+      "passed": true,
+      "result": {
+        "oldRevision": 14,
+        "invalidatedRevision": 15,
+        "newRevision": 15,
+        "transport": "synthetic send recorder; no GitHub request",
+        "sent": ["failure"],
+        "guards": [
+          "exact source reference",
+          "source invalidation",
+          "source Undo",
+          "unrelated-lineage refusal",
+          "delayed status freshness"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected source rejection after status claim and before delivery",
+          "wallTime": "2026-09-22T14:05:35.376Z",
+          "queuedRevision": 14
+        },
+        {
+          "name": "source rejection prevents baseline promotion",
+          "wallTime": "2026-09-22T14:05:38.392Z",
+          "code": "CONFLICT",
+          "message": "State changed. Refresh the comparison before trying again."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "exact verified-related acceptance is reused",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "reuse references specific original source decision",
+          "actual": "d3e51e60-6239-4798-a275-5b439961f0cf",
+          "expected": "d3e51e60-6239-4798-a275-5b439961f0cf",
+          "passed": true
+        },
+        {
+          "message": "reuse creates no detached decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact acceptance initially queues success",
+          "actual": "success",
+          "expected": "success",
+          "passed": true
+        },
+        {
+          "message": "old success has native outbox lease",
+          "passed": true
+        },
+        {
+          "message": "source rejection invalidates dependent acceptance",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "source rejection atomically advances native desired status revision",
+          "passed": true
+        },
+        {
+          "message": "delayed success is refused before mock sender",
+          "actual": "stale",
+          "expected": "stale",
+          "passed": true
+        },
+        {
+          "message": "no stale transport invocation",
+          "actual": ["failure"],
+          "expected": [],
+          "passed": true
+        },
+        {
+          "message": "fresh domain status is failure",
+          "actual": "failure",
+          "expected": "failure",
+          "passed": true
+        },
+        {
+          "message": "fresh failure claim",
+          "passed": true
+        },
+        {
+          "message": "fresh failure reaches mock sender",
+          "actual": "delivered",
+          "expected": "delivered",
+          "passed": true
+        },
+        {
+          "message": "only current failure was recorded",
+          "actual": ["failure"],
+          "expected": ["failure"],
+          "passed": true
+        },
+        {
+          "message": "source rejection Undo restores exact acceptance eligibility",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "unrelated equal bytes cannot borrow acceptance",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "fixture leaves baseline at seed",
+          "actual": "hosted1-acceptancestatus-snapshot-seed",
+          "expected": "hosted1-acceptancestatus-snapshot-seed",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 281,
+        "attemptedStatements": 719,
+        "statements": 709,
+        "rowsRead": 1411,
+        "rowsWritten": 775,
+        "nativeDurationMs": 121.25679999999994
+      },
+      "r2": {
+        "puts": 5,
+        "gets": 12,
+        "deletes": 0,
+        "bytesWritten": 350
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 46362.377125,
+        "httpStatus": 200,
+        "ray": "a3f1dcce0e27625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:05:51 GMT"
+      }
+    },
+    {
+      "scenario": "restoration",
+      "prefix": "hosted1-restoration",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:05:52.355Z",
+      "completedAt": "2026-09-22T14:06:53.294Z",
+      "durationMs": 60939,
+      "passed": true,
+      "result": {
+        "exactRestoration": "passed",
+        "driftedRestoration": "needs-review",
+        "protectedRemoval": true
+      },
+      "events": [
+        {
+          "name": "automatic removal promoted history stays protected",
+          "wallTime": "2026-09-22T14:06:25.410Z",
+          "code": "CONFLICT",
+          "message": "Automatically accepted promoted history is protected. Capture a correction in a new main run."
+        }
+      ],
+      "assertions": [
+        {
+          "message": "seed menu has original automatic acceptance",
+          "passed": true
+        },
+        {
+          "message": "confirmed removal has automatic acceptance and retained row",
+          "passed": true
+        },
+        {
+          "message": "protected removal makes no partial writes",
+          "actual": {
+            "ariviso_ancestry": {
+              "rows": 8,
+              "sha256": "b7dc8e003c0d43234b2f078609bed1aec525a35829fafefd6b0287a98f399a36"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 60,
+              "sha256": "b8e58bf160961b8033e5dd0e8df7a158e173877a2a2eda376a1af45274473fef"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 17,
+              "sha256": "0cdd25fd4d30eab30de86f32d16c52fdc3e10b79a9ab7330ef4fe56a6e746f25"
+            },
+            "ariviso_checks": {
+              "rows": 1,
+              "sha256": "68108263ea479bd8e3bdf98d700dbe4bd32a7553861db5f138f05fc4c34b3585"
+            },
+            "ariviso_commands": {
+              "rows": 12,
+              "sha256": "a7486a610f05c8b8a377326e6dbf0036c7f7421bba7a75f83e27a1faa7bcf30b"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 18,
+              "sha256": "730a99684180a478fa708f67c3db0172b83372a7c01a8ecc91e7df9a8e07fd02"
+            },
+            "ariviso_comparisons": {
+              "rows": 13,
+              "sha256": "d9118a81d1210df2aded26ae9172177bd71b51ac3d84c50767c436ba6d212f58"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 18,
+              "sha256": "b5519b6fca59684ac20cfe0a3575cdd776db7ff3ea4daac3babaa13e533df22b"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 10,
+              "sha256": "eb769f92c3edc8159a49ad8f6d4876de4ca712ae083d80de4eb32fe168f0fd3b"
+            },
+            "ariviso_images": {
+              "rows": 17,
+              "sha256": "d99d7d69d0ef1d11bc628bcc4e3fd45d1a0196cef8d15bb8cafc83d264d29bcf"
+            },
+            "ariviso_lineage": {
+              "rows": 1,
+              "sha256": "d19908be20eb7cdbd6ee0ae2a2a0dcab6ff89a7285cf474e892a595874413557"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 1,
+              "sha256": "d19908be20eb7cdbd6ee0ae2a2a0dcab6ff89a7285cf474e892a595874413557"
+            },
+            "ariviso_pins": {
+              "rows": 21,
+              "sha256": "d7889ca9d032020f2ba0696ebdb9330d5747cb1f77ed344b44137c1d0e498164"
+            },
+            "ariviso_policies": {
+              "rows": 5,
+              "sha256": "0e973b1676b1fa7f1169a47006a4067c533bf01bce2e3c24d0ca3dd50144046e"
+            },
+            "ariviso_projects": {
+              "rows": 5,
+              "sha256": "c7c09466df4276e5e9d4c14405d2b4d41815ce514c71cc04f70f8afa151ca141"
+            },
+            "ariviso_promotions": {
+              "rows": 10,
+              "sha256": "2430e591a1f2c4c3eab491cff2e1f991442bdb659815cae266f096ec34214cee"
+            },
+            "ariviso_reservations": {
+              "rows": 9,
+              "sha256": "df596902ec148652be14e39b7fbb172317736f9ba254756d4bffc60f99462f10"
+            },
+            "ariviso_runs": {
+              "rows": 13,
+              "sha256": "a0cf0b40fd28b931228c23952dd1cce3efc3e848cd95edc95c76f27d733d77a7"
+            },
+            "ariviso_shards": {
+              "rows": 13,
+              "sha256": "9321558eaf9bb8af0c3fb1a970f8c2ebb221dc327fa35366dc22d1ab54854fbd"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 12,
+              "sha256": "26139f9d5b3a1b73ecfef036508b7a1ffe45248639a9de20899c524e6b5bfd1d"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 9,
+              "sha256": "4d445ab44c495ba3cb00ea610431616de82bdf37483d088b5f50f7bf029e33c6"
+            },
+            "ariviso_snapshots": {
+              "rows": 9,
+              "sha256": "14bd0d8fe01561255ddba9900fb7c4c4ef9d7c7763e610b6be796543c6ebd663"
+            },
+            "ariviso_status_outbox": {
+              "rows": 94,
+              "sha256": "73a3e7740480ff6ea4f9b4fe9d24e756b8d09a51d03b0b1e6b53c64cd689cc5c"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 1,
+              "sha256": "da783ad3ab51afb56d97db7527859811ea6ec95e85ddc68367cd27693b1cfff6"
+            },
+            "work_retained_runs": {
+              "rows": 13,
+              "sha256": "0a6fd2e7ccd3c527d60f017f5ae9e119ebc968cdd4b87d037b32272bfd8bd3cd"
+            },
+            "work_retention_pins": {
+              "rows": 26,
+              "sha256": "e640c50aa5534e87cba716b53c29b26a83972c0b1f77df208a84488dc50bd1f7"
+            },
+            "work_status_outbox": {
+              "rows": 2,
+              "sha256": "a4451816127a019261d185baebc10f888446a82ba6f7a702a37f31b93a1313fe"
+            },
+            "work_tasks": {
+              "rows": 9,
+              "sha256": "34e00898dfcdad6434f62c534ee1321a037cfd4cba4d115e6cd3c3ce7b9fcf2f"
+            }
+          },
+          "expected": {
+            "ariviso_ancestry": {
+              "rows": 8,
+              "sha256": "b7dc8e003c0d43234b2f078609bed1aec525a35829fafefd6b0287a98f399a36"
+            },
+            "ariviso_assertions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_audit": {
+              "rows": 60,
+              "sha256": "b8e58bf160961b8033e5dd0e8df7a158e173877a2a2eda376a1af45274473fef"
+            },
+            "ariviso_capture_profiles": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_captures": {
+              "rows": 17,
+              "sha256": "0cdd25fd4d30eab30de86f32d16c52fdc3e10b79a9ab7330ef4fe56a6e746f25"
+            },
+            "ariviso_checks": {
+              "rows": 1,
+              "sha256": "68108263ea479bd8e3bdf98d700dbe4bd32a7553861db5f138f05fc4c34b3585"
+            },
+            "ariviso_commands": {
+              "rows": 12,
+              "sha256": "a7486a610f05c8b8a377326e6dbf0036c7f7421bba7a75f83e27a1faa7bcf30b"
+            },
+            "ariviso_comparison_rows": {
+              "rows": 18,
+              "sha256": "730a99684180a478fa708f67c3db0172b83372a7c01a8ecc91e7df9a8e07fd02"
+            },
+            "ariviso_comparisons": {
+              "rows": 13,
+              "sha256": "d9118a81d1210df2aded26ae9172177bd71b51ac3d84c50767c436ba6d212f58"
+            },
+            "ariviso_decision_replacements": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_decisions": {
+              "rows": 18,
+              "sha256": "b5519b6fca59684ac20cfe0a3575cdd776db7ff3ea4daac3babaa13e533df22b"
+            },
+            "ariviso_historical_preparations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "ariviso_identity_history": {
+              "rows": 10,
+              "sha256": "eb769f92c3edc8159a49ad8f6d4876de4ca712ae083d80de4eb32fe168f0fd3b"
+            },
+            "ariviso_images": {
+              "rows": 17,
+              "sha256": "d99d7d69d0ef1d11bc628bcc4e3fd45d1a0196cef8d15bb8cafc83d264d29bcf"
+            },
+            "ariviso_lineage": {
+              "rows": 1,
+              "sha256": "d19908be20eb7cdbd6ee0ae2a2a0dcab6ff89a7285cf474e892a595874413557"
+            },
+            "ariviso_lineage_edges": {
+              "rows": 1,
+              "sha256": "d19908be20eb7cdbd6ee0ae2a2a0dcab6ff89a7285cf474e892a595874413557"
+            },
+            "ariviso_pins": {
+              "rows": 21,
+              "sha256": "d7889ca9d032020f2ba0696ebdb9330d5747cb1f77ed344b44137c1d0e498164"
+            },
+            "ariviso_policies": {
+              "rows": 5,
+              "sha256": "0e973b1676b1fa7f1169a47006a4067c533bf01bce2e3c24d0ca3dd50144046e"
+            },
+            "ariviso_projects": {
+              "rows": 5,
+              "sha256": "c7c09466df4276e5e9d4c14405d2b4d41815ce514c71cc04f70f8afa151ca141"
+            },
+            "ariviso_promotions": {
+              "rows": 10,
+              "sha256": "2430e591a1f2c4c3eab491cff2e1f991442bdb659815cae266f096ec34214cee"
+            },
+            "ariviso_reservations": {
+              "rows": 9,
+              "sha256": "df596902ec148652be14e39b7fbb172317736f9ba254756d4bffc60f99462f10"
+            },
+            "ariviso_runs": {
+              "rows": 13,
+              "sha256": "a0cf0b40fd28b931228c23952dd1cce3efc3e848cd95edc95c76f27d733d77a7"
+            },
+            "ariviso_shards": {
+              "rows": 13,
+              "sha256": "9321558eaf9bb8af0c3fb1a970f8c2ebb221dc327fa35366dc22d1ab54854fbd"
+            },
+            "ariviso_snapshot_images": {
+              "rows": 12,
+              "sha256": "26139f9d5b3a1b73ecfef036508b7a1ffe45248639a9de20899c524e6b5bfd1d"
+            },
+            "ariviso_snapshot_retention": {
+              "rows": 9,
+              "sha256": "4d445ab44c495ba3cb00ea610431616de82bdf37483d088b5f50f7bf029e33c6"
+            },
+            "ariviso_snapshots": {
+              "rows": 9,
+              "sha256": "14bd0d8fe01561255ddba9900fb7c4c4ef9d7c7763e610b6be796543c6ebd663"
+            },
+            "ariviso_status_outbox": {
+              "rows": 94,
+              "sha256": "73a3e7740480ff6ea4f9b4fe9d24e756b8d09a51d03b0b1e6b53c64cd689cc5c"
+            },
+            "operations_backup_group_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_groups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_inventory": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_members": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_objects": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_pages": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backup_required": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_backups": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_check_creations": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_comparison_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_cursors": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_events": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_exports": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_promotions": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "operations_run_archives": {
+              "rows": 0,
+              "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+            },
+            "work_checks": {
+              "rows": 1,
+              "sha256": "da783ad3ab51afb56d97db7527859811ea6ec95e85ddc68367cd27693b1cfff6"
+            },
+            "work_retained_runs": {
+              "rows": 13,
+              "sha256": "0a6fd2e7ccd3c527d60f017f5ae9e119ebc968cdd4b87d037b32272bfd8bd3cd"
+            },
+            "work_retention_pins": {
+              "rows": 26,
+              "sha256": "e640c50aa5534e87cba716b53c29b26a83972c0b1f77df208a84488dc50bd1f7"
+            },
+            "work_status_outbox": {
+              "rows": 2,
+              "sha256": "a4451816127a019261d185baebc10f888446a82ba6f7a702a37f31b93a1313fe"
+            },
+            "work_tasks": {
+              "rows": 9,
+              "sha256": "34e00898dfcdad6434f62c534ee1321a037cfd4cba4d115e6cd3c3ce7b9fcf2f"
+            }
+          },
+          "passed": true
+        },
+        {
+          "message": "exact restoration reuses specific original eligible decision",
+          "actual": "automatic:hosted1-restoration-comparison-seed:hosted1-restoration-capture-seed-1",
+          "expected": "automatic:hosted1-restoration-comparison-seed:hosted1-restoration-capture-seed-1",
+          "passed": true
+        },
+        {
+          "message": "restoration creates no detached decision",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "exact restoration passes",
+          "actual": "passed",
+          "expected": "passed",
+          "passed": true
+        },
+        {
+          "message": "drifted restoration receives no automatic/reused decision",
+          "passed": true
+        },
+        {
+          "message": "changed restoration needs review",
+          "actual": "needs-review",
+          "expected": "needs-review",
+          "passed": true
+        },
+        {
+          "message": "protected removal retains decision metadata",
+          "actual": 0,
+          "expected": 0,
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 334,
+        "attemptedStatements": 759,
+        "statements": 759,
+        "rowsRead": 2748,
+        "rowsWritten": 823,
+        "nativeDurationMs": 126.40029999999996
+      },
+      "r2": {
+        "puts": 10,
+        "gets": 19,
+        "deletes": 0,
+        "bytesWritten": 700
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 61157.902166000014,
+        "httpStatus": 200,
+        "ray": "a3f1ddf22aaa625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:06:53 GMT"
+      }
+    },
+    {
+      "scenario": "retentionRaces",
+      "prefix": "hosted1-retentionraces",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:06:53.920Z",
+      "completedAt": "2026-09-22T14:07:01.489Z",
+      "durationMs": 7569,
+      "passed": true,
+      "result": {
+        "injectedClock": 2592000100,
+        "boundary": "synthetic retained-run rows; exact native D1 lease/pin algorithms plus native R2 bytes",
+        "guards": [
+          "promotion-first",
+          "expired promotion pin",
+          "GC-first",
+          "late rollback refusal",
+          "stale deletion token",
+          "rollback-first"
+        ]
+      },
+      "events": [
+        {
+          "name": "injected 30-day elapsed clock with expired promotion lease",
+          "wallTime": "2026-09-22T14:06:55.353Z",
+          "now": 2592000100
+        },
+        {
+          "name": "injected GC pause after native claim and before R2 delete",
+          "wallTime": "2026-09-22T14:06:58.096Z",
+          "runId": "hosted1-retentionraces-gc-first",
+          "latePromotion": false,
+          "lateRollback": "refused"
+        }
+      ],
+      "assertions": [
+        {
+          "message": "promotion obtains native retained-byte lease",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "expired promotion lease still pins bytes against GC",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "stale owner cannot release promotion pin",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "fresh owner recovers expired promotion lease",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "promotion-first R2 bytes remain",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "GC becomes eligible only after explicit promotion settlement",
+          "passed": true
+        },
+        {
+          "message": "GC wins native claim",
+          "passed": true
+        },
+        {
+          "message": "GC-first blocks late promotion",
+          "actual": false,
+          "expected": false,
+          "passed": true
+        },
+        {
+          "message": "GC-first refuses late rollback reference",
+          "passed": true
+        },
+        {
+          "message": "new deletion token recovers expired native lease",
+          "passed": true
+        },
+        {
+          "message": "stale deletion token cannot settle",
+          "actual": false,
+          "expected": false,
+          "passed": true
+        },
+        {
+          "message": "native R2 object was deleted",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "current token settles deleted bytes",
+          "actual": true,
+          "expected": true,
+          "passed": true
+        },
+        {
+          "message": "existing rollback pin blocks GC",
+          "actual": null,
+          "expected": null,
+          "passed": true
+        },
+        {
+          "message": "rollback R2 bytes remain",
+          "actual": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "expected": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b",
+          "passed": true
+        },
+        {
+          "message": "released rollback pin permits GC",
+          "passed": true
+        }
+      ],
+      "d1": {
+        "calls": 20,
+        "attemptedStatements": 20,
+        "statements": 19,
+        "rowsRead": 55,
+        "rowsWritten": 21,
+        "nativeDurationMs": 6.835699999999999
+      },
+      "r2": {
+        "puts": 3,
+        "gets": 2,
+        "deletes": 1,
+        "bytesWritten": 210
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 7767.888083000027,
+        "httpStatus": 200,
+        "ray": "a3f1df72fa87625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:07:01 GMT"
+      }
+    },
+    {
+      "scenario": "statusScenarios",
+      "prefix": "hosted1-statusscenarios",
+      "sourceTree": "8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f",
+      "deployment": {
+        "id": "5073224a-6204-461a-b768-178ec22339f6",
+        "tag": "",
+        "timestamp": "2026-09-22T14:01:29.591747Z"
+      },
+      "startedAt": "2026-09-22T14:07:02.031Z",
+      "completedAt": "2026-09-22T14:07:14.896Z",
+      "durationMs": 12865,
+      "passed": true,
+      "result": {
+        "scope": "Standalone work.ts status delivery state transitions on the supplied native D1 database",
+        "githubTransport": "mocked; no GitHub HTTP requests or credential requests are performed",
+        "domainStatusPreparation": "Not exercised here; prepareStatusIntent is covered by the parent fixture",
+        "invocation": "97d190a0-0c06-410a-823f-78f8bf506535",
+        "scenarioCount": 5,
+        "assertionCount": 79,
+        "assertions": [
+          {
+            "name": "stale-success-refusal: old claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "stale-success: obsolete success refused",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "stale-success: obsolete success made no transport call",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success: old outbox row obsolete",
+            "passed": true,
+            "actual": "obsolete",
+            "expected": "obsolete"
+          },
+          {
+            "name": "stale-success-refusal: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "stale-success-refusal: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "stale-success: failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "stale-success: only current failure reached mocked remote",
+            "passed": true,
+            "actual": ["failure"],
+            "expected": ["failure"]
+          },
+          {
+            "name": "stale-success-refusal: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "stale-success-refusal: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success-refusal: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "stale-success-refusal: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "stale-success-refusal: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: old claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: old request was current before transport",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "delayed: expired in-flight request needs attention",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: expired in-flight lock retained",
+            "passed": true,
+            "actual": "old",
+            "expected": "old"
+          },
+          {
+            "name": "delayed: request remains marked as started",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: premature-current claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "delayed: duplicate old send refused",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "delayed: exactly one request started during pause",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: mocked response has not yet applied",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed: old request settles after response barrier",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "delayed: old response records revision one",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "delayed: old response is obsolete locally",
+            "passed": true,
+            "actual": "obsolete",
+            "expected": "obsolete"
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "delayed: current failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "delayed: current failure follows the settled old success",
+            "passed": true,
+            "actual": ["success", "failure"],
+            "expected": ["success", "failure"]
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: ambiguous-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "ambiguous: intent current before mocked request",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous: uncertain response recorded",
+            "passed": true,
+            "actual": "ambiguous",
+            "expected": "ambiguous"
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: lease-expiry-cannot-recover claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "ambiguous: wrong token cannot settle lock",
+            "passed": true,
+            "actual": false,
+            "expected": false
+          },
+          {
+            "name": "ambiguous: attention flag survives lease expiry",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "ambiguous: owner lock survives expiry",
+            "passed": true,
+            "actual": "ambiguous-owner",
+            "expected": "ambiguous-owner"
+          },
+          {
+            "name": "ambiguous: old outbox remains sending",
+            "passed": true,
+            "actual": "sending",
+            "expected": "sending"
+          },
+          {
+            "name": "ambiguous: owning token explicitly settles stopped transport",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: recovered-current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "ambiguous: current failure delivered after explicit settlement",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "ambiguous: only current failure applied in the controlled transport",
+            "passed": true,
+            "actual": ["failure"],
+            "expected": ["failure"]
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: credential-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "credentials: old success refused after credentials return",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "credentials: current check changes while credentials are paused",
+            "passed": true,
+            "actual": [true, false],
+            "expected": [true, false]
+          },
+          {
+            "name": "credentials: invalidated success never starts mocked PATCH",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: current claimed revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "current-check-after-credential-pause: current immediately before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "credentials: current failure delivered",
+            "passed": true,
+            "actual": "delivered",
+            "expected": "delivered"
+          },
+          {
+            "name": "current-check-after-credential-pause: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "current-check-after-credential-pause: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "current-check-after-credential-pause: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 2,
+            "expected": 2
+          },
+          {
+            "name": "current-check-after-credential-pause: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: shared-owner claimed revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: winning intent current before mocked PATCH",
+            "passed": true,
+            "actual": true,
+            "expected": true
+          },
+          {
+            "name": "duplicate: competing call refuses before winner responds",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "duplicate: only one sender callback enters transport",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: competing-owner claimed revision",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "duplicate: winning request remains started",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: one outbox delivery attempt consumed",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate: one delivery and one refusal",
+            "passed": true,
+            "actual": ["delivered", "stale"],
+            "expected": ["delivered", "stale"]
+          },
+          {
+            "name": "duplicate: completed delivery cannot replay with old token",
+            "passed": true,
+            "actual": "stale",
+            "expected": "stale"
+          },
+          {
+            "name": "duplicate: repeated calls produce one mocked write",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: final lease released",
+            "passed": true,
+            "actual": null,
+            "expected": null
+          },
+          {
+            "name": "duplicate-serialized-sends: final request flag cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: final ambiguity cleared",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          },
+          {
+            "name": "duplicate-serialized-sends: final delivered revision matches desired revision",
+            "passed": true,
+            "actual": 1,
+            "expected": 1
+          },
+          {
+            "name": "duplicate-serialized-sends: no mocked requests remain in flight",
+            "passed": true,
+            "actual": 0,
+            "expected": 0
+          }
+        ],
+        "scenarios": [
+          {
+            "name": "stale-success-refusal",
+            "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "staleOutcome": "stale",
+              "refusedBeforeTransport": true,
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 101
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "obsolete-success-refused",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "delayed-in-flight-then-current-failure",
+            "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "oldOutcome": "delivered",
+              "duplicateOutcome": "stale",
+              "currentClaimBlockedDuringOldRequest": true,
+              "injectedLeaseExpiryAt": 110,
+              "injectedReconciliationAt": 120,
+              "transportCalls": 2,
+              "appliedWrites": 2,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 120,
+                "outcome": "delivered"
+              },
+              {
+                "sequence": 2,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 120,
+                "completedAt": 120,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 1,
+                "conclusion": "success",
+                "at": 120
+              },
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 120
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "expired-in-flight-lock-held",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "old",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 1
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "old-response-settled",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": 1,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 120,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 120,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "ambiguous-transport-explicit-settlement",
+            "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "ambiguousOutcome": "ambiguous",
+              "settlementProof": {
+                "source": "injected mocked transport terminal state",
+                "cannotWriteAgain": true,
+                "remoteWasReadToInferSettlement": false,
+                "appliesToRealGitHubTransport": false
+              },
+              "leaseExpiryAloneRecovered": false,
+              "wrongTokenSettled": false,
+              "ownerSettled": true,
+              "transportCalls": 2,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "connection-reset-without-confirmation"
+              },
+              {
+                "sequence": 2,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 1000,
+                "completedAt": 1000,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 1000
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "ambiguous-after-expiry-and-wrong-token",
+                "logicalNow": 1000,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "ambiguous-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 1
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": "Error: Injected mocked GitHub transport connection reset"
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 1000,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 1000,
+                    "last_error": "Error: Injected mocked GitHub transport connection reset"
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 1000,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "current-check-after-credential-pause",
+            "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "oldOutcome": "stale",
+              "credentialLookups": 1,
+              "currentChecks": [
+                {
+                  "phase": "before-credentials",
+                  "current": true
+                },
+                {
+                  "phase": "after-credentials-before-patch",
+                  "current": false
+                }
+              ],
+              "credentialTransport": "injected Promise barrier; no real credential request",
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 2,
+                "conclusion": "failure",
+                "startedAt": 102,
+                "completedAt": 102,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 2,
+                "conclusion": "failure",
+                "at": 102
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "new-intent-during-credential-pause",
+                "logicalNow": 102,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                  "desired_revision": 2,
+                  "delivered_revision": null,
+                  "lease_token": "credential-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "state": "pending",
+                    "attempts": 0,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 102,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                  "desired_revision": 2,
+                  "delivered_revision": 2,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "state": "obsolete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  },
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "revision": 2,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "attempt": 1,
+                    "comparison_revision": 2,
+                    "source_revision": 2,
+                    "conclusion": "failure",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 102,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "duplicate-serialized-sends",
+            "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+            "githubTransport": "mocked",
+            "clock": "injected logical milliseconds; no wall-clock lease wait",
+            "measurements": {
+              "concurrentCalls": 2,
+              "firstOutcome": "stale",
+              "outcomes": ["delivered", "stale"],
+              "replayOutcome": "stale",
+              "transportCalls": 1,
+              "appliedWrites": 1,
+              "maximumConcurrentRequests": 1
+            },
+            "calls": [
+              {
+                "sequence": 1,
+                "revision": 1,
+                "conclusion": "success",
+                "startedAt": 101,
+                "completedAt": 101,
+                "outcome": "delivered"
+              }
+            ],
+            "applied": [
+              {
+                "revision": 1,
+                "conclusion": "success",
+                "at": 101
+              }
+            ],
+            "checkpoints": [
+              {
+                "label": "duplicate-refused-while-winner-in-flight",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                  "desired_revision": 1,
+                  "delivered_revision": null,
+                  "lease_token": "shared-owner",
+                  "lease_until": 110,
+                  "lease_revision": 1,
+                  "request_started": 1,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "state": "sending",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 100,
+                    "last_error": null
+                  }
+                ]
+              },
+              {
+                "label": "final",
+                "logicalNow": 101,
+                "check": {
+                  "id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                  "desired_revision": 1,
+                  "delivered_revision": 1,
+                  "lease_token": null,
+                  "lease_until": null,
+                  "lease_revision": null,
+                  "request_started": 0,
+                  "ambiguous": 0
+                },
+                "outbox": [
+                  {
+                    "check_id": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "revision": 1,
+                    "run_id": "fixture:e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "attempt": 1,
+                    "comparison_revision": 1,
+                    "source_revision": 1,
+                    "conclusion": "success",
+                    "details_url": "https://evidence.invalid/status/e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+                    "state": "complete",
+                    "attempts": 1,
+                    "max_attempts": 3,
+                    "available_at": 101,
+                    "last_error": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "events": [
+        {
+          "name": "status.stale-success-refusal.start",
+          "wallTime": "2026-09-22T14:07:02.177Z",
+          "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:stale-success-refusal",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.stale-success-refusal.complete",
+          "wallTime": "2026-09-22T14:07:04.273Z",
+          "staleOutcome": "stale",
+          "refusedBeforeTransport": true,
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.delayed-in-flight-then-current-failure.start",
+          "wallTime": "2026-09-22T14:07:04.273Z",
+          "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:delayed-in-flight-then-current-failure",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.delayed-in-flight-then-current-failure.complete",
+          "wallTime": "2026-09-22T14:07:07.588Z",
+          "oldOutcome": "delivered",
+          "duplicateOutcome": "stale",
+          "currentClaimBlockedDuringOldRequest": true,
+          "injectedLeaseExpiryAt": 110,
+          "injectedReconciliationAt": 120,
+          "transportCalls": 2,
+          "appliedWrites": 2,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.ambiguous-transport-explicit-settlement.start",
+          "wallTime": "2026-09-22T14:07:07.588Z",
+          "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:ambiguous-transport-explicit-settlement",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.ambiguous-transport-explicit-settlement.complete",
+          "wallTime": "2026-09-22T14:07:10.917Z",
+          "ambiguousOutcome": "ambiguous",
+          "settlementProof": {
+            "source": "injected mocked transport terminal state",
+            "cannotWriteAgain": true,
+            "remoteWasReadToInferSettlement": false,
+            "appliesToRealGitHubTransport": false
+          },
+          "leaseExpiryAloneRecovered": false,
+          "wrongTokenSettled": false,
+          "ownerSettled": true,
+          "transportCalls": 2,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.current-check-after-credential-pause.start",
+          "wallTime": "2026-09-22T14:07:10.917Z",
+          "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:current-check-after-credential-pause",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.current-check-after-credential-pause.complete",
+          "wallTime": "2026-09-22T14:07:13.321Z",
+          "oldOutcome": "stale",
+          "credentialLookups": 1,
+          "currentChecks": [
+            {
+              "phase": "before-credentials",
+              "current": true
+            },
+            {
+              "phase": "after-credentials-before-patch",
+              "current": false
+            }
+          ],
+          "credentialTransport": "injected Promise barrier; no real credential request",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        },
+        {
+          "name": "status.duplicate-serialized-sends.start",
+          "wallTime": "2026-09-22T14:07:13.321Z",
+          "checkId": "e03:status:97d190a0-0c06-410a-823f-78f8bf506535:duplicate-serialized-sends",
+          "githubTransport": "mocked"
+        },
+        {
+          "name": "status.duplicate-serialized-sends.complete",
+          "wallTime": "2026-09-22T14:07:14.896Z",
+          "concurrentCalls": 2,
+          "firstOutcome": "stale",
+          "outcomes": ["delivered", "stale"],
+          "replayOutcome": "stale",
+          "transportCalls": 1,
+          "appliedWrites": 1,
+          "maximumConcurrentRequests": 1
+        }
+      ],
+      "assertions": [],
+      "d1": {
+        "calls": 104,
+        "attemptedStatements": 124,
+        "statements": 124,
+        "rowsRead": 334,
+        "rowsWritten": 107,
+        "nativeDurationMs": 34.117699999999985
+      },
+      "r2": {
+        "puts": 0,
+        "gets": 0,
+        "deletes": 0,
+        "bytesWritten": 0
+      },
+      "boundaries": {
+        "runtime": "same Worker bundle for local Miniflare and hosted Cloudflare",
+        "source": "exact frozen service, work, retention, lineage, comparator algorithms",
+        "identity": "synthetic trusted metadata and maintainers, no OAuth/OIDC/webhook",
+        "captures": "synthetic 1x1 PNGs in native R2; RGBA decode fixture after SHA-256 verification",
+        "clock": "explicit injected logical clocks; wall time measured separately",
+        "github": "Recorded callbacks or strict local HTTP mock; no outbound GitHub request",
+        "metrics": "D1 calls/attemptedStatements count attempts; other D1 metadata sums successful returned results only, excludes failed-batch metadata and probe bookkeeping. R2 meters explicit fixture puts/gets/deletes, excludes HEAD and control-plane operations."
+      },
+      "controller": {
+        "durationMs": 13085.833500000008,
+        "httpStatus": 200,
+        "ray": "a3f1dfa5abbc625e-GRU",
+        "date": "Tue, 22 Sep 2026 14:07:15 GMT"
+      }
+    }
+  ],
+  "authentication": {
+    "missing": 401,
+    "wrong": 401,
+    "tokenRecorded": false
+  },
+  "deployment": {
+    "id": "5073224a-6204-461a-b768-178ec22339f6",
+    "tag": "",
+    "timestamp": "2026-09-22T14:01:29.591747Z"
+  },
+  "fixtureDigest": "68caa8ef121bf829eb876cd8579bcd5ce403cfd2027fc1e70a1c6dda1558f679",
+  "manifestVerified": true,
+  "completedAt": "2026-09-22T14:07:15.433Z"
+}

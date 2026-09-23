@@ -1,0 +1,64 @@
+{
+  "runId": "f308fcb5-145e-4019-b192-721b32b2afc1",
+  "exportId": "fd6399f8-f6bc-4950-8253-00dbbf3b5b36",
+  "tarBytes": 34304,
+  "tarSha256": "1c20c7881b28330ab4c482cda7b832effc032b453705993e3d53ffc32b8998b8",
+  "metadataSections": [
+    "run",
+    "project",
+    "shards",
+    "images",
+    "captures",
+    "comparisons",
+    "comparisonRows",
+    "decisions",
+    "commands",
+    "audit",
+    "identityHistory",
+    "snapshots",
+    "snapshotImages",
+    "referenceSnapshots",
+    "referenceCaptures",
+    "referenceSnapshotImages",
+    "provenance",
+    "manifests"
+  ],
+  "verifiedEntries": [
+    {
+      "name": "images/00000000.png",
+      "bytes": 755,
+      "sha256": "80f8915861c7e8ce84484ac87e16da486886660b04a0749c64276118f18ea832"
+    },
+    {
+      "name": "images/00000001.png",
+      "bytes": 752,
+      "sha256": "cb22e7356d3ac660546cac07209af5ac2f8224002555b40794738319506f045c"
+    },
+    {
+      "name": "source/00000002.json",
+      "bytes": 2293,
+      "sha256": "c6080ddeda6c09900bfaa42619af744ae37f4b29d012448ac5c743295df1a660"
+    },
+    {
+      "name": "source/00000003.json",
+      "bytes": 2298,
+      "sha256": "08e56b2d991166f39583eb8ef7950b359e609d517fdec103f577883330cc6d06"
+    },
+    {
+      "name": "source/00000004.json",
+      "bytes": 1040,
+      "sha256": "d3dea6a16310a1186217180bb45ea827f6846c72cb817f3a09be840923b98a33"
+    }
+  ],
+  "credentialKind": "Temporary synthetic diagnostic session; live GitHub repository authorization checked",
+  "oauthProof": false,
+  "privateArtifactRetainedLocally": true,
+  "captureCount": 2,
+  "profileDigestChecks": [
+    "ce5a245f7258db88f62f2e7c87067d26b22d5b15228fa4913be7d4b6562b3a36",
+    "ce5a245f7258db88f62f2e7c87067d26b22d5b15228fa4913be7d4b6562b3a36"
+  ],
+  "sourceDocumentCount": 3,
+  "decisionCount": 2,
+  "snapshotCount": 1
+}

@@ -1,0 +1,43 @@
+{
+  "rows": {
+    "ariviso_runs": 2,
+    "ariviso_captures": 7164,
+    "ariviso_images": 3582,
+    "ariviso_comparison_rows": 7164,
+    "ariviso_decisions": 7200,
+    "ariviso_commands": 395,
+    "work_tasks": 3583,
+    "ariviso_capture_profiles": 1,
+    "operations_run_archives": 0,
+    "operations_backup_groups": 0
+  },
+  "physicalBytes": 40873984,
+  "archive": [],
+  "milliseconds": 195,
+  "counts": {},
+  "queries": [
+    {
+      "sql": "SELECT run_id,generation,state,page_count,progress_json FROM operations_run_archives ORDER BY run_id",
+      "milliseconds": 15,
+      "meta": {
+        "served_by": "v3-prod",
+        "served_by_region": "ENAM",
+        "served_by_colo": "EWR",
+        "served_by_primary": true,
+        "timings": {
+          "sql_duration_ms": 0.1103
+        },
+        "duration": 0.1103,
+        "changes": 0,
+        "last_row_id": 1,
+        "changed_db": false,
+        "size_after": 40873984,
+        "rows_read": 1,
+        "rows_written": 0,
+        "total_attempts": 1
+      }
+    }
+  ],
+  "colo": "CWB",
+  "placement": "remote-IAD"
+}

@@ -1,0 +1,258 @@
+{
+  "recordedAt": "2026-09-23T02:49:00Z",
+  "scope": "public synthetic two-shard PR and final-source diagnostic Worker; no Ariakit captures",
+  "fixture": {
+    "repository": "ariakit/visonaut-diagnostics",
+    "pullRequest": 19,
+    "headSha": "9120f50400e66b3f71e9f83508efab05cd36ee6c",
+    "testedMergeSha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+    "workflowRunId": 35811335129,
+    "workflowRef": "ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@b37defd0ddcfabfce864511b31def1e9a27c67e3",
+    "executorSourceSha": "756a5225af9bbcd466ef56d56abdee2843b897c9"
+  },
+  "service": {
+    "sourceSha": "57f5687b94b0fba4b22a1bc1d8c2b5c3133251a9",
+    "diagnosticWebWorkerVersion": "75c8f8c7-ed01-4f50-83bf-528be27433b5",
+    "runsAndShards": [
+      {
+        "id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+        "attempt": 1,
+        "kind": "pull_request",
+        "tested_sha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+        "state": "superseded",
+        "active": 0,
+        "comparison_id": null,
+        "key": "chromium-1",
+        "shard_state": "complete",
+        "source_attempt": 1,
+        "source_run_id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+        "manifest_digest": "76d4e77d1858f6de23b70801fbbbf737925cb4b0d5c239730ec0c3d4bf773fbc",
+        "full_profile_digest": "2ffba3a8dd612b7b72eb4020ae0cf77d4ab06cc4d2839e6f98b8053a1c9f2d0a",
+        "captures": 1,
+        "min_retry": 0,
+        "max_retry": 0
+      },
+      {
+        "id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+        "attempt": 1,
+        "kind": "pull_request",
+        "tested_sha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+        "state": "superseded",
+        "active": 0,
+        "comparison_id": null,
+        "key": "chromium-2",
+        "shard_state": "pending",
+        "source_attempt": null,
+        "source_run_id": null,
+        "manifest_digest": null,
+        "full_profile_digest": null,
+        "captures": 0,
+        "min_retry": null,
+        "max_retry": null
+      },
+      {
+        "id": "02e68913-0d6c-45ca-858f-9f32b53b6519",
+        "attempt": 2,
+        "kind": "pull_request",
+        "tested_sha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+        "state": "reviewing",
+        "active": 1,
+        "comparison_id": "0c51de4c-58c2-412e-8e46-2e9ae5bd6245",
+        "key": "chromium-1",
+        "shard_state": "complete",
+        "source_attempt": 1,
+        "source_run_id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+        "manifest_digest": "76d4e77d1858f6de23b70801fbbbf737925cb4b0d5c239730ec0c3d4bf773fbc",
+        "full_profile_digest": "2ffba3a8dd612b7b72eb4020ae0cf77d4ab06cc4d2839e6f98b8053a1c9f2d0a",
+        "captures": 1,
+        "min_retry": 0,
+        "max_retry": 0
+      },
+      {
+        "id": "02e68913-0d6c-45ca-858f-9f32b53b6519",
+        "attempt": 2,
+        "kind": "pull_request",
+        "tested_sha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+        "state": "reviewing",
+        "active": 1,
+        "comparison_id": "0c51de4c-58c2-412e-8e46-2e9ae5bd6245",
+        "key": "chromium-2",
+        "shard_state": "complete",
+        "source_attempt": 2,
+        "source_run_id": "02e68913-0d6c-45ca-858f-9f32b53b6519",
+        "manifest_digest": "9d437ab330518c4802212187185da938e4b6eca23a7df7cc473d135d54a9ed15",
+        "full_profile_digest": "d1c3c33b3e5f08613f495ae36bdcb00e018f15c63287ad93447804023c447985",
+        "captures": 1,
+        "min_retry": 1,
+        "max_retry": 1
+      }
+    ],
+    "comparisonRows": [
+      {
+        "item_key": "synthetic/first",
+        "variant_key": "chromium-light",
+        "outcome": "unchanged",
+        "decision_revision": 0,
+        "decision_id": null,
+        "reference_digest": "d29542ec3b3438ddac223b73c312c45868caf838bbeb41466d20ddb8814c748c",
+        "candidate_digest": "d29542ec3b3438ddac223b73c312c45868caf838bbeb41466d20ddb8814c748c",
+        "reference_profile": "ce5a245f7258db88f62f2e7c87067d26b22d5b15228fa4913be7d4b6562b3a36",
+        "candidate_profile": "ce5a245f7258db88f62f2e7c87067d26b22d5b15228fa4913be7d4b6562b3a36",
+        "candidate_retry": 0
+      },
+      {
+        "item_key": "synthetic/second",
+        "variant_key": "chromium-light",
+        "outcome": "changed",
+        "decision_revision": 1,
+        "decision_id": "a1694e38-3298-49dc-8b7c-2fd7e3bcc2b6",
+        "reference_digest": "9c7bc79a317fd2dbe8f0a1e860ce91888ceb8275d1a9f69fc9245b93c5f4d6af",
+        "candidate_digest": "9c7bc79a317fd2dbe8f0a1e860ce91888ceb8275d1a9f69fc9245b93c5f4d6af",
+        "reference_profile": "ab33a8c2e5418d861985ebd981738d9f6289caa08e28e6e07f15ea21379edfb0",
+        "candidate_profile": "ce5a245f7258db88f62f2e7c87067d26b22d5b15228fa4913be7d4b6562b3a36",
+        "candidate_retry": 1
+      }
+    ],
+    "beforeRerun": {
+      "provenance": "Transcribed from the read-only remote D1 query made before requesting GitHub failed-jobs rerun; the task transcript retains the original response.",
+      "observedBefore": "2026-09-23T02:43:03Z",
+      "rows": [
+        {
+          "id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+          "external_run_id": "35811335129",
+          "attempt": 1,
+          "state": "failed",
+          "active": 1,
+          "key": "chromium-1",
+          "shard_state": "complete",
+          "source_attempt": 1,
+          "source_run_id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+          "manifest_digest": "76d4e77d1858f6de23b70801fbbbf737925cb4b0d5c239730ec0c3d4bf773fbc",
+          "captures": 1
+        },
+        {
+          "id": "6f52de66-e670-4821-a0c2-b421fcbfba49",
+          "external_run_id": "35811335129",
+          "attempt": 1,
+          "state": "failed",
+          "active": 1,
+          "key": "chromium-2",
+          "shard_state": "pending",
+          "source_attempt": null,
+          "source_run_id": null,
+          "manifest_digest": null,
+          "captures": 0
+        }
+      ]
+    }
+  },
+  "github": {
+    "attemptOneJobs": [
+      {
+        "completed_at": "2026-09-23T02:42:04Z",
+        "conclusion": "success",
+        "id": 107023374998,
+        "name": "capture / chromium-1",
+        "run_attempt": 1,
+        "started_at": "2026-09-23T02:41:09Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-23T02:42:26Z",
+        "conclusion": "failure",
+        "id": 107023375041,
+        "name": "capture / chromium-2",
+        "run_attempt": 1,
+        "started_at": "2026-09-23T02:41:09Z",
+        "status": "completed"
+      }
+    ],
+    "attemptTwoJobs": [
+      {
+        "completed_at": "2026-09-23T02:44:23Z",
+        "conclusion": "success",
+        "id": 107023760350,
+        "name": "capture / chromium-2",
+        "run_attempt": 2,
+        "started_at": "2026-09-23T02:43:03Z",
+        "status": "completed"
+      },
+      {
+        "completed_at": "2026-09-23T02:42:04Z",
+        "conclusion": "success",
+        "id": 107023761300,
+        "name": "capture / chromium-1",
+        "run_attempt": 2,
+        "started_at": "2026-09-23T02:41:09Z",
+        "status": "completed"
+      }
+    ],
+    "receiptArtifacts": [
+      {
+        "created_at": "2026-09-23T02:41:44Z",
+        "expired": false,
+        "id": 10730040721,
+        "name": "visonaut-environment-chromium-1-1",
+        "size_in_bytes": 4459
+      },
+      {
+        "created_at": "2026-09-23T02:43:47Z",
+        "expired": false,
+        "id": 10730010966,
+        "name": "visonaut-environment-chromium-2-2",
+        "size_in_bytes": 4459
+      },
+      {
+        "created_at": "2026-09-23T02:44:20Z",
+        "expired": false,
+        "id": 10729868633,
+        "name": "visonaut-discovery-2-107023760350-chromium-2-9d437ab330518c4802212187185da938e4b6eca23a7df7cc473d135d54a9ed15",
+        "size_in_bytes": 533
+      },
+      {
+        "created_at": "2026-09-23T02:42:02Z",
+        "expired": false,
+        "id": 10729753579,
+        "name": "visonaut-discovery-1-107023374998-chromium-1-76d4e77d1858f6de23b70801fbbbf737925cb4b0d5c239730ec0c3d4bf773fbc",
+        "size_in_bytes": 533
+      },
+      {
+        "created_at": "2026-09-23T02:42:20Z",
+        "expired": false,
+        "id": 10729234013,
+        "name": "visonaut-environment-chromium-2-1",
+        "size_in_bytes": 4459
+      }
+    ],
+    "finalAppCheck": [
+      {
+        "app": "ariakit-visonaut",
+        "completed_at": "2026-09-23T02:47:23Z",
+        "conclusion": "success",
+        "details_url": "https://diagnostics.visonaut.com/runs/02e68913-0d6c-45ca-858f-9f32b53b6519",
+        "id": 107024022145,
+        "name": "Visonaut",
+        "status": "completed"
+      }
+    ],
+    "appCheckBeforeApproval": {
+      "provenance": "Transcribed from the read-only GitHub Checks GET made before synthetic browser approval; the task transcript retains the original response.",
+      "checkedSha": "2b2c95e8b12197d86502e4586c49ed452c4e9f53",
+      "response": {
+        "id": 107024022145,
+        "name": "Visonaut",
+        "status": "completed",
+        "conclusion": "failure",
+        "completed_at": "2026-09-23T02:45:00Z",
+        "app": "ariakit-visonaut",
+        "details_url": "https://diagnostics.visonaut.com/runs/02e68913-0d6c-45ca-858f-9f32b53b6519"
+      }
+    }
+  },
+  "browserObservation": {
+    "runUrl": "https://diagnostics.visonaut.com/runs/02e68913-0d6c-45ca-858f-9f32b53b6519",
+    "beforeApproval": "1 of 2 needed review; same green image digest and 0 changed pixels, but profile digest changed",
+    "afterApproval": "0 of 2 needed review; Check passed; decision revision 1",
+    "actor": "signed-in maintainer session"
+  }
+}
