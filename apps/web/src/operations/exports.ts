@@ -561,7 +561,9 @@ export async function expireExports(context: OperationsContext) {
       prefix: `exports/${row.id}/`,
       limit: Math.min(1000, context.budget.objectsPerStep),
     });
-    await context.backups.delete(pages.objects.map((page) => page.key));
+    if (pages.objects.length) {
+      await context.backups.delete(pages.objects.map((page) => page.key));
+    }
     if (pages.truncated) continue;
     await context.backups.delete(`exports/${row.id}.json`);
     await context.database
