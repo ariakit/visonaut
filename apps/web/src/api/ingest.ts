@@ -70,6 +70,36 @@ interface UploadRow {
   complete: number;
 }
 
+// Each new manifest spends its shard total, including cross-shard duplicates.
+// Carried captures have no manifest here, so count each stored image once.
+const runDeclaredBytesSql = `
+  (SELECT COALESCE(SUM(manifest.declared_bytes), 0)
+   FROM ingest_manifests AS manifest WHERE manifest.run_id = ?)
+  +
+  (SELECT COALESCE(SUM(original.bytes), 0) FROM (
+    SELECT DISTINCT image.id, image.bytes
+    FROM visonaut_captures AS capture
+    JOIN visonaut_images AS image ON image.id = capture.image_id
+    WHERE capture.run_id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM ingest_manifests AS manifest
+        WHERE manifest.run_id = capture.run_id
+          AND manifest.shard_key = capture.shard_key
+      )
+  ) AS original)
+`;
+
+async function runDeclaredBytes(context: ApiContext, runId: string) {
+  const row = await context.database
+    .prepare(`SELECT ${runDeclaredBytesSql} AS bytes`)
+    .bind(runId, runId)
+    .first<{ bytes: number }>();
+  if (!row) {
+    throw new IncompleteError("The run byte total is unavailable.");
+  }
+  return row.bytes;
+}
+
 function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
   validateVersion(body.schemaVersion);
   validateDigest(body.planDigest);
@@ -415,6 +445,7 @@ export async function declareShard(
     images.set(capture.image.digest, capture.image);
   }
   const declaredBytes = [...images.values()].reduce((sum, image) => sum + image.bytes, 0);
+  const maximumRunBytes = context.configuration.limits.maximumRunBytes ?? 2 * 1024 * 1024 * 1024;
   if (
     manifest.captures.length > context.configuration.limits.maximumCaptures ||
     images.size > capability.maximumImages ||
@@ -427,36 +458,65 @@ export async function declareShard(
   }
   const manifestDigest = await digestJson(manifest);
   const manifestKey = `manifests/${run.id}/${manifestDigest}.json`;
-  await atomic(context.database, [
-    assertion(
-      context.database,
-      "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
-      [run.id],
-    ),
-    statement(
-      context.database,
-      "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(run_id, shard_key) DO NOTHING",
-      [
-        run.id,
-        shardKey,
-        manifestDigest,
-        manifestKey,
-        capability.jobId,
-        manifest.captures.length,
-        Date.now(),
-      ],
-    ),
-    assertion(
-      context.database,
-      "EXISTS (SELECT 1 FROM ingest_manifests WHERE run_id = ? AND shard_key = ? AND digest = ? AND job_id = ?)",
-      [run.id, shardKey, manifestDigest, capability.jobId],
-    ),
-    assertion(
-      context.database,
-      "(SELECT COALESCE(sum(capture_count), 0) FROM ingest_manifests WHERE run_id = ?) + (SELECT count(*) FROM visonaut_captures c WHERE c.run_id = ? AND NOT EXISTS (SELECT 1 FROM ingest_manifests m WHERE m.run_id = c.run_id AND m.shard_key = c.shard_key)) <= ?",
-      [run.id, run.id, context.configuration.limits.maximumCaptures],
-    ),
-  ]);
+  try {
+    await atomic(context.database, [
+      assertion(
+        context.database,
+        "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL)",
+        [run.id],
+      ),
+      statement(
+        context.database,
+        "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(run_id, shard_key) DO UPDATE SET declared_bytes = excluded.declared_bytes WHERE ingest_manifests.digest = excluded.digest AND ingest_manifests.job_id = excluded.job_id AND ingest_manifests.declared_bytes IS NULL",
+        [
+          run.id,
+          shardKey,
+          manifestDigest,
+          manifestKey,
+          capability.jobId,
+          manifest.captures.length,
+          declaredBytes,
+          Date.now(),
+        ],
+      ),
+      assertion(
+        context.database,
+        "EXISTS (SELECT 1 FROM ingest_manifests WHERE run_id = ? AND shard_key = ? AND digest = ? AND job_id = ? AND declared_bytes = ?)",
+        [run.id, shardKey, manifestDigest, capability.jobId, declaredBytes],
+      ),
+      assertion(
+        context.database,
+        "(SELECT COALESCE(sum(capture_count), 0) FROM ingest_manifests WHERE run_id = ?) + (SELECT count(*) FROM visonaut_captures c WHERE c.run_id = ? AND NOT EXISTS (SELECT 1 FROM ingest_manifests m WHERE m.run_id = c.run_id AND m.shard_key = c.shard_key)) <= ?",
+        [run.id, run.id, context.configuration.limits.maximumCaptures],
+      ),
+      assertion(
+        context.database,
+        "NOT EXISTS (SELECT 1 FROM ingest_manifests WHERE run_id = ? AND declared_bytes IS NULL)",
+        [run.id],
+      ),
+      assertion(context.database, `${runDeclaredBytesSql} <= ?`, [run.id, run.id, maximumRunBytes]),
+    ]);
+  } catch (error) {
+    if (error instanceof ConflictError) {
+      const existing = await context.database
+        .prepare(
+          "SELECT digest, job_id, declared_bytes FROM ingest_manifests WHERE run_id = ? AND shard_key = ?",
+        )
+        .bind(run.id, shardKey)
+        .first<{ digest: string; job_id: string; declared_bytes: number | null }>();
+      const additionalBytes = existing ? 0 : declaredBytes;
+      if (
+        (!existing ||
+          (existing.digest === manifestDigest &&
+            existing.job_id === capability.jobId &&
+            existing.declared_bytes === declaredBytes)) &&
+        (await runDeclaredBytes(context, run.id)) + additionalBytes > maximumRunBytes
+      ) {
+        throw new SecurityError("upload_limit", 413, "The run exceeds its original-byte limit.");
+      }
+    }
+    throw error;
+  }
   await context.quarantine.put(manifestKey, JSON.stringify(manifest), {
     httpMetadata: { contentType: "application/json" },
   });

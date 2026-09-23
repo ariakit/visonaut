@@ -27,6 +27,7 @@ export interface ApiConfiguration {
   limits: {
     maximumImageBytes: number;
     maximumShardBytes: number;
+    maximumRunBytes?: number;
     maximumManifestBytes: number;
     maximumPlanBytes: number;
     maximumCaptures: number;

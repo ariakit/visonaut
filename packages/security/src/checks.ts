@@ -2,6 +2,13 @@ import { numericId, record, SecurityError } from "./errors.js";
 import type { GitHubClient } from "./github.js";
 
 export const CHECK_NAME = "Visonaut";
+const legacyCheckName = "Ariviso";
+
+function expectedCheckName(name: unknown, externalId: string) {
+  if (name === CHECK_NAME) return true;
+  // Only checks created before the rename may retain the old display name.
+  return name === legacyCheckName && externalId.startsWith("ariviso:");
+}
 
 /** Structural match for the service's durable outbox intent. */
 export interface StatusDelivery {
@@ -62,45 +69,47 @@ export async function findGitHubCheck({
   if (!/^[a-f0-9]{40}$/.test(testedSha) || !/^[A-Za-z0-9:_-]{1,200}$/.test(externalId)) {
     throw new Error("A check needs a full tested SHA and a stable external identity.");
   }
-  const matches: string[] = [];
-  for (let page = 1; page <= 20; page += 1) {
-    const result = record(
-      await github.request(
-        `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=Visonaut&filter=all&per_page=100&page=${page}`,
-      ),
-    );
-    if (!Array.isArray(result.check_runs)) {
-      throw new SecurityError("invalid_checks", 503, "GitHub check metadata is unavailable.");
-    }
-    for (const value of result.check_runs) {
-      const check = record(value);
-      if (
-        check.external_id === externalId &&
-        check.name === CHECK_NAME &&
-        numericId(record(check.app).id) === github.appId &&
-        check.head_sha === testedSha
-      ) {
-        matches.push(numericId(check.id));
+  const matches = new Set<string>();
+  const names = externalId.startsWith("ariviso:") ? [CHECK_NAME, legacyCheckName] : [CHECK_NAME];
+  for (const name of names) {
+    for (let page = 1; page <= 20; page += 1) {
+      const result = record(
+        await github.request(
+          `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=${name}&filter=all&per_page=100&page=${page}`,
+        ),
+      );
+      if (!Array.isArray(result.check_runs)) {
+        throw new SecurityError("invalid_checks", 503, "GitHub check metadata is unavailable.");
+      }
+      for (const value of result.check_runs) {
+        const check = record(value);
+        if (
+          check.external_id === externalId &&
+          expectedCheckName(check.name, externalId) &&
+          numericId(record(check.app).id) === github.appId &&
+          check.head_sha === testedSha
+        ) {
+          matches.add(numericId(check.id));
+        }
+      }
+      if (result.check_runs.length < 100) break;
+      if (page === 20) {
+        throw new SecurityError(
+          "too_many_checks",
+          503,
+          "GitHub check reconciliation exceeded its limit.",
+        );
       }
     }
-    if (result.check_runs.length < 100) break;
-    if (page === 20) {
-      throw new SecurityError(
-        "too_many_checks",
-        503,
-        "GitHub check reconciliation exceeded its limit.",
-      );
-    }
   }
-  const existing = matches[0];
-  if (matches.length > 1) {
+  if (matches.size > 1) {
     throw new SecurityError(
       "duplicate_check",
       409,
       "Multiple GitHub checks have the same external identity.",
     );
   }
-  return existing ?? null;
+  return matches.values().next().value ?? null;
 }
 
 /** Invoke under the service's per-check lock, including after ambiguous creation. */
@@ -150,9 +159,11 @@ export async function sendGitHubCheck({
   const checkId = numericId(intent.check_id);
   const path = `/repos/${github.repository}/check-runs/${checkId}`;
   const existing = record(await github.request(path));
+  const legacyCheck =
+    existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
   if (
     existing.head_sha !== testedSha ||
-    existing.name !== CHECK_NAME ||
+    (existing.name !== CHECK_NAME && !legacyCheck) ||
     numericId(record(existing.app).id) !== github.appId
   ) {
     throw new SecurityError(

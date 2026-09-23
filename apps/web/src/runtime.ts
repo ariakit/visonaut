@@ -182,6 +182,7 @@ export function apiBindings(env: Env): ApiBindings {
     limits: {
       maximumImageBytes: positive(limits.maximumImageBytes, "maximumImageBytes"),
       maximumShardBytes: positive(limits.maximumShardBytes, "maximumShardBytes"),
+      maximumRunBytes: positive(limits.maximumRunBytes, "maximumRunBytes"),
       maximumManifestBytes: positive(limits.maximumManifestBytes, "maximumManifestBytes"),
       maximumPlanBytes: positive(limits.maximumPlanBytes, "maximumPlanBytes"),
       maximumCaptures: positive(limits.maximumCaptures, "maximumCaptures"),

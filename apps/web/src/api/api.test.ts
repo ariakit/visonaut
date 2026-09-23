@@ -105,6 +105,7 @@ beforeAll(async () => {
     new URL("../../migrations/0012_historical_comparisons.sql", import.meta.url),
     new URL("../../migrations/0013_promotion_scans.sql", import.meta.url),
     new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
+    new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
@@ -119,7 +120,19 @@ beforeAll(async () => {
 });
 afterAll(async () => runtime.dispose());
 
-async function fixture(secondShard = false, discovery = false) {
+interface FixtureOptions {
+  secondShard?: boolean;
+  discovery?: boolean;
+  duplicateOriginal?: boolean;
+  inheritedShardCount?: number;
+}
+
+async function fixture({
+  secondShard = false,
+  discovery = false,
+  duplicateOriginal = false,
+  inheritedShardCount = 0,
+}: FixtureOptions = {}) {
   repositoryId += 1;
   const id = String(repositoryId);
   const projectId = crypto.randomUUID();
@@ -184,6 +197,29 @@ async function fixture(secondShard = false, discovery = false) {
         { id: "test-2", captures: [{ itemKey: "dialog/open", variantKey: "firefox-light" }] },
       ],
     });
+  for (let index = 1; index <= inheritedShardCount; index += 1) {
+    const key = `carried-${index}`;
+    plan.shards.push({
+      ...plan.shards[0]!,
+      key,
+      jobName: key,
+      tests: [
+        {
+          id: `test-${key}`,
+          captures: Array.from({ length: 256 }, (_, ordinal) => ({
+            itemKey: `${key}/item-${ordinal}`,
+            variantKey: "light",
+          })),
+        },
+      ],
+    });
+  }
+  if (duplicateOriginal) {
+    plan.shards[0]?.tests?.[0]?.captures.push({
+      itemKey: "dialog/open",
+      variantKey: "react-dark",
+    });
+  }
   if (discovery) {
     plan.discovery = { executorDigest: "f".repeat(64) };
     for (const shard of plan.shards) {
@@ -253,6 +289,15 @@ async function fixture(secondShard = false, discovery = false) {
       },
     ],
   };
+  if (duplicateOriginal) {
+    const capture = manifest.captures[0];
+    if (!capture) throw new Error("Expected a capture fixture.");
+    manifest.captures.push({
+      ...capture,
+      ordinal: 1,
+      variant: { ...capture.variant, key: "react-dark" },
+    });
+  }
   if (plan.discovery) {
     manifest.discovery = {
       executorDigest: plan.discovery.executorDigest,
@@ -388,9 +433,10 @@ async function fixture(secondShard = false, discovery = false) {
       limits: {
         maximumImageBytes: 2 * 1024 * 1024,
         maximumShardBytes: 16 * 1024 * 1024,
+        maximumRunBytes: 2 * 1024 * 1024 * 1024,
         maximumManifestBytes: 2 * 1024 * 1024,
         maximumPlanBytes: 2 * 1024 * 1024,
-        maximumCaptures: 100,
+        maximumCaptures: inheritedShardCount ? 1100 : 100,
       },
     },
   };
@@ -563,8 +609,8 @@ async function fixture(secondShard = false, discovery = false) {
   };
 }
 
-async function rerunFixture(discovery = false) {
-  const test = await fixture(true, discovery);
+async function rerunFixture(discovery = false, duplicateOriginal = false) {
+  const test = await fixture({ secondShard: true, discovery, duplicateOriginal });
   const digest = await test.upload();
   test.succeedShard();
   expect(
@@ -640,6 +686,40 @@ async function rerunFixture(discovery = false) {
     return next;
   };
   return { ...test, digest, github, verified, original, alias, current, inherit, reserve };
+}
+
+async function secondShardDeclaration(
+  test: Awaited<ReturnType<typeof fixture>>,
+  runId: string,
+  workflowAttempt: number,
+) {
+  const jobId = workflowAttempt === 1 ? "791" : "792";
+  const manifest: Manifest = {
+    ...test.manifest,
+    run: { ...test.manifest.run, workflowAttempt },
+    shard: { key: "firefox-1", jobId, sourceAttempt: workflowAttempt },
+    tests: test.manifest.tests.map((entry) => ({ ...entry, id: "test-2" })),
+    captures: test.manifest.captures.slice(0, 1).map((capture) => ({
+      ...capture,
+      testId: "test-2",
+      variant: { ...capture.variant, key: "firefox-light" },
+    })),
+  };
+  const capability = await issueIngestCapability(test.bindings.configuration.capability, {
+    runId,
+    repositoryId: test.manifest.run.repositoryId,
+    workflowRunId: "456",
+    workflowAttempt,
+    testedSha: manifest.run.testedSha,
+    planDigest: manifest.run.planDigest,
+    shardKey: "firefox-1",
+    jobId,
+    maximumBytes: test.bindings.configuration.limits.maximumShardBytes,
+    maximumImages: 1,
+  });
+  const declare = () =>
+    test.send(`/v1/runs/${runId}/shards/firefox-1`, test.json(manifest, capability));
+  return { manifest, capability, declare };
 }
 
 describe("HTTP boundary with real local D1, R2, and image codecs", () => {
@@ -744,6 +824,181 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     expect((await test.declare()).status).toBe(409);
     expect((await quarantine.list({ prefix: `manifests/${test.runId}/` })).objects).toHaveLength(1);
   });
+  it("atomically refuses a second shard above the aggregate declared-byte cap", async () => {
+    const test = await fixture({ secondShard: true });
+    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2 - 1;
+    expect((await test.declare()).status).toBe(200);
+    const second = await secondShardDeclaration(test, test.runId, 1);
+    const refused = await second.declare();
+    expect(refused.status, await refused.clone().text()).toBe(413);
+    expect(
+      await database
+        .prepare("SELECT shard_key, declared_bytes FROM ingest_manifests WHERE run_id=?")
+        .bind(test.runId)
+        .all(),
+    ).toMatchObject({ results: [{ shard_key: "chrome-1", declared_bytes: bytes.byteLength }] });
+    expect((await test.declare()).status).toBe(200);
+  });
+  it("serializes simultaneous shard claims against the same byte cap", async () => {
+    const test = await fixture({ secondShard: true });
+    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength;
+    const second = await secondShardDeclaration(test, test.runId, 1);
+    const responses = await Promise.all([test.declare(), second.declare()]);
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 413]);
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(*) AS count, SUM(declared_bytes) AS bytes FROM ingest_manifests WHERE run_id=?",
+        )
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ count: 1, bytes: bytes.byteLength });
+  });
+  it("waits for a legacy manifest to be replayed with its complete byte total", async () => {
+    const test = await fixture({ secondShard: true });
+    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2;
+    expect((await test.declare()).status).toBe(200);
+    await database
+      .prepare("UPDATE ingest_manifests SET declared_bytes=NULL WHERE run_id=?")
+      .bind(test.runId)
+      .run();
+    const second = await secondShardDeclaration(test, test.runId, 1);
+    expect((await second.declare()).status).toBe(409);
+    expect((await test.declare()).status).toBe(200);
+    expect((await second.declare()).status).toBe(200);
+    expect(
+      await database
+        .prepare("SELECT SUM(declared_bytes) AS bytes FROM ingest_manifests WHERE run_id=?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ bytes: bytes.byteLength * 2 });
+  });
+  it("charges inherited originals once and permits an identical shard replay", async () => {
+    const test = await rerunFixture(false, true);
+    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2;
+    const next = await test.reserve();
+    const second = await secondShardDeclaration(test, next.id, 2);
+    expect((await second.declare()).status).toBe(200);
+    expect((await second.declare()).status).toBe(200);
+    expect(
+      await database
+        .prepare("SELECT shard_key, declared_bytes FROM ingest_manifests WHERE run_id=?")
+        .bind(next.id)
+        .all(),
+    ).toMatchObject({ results: [{ shard_key: "firefox-1", declared_bytes: bytes.byteLength }] });
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'",
+        )
+        .bind(next.id)
+        .first(),
+    ).toEqual({ count: 2 });
+  });
+  it("counts separate inherited image objects with matching digests at the 2 GiB boundary", async () => {
+    const test = await fixture({ inheritedShardCount: 4 });
+    test.bindings.configuration.limits.maximumShardBytes = 512 * 1024 * 1024;
+    const shardKeys = ["carried-1", "carried-2", "carried-3", "carried-4"];
+    const profileDigest = test.manifest.profiles[0]?.digest;
+    if (!profileDigest) throw new Error("Expected a profile fixture.");
+    const fullProfileDigest = "e".repeat(64);
+    const imageBytes = 2 * 1024 * 1024;
+
+    // Model four verified 512 MiB shards without allocating 2 GiB in the test.
+    for (const shardKey of shardKeys) {
+      await database
+        .prepare(
+          "WITH RECURSIVE numbers(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM numbers WHERE n < 255) INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) SELECT printf('%s:image:%s:%d', ?, ?, n), ?, printf('%064x', n), printf('runs/%s/images/%s/%d', ?, ?, n), 'image/png', ?, 1, 1 FROM numbers",
+        )
+        .bind(test.runId, shardKey, test.runId, test.runId, shardKey, imageBytes)
+        .run();
+      await database
+        .prepare(
+          "WITH RECURSIVE numbers(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM numbers WHERE n < 255) INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT printf('%s:capture:%s:%d', ?, ?, n), ?, ?, printf('%s/item-%d', ?, n), 'light', n, printf('%s:image:%s:%d', ?, ?, n), ?, ?, 1, '{}' FROM numbers",
+        )
+        .bind(
+          test.runId,
+          shardKey,
+          test.runId,
+          shardKey,
+          shardKey,
+          test.runId,
+          shardKey,
+          profileDigest,
+          `test-${shardKey}`,
+        )
+        .run();
+      await database
+        .prepare(
+          "UPDATE visonaut_shards SET state='complete', manifest_digest=?, full_profile_digest=? WHERE run_id=? AND key=?",
+        )
+        .bind("a".repeat(64), fullProfileDigest, test.runId, shardKey)
+        .run();
+    }
+    const next = await test.service.reserveRun({
+      id: crypto.randomUUID(),
+      projectId: test.bindings.configuration.projectId,
+      externalRunId: "456",
+      attempt: 2,
+      kind: "main",
+      testedSha: test.manifest.run.testedSha,
+      lineageKey: "main",
+      plan: test.servicePlan,
+      verifiedRelatedRunIds: [test.runId],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified-rerun",
+      rerunShardKeys: ["chrome-1"],
+      inheritFromRunId: test.runId,
+      verifiedInheritedShards: shardKeys.map((key) => ({
+        key,
+        manifestDigest: "a".repeat(64),
+        captureProfileDigest: fullProfileDigest,
+      })),
+      now: Date.now(),
+    });
+    await database
+      .prepare(
+        "INSERT INTO ingest_run_provenance(run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
+      )
+      .bind(next.id, test.runId)
+      .run();
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(DISTINCT image.id) AS images, COUNT(DISTINCT image.digest) AS digests, SUM(image.bytes) AS bytes FROM visonaut_captures AS capture JOIN visonaut_images AS image ON image.id=capture.image_id WHERE capture.run_id=?",
+        )
+        .bind(next.id)
+        .first(),
+    ).toEqual({ images: 1024, digests: 256, bytes: 2 * 1024 * 1024 * 1024 });
+    const manifest: Manifest = {
+      ...test.manifest,
+      run: { ...test.manifest.run, workflowAttempt: 2 },
+      shard: { ...test.manifest.shard, jobId: "790", sourceAttempt: 2 },
+    };
+    const capability = await issueIngestCapability(test.bindings.configuration.capability, {
+      runId: next.id,
+      repositoryId: manifest.run.repositoryId,
+      workflowRunId: "456",
+      workflowAttempt: 2,
+      testedSha: manifest.run.testedSha,
+      planDigest: manifest.run.planDigest,
+      shardKey: "chrome-1",
+      jobId: "790",
+      maximumBytes: test.bindings.configuration.limits.maximumShardBytes,
+      maximumImages: 1,
+    });
+    const response = await test.send(
+      `/v1/runs/${next.id}/shards/chrome-1`,
+      test.json(manifest, capability),
+    );
+    expect(response.status, await response.clone().text()).toBe(413);
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM ingest_manifests WHERE run_id=?")
+        .bind(next.id)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
   it("waits for successful GitHub jobs before sealing and presenting review", async () => {
     const test = await fixture();
     const digest = await test.upload();
@@ -803,7 +1058,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     });
   });
   it("retires an old attempt under a changed executor without blocking a later attempt", async () => {
-    const test = await fixture(true);
+    const test = await fixture({ secondShard: true });
     test.bindings.configuration.reusableWorkflowSha = "e".repeat(40);
     await trySealRun(apiContext(test.bindings), test.runId, true);
     expect((await test.service.run(test.runId)).state).toBe("failed");
@@ -915,7 +1170,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     });
   });
   it("keeps staged inline profiles unchanged when a shard retries after normalization deploys", async () => {
-    const test = await fixture(true);
+    const test = await fixture({ secondShard: true });
     const digest = await test.upload();
     test.succeedShard();
     expect(
@@ -966,7 +1221,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     await expect(test.inherit()).rejects.toThrow("original verified manifest");
   });
   it("inherits GitHub carried-success aliases using the original job execution", async () => {
-    const test = await fixture(true, true);
+    const test = await fixture({ secondShard: true, discovery: true });
     const digest = await test.upload();
     test.succeedShard();
     const response = await test.send(
@@ -1356,7 +1611,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
   });
 
   it("does not inherit discovery uploads without an independent successful receipt", async () => {
-    const test = await fixture(true, true);
+    const test = await fixture({ secondShard: true, discovery: true });
     const digest = await test.upload();
     test.succeedShard();
     test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", { artifacts: [] });
