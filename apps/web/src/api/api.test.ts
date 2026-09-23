@@ -6,7 +6,6 @@ import { decodeImage, validateImage } from "@visonaut/compare";
 import { createCodecs } from "@visonaut/compare/jsquash";
 import {
   digestJson,
-  sha256,
   type CaptureProfile,
   type Manifest,
   type TrustedPlan,
@@ -1968,7 +1967,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     }
   });
 
-  it("serves main-pinned clients and the transfer key only to their signed jobs", async () => {
+  it("serves the transfer key only to its signed capture job", async () => {
     const test = await fixture();
     const configuration = test.bindings.configuration;
     const executorDigest = "e".repeat(64);
@@ -1997,53 +1996,18 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         },
       ],
     };
-    const archive = new TextEncoder().encode("audited future-public client archive");
-    const digest = await sha256(archive);
-    const cliArchive = new TextEncoder().encode("audited future-public command archive");
-    const cliDigest = await sha256(cliArchive);
-    const settings = {
-      packages: {
-        playwright: { sha256: digest, bytes: archive.byteLength },
-        cli: { sha256: cliDigest, bytes: cliArchive.byteLength },
-      },
-    };
-    const requestedKeys: string[] = [];
-    let storedBytes = archive;
-    test.bindings.bootstrap = {
-      async get(key) {
-        requestedKeys.push(key);
-        if (key === `packages/${cliDigest}.tgz`) {
-          return {
-            size: cliArchive.byteLength,
-            arrayBuffer: async () => cliArchive.slice().buffer,
-          };
-        }
-        if (key !== `packages/${digest}.tgz`) return null;
-        return {
-          size: storedBytes.byteLength,
-          arrayBuffer: async () => storedBytes.slice().buffer,
-        };
-      },
-    };
     const original = configuration.github.fetch!;
-    let signedJobName = "capture / render-chromium";
-    let changeMainDuringLoad = false;
-    let mainRefCalls = 0;
+    let signedJobName = "capture / chromium";
     configuration.github.fetch = async (input, init) => {
       const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
       if (url.pathname.endsWith("/git/ref/heads/main")) {
-        const sha =
-          changeMainDuringLoad && mainRefCalls++ % 2 === 1
-            ? "b".repeat(40)
-            : test.manifest.run.testedSha;
-        return Response.json({ object: { sha } });
+        return Response.json({ object: { sha: test.manifest.run.testedSha } });
       }
       if (url.pathname.includes("/contents/")) {
-        const value = url.pathname.endsWith("settings.json") ? settings : plan;
         return Response.json({
           type: "file",
           encoding: "base64",
-          content: Buffer.from(JSON.stringify(value)).toString("base64"),
+          content: Buffer.from(JSON.stringify(plan)).toString("base64"),
         });
       }
       if (url.pathname.endsWith("/jobs")) {
@@ -2077,7 +2041,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       return original(input, init);
     };
     const keys = await generateKeyPair("RS256");
-    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "bootstrap-test", alg: "RS256" };
+    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "transfer-test", alg: "RS256" };
     vi.stubGlobal("fetch", async (input: string | URL | Request) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
@@ -2087,7 +2051,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     });
     try {
       const signed = async (
-        audience = "https://preview.example/bootstrap",
+        audience = "https://preview.example/transfer-key",
         reusableWorkflowRef = configuration.reusableWorkflowRef,
         callerWorkflowRef = `ariakit/ariakit/${plan.workflow}@refs/heads/main`,
       ) =>
@@ -2105,7 +2069,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
           job_workflow_ref: reusableWorkflowRef,
           job_workflow_sha: configuration.reusableWorkflowSha,
         })
-          .setProtectedHeader({ alg: "RS256", kid: "bootstrap-test" })
+          .setProtectedHeader({ alg: "RS256", kid: "transfer-test" })
           .setIssuer("https://token.actions.githubusercontent.com")
           .setAudience(audience)
           .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
@@ -2114,55 +2078,6 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
           .setExpirationTime("5m")
           .setJti(crypto.randomUUID())
           .sign(keys.privateKey);
-      const body = {
-        browser: "chromium",
-        stage: "render",
-        workflowRunId: "457",
-        workflowAttempt: 1,
-        testedSha: test.manifest.run.testedSha,
-      };
-      const token = await signed();
-      const route = "/v1/bootstrap/packages/playwright";
-      const response = await test.send(route, test.json(body, token));
-      expect(response.status, response.status === 200 ? "" : await response.clone().text()).toBe(
-        200,
-      );
-      expect(response.headers.get("cache-control")).toContain("no-store");
-      expect(new Uint8Array(await response.arrayBuffer())).toEqual(archive);
-      expect(requestedKeys).toEqual([`packages/${digest}.tgz`]);
-      const cliResponse = await test.send("/v1/bootstrap/packages/cli", test.json(body, token));
-      expect(cliResponse.status).toBe(200);
-      expect(new Uint8Array(await cliResponse.arrayBuffer())).toEqual(cliArchive);
-      expect(
-        (await test.send("/v1/bootstrap/packages/private", test.json(body, token))).status,
-      ).toBe(404);
-      expect(requestedKeys).toEqual([`packages/${digest}.tgz`, `packages/${cliDigest}.tgz`]);
-      expect(
-        (await test.send(route, test.json({ ...body, testedSha: "a".repeat(40) }, token))).status,
-      ).toBe(403);
-      expect(
-        (await test.send(route, test.json(body, await signed("https://preview.example")))).status,
-      ).toBe(401);
-      signedJobName = "capture / chromium";
-      expect((await test.send(route, test.json(body, token))).status).toBe(403);
-      signedJobName = "capture / render-chromium";
-      storedBytes = archive.slice();
-      storedBytes[0] = (storedBytes[0] ?? 0) ^ 1;
-      expect((await test.send(route, test.json(body, token))).status).toBe(503);
-      storedBytes = archive;
-      settings.packages.playwright.bytes += 1;
-      expect((await test.send(route, test.json(body, token))).status).toBe(503);
-      settings.packages.playwright.bytes -= 1;
-      configuration.trustedExecutorDigest = "f".repeat(64);
-      expect((await test.send(route, test.json(body, token))).status).toBe(403);
-      configuration.trustedExecutorDigest = executorDigest;
-      changeMainDuringLoad = true;
-      mainRefCalls = 0;
-      expect((await test.send(route, test.json(body, token))).status).toBe(409);
-
-      changeMainDuringLoad = false;
-      test.bindings.transferPrivateKey = privateKey;
-      signedJobName = "capture / chromium";
       const transferRoute = "/v1/transfer/private-key";
       const transferBody = {
         browser: "chromium",
@@ -2170,7 +2085,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         workflowAttempt: 1,
         testedSha: test.manifest.run.testedSha,
       };
-      const transferToken = await signed("https://preview.example/transfer-key");
+      const transferToken = await signed();
       test.bindings.transferPrivateKey = undefined;
       expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
         503,
@@ -2201,7 +2116,14 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         403,
       );
       signedJobName = "capture / chromium";
-      expect((await test.send(transferRoute, test.json(transferBody, token))).status).toBe(401);
+      expect(
+        (
+          await test.send(
+            transferRoute,
+            test.json(transferBody, await signed("https://preview.example/bootstrap")),
+          )
+        ).status,
+      ).toBe(401);
       expect(
         (
           await test.send(

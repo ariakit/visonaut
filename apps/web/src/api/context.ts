@@ -50,7 +50,6 @@ export interface ApiBindings {
   database: D1Database;
   images: ObjectStorage;
   quarantine: ObjectStorage;
-  bootstrap?: Pick<ObjectStorage, "get">;
   transferPrivateKey?: string;
   comparator: { fetch: typeof fetch };
   operations: { send(message: { kind: "continue" }): Promise<void> };
