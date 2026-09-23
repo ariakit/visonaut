@@ -1,0 +1,77 @@
+{
+  "scope": "Read-only Cloudflare D1 GraphQL analytics around synthetic capacity database cleanup",
+  "datesUtc": {
+    "billingCycleStart": "2026-09-09",
+    "lastQueriedDate": "2026-09-23",
+    "preDeletionQueryApprox": "2026-09-23T20:12:00Z",
+    "postDeletionQueryApprox": "2026-09-23T20:17:00Z"
+  },
+  "method": {
+    "dataset": "viewer.accounts.d1AnalyticsAdaptiveGroups",
+    "authentication": "Existing Wrangler OAuth session; credential values were not printed or stored in this receipt",
+    "perDatabaseFilter": "databaseId with date_geq/date_leq for 2026-09-22 and 2026-09-23",
+    "cycleFilter": "date_geq=2026-09-09, date_leq=2026-09-23",
+    "minuteFilter": "datetime_geq=2026-09-23T20:10:00Z, datetime_lt=2026-09-23T20:22:00Z; grouped by datetimeMinute",
+    "queryErrors": []
+  },
+  "preDeletion": {
+    "cycleRowsWritten": 151659178,
+    "syntheticRowsWrittenTotal": 144767914,
+    "syntheticShareOfCyclePercent": 95.46,
+    "syntheticDatabases": [
+      {
+        "name": "visonaut-capacity-final-20260922",
+        "id": "0ff8f229-4a5a-42f5-a40b-619dd0fa1ff0",
+        "rowsWritten": 44133633,
+        "observedDateUtc": "2026-09-22",
+        "physicalBytesFromPreDeletionInventory": 5919244288
+      },
+      {
+        "name": "visonaut-capacity-restore-20260922",
+        "id": "052d7755-10f1-43a5-b218-b40fc8906ca8",
+        "rowsWritten": 31207881,
+        "observedDateUtc": "2026-09-23",
+        "physicalBytesFromPreDeletionInventory": 4490444800
+      },
+      {
+        "name": "visonaut-capacity-restore-indexed-20260923",
+        "id": "76f6af6a-7a04-4d2a-ba68-ae02cd053a41",
+        "rowsWritten": 41690404,
+        "observedDateUtc": "2026-09-23",
+        "physicalBytesFromPreDeletionInventory": 5937836032
+      },
+      {
+        "name": "ariviso-v3-capacity-source-20260922",
+        "id": "74ad10df-191d-4815-90f9-79aa51eb4e41",
+        "rowsWritten": 13867998,
+        "observedDateUtc": "2026-09-22",
+        "physicalBytesFromPreDeletionInventory": 1804353536
+      },
+      {
+        "name": "ariviso-v3-capacity-restore-20260922",
+        "id": "ab0adb72-62b0-4ce2-8e99-7972759da58e",
+        "rowsWritten": 13867998,
+        "observedDateUtc": "2026-09-22",
+        "physicalBytesFromPreDeletionInventory": 1737814016
+      }
+    ],
+    "syntheticPhysicalBytesTotal": 19889692672,
+    "physicalBytesSource": "Read-only wrangler d1 list --json before deletion; GraphQL does not report this inventory size."
+  },
+  "postDeletion": {
+    "cycleRowsWritten": 151659364,
+    "cycleDeltaFromPreDeletion": 186,
+    "minuteDatasetVisibleThroughUtc": "2026-09-23T20:16:00Z",
+    "deletedDatabaseMinuteGroups": 0,
+    "accountMinuteGroups": "Visible groups in the requested window belonged to other databases; they do not provide a complete reconciliation of the cycle delta.",
+    "limitation": "Analytics had not yet returned data after 20:16 UTC. Empty minute groups for deleted IDs do not prove deletion produced zero metered writes. Deletion via the D1 API was independently confirmed by a fresh database list."
+  },
+  "billingDashboardObservation": {
+    "source": "Parent agent's earlier Cloudflare dashboard observation, also consistent with the user's alert screenshot; not independently queried in this GraphQL audit",
+    "observedApproxUtc": "2026-09-23T19:57:00Z",
+    "currentTotalUsd": 28.9,
+    "d1RowsWrittenUsd": 28,
+    "r2StorageUsd": 0.9,
+    "limitation": "This displayed billable-usage total lagged behind GraphQL row metrics and is not a final invoice."
+  }
+}
