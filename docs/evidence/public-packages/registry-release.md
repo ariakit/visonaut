@@ -1,0 +1,14 @@
+# Public registry release audit
+
+On September 23, 2026, the public npm registry served [`visonaut@0.1.0`](https://www.npmjs.com/package/visonaut/v/0.1.0) and [`@visonaut/playwright@0.1.0`](https://www.npmjs.com/package/@visonaut/playwright/v/0.1.0). The registry tarballs were downloaded with `npm pack` and audited with the repository's `auditTarball` function. The audit accepted only the CLI's eight intended files and the adapter's eighteen intended files, including its ten trusted CI helpers. It rejected workspace runtime dependencies and unexpected packed paths by construction.
+
+| Registry tarball                |  Bytes | SHA-256                                                            |
+| ------------------------------- | -----: | ------------------------------------------------------------------ |
+| `visonaut-0.1.0.tgz`            | 14,509 | `3d4e9c5f84bf401ddd8fd58b934b3cac8d5a212faf34bb14dd74cea02a532054` |
+| `visonaut-playwright-0.1.0.tgz` | 25,171 | `c89d07bf0cafce24b63ae1039aece8dcf9b55a9b4a38f5320b03d7d6c95bb465` |
+
+An isolated checkout of current main at [`beabb92`](https://github.com/ariakit/visonaut/commit/beabb924dba47ad0ba5b2551283b3d9e7c71d0ed) installed the frozen lockfile and built both packages with Node 24.18.0 and pnpm 12.5.1. `packages.mjs pack` created audited tarballs whose SHA-256 values matched the two registry downloads exactly. The earlier [CI artifact](./visonaut-ci.md) contains the same CLI tarball but an older, smaller adapter tarball. Trusted capture transfer helpers were added to the adapter before its first npm publication, so the older adapter artifact is not the published file.
+
+A separate consumer, outside the workspace, installed the two public registry versions with `@playwright/test@1.63.0`, TypeScript 6.0.2, and Node types 24.13.6. Install scripts were disabled; the user npm configuration was empty; token environment variables were removed; and the isolated pnpm store downloaded ten packages with none reused. `pnpm exec visonaut --help` exposed upload, finalize, and status only. The adapter, reporter, and CI ESM exports imported. A prepared `visual(page, { item, variant })` call type-checked under strict NodeNext and Bundler resolution. Status without a maintainer token returned exit 4 before network use. A loopback-only fixture sent four synthetic authenticated requests through the installed binary: passed returned exit 0, needs-review exit 3, 403 exit 4, and invalid protocol state exit 1. No deployed Visonaut API was called by that fixture.
+
+The exact-byte match verifies that the installed first versions correspond to the recorded current package source. It does not prove npm trusted-publisher configuration or a full Ariakit capture cycle. Those checks remain open before the required-check cutover. No `@visonaut/cli` alias was published or selected.
