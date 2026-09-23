@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   assertInfrastructure,
   assertStableDurableObjectNamespaces,
+  runNonproductionMigrations,
   versionConfiguration,
 } from "./deploy-version.mjs";
 
@@ -136,5 +137,125 @@ test("preflight requires the configured self Durable Object namespace", () => {
         assertInfrastructure(configuration, replacementNamespace, schedules),
       ),
     /Durable Object namespace IDs changed/,
+  );
+});
+
+test("nonproduction web upload applies and verifies migrations with the separate D1 token", () => {
+  for (const [worker, migrationEnvironment] of [
+    ["visonaut-preview", undefined],
+    ["visonaut-diagnostics", "diagnostics"],
+  ]) {
+    const events = [];
+    const target = {
+      ...configuration,
+      name: worker,
+      d1_databases: [
+        {
+          binding: "DB",
+          database_name: worker,
+          database_id: "target-database-id",
+        },
+      ],
+    };
+    const source = {
+      name: worker,
+      d1_databases: [
+        {
+          binding: "DB",
+          database_name: worker,
+          database_id: "target-database-id",
+          migrations_dir: "migrations",
+        },
+      ],
+    };
+    runNonproductionMigrations({
+      expectedName: worker,
+      configuration: target,
+      sourceConfiguration: source,
+      sourceConfigPath: "/workspace/apps/web/wrangler.jsonc",
+      wranglerPath: "/workspace/node_modules/wrangler/bin/wrangler.js",
+      environment: {
+        CLOUDFLARE_API_TOKEN: "worker-token",
+        CLOUDFLARE_MIGRATIONS_API_TOKEN: "migration-token",
+      },
+      run: (_executable, arguments_, options) => {
+        events.push({ arguments_, token: options.env.CLOUDFLARE_API_TOKEN });
+        if (arguments_.includes("list")) {
+          return "✅ No migrations to apply!\n";
+        }
+        return undefined;
+      },
+    });
+    assert.deepEqual(
+      events.map((event) => event.arguments_[3]),
+      ["apply", "list"],
+    );
+    assert(events.every((event) => event.token === "migration-token"));
+    assert(events.every((event) => event.arguments_.includes("--remote")));
+    assert(
+      events.every((event) => event.arguments_.includes("/workspace/apps/web/wrangler.jsonc")),
+    );
+    assert.equal(events[0].arguments_.includes("--env"), migrationEnvironment !== undefined);
+    if (migrationEnvironment) {
+      assert(events.every((event) => event.arguments_.at(-1) === migrationEnvironment));
+    }
+  }
+});
+
+test("nonproduction migration gate fails closed before upload", () => {
+  const target = {
+    ...configuration,
+    name: "visonaut-preview",
+    d1_databases: [{ binding: "DB", database_name: "visonaut-preview", database_id: "expected" }],
+  };
+  const source = {
+    name: "visonaut-preview",
+    d1_databases: [
+      {
+        binding: "DB",
+        database_name: "visonaut-preview",
+        database_id: "expected",
+        migrations_dir: "migrations",
+      },
+    ],
+  };
+  const options = {
+    expectedName: "visonaut-preview",
+    configuration: target,
+    sourceConfiguration: source,
+    sourceConfigPath: "/workspace/apps/web/wrangler.jsonc",
+    wranglerPath: "/workspace/node_modules/wrangler/bin/wrangler.js",
+    environment: {
+      CLOUDFLARE_API_TOKEN: "worker-token",
+      CLOUDFLARE_MIGRATIONS_API_TOKEN: "migration-token",
+    },
+  };
+  assert.throws(
+    () =>
+      runNonproductionMigrations({
+        ...options,
+        environment: { CLOUDFLARE_API_TOKEN: "worker-token" },
+      }),
+    /migration token/i,
+  );
+  assert.throws(
+    () =>
+      runNonproductionMigrations({
+        ...options,
+        sourceConfiguration: {
+          ...source,
+          d1_databases: [{ ...source.d1_databases[0], database_id: "wrong" }],
+        },
+      }),
+    /database/i,
+  );
+  assert.throws(
+    () =>
+      runNonproductionMigrations({
+        ...options,
+        run: (_executable, arguments_) =>
+          arguments_.includes("list") ? "Migrations to be applied:\n" : undefined,
+      }),
+    /pending migrations/i,
   );
 });

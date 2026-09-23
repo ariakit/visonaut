@@ -8,6 +8,14 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const resourceTypes = new Set(["queue", "d1", "r2_bucket", "service", "durable_object_namespace"]);
+const nonproductionWebEnvironments = new Map([
+  ["visonaut-preview", null],
+  ["visonaut-diagnostics", "diagnostics"],
+]);
+const webSourceConfigPath = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../apps/web/wrangler.jsonc",
+);
 
 export function resourceInventory(configuration) {
   return [
@@ -154,6 +162,83 @@ export function versionConfiguration(configuration, propertyNames) {
   return output;
 }
 
+export function runNonproductionMigrations({
+  expectedName,
+  configuration,
+  sourceConfiguration,
+  sourceConfigPath,
+  wranglerPath,
+  environment = process.env,
+  run = execFileSync,
+}) {
+  if (!nonproductionWebEnvironments.has(expectedName)) {
+    return;
+  }
+  const migrationEnvironment = nonproductionWebEnvironments.get(expectedName);
+  assert.equal(sourceConfiguration.name, expectedName, "Migration config targets the wrong Worker");
+  assert.equal(configuration.name, expectedName, "Upload config targets the wrong Worker");
+  assert.equal(sourceConfiguration.d1_databases?.length, 1, "Expected one source D1 binding");
+  assert.equal(configuration.d1_databases?.length, 1, "Expected one upload D1 binding");
+  const sourceDatabase = sourceConfiguration.d1_databases[0];
+  const uploadDatabase = configuration.d1_databases[0];
+  assert.equal(sourceDatabase.binding, "DB");
+  assert.equal(uploadDatabase.binding, "DB");
+  assert.equal(sourceDatabase.migrations_dir, "migrations");
+  assert.equal(
+    sourceDatabase.database_id,
+    uploadDatabase.database_id,
+    "Migration database differs",
+  );
+  assert.equal(
+    sourceDatabase.database_name,
+    uploadDatabase.database_name,
+    "Migration database differs",
+  );
+  assert(isAbsolute(sourceConfigPath), "Migration config path must be absolute");
+  const migrationToken = environment.CLOUDFLARE_MIGRATIONS_API_TOKEN;
+  assert(migrationToken, "Separate Cloudflare migration token is required");
+  assert.notEqual(
+    migrationToken,
+    environment.CLOUDFLARE_API_TOKEN,
+    "Worker and migration tokens must be separate",
+  );
+  const migrationArguments = (operation) => [
+    wranglerPath,
+    "d1",
+    "migrations",
+    operation,
+    "DB",
+    "--remote",
+    "--config",
+    sourceConfigPath,
+    ...(migrationEnvironment ? ["--env", migrationEnvironment] : []),
+  ];
+  const migrationProcessEnvironment = {
+    ...environment,
+    CLOUDFLARE_API_TOKEN: migrationToken,
+    CI: "true",
+    WRANGLER_SEND_METRICS: "false",
+  };
+  // Schema must be current before a new Worker version can receive traffic.
+  run(process.execPath, migrationArguments("apply"), {
+    env: migrationProcessEnvironment,
+    stdio: "inherit",
+    timeout: 600000,
+  });
+  const pending = run(process.execPath, migrationArguments("list"), {
+    env: migrationProcessEnvironment,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "inherit"],
+    timeout: 60000,
+  });
+  assert(
+    typeof pending === "string" &&
+      pending.split(/\r?\n/u).some((line) => line.trim() === "✅ No migrations to apply!"),
+    "D1 still has pending migrations; refusing Worker upload",
+  );
+  console.log(`D1 migrations are current for ${expectedName}`);
+}
+
 export async function deployVersion(configPath, expectedName, environment) {
   assert(
     /^visonaut(?:-(?:preview|diagnostics))?(?:-compare)?$/.test(expectedName) ||
@@ -182,6 +267,19 @@ export async function deployVersion(configPath, expectedName, environment) {
   const beforeSchedules = await inspect("/schedules");
   const beforeNamespaces = assertInfrastructure(configuration, beforeSettings, beforeSchedules);
   const wranglerDirectory = dirname(require.resolve("wrangler/package.json"));
+  if (nonproductionWebEnvironments.has(expectedName)) {
+    const sourceConfiguration = unstable_readConfig({
+      config: webSourceConfigPath,
+      env: nonproductionWebEnvironments.get(expectedName) ?? undefined,
+    });
+    runNonproductionMigrations({
+      expectedName,
+      configuration,
+      sourceConfiguration,
+      sourceConfigPath: webSourceConfigPath,
+      wranglerPath: resolve(wranglerDirectory, "bin/wrangler.js"),
+    });
+  }
   const schema = JSON.parse(
     await readFile(resolve(wranglerDirectory, "config-schema.json"), "utf8"),
   );
