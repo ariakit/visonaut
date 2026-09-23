@@ -1,0 +1,40 @@
+{
+  "name": "visonaut-e03-final-20260923",
+  "main": "dist/worker.js",
+  "compatibility_date": "2026-09-22",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "visonaut-e03-final-20260923",
+      "database_id": "f1197621-9b01-4d2e-be9b-0e40d9bb4026",
+      "migrations_dir": "../../../apps/web/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "IMAGES",
+      "bucket_name": "visonaut-e03-final-20260923-images"
+    }
+  ],
+  "secrets": {
+    "required": ["PROBE_TOKEN"]
+  },
+  "limits": {
+    "cpu_ms": 30000,
+    "subrequests": 10000
+  },
+  "account_id": "b04f3af3f0f10a6b9481bc23ba974eca",
+  "no_bundle": true,
+  "version_metadata": {
+    "binding": "VERSION"
+  }
+}

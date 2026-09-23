@@ -1,0 +1,77 @@
+{
+  "mode": "hosted-cloudflare-native-final-source",
+  "sourceTree": "a953a2b42eb293088ba895484861756610de4f40",
+  "sourceFileCount": 42,
+  "startedAt": "2026-09-23T17:08:10.599Z",
+  "completedAt": "2026-09-23T17:13:11.768Z",
+  "worker": "visonaut-e03-final-20260923",
+  "workerVersion": "89e1c8de-6084-4e81-986a-d729f250b5f4",
+  "bundleSha256": "054ac9b6a5660132662456e9f34689d56c2c1eadebe83ba7d78b15cf3508f24d",
+  "fixtureDigest": "038e6326d2e1aaa3d4a4680e74c11c32ed184b2376456b475870d0ee77fc9016",
+  "passed": true,
+  "scenarioCount": 7,
+  "assertionCount": 147,
+  "attemptedD1Statements": 3744,
+  "maxAttemptedD1Statements": 759,
+  "d1ForeignKeyErrors": 0,
+  "d1PassingReceiptRows": 7,
+  "r2ReadbackObjects": 35,
+  "r2ReadbackBytes": 2450,
+  "r2DeletedKeyRefused": true,
+  "scenarios": [
+    {
+      "name": "atomicCommands",
+      "passed": true,
+      "assertions": 7,
+      "workerWallMs": 51755,
+      "d1AttemptedStatements": 650
+    },
+    {
+      "name": "currentAndStaleUndo",
+      "passed": true,
+      "assertions": 6,
+      "workerWallMs": 50211,
+      "d1AttemptedStatements": 729
+    },
+    {
+      "name": "rollbackHistory",
+      "passed": true,
+      "assertions": 14,
+      "workerWallMs": 61305,
+      "d1AttemptedStatements": 743
+    },
+    {
+      "name": "acceptanceStatus",
+      "passed": true,
+      "assertions": 16,
+      "workerWallMs": 44061,
+      "d1AttemptedStatements": 719
+    },
+    {
+      "name": "restoration",
+      "passed": true,
+      "assertions": 9,
+      "workerWallMs": 69764,
+      "d1AttemptedStatements": 759
+    },
+    {
+      "name": "retentionRaces",
+      "passed": true,
+      "assertions": 16,
+      "workerWallMs": 5858,
+      "d1AttemptedStatements": 20
+    },
+    {
+      "name": "statusScenarios",
+      "passed": true,
+      "assertions": 79,
+      "workerWallMs": 13436,
+      "d1AttemptedStatements": 124
+    }
+  ],
+  "boundaries": [
+    "isolated Worker/D1/private R2; synthetic identities, lineage, images, and clocks",
+    "recorded status sender; no GitHub checks or external notifications",
+    "production service/compare/protocol source, but not the production deployment, OAuth/OIDC, App webhook, or production sendGitHubCheck"
+  ]
+}

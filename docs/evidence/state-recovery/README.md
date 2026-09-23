@@ -1,5 +1,7 @@
 # Frozen E03 hosted state result
 
+A [final-source hosted replay](./final-source-20260923.md) passed the same seven state suites on September 23 against the final production-source tree, with independent D1 and R2 readback. It does not exercise the production sender.
+
 The seven bounded state scenarios passed on September 22, 2026. This is partial E03 evidence. It does not complete the launch gate. The [raw hosted report](../../../tooling/evidence/state-recovery/results/hosted-report.json) records the complete result. The source is frozen at Git tree `8a40dceb1831e14da4d7fe2b6b4e4cf893ab081f`; later product changes need their own source mapping or new run.
 
 | Scenario                                               | Result | Recorded assertions | Worker wall seconds | Attempted D1 statements | Evidence                                                                                    |

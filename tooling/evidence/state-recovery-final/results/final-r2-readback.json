@@ -1,0 +1,187 @@
+{
+  "bucket": "visonaut-e03-final-20260923-images",
+  "completedAt": "2026-09-23T17:17:50.517155+00:00",
+  "referencedObjects": 33,
+  "retainedSyntheticObjects": 2,
+  "verifiedObjects": [
+    {
+      "objectKey": "baselines/final20260923-acceptancestatus-seed/final20260923-acceptancestatus-image-seed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-atomiccommands-seed/final20260923-atomiccommands-image-seed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-atomiccommands-seed/final20260923-atomiccommands-image-seed-1",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-currentandstaleundo-green/final20260923-currentandstaleundo-image-green-0",
+      "bytes": 70,
+      "sha256": "619b0e8b0c8741604b8628c64323444df334846a0dfe13963662586a3603f14c"
+    },
+    {
+      "objectKey": "baselines/final20260923-currentandstaleundo-red/final20260923-currentandstaleundo-image-red-0",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "baselines/final20260923-currentandstaleundo-seed/final20260923-currentandstaleundo-image-seed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-restoration-removed/final20260923-restoration-image-removed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-restoration-seed/final20260923-restoration-image-seed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-restoration-seed/final20260923-restoration-image-seed-1",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "baselines/final20260923-rollbackhistory-mixed/final20260923-rollbackhistory-image-mixed-0",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "baselines/final20260923-rollbackhistory-mixed/final20260923-rollbackhistory-image-mixed-1",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "baselines/final20260923-rollbackhistory-seed/final20260923-rollbackhistory-image-seed-0",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-acceptancestatus-dependent/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-acceptancestatus-seed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-acceptancestatus-source/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-acceptancestatus-unrelated/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-atomiccommands-changed/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-atomiccommands-changed/1.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-atomiccommands-seed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-atomiccommands-seed/1.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-currentandstaleundo-green/0.png",
+      "bytes": 70,
+      "sha256": "619b0e8b0c8741604b8628c64323444df334846a0dfe13963662586a3603f14c"
+    },
+    {
+      "objectKey": "runs/final20260923-currentandstaleundo-red/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-currentandstaleundo-seed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-drifted/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-drifted/1.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-removed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-restored/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-restored/1.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-seed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-restoration-seed/1.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-rollbackhistory-mixed/0.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-rollbackhistory-mixed/1.png",
+      "bytes": 70,
+      "sha256": "4ff6ab670a58c14270e034e2090d9a432caa263a14e0a25785386b0c12f880b5"
+    },
+    {
+      "objectKey": "runs/final20260923-rollbackhistory-seed/0.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-retentionraces-promotion-first/image.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    },
+    {
+      "objectKey": "runs/final20260923-retentionraces-rollback-pinned/image.png",
+      "bytes": 70,
+      "sha256": "6a34118ba2e0bf5da5ab14cb63b121e2e8b2987a876668a9b2f9c30e1357470b"
+    }
+  ],
+  "verifiedBytes": 2450,
+  "gcFirstDeletedKey": "runs/final20260923-retentionraces-gc-first/image.png",
+  "gcFirstReadRefused": true,
+  "boundary": "Exact known objects were read by Wrangler; extra unreferenced objects were not enumerated."
+}
