@@ -1,0 +1,55 @@
+{
+  "observedAtUtc": "2026-09-23T12:01:43.467Z",
+  "deployedSource": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+  "deployedVersionAt12Z": "af856fc9-78b0-46c0-b1c9-9e6b4fb2d346",
+  "environment": "production",
+  "method": "Read-only remote D1 query and R2 object stream through SHA-256; no SQL content retained or printed.",
+  "slots": [
+    {
+      "id": "2026-09-22T12Z",
+      "state": "complete",
+      "formatVersion": 3,
+      "createdAtUtc": "2026-09-22T21:11:19.499Z",
+      "completedAtUtc": "2026-09-22T21:11:46.401Z",
+      "sqlBytes": 4512723,
+      "sqlDigest": "37b24e19be583bff14eaa2a505afe046a85d2f215e326a7d60e239323ba6aecf",
+      "scheduleInterpretation": "late completion; does not prove on-time Cron delivery"
+    },
+    {
+      "id": "2026-09-23T00Z",
+      "state": "complete",
+      "formatVersion": 3,
+      "createdAtUtc": "2026-09-23T00:01:30.182Z",
+      "completedAtUtc": "2026-09-23T00:02:03.679Z",
+      "sqlBytes": 8157849,
+      "sqlDigest": "6d8d9718df5922d812e3d7e76172f80b91286165ba9f63d66bc17b6ad04f835b",
+      "streamedObjectSha256": "6d8d9718df5922d812e3d7e76172f80b91286165ba9f63d66bc17b6ad04f835b",
+      "scheduleInterpretation": "timing consistent with scheduled five-minute Cron path"
+    },
+    {
+      "id": "2026-09-23T12Z",
+      "state": "complete",
+      "formatVersion": 3,
+      "createdAtUtc": "2026-09-23T12:00:31.637Z",
+      "completedAtUtc": "2026-09-23T12:01:04.522Z",
+      "sqlBytes": 83771992,
+      "sqlDigest": "cf87d567c22fbc8d7c899cc629b68f1ca140a8ec683948d104b7e718700f9bfc",
+      "streamedObjectSha256": "cf87d567c22fbc8d7c899cc629b68f1ca140a8ec683948d104b7e718700f9bfc",
+      "rootManifestSha256": "8bdb82c4b87ce9b76e300258f7da4e681c62806c602ea78d4716d5d8a1d44879",
+      "completionGapFromPreviousMs": 43140843,
+      "safetyCounters": {
+        "nonterminalBackups": 0,
+        "unresolvedBackupEvents": 0,
+        "recoveryPins": 0,
+        "unsealedGroupMembers": 0,
+        "deletingGroups": 0,
+        "deletingObjects": 0
+      },
+      "scheduleInterpretation": "second consecutive half-day slot completed near schedule time"
+    }
+  ],
+  "limitations": [
+    "Two timely slots do not prove 30 days of recurrent Cron reliability.",
+    "The 2026-09-22 12Z row was late. The isolated retention drill covered image-bearing churn."
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "observedFromUtc": "2026-09-23T16:23:16Z",
+  "observedThroughUtc": "2026-09-23T16:48:39Z",
+  "method": [
+    "Read-only Wrangler deployment, version, queue-consumer, and remote D1 queries",
+    "SHA-256 comparison of nine current repository files against source-identity.json",
+    "Read-only stream of the latest production SQL object to SHA-256; no SQL file retained",
+    "GitHub Deploy runs 35883186787 and 35889380891 commit and version logs",
+    "Production post-deployment read-only D1 backup and seven-counter query, Worker version list, and public health request"
+  ],
+  "productionSource": {
+    "deployedCommit": "a953a2b42eb293088ba895484861756610de4f40",
+    "deployRun": "https://github.com/ariakit/visonaut/actions/runs/35889380891",
+    "deployedVersion": "fad49935-4257-4e4f-82ec-9271ac5efa32",
+    "previousVersion": "0941c4a2-82fe-4a9b-a786-67a6b5c17c04",
+    "trafficPercent": 100,
+    "cronPreservedInDeployLog": true,
+    "testedBackupSourceCommit": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+    "matchingBackupRestoreRetentionSourceFiles": 9,
+    "sourceDigests": "source-identity.json"
+  },
+  "runtime": {
+    "compatibilityDate": "2026-09-22",
+    "cpuMillisecondsLimit": 240000,
+    "subrequestLimit": 250000,
+    "exportDeadlineMilliseconds": 420000,
+    "backupLeaseMilliseconds": 720000,
+    "maximumDatabaseBytes": 2147483648,
+    "queueBatchSize": 1,
+    "queueMaxConcurrency": 1,
+    "queueMaxRetries": 5,
+    "configuredCron": "*/5 * * * *",
+    "backupSlotHours": 12,
+    "backupRetentionDays": 30
+  },
+  "environments": [
+    {
+      "name": "production",
+      "worker": "visonaut",
+      "activeVersion": "fad49935-4257-4e4f-82ec-9271ac5efa32",
+      "activeVersionCreatedAtUtc": "2026-09-23T16:44:24.01447Z",
+      "databaseId": "15fcd402-dccb-4359-a1ce-280ff67ca596",
+      "backupBucket": "visonaut-production-backups",
+      "operationsQueue": "visonaut-production-operations",
+      "deadLetterQueue": "visonaut-production-dead-letter",
+      "migrationsPresent": ["0016_comparison_publication.sql", "0018_transfer_key_redemptions.sql"],
+      "health": { "httpStatus": 200, "status": "setup", "launchEnabled": false },
+      "latestBackup": {
+        "id": "2026-09-23T12Z",
+        "state": "complete",
+        "createdAt": 1790164831637,
+        "completedAt": 1790164864522,
+        "databaseBytes": 83771992,
+        "databaseDigest": "cf87d567c22fbc8d7c899cc629b68f1ca140a8ec683948d104b7e718700f9bfc",
+        "streamedObjectSha256": "cf87d567c22fbc8d7c899cc629b68f1ca140a8ec683948d104b7e718700f9bfc",
+        "failures": 0,
+        "startedBeforeActiveVersion": true
+      }
+    },
+    {
+      "name": "preview",
+      "worker": "visonaut-preview",
+      "activeVersion": "ed60b144-f2d7-4c19-ac9d-0b63c6922219",
+      "activeVersionCreatedAtUtc": "2026-09-23T16:34:23.600881Z",
+      "databaseId": "395b539c-c423-4ce4-887c-a5792792a63b",
+      "backupBucket": "visonaut-preview-backups",
+      "operationsQueue": "visonaut-preview-operations",
+      "deadLetterQueue": "visonaut-preview-dead-letter",
+      "migrationsPresent": ["0016_comparison_publication.sql", "0018_transfer_key_redemptions.sql"],
+      "health": { "httpStatus": 200, "status": "setup", "launchEnabled": false },
+      "latestBackup": {
+        "id": "2026-09-23T12Z",
+        "state": "complete",
+        "createdAt": 1790164831436,
+        "completedAt": 1790164866032,
+        "databaseBytes": 83770494,
+        "databaseDigest": "5dd4fee2ae86d6cbe338de16ebfd31b3e2eb85921560c7611e15b00522d218ac",
+        "failures": 0,
+        "startedBeforeActiveVersion": true
+      }
+    },
+    {
+      "name": "diagnostics",
+      "worker": "visonaut-diagnostics",
+      "activeVersion": "4061d8be-58d8-460e-9301-6b1a0ced31b5",
+      "activeVersionCreatedAtUtc": "2026-09-23T16:03:30.556103Z",
+      "databaseId": "6d68da10-2754-433f-99d1-fdfc080dfe11",
+      "backupBucket": "visonaut-diagnostics-backups",
+      "operationsQueue": "visonaut-diagnostics-operations",
+      "deadLetterQueue": "visonaut-diagnostics-dead-letter",
+      "migrationsPresent": ["0016_comparison_publication.sql", "0018_transfer_key_redemptions.sql"],
+      "health": { "httpStatus": 200, "status": "setup", "launchEnabled": false },
+      "latestBackup": {
+        "id": "2026-09-23T12Z",
+        "state": "complete",
+        "createdAt": 1790170689708,
+        "completedAt": 1790179826262,
+        "databaseBytes": 12357435,
+        "databaseDigest": "c311198361c8a7e4bb5f88288ccecbccab2765397eff799b07fc3c20ab460e90",
+        "failures": 0,
+        "startedBeforeActiveVersion": true
+      }
+    }
+  ],
+  "countersPerEnvironment": {
+    "nonterminalBackups": 0,
+    "failedBackups": 0,
+    "unresolvedOperationsEvents": 0,
+    "recoveryPins": 0,
+    "nonreadyBackupGroups": 0,
+    "nonreadyBackupObjects": 0,
+    "pendingBackupMemberships": 0
+  },
+  "previewGuardedRollout": {
+    "previousWorkerVersion": "9f64a910-0260-47f3-af67-9e2dfc7b73f1",
+    "migrationsAbsentBeforeRollout": [
+      "0016_comparison_publication.sql",
+      "0018_transfer_key_redemptions.sql"
+    ],
+    "newWorkerVersion": "ed60b144-f2d7-4c19-ac9d-0b63c6922219",
+    "migrationsPresentAfterRollout": [
+      "0016_comparison_publication.sql",
+      "0018_transfer_key_redemptions.sql"
+    ],
+    "postRolloutBackupAndAlertCountersUnchanged": true
+  },
+  "limitations": [
+    "The current production version has not yet created a new half-day backup; its latest set started before deployment.",
+    "A read-only queue inventory verified each one-consumer, five-retry, dead-letter configuration but did not expose message depth or individual Cron events.",
+    "Preview schema migrations 0016 and 0018 were absent at the start of this audit; a guarded rollout applied them before deploying the current preview Worker, and the post-rollout read-only check passed.",
+    "The controlled-time retention test does not represent 30 days of observed Cron delivery or full Ariakit workload."
+  ]
+}

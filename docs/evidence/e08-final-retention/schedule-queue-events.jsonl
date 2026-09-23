@@ -1,0 +1,2 @@
+{"event":"complete","slot":0,"at":"2026-08-23T00:00:00.000Z","attempts":4,"backups":1,"complete":1,"deleted":0,"readyGroups":2,"images":2,"latestObjects":2,"latestBytes":140}
+{"event":"start","slot":1,"at":"2026-08-23T12:00:00.000Z","id":"2026-08-23T12Z"}

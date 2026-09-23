@@ -1,0 +1,26 @@
+{
+  "backupId": "2026-09-23T12Z",
+  "startedAt": 1790148705414,
+  "importedAt": 1790148708896,
+  "completedAt": 1790148711264,
+  "durationMilliseconds": 5850,
+  "sqlBytes": 170857,
+  "sqlDigest": "f284d6247665d93aa4d57906d3ae098690063bf174a787984d5060b5f055795f",
+  "groups": 2,
+  "objects": 3,
+  "bytes": 210,
+  "before": {
+    "verified": 3,
+    "bytes": 210,
+    "sourcePresent": 3,
+    "foreignKeys": 0,
+    "active": 2
+  },
+  "after": {
+    "verified": 3,
+    "bytes": 210,
+    "sourcePresent": 3,
+    "foreignKeys": 0,
+    "active": 0
+  }
+}

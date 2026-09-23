@@ -1,0 +1,41 @@
+{
+  "sourceCommit": "507179fd59fad0333880be40d2b4a33ba2e0e653",
+  "verifiedAt": "2026-09-23T07:32:21.577Z",
+  "worker": "visonaut-e08-retention-q7m6-20260923",
+  "workerVersion": "5c779e4b-29af-4960-aecf-ea45bd91ffa7",
+  "resources": {
+    "sourceD1": "0134b1be-5fe1-4acb-a45b-b7f0152d1ec8",
+    "targetD1": "50ef1374-2ecc-425b-9ff1-2b8a4f92b3c2",
+    "r2": "visonaut-e08-retention-q7m6-20260923-objects",
+    "queue": "visonaut-e08-retention-q7m6-20260923-jobs (consumer detached before direct cadence)"
+  },
+  "files": {
+    "apps/web/src/operations/backups.ts": "bdc2e20749ef5dfc16dd7d25df6d188d36beaa7cf82f09446cc5d21cc57a7bfc",
+    "apps/web/src/operations/backups-v2.ts": "54eae1131def3eb8fadca814755f1acf514c597a280587c58cd3cc0badf3dd2b",
+    "apps/web/src/operations/backup-groups.ts": "9644287eeea8d216a806fe92fe1352f41d0c409906b33346bc68fd196a314a90",
+    "apps/web/src/operations/backup-objects.ts": "3c6379778897a4696b1a40423b889cd2cfb7ac8ba0ed97e06c32e4c84e139abe",
+    "apps/web/src/operations/backup-format.ts": "5ddcabf94479705c0dd48818699f032815c49508ecc1ced33f888afdf011a943",
+    "apps/web/src/operations/cloudflare-export.ts": "5d9fb85d0dbd711ab35b7d6c3be01bd2a81729e68111bee243d27349f4612100",
+    "apps/web/src/operations/restore.ts": "f138954f3986f172b3a999debb44dc31eed811235009961ebb44ac2ccb19f25f",
+    "apps/web/src/operations/recovery.ts": "0fe196f23c3638deae2cb17c5f9cbccc273f676142044f1008d5911809105a0b",
+    "packages/service/src/retention.ts": "cb3ed44700b6a6d30f712c8729613c89fd75764803e626cbd1faf4ae6a93332f",
+    "drill/worker.mjs": "c9727a2dcd9bb7e57125dfbf145f4a41bcf4c5757b24b5e1686de5beef8f1f1c",
+    "drill/wrangler.jsonc": "9825fce91208c180c01ee5d1a998c7e9915d6458c7a5d5732dd5d7a5a8eb0184",
+    "drill/results/bundle/worker.js": "fdaad6381dd5ab70a6592ee94b6f521c5097ff14e0d89153be300d10cfea6f2a",
+    "drill/results/bundle-final/worker.js": "311fdd2b45fed155f1ffde81898aedcfbd7bd297ec5f3519747b2cbb7d69fde9"
+  },
+  "workerVersions": {
+    "initialQueue": "a5d03355-c538-49a3-b370-e26951a1eb13",
+    "queueSeedRetry": "9f36b366-0376-4c80-bd32-ba03c2a1e02b",
+    "queueBackupOnly": "b933ce86-6a16-4d70-9165-30e70d218c8e",
+    "directBackupOnly": "3e06707f-9f09-4e82-b702-218269b56c49",
+    "finalDirectAndVerify": "5c779e4b-29af-4960-aecf-ea45bd91ffa7"
+  },
+  "methods": {
+    "slots0to1": "isolated Queue continuation during harness correction",
+    "slots2to63": "authenticated direct Worker invocations of unchanged final backupDaily/expireBackups",
+    "queueConsumerDetached": true,
+    "slot0Receipt": "original isolated Queue completion event in schedule-queue-events.jsonl",
+    "slot1Receipt": "retrospective D1 state after Queue completion; replay timing omitted"
+  }
+}
