@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-09-23T07:45:34Z",
+  "environment": "https://diagnostics.visonaut.com",
+  "webWorkerVersion": "8996328b-a965-4b82-b632-900832eeef2b",
+  "syntheticRunId": "0c19d0a2-c139-4340-a6bf-a6c684e04c90",
+  "quarantinePlanKey": "plans/5fe5fa31186359dd8f065e6f7a34aebcc9ea81ef38622e8607b55bba10b905ed.json",
+  "privateR2ObjectReadSucceeded": true,
+  "privateR2ObjectBytes": 1178,
+  "anonymousKnownQuarantineDigestProbe": {
+    "path": "/images/5fe5fa31186359dd8f065e6f7a34aebcc9ea81ef38622e8607b55bba10b905ed",
+    "status": 404,
+    "cacheControl": "no-store",
+    "contentTypeOptions": "nosniff"
+  },
+  "anonymousValidatedImageControl": {
+    "path": "/images/d5471ee3-1009-4fa1-b971-ed60cc15e4f0",
+    "status": 200,
+    "contentType": "image/png",
+    "contentLength": 778,
+    "cacheControl": "public, max-age=31536000, immutable"
+  },
+  "quarantineBucketPublicAccess": {
+    "production": { "r2DevEnabled": false, "customDomains": 0 },
+    "preview": { "r2DevEnabled": false, "customDomains": 0 },
+    "diagnostics": { "r2DevEnabled": false, "customDomains": 0 }
+  },
+  "quarantineContentsPrintedOrSaved": false
+}

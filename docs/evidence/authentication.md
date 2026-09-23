@@ -1,6 +1,6 @@
 # Deployed authentication evidence
 
-These checks ran on September 22, 2026 against the Cloudflare preview and diagnostic deployments. They use Better Auth 1.7.5 with native D1. The results cover authentication and the private API boundary; they do not mark all of E02 complete.
+These checks ran on September 22, 2026 against the Cloudflare preview and diagnostic deployments. They use Better Auth 1.7.5 with native D1. The later [final-source authentication and genuine revocation record](./e02-final-auth.md) completes the remaining E02 checks.
 
 ## Real browser login
 
@@ -28,8 +28,8 @@ The [deployed capability probes](./deployed-capability-boundaries.md) separately
 
 GitHub manually redelivered an existing genuine App ping to the diagnostic receiver. GitHub recorded HTTP `202`, and the matching D1 delivery was processed. The [sanitized receipt](./github/diagnostic-app-ping.json) proves signed transport for that event. It does not prove automatic event delivery, merge-group metadata delivery, installation revocation, or OAuth revocation.
 
-## Remaining E02 observations
+## Subsequent E02 observations
 
-The [hosted GitHub integration record](./github-integration.md) also provides real successful OIDC uploads and validated public image reads. The App's automatic webhook remains inactive, and diagnostic OAuth callback registration remains blocked by the GitHub settings sudo/2FA check. Preview OAuth login and diagnostic sessions seeded in D1 do not establish diagnostic OAuth login. Real revocation delivery and production-to-preview isolation still need their required evidence.
+The [hosted GitHub integration record](./github-integration.md) also provides real successful OIDC uploads and validated public image reads. At the time of these September 22 probes, automatic App webhook delivery and diagnostic OAuth callback registration were still blocked. The September 23 [hosted topology](./visonaut-hosted-topology.md) and [final-source authentication record](./e02-final-auth.md) supersede those limits with diagnostic GitHub login, real grant revocation, automatic signed delivery, session renewal and expiry, and production-to-preview isolation.
 
-The [nonproduction auth retirement runbook](../operations/retire-preview-auth-at-cutover.md) selects production as the only retained authenticated environment because the shared App has one revocation webhook destination. Its route shutdown, session cleanup, and old-credential probes have not run. The genuine ping does not close this revocation-delivery gap. The files here contain no session tokens, account email addresses, private keys, or image bytes.
+The [nonproduction auth retirement runbook](../operations/retire-preview-auth-at-cutover.md) remains a contingency if preview or diagnostics are later closed. The single App webhook destination now fans out signed events to all three active environments. The files here contain no session tokens, account email addresses, private keys, or image bytes.
