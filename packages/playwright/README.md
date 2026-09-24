@@ -62,10 +62,10 @@ The published 0.1 adapter must stay paired with CLI 0.1 because CLI 0.2 removes 
 
 The workflow-owned `visonaut-capture` runner executes one complete visual collection from Ariakit's approved `app.yml` jobs. Those jobs declare the browser, operating system, project, test-file patterns, app preview commands, and comparator policy. The service checks the Git blob of `app.yml` in the tested commit against its approved blob. The runner does not load the candidate Playwright config or a trusted-plan file. It forces one project, `@visual`, no ignored tests, one execution per test, and `forbidOnly`. The reporter records the discovered test inventory and requires every selected test to finish successfully. A zero-test shard fails.
 
-The workflow verifies the adapter tarball SHA-256 before extraction. It then copies `ci/runtime-lock.json` to `ci/package-lock.json` and runs `npm ci --ignore-scripts --no-audit --no-fund` from the extracted `package/ci` directory. This installs the exact published CLI and Playwright versions from the package-owned integrity lock.
+Install `@visonaut/playwright` in the app workspace like any other development dependency. The adapter depends on the matching `visonaut` CLI and uses the app's `@playwright/test` peer. Render runs from the app workspace without a second Playwright install. The signed upload and submit jobs install the published packages from verified npm tarballs in a separate directory; they do not check out or install candidate code.
 
 ```sh
-node package/ci/bin.mjs render --repository-root "$GITHUB_WORKSPACE" \
+pnpm --filter app exec visonaut-capture render --repository-root "$GITHUB_WORKSPACE" \
   --test-dir app/src --test-patterns '["/test[^/]*-browser"]' \
   --project chrome --browser chromium --device "Desktop Chrome" \
   --base-url http://localhost:4321 --shard chrome-1 \
@@ -77,10 +77,10 @@ node package/ci/bin.mjs render --repository-root "$GITHUB_WORKSPACE" \
 
 Ariakit's app workflow supplies `VISONAUT_WEB_SERVERS` as a JSON array of its preview commands, working directories, ports, and environment settings. `--test-patterns` is a JSON array of regular-expression sources. Ariakit's preview imports `@fontsource-variable/inter`, so its workflow passes that package to both render and upload. The runner records operating-system, system-font, and application-font hashes once; each `visual()` call records the actual browser version, viewport, media state, and screenshot options. There is no catalogue of hypothetical profile digests.
 
-The render job has no OIDC permission. It writes only an encrypted manifest and images. A separate upload job has `id-token: write`, does not check out candidate code, and uses the same verified package:
+The render job has no OIDC permission. It writes only an encrypted manifest and images. A separate upload job has `id-token: write`, does not check out candidate code, and uses a checksum-verified package:
 
 ```sh
-node package/ci/bin.mjs upload --shard chrome-1 \
+visonaut-capture upload --shard chrome-1 \
   --font-package @fontsource-variable/inter \
   --comparison-policy-digest "$APPROVED_POLICY_SHA" \
   --bundle-sha256 "$VERIFIED_TARBALL_SHA" \

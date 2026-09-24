@@ -60,7 +60,8 @@
     "test": "vitest run test"
   },
   "dependencies": {
-    "pngjs": "^7.0.0"
+    "pngjs": "^7.0.0",
+    "visonaut": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

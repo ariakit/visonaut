@@ -364,6 +364,9 @@ importers:
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
+      visonaut:
+        specifier: workspace:*
+        version: link:../cli
     devDependencies:
       '@playwright/test':
         specifier: 1.63.0

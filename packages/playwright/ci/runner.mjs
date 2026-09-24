@@ -11,9 +11,7 @@ import { settings, trustedServer } from "./settings.mjs";
 import { decryptTransfer, encryptTransferWithPublicKey } from "./transfer.mjs";
 
 const directory = import.meta.dirname;
-const playwrightCli = fileURLToPath(
-  new URL("./node_modules/@playwright/test/cli.js", import.meta.url),
-);
+const playwrightCli = fileURLToPath(import.meta.resolve("@playwright/test/cli"));
 const shardPattern = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 const renderFlags = [
   "--repository-root",
@@ -129,13 +127,18 @@ function runPlaywright(environment) {
 
 async function linkRuntimeDependencies() {
   const packageModules = path.resolve(directory, "../node_modules");
+  const isolatedModules = path.join(directory, "node_modules");
+  try {
+    await realpath(isolatedModules);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
   try {
     await symlink("ci/node_modules", packageModules, "dir");
   } catch (error) {
     if (error?.code !== "EEXIST") throw error;
-    if (
-      (await realpath(packageModules)) !== (await realpath(path.join(directory, "node_modules")))
-    ) {
+    if ((await realpath(packageModules)) !== (await realpath(isolatedModules))) {
       throw new Error("The isolated package has unexpected runtime dependencies");
     }
   }
