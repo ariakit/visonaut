@@ -107,6 +107,7 @@ beforeAll(async () => {
     new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
     new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
     new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
+    new URL("../../migrations/0019_staged_workflows.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");

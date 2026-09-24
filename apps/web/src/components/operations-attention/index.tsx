@@ -142,6 +142,13 @@ function recovery(event: OperationEvent) {
         "Check the comparison results and database access, then resume the scheduled service operations.",
     };
   }
+  if (event.kind === "staged-reconciliation") {
+    return {
+      title: "A signed capture run needs attention",
+      action:
+        "Check this GitHub workflow run and its staged images. The service retries each hour. If a restore removed staged bytes, run a fresh signed capture and upload of every shard.",
+    };
+  }
   if (event.kind === "promotion") {
     return {
       title: "A baseline update needs attention",

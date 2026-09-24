@@ -1,4 +1,9 @@
-import { digestJson, parseTrustedPlan } from "@visonaut/protocol";
+import {
+  digestJson,
+  parseTrustedPlan,
+  validateKey,
+  workflowSourceDigest,
+} from "@visonaut/protocol";
 import {
   bearerToken,
   loadTrustedMainFile,
@@ -9,6 +14,7 @@ import {
 import type { JWTVerifyGetKey } from "jose";
 import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, string } from "./input.js";
+import { workflowConfiguration } from "./workflow-owned.js";
 
 const browsers = new Set(["chromium", "firefox", "webkit"]);
 const maximumKeyBytes = 4096;
@@ -26,26 +32,44 @@ export async function transferPrivateKey({
   keySet?: JWTVerifyGetKey;
 }): Promise<Response> {
   const body = await jsonBody(request, 2048);
-  const browser = string(body.browser, 16);
-  if (!browsers.has(browser)) {
+  const shardKey = string(body.shardKey ?? body.browser, 256);
+  validateKey(shardKey, "shardKey");
+  if (!context.configuration.workflowOwned && !browsers.has(shardKey)) {
     throw new SecurityError("invalid_transfer_job", 400, "The transfer job is invalid.");
   }
   const workflowRunId = string(body.workflowRunId, 20);
   const workflowAttempt = integer(body.workflowAttempt, 1);
   const testedSha = string(body.testedSha, 40);
-  const planSource = await loadTrustedMainFile(github, context.configuration.trustedPlanPath);
-  const plan = parseTrustedPlan(JSON.parse(planSource.content));
-  const jobName = `capture / ${browser}`;
-  const shard = plan.shards.find((entry) => entry.key === browser);
-  if (
-    plan.repositoryId !== context.configuration.github.repositoryId ||
-    !plan.discovery ||
-    plan.discovery.executorDigest !== context.configuration.trustedExecutorDigest ||
-    shard?.jobName !== jobName
-  ) {
-    throw new SecurityError("untrusted_executor", 403, "The capture executor is not trusted.");
+  const workflowOwned = context.configuration.workflowOwned
+    ? workflowConfiguration(context)
+    : undefined;
+  let planDigest: string;
+  let jobName: string;
+  let workflowPath: string;
+  let reusableWorkflowRef = context.configuration.reusableWorkflowRef;
+  let reusableWorkflowSha = context.configuration.reusableWorkflowSha;
+  if (workflowOwned) {
+    planDigest = await workflowSourceDigest(workflowOwned.reusableWorkflowSha);
+    jobName = `${workflowOwned.captureJobPrefix}${shardKey}`;
+    workflowPath = workflowOwned.callerWorkflowPath;
+    reusableWorkflowRef = workflowOwned.reusableWorkflowRef;
+    reusableWorkflowSha = workflowOwned.reusableWorkflowSha;
+  } else {
+    const planSource = await loadTrustedMainFile(github, context.configuration.trustedPlanPath);
+    const plan = parseTrustedPlan(JSON.parse(planSource.content));
+    jobName = `capture / ${shardKey}`;
+    const shard = plan.shards.find((entry) => entry.key === shardKey);
+    if (
+      plan.repositoryId !== context.configuration.github.repositoryId ||
+      !plan.discovery ||
+      plan.discovery.executorDigest !== context.configuration.trustedExecutorDigest ||
+      shard?.jobName !== jobName
+    ) {
+      throw new SecurityError("untrusted_executor", 403, "The capture executor is not trusted.");
+    }
+    planDigest = await digestJson(plan);
+    workflowPath = plan.workflow;
   }
-  const planDigest = await digestJson(plan);
   const verified = await verifyGitHubOidc({
     token: bearerToken(request),
     request: {
@@ -55,7 +79,7 @@ export async function transferPrivateKey({
       workflowAttempt,
       testedSha,
       planDigest,
-      shardKey: browser,
+      shardKey,
     },
     github,
     keySet,
@@ -65,11 +89,11 @@ export async function transferPrivateKey({
         context.configuration.auth.environment === "preview" &&
         context.configuration.allowMainDispatch === true,
       repositoryOwnerId: context.configuration.repositoryOwnerId,
-      workflowPath: plan.workflow,
-      reusableWorkflowRef: context.configuration.reusableWorkflowRef,
-      reusableWorkflowSha: context.configuration.reusableWorkflowSha,
+      workflowPath,
+      reusableWorkflowRef,
+      reusableWorkflowSha,
       planDigest,
-      shards: [{ key: browser, jobName }],
+      shards: [{ key: shardKey, jobName }],
       loadMergeGroup: (sha) => loadVerifiedMergeGroup(context, sha),
     },
   });

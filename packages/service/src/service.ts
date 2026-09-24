@@ -267,14 +267,27 @@ export class Service {
     if (!input.verificationDigest || !input.lineageKey || input.plan.shards.length === 0) {
       throw new IncompleteError("A verified full plan and lineage are required.");
     }
+    const precreatedCheck = input.precreatedCheck;
+    if (
+      precreatedCheck &&
+      (precreatedCheck.testedSha !== input.testedSha ||
+        precreatedCheck.workflowRunId !== input.externalRunId ||
+        precreatedCheck.workflowAttempt !== input.attempt ||
+        !precreatedCheck.repositoryId ||
+        !precreatedCheck.externalId ||
+        !precreatedCheck.checkId)
+    ) {
+      throw new IncompleteError("The existing App check belongs to another workflow attempt.");
+    }
     const existing = await this.sql(
       "SELECT * FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND attempt = ?",
       [input.projectId, input.externalRunId, input.attempt],
-    ).first<RunRow>();
+    ).first<RunRow & { plan_json: string }>();
     if (existing) {
       if (
         existing.tested_sha !== input.testedSha ||
         existing.plan_digest !== input.plan.digest ||
+        existing.plan_json !== JSON.stringify(input.plan) ||
         existing.lineage_key !== input.lineageKey
       ) {
         throw new ConflictError(
@@ -294,6 +307,12 @@ export class Service {
     for (const shard of input.plan.shards) {
       if (
         keys.has(shard.key) ||
+        (shard.environmentProfilePolicy === "measured" &&
+          shard.environmentProfileDigests !== undefined) ||
+        (shard.sourceAttempt !== undefined &&
+          (!Number.isSafeInteger(shard.sourceAttempt) ||
+            shard.sourceAttempt < 1 ||
+            shard.sourceAttempt > input.attempt)) ||
         (!shard.discovery && (shard.tests.length === 0 || shard.captures.length === 0)) ||
         (shard.discovery &&
           (!shard.discovery.executorDigest || !shard.discovery.configurationDigest))
@@ -358,6 +377,41 @@ export class Service {
         `review:${input.id}`,
       ]),
     ];
+    if (precreatedCheck) {
+      statements.push(
+        this.guard(
+          "EXISTS (SELECT 1 FROM ingest_staged_runs WHERE id = ? AND repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND tested_sha = ? AND submitted_at IS NOT NULL AND retention_state = 'live')",
+          [
+            input.id,
+            precreatedCheck.repositoryId,
+            precreatedCheck.workflowRunId,
+            precreatedCheck.workflowAttempt,
+            precreatedCheck.testedSha,
+          ],
+        ),
+        this.guard(
+          "EXISTS (SELECT 1 FROM pre_run_checks WHERE repository_id = ? AND tested_sha = ? AND workflow_run_id = ? AND workflow_attempt = ? AND external_id = ? AND check_id = ? AND state = 'active' AND docs_only = 0)",
+          [
+            precreatedCheck.repositoryId,
+            precreatedCheck.testedSha,
+            precreatedCheck.workflowRunId,
+            precreatedCheck.workflowAttempt,
+            precreatedCheck.externalId,
+            precreatedCheck.checkId,
+          ],
+        ),
+        this.sql(
+          "INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)",
+          [input.id, precreatedCheck.externalId, precreatedCheck.checkId, input.now, input.now],
+        ),
+        // A completed attempt can supply originals to a GitHub rerun after
+        // ordinary closed-run retention has passed.
+        this.sql(
+          "INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'comparison')",
+          [input.id, `workflow-rerun:${input.id}`],
+        ),
+      );
+    }
     if (input.maximumActiveRuns !== undefined) {
       if (!Number.isSafeInteger(input.maximumActiveRuns) || input.maximumActiveRuns < 1)
         throw new IncompleteError("The active run admission limit is invalid.");
@@ -550,7 +604,7 @@ export class Service {
         proof.executorDigest !== expected.discovery.executorDigest ||
         proof.configurationDigest !== expected.discovery.configurationDigest ||
         proof.externalRunId !== run.external_run_id ||
-        proof.attempt !== run.attempt ||
+        proof.attempt !== (expected.sourceAttempt ?? run.attempt) ||
         proof.testedSha !== run.tested_sha ||
         !proof.verificationDigest ||
         !proof.inventoryDigest ||
@@ -601,9 +655,10 @@ export class Service {
       if (
         !capture ||
         capture.testId !== required.testId ||
-        !(expected.environmentProfileDigests ?? [expected.profileDigest]).includes(
-          capture.environmentProfileDigest,
-        ) ||
+        (expected.environmentProfilePolicy !== "measured" &&
+          !(expected.environmentProfileDigests ?? [expected.profileDigest]).includes(
+            capture.environmentProfileDigest,
+          )) ||
         capture.testRetry !== outcomes.get(required.testId)?.retry
       ) {
         throw new IncompleteError(
@@ -664,7 +719,7 @@ export class Service {
           JSON.stringify(expected),
           input.verifiedDiscovery ? JSON.stringify(input.verifiedDiscovery) : null,
           run.id,
-          run.attempt,
+          expected.sourceAttempt ?? run.attempt,
           run.id,
           input.key,
         ],
@@ -1491,6 +1546,70 @@ export class Service {
       ...this.touch(run, input.now),
       this.audit(run, "retire", {}, input.now),
     ]);
+  }
+
+  /** Close a stranded signed attempt only after its staging and writer lease expire. */
+  async expireIncompleteWorkflowRun(input: { runId: string; cutoff: number; now: number }) {
+    const run = await this.run(input.runId);
+    if (!run.active || run.sealed_at !== null) return false;
+    const project = await this.project(run.project_id);
+    try {
+      await atomic(this.database, [
+        this.projectGuard(project),
+        this.activeGuard(run),
+        this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NULL)", [
+          run.id,
+        ]),
+        this.guard(
+          `EXISTS (SELECT 1 FROM ingest_staged_runs staged
+            WHERE staged.id = ? AND staged.created_at <= ?
+              AND staged.submitted_at IS NOT NULL AND staged.retention_state = 'live'
+              AND COALESCE(staged.materialization_lease_until, 0) <= ?)`,
+          [run.id, input.cutoff, input.now],
+        ),
+        this.guard(
+          "NOT EXISTS (SELECT 1 FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id WHERE snapshot.run_id = ?)",
+          [run.id],
+        ),
+        this.sql(
+          "UPDATE visonaut_runs SET active = 0, state = 'failed', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
+          [input.now, run.id],
+        ),
+        this.sql("UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id = ?", [
+          input.now,
+          run.id,
+        ]),
+        this.sql(
+          "DELETE FROM work_retention_pins WHERE run_id = ? AND owner = ? AND reason = 'review'",
+          [run.id, `review:${run.id}`],
+        ),
+        this.sql(
+          `UPDATE pre_run_checks SET state = 'failed', updated_at = ?
+            WHERE state = 'active' AND EXISTS (SELECT 1 FROM ingest_staged_runs staged
+              WHERE staged.id = ? AND staged.repository_id = pre_run_checks.repository_id
+                AND staged.workflow_run_id = pre_run_checks.workflow_run_id
+                AND staged.workflow_attempt = pre_run_checks.workflow_attempt
+                AND staged.tested_sha = pre_run_checks.tested_sha)`,
+          [input.now, run.id],
+        ),
+        this.sql(
+          `INSERT INTO operations_events
+            (id, kind, subject_id, code, first_seen_at, last_seen_at)
+            SELECT 'staged-reconciliation:' || workflow_run_id || ':' || workflow_attempt || ':expired-incomplete',
+              'staged-reconciliation', workflow_run_id || ':' || workflow_attempt,
+              'expired-incomplete', ?, ? FROM ingest_staged_runs WHERE id = ?
+            ON CONFLICT(id) DO UPDATE SET last_seen_at = excluded.last_seen_at,
+              resolved_at = NULL`,
+          [input.now, input.now, run.id],
+        ),
+        ...this.touch(run, input.now),
+        this.audit(run, "workflow-expired", { reason: "incomplete-materialization" }, input.now),
+      ]);
+      return true;
+    } catch (error) {
+      if (error instanceof ConflictError) return false;
+      throw error;
+    }
   }
 
   private async commandReplay(commandId: string, request: string) {

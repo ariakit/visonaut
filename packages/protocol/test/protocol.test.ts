@@ -8,8 +8,17 @@ import {
   parseTrustedPlan,
   validateManifestProfiles,
   validateShardAgainstPlan,
+  workflowSourceDigest,
 } from "../src/index.js";
 import type { CaptureProfile, Manifest, TrustedPlan } from "../src/index.js";
+
+it("commits workflow-owned manifests to the immutable reusable source", async () => {
+  const sha = "a".repeat(40);
+  expect(await workflowSourceDigest(sha)).toBe(
+    await digestJson({ schemaVersion: "1.0", source: "workflow", reusableWorkflowSha: sha }),
+  );
+  expect(() => workflowSourceDigest("main")).toThrow("full reusable workflow SHA");
+});
 
 async function fixture() {
   const profile: CaptureProfile = {
@@ -171,6 +180,31 @@ describe("trusted plan accounting", () => {
     const { manifest, plan } = await fixture();
     expect(parseTrustedPlan(plan)).toEqual(plan);
     await expect(validateShardAgainstPlan(manifest, plan)).resolves.toBeUndefined();
+  });
+  it("requires an explicit measured policy and validates changed full records", async () => {
+    const { manifest, plan } = await fixture();
+    const original = first(plan.shards);
+    plan.shards[0] = {
+      key: original.key,
+      jobName: original.jobName,
+      tests: original.tests,
+      environmentProfilePolicy: "measured",
+    };
+    manifest.run.planDigest = await digestJson(plan);
+    const record = first(manifest.profiles);
+    record.profile.browserVersion = "new-browser";
+    record.digest = await digestJson(record.profile);
+    first(manifest.captures).profileDigest = record.digest;
+    expect(parseTrustedPlan(plan)).toEqual(plan);
+    await expect(validateShardAgainstPlan(manifest, plan)).resolves.toBeUndefined();
+    record.profile.browserVersion = "forged-with-stale-digest";
+    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow();
+    expect(() =>
+      parseTrustedPlan({
+        ...plan,
+        shards: [{ key: original.key, jobName: original.jobName, tests: original.tests }],
+      }),
+    ).toThrow("environmentProfileDigests");
   });
   it("refuses subsets even if the client claims full coverage", async () => {
     const { manifest, plan } = await fixture();

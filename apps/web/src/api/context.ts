@@ -21,6 +21,14 @@ export interface ApiConfiguration {
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
   trustedPlanPath: string;
+  /** Names and immutable source of the workflow-owned upload and submit jobs. */
+  workflowOwned?: {
+    callerWorkflowPath: string;
+    captureJobPrefix: string;
+    submitJobName: string;
+    reusableWorkflowRef: string;
+    reusableWorkflowSha: string;
+  };
   reusableWorkflowRef: string;
   reusableWorkflowSha: string;
   trustedExecutorDigest?: string;
@@ -29,6 +37,8 @@ export interface ApiConfiguration {
     maximumImageBytes: number;
     maximumShardBytes: number;
     maximumRunBytes?: number;
+    /** Aggregate unmaterialized staging budget, independent of run concurrency. */
+    maximumStagedBytes?: number;
     maximumManifestBytes: number;
     maximumPlanBytes: number;
     maximumCaptures: number;

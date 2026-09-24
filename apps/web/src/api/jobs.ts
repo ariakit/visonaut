@@ -23,6 +23,15 @@ function timestamp(value: unknown) {
   return parsed;
 }
 
+export function jobExecutedInAttempt(job: Record<string, unknown>, attemptStartedAt: unknown) {
+  const started = timestamp(job.started_at);
+  const attemptStarted = timestamp(attemptStartedAt);
+  if (started === null || attemptStarted === null) {
+    throw new IncompleteError("The capture job or workflow start time is unavailable.");
+  }
+  return started >= attemptStarted;
+}
+
 export async function workflowAttempt(
   github: GitHubClient,
   identity: RunIdentity,
@@ -67,6 +76,48 @@ export async function workflowJobs(github: GitHubClient, externalRunId: string, 
     503,
     "GitHub capture job reconciliation exceeded its limit.",
   );
+}
+
+/** A terminal workflow must expose its whole job set, including carried successes. */
+export async function completeWorkflowJobs(
+  github: GitHubClient,
+  externalRunId: string,
+  attempt?: number,
+) {
+  const jobs: Record<string, unknown>[] = [];
+  const ids = new Set<string>();
+  const suffix = attempt === undefined ? "jobs?filter=latest&" : `attempts/${attempt}/jobs?`;
+  let total: number | undefined;
+  for (let page = 1; page <= 20; page += 1) {
+    const response = object(
+      await github.request(
+        `/repos/${github.repository}/actions/runs/${externalRunId}/${suffix}per_page=100&page=${page}`,
+      ),
+    );
+    if (
+      !Number.isSafeInteger(response.total_count) ||
+      Number(response.total_count) < 0 ||
+      Number(response.total_count) > 2000 ||
+      !Array.isArray(response.jobs) ||
+      (total !== undefined && total !== response.total_count)
+    ) {
+      throw new IncompleteError("The complete GitHub job count is unavailable.");
+    }
+    total = Number(response.total_count);
+    for (const value of response.jobs) {
+      const job = object(value);
+      if (!Number.isSafeInteger(job.id) || Number(job.id) < 1 || ids.has(String(job.id))) {
+        throw new IncompleteError("The GitHub job list has an invalid or repeated ID.");
+      }
+      ids.add(String(job.id));
+      jobs.push(job);
+    }
+    if (jobs.length === total) return jobs;
+    if (response.jobs.length !== 100 || jobs.length > total) {
+      throw new IncompleteError("The GitHub job list is incomplete.");
+    }
+  }
+  throw new IncompleteError("The GitHub job list exceeded its limit.");
 }
 
 function execution(job: Record<string, unknown>) {
@@ -138,6 +189,52 @@ function execution(job: Record<string, unknown>) {
   };
 }
 
+/** GitHub can wrap an earlier successful job when a failed attempt is rerun. */
+export async function verifyCarriedExecution(
+  github: GitHubClient,
+  sourceJobId: string,
+  wrapper: Record<string, unknown>,
+  identity: {
+    workflowRunId: string;
+    workflowAttempt: number;
+    sourceAttempt: number;
+    sourceHead: string;
+    jobName: string;
+    attemptStartedAt: unknown;
+  },
+) {
+  const original = object(
+    await github.request(`/repos/${github.repository}/actions/jobs/${sourceJobId}`),
+  );
+  if (
+    !Number.isSafeInteger(original.id) ||
+    String(original.id) !== sourceJobId ||
+    original.run_attempt !== identity.sourceAttempt ||
+    !Number.isSafeInteger(wrapper.id) ||
+    !Number.isSafeInteger(wrapper.run_attempt) ||
+    Number(wrapper.run_attempt) < identity.sourceAttempt ||
+    Number(wrapper.run_attempt) > identity.workflowAttempt ||
+    (String(wrapper.id) === sourceJobId
+      ? wrapper.run_attempt !== identity.sourceAttempt
+      : Number(wrapper.run_attempt) <= identity.sourceAttempt) ||
+    [original, wrapper].some(
+      (job) =>
+        !Number.isSafeInteger(job.run_id) ||
+        String(job.run_id) !== identity.workflowRunId ||
+        job.name !== identity.jobName ||
+        job.head_sha !== identity.sourceHead,
+    )
+  ) {
+    throw new IncompleteError("The carried job does not identify its original execution.");
+  }
+  const source = execution(original);
+  const carried = execution(wrapper);
+  const started = timestamp(identity.attemptStartedAt);
+  if (started === null || source.completed >= started || source.facts !== carried.facts) {
+    throw new IncompleteError("The carried job was rerun or its execution proof changed.");
+  }
+}
+
 interface InheritedShardParams {
   runId: string;
   identity: RunIdentity;
@@ -160,7 +257,11 @@ export async function verifiedInheritedShard(
     .bind(
       runId,
       shard.key,
-      await digestJson(shard.environmentProfileDigests),
+      await digestJson(
+        shard.environmentProfilePolicy === "measured"
+          ? { environmentProfilePolicy: "measured" }
+          : shard.environmentProfileDigests,
+      ),
       context.configuration.projectId,
       identity.workflowRunId,
       identity.testedSha,

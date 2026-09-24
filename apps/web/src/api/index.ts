@@ -15,9 +15,17 @@ import { uuid } from "./input.js";
 import { publicImage } from "./images.js";
 import { handleReview } from "./review.js";
 import { receiveWebhook } from "./webhooks.js";
+import {
+  declareStaged,
+  finalizeStaged,
+  reserveStaged,
+  submitStaged,
+  uploadStagedImage,
+} from "./workflow-owned.js";
 
 export * from "./context.js";
 export { reconcileIngest } from "./ingest.js";
+export { reconcileStagedWorkflows } from "./workflow-materialize.js";
 export { reconcileWebhooks } from "./webhooks.js";
 
 function errorResponse(error: unknown) {
@@ -103,7 +111,11 @@ export async function handleApi(
       return privateResponse(await auth.handler(request));
     }
     if (path === "/v1/runs" && request.method === "POST") {
-      return privateResponse(await reserve(request, context));
+      return privateResponse(
+        await (context.configuration.workflowOwned
+          ? reserveStaged(request, context)
+          : reserve(request, context)),
+      );
     }
     if (path === "/v1/transfer/private-key" && request.method === "POST") {
       const github = await createGitHubClient(bindings.configuration.github);
@@ -112,7 +124,7 @@ export async function handleApi(
     const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
     if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {
       return privateResponse(
-        await declareShard(
+        await (context.configuration.workflowOwned ? declareStaged : declareShard)(
           request,
           context,
           uuid(shardMatch[1]),
@@ -122,11 +134,27 @@ export async function handleApi(
     }
     const uploadMatch = /^\/v1\/uploads\/([A-Za-z0-9_.-]{1,8192})$/.exec(path);
     if (uploadMatch?.[1] && request.method === "PUT") {
-      return privateResponse(await uploadImage(request, context, uploadMatch[1]));
+      return privateResponse(
+        await (context.configuration.workflowOwned ? uploadStagedImage : uploadImage)(
+          request,
+          context,
+          uploadMatch[1],
+        ),
+      );
     }
     const finalizeMatch = /^\/v1\/runs\/([a-f0-9-]+)\/finalize$/.exec(path);
     if (finalizeMatch?.[1] && request.method === "POST") {
-      return privateResponse(await finalize(request, context, uuid(finalizeMatch[1])));
+      return privateResponse(
+        await (context.configuration.workflowOwned ? finalizeStaged : finalize)(
+          request,
+          context,
+          uuid(finalizeMatch[1]),
+        ),
+      );
+    }
+    const submitMatch = /^\/v1\/runs\/([1-9][0-9]*)\/submit$/.exec(path);
+    if (submitMatch?.[1] && request.method === "POST" && context.configuration.workflowOwned) {
+      return privateResponse(await submitStaged(request, context, submitMatch[1]));
     }
     // A signed upload token is never accepted by this live-session boundary.
     const github = await createGitHubClient(bindings.configuration.github);

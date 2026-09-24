@@ -96,14 +96,26 @@ export interface PlannedTest {
   captures: CaptureIdentity[];
 }
 
-export interface PlannedShard {
+interface PlannedShardBase {
   key: string;
   jobName: string;
   tests?: PlannedTest[];
   collection?: TrustedCollection;
-  /** A trusted environment allow-list. Effective content clip bounds are excluded. */
-  environmentProfileDigests: string[];
 }
+
+export type PlannedShard = PlannedShardBase &
+  (
+    | {
+        /** The trusted job measures full profile records for every capture. */
+        environmentProfilePolicy: "measured";
+        environmentProfileDigests?: never;
+      }
+    | {
+        /** Legacy trusted environment allow-list. Effective content clip bounds are excluded. */
+        environmentProfileDigests: string[];
+        environmentProfilePolicy?: never;
+      }
+  );
 
 export interface TrustedCollection {
   projectName: string;
@@ -184,6 +196,26 @@ export interface FinalizeRequest {
   manifestDigest: string;
 }
 
+export interface StagedShardResponse {
+  schemaVersion: string;
+  runId: string;
+  state: "staged";
+  shardKey: string;
+  manifestDigest: string;
+}
+
+export interface SubmitRunRequest {
+  schemaVersion: string;
+  workflowAttempt: number;
+}
+
+export interface SubmitRunResponse {
+  schemaVersion: string;
+  runId: string;
+  state: "submitted";
+  submittedAt: number;
+}
+
 export type RunState =
   | "uploading"
   | "incomplete"
@@ -215,5 +247,7 @@ export const TRANSPORT = {
     `/v1/runs/${encodeURIComponent(runId)}/shards/${encodeURIComponent(key)}`,
   upload: (ticket: string) => `/v1/uploads/${encodeURIComponent(ticket)}`,
   finalize: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/finalize`,
+  submit: (externalWorkflowRunId: string) =>
+    `/v1/runs/${encodeURIComponent(externalWorkflowRunId)}/submit`,
   status: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}`,
 } as const;

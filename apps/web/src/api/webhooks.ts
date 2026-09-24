@@ -12,6 +12,8 @@ import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { trySealRun } from "./ingest.js";
+import { candidateForWebhook, ensurePreRunCheck, settlePreRunWorkflow } from "./pre-run.js";
+import { materializeWorkflowRun } from "./workflow-materialize.js";
 
 interface AppLifecycle {
   action: string | null;
@@ -152,6 +154,11 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     await revokeGitHubAuthorization(context.database, webhook);
     return;
   }
+  if (webhook.event === "push" && context.configuration.workflowOwned) {
+    const github = await createGitHubClient(context.configuration.github);
+    const candidate = await candidateForWebhook(github, webhook);
+    if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
+  }
   if (webhook.event === "merge_group") {
     if (webhook.payload.action === "checks_requested") {
       const group = readMergeGroup(webhook);
@@ -161,6 +168,11 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
         )
         .bind(group.headSha, JSON.stringify(group), webhook.deliveryId)
         .run();
+      if (context.configuration.workflowOwned) {
+        const github = await createGitHubClient(context.configuration.github);
+        const candidate = await candidateForWebhook(github, webhook);
+        if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
+      }
     } else if (webhook.payload.action === "destroyed") {
       const group = object(webhook.payload.merge_group);
       const headSha = string(group.head_sha, 40);
@@ -182,14 +194,43 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
   if (webhook.event === "workflow_run") {
     const workflow = object(webhook.payload.workflow_run);
     const runId = String(integer(workflow.id, 1));
-    const runs = await context.database
-      .prepare(
-        "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 1",
-      )
-      .bind(context.configuration.projectId, runId)
-      .all<{ id: string }>();
-    for (const run of runs.results) {
-      await trySealRun(context, run.id);
+    const attempt = integer(workflow.run_attempt, 1);
+    let historical = false;
+    if (context.configuration.workflowOwned) {
+      const github = await createGitHubClient(context.configuration.github);
+      historical = (await settlePreRunWorkflow(context, github, webhook)) === "historical";
+    }
+    if (!historical) {
+      const runs = await context.database
+        .prepare(
+          "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 1",
+        )
+        .bind(context.configuration.projectId, runId)
+        .all<{ id: string }>();
+      for (const run of runs.results) {
+        const staged = context.configuration.workflowOwned
+          ? await context.database
+              .prepare("SELECT id FROM ingest_staged_runs WHERE id = ?")
+              .bind(run.id)
+              .first<{ id: string }>()
+          : null;
+        if (!staged) await trySealRun(context, run.id);
+      }
+      if (
+        context.configuration.workflowOwned &&
+        workflow.status === "completed" &&
+        workflow.conclusion === "success"
+      ) {
+        const staged = await context.database
+          .prepare(
+            "SELECT id FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND submitted_at IS NOT NULL",
+          )
+          .bind(context.configuration.github.repositoryId, runId, attempt)
+          .all<{ id: string }>();
+        for (const row of staged.results) {
+          await materializeWorkflowRun(context, row.id);
+        }
+      }
     }
   }
   if (webhook.event === "pull_request") {
@@ -212,6 +253,10 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
           throw error;
         }
       }
+    }
+    if (context.configuration.workflowOwned) {
+      const candidate = await candidateForWebhook(github, webhook);
+      if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
     }
   }
   await context.database

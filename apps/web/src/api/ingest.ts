@@ -157,7 +157,7 @@ async function runPlan(context: ApiContext, runId: string) {
   return { plan: await storedPlan(context, planObjectKey), verified };
 }
 
-async function verifyAncestry(context: ApiContext, github: GitHubClient, testedSha: string) {
+export async function verifyAncestry(context: ApiContext, github: GitHubClient, testedSha: string) {
   const snapshots = await context.database
     .prepare(
       "SELECT DISTINCT tested_sha FROM visonaut_snapshots WHERE project_id = ? AND reference_eligible = 1 ORDER BY created_at DESC LIMIT 100",
@@ -242,7 +242,12 @@ export async function reserve(request: Request, context: ApiContext): Promise<Re
   const serviceShards = await Promise.all(
     plan.shards.map(async (shard) => ({
       key: shard.key,
-      profileDigest: await digestJson(shard.environmentProfileDigests),
+      profileDigest: await digestJson(
+        shard.environmentProfilePolicy === "measured"
+          ? { environmentProfilePolicy: "measured" }
+          : shard.environmentProfileDigests,
+      ),
+      environmentProfilePolicy: shard.environmentProfilePolicy,
       environmentProfileDigests: shard.environmentProfileDigests,
       ...(plan.discovery
         ? {
@@ -1040,7 +1045,7 @@ export async function reconcileIngest(context: ApiContext, limit = 25) {
   await assertConfiguredProject(context);
   const runs = await context.database
     .prepare(
-      "SELECT r.id FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND r.active = 1 AND r.state IN ('uploading', 'comparing') ORDER BY p.last_checked_at, r.created_at LIMIT ?",
+      "SELECT r.id FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND r.active = 1 AND r.state IN ('uploading', 'comparing') AND NOT EXISTS (SELECT 1 FROM ingest_staged_runs staged WHERE staged.id = r.id) ORDER BY p.last_checked_at, r.created_at LIMIT ?",
     )
     .bind(context.configuration.projectId, Math.min(limit, 100))
     .all<{ id: string }>();

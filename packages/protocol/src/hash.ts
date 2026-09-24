@@ -80,6 +80,14 @@ export async function digestEnvironmentProfile(profile: CaptureProfile): Promise
   return digestJson({ ...profile, captureOptions });
 }
 
+/** Bind workflow-owned manifests to the immutable reusable workflow source. */
+export function workflowSourceDigest(reusableWorkflowSha: string): Promise<string> {
+  if (!/^[a-f0-9]{40}$/.test(reusableWorkflowSha)) {
+    throw new Error("A full reusable workflow SHA is required.");
+  }
+  return digestJson({ schemaVersion: "1.0", source: "workflow", reusableWorkflowSha });
+}
+
 interface DiscoveryArtifactPrefixParams {
   workflowAttempt: number;
   jobId: string;
