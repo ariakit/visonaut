@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "noEmit": true,
+    "paths": {
+      "@playwright/test": ["./node_modules/@playwright/test/index.mjs"],
+      "@visonaut/playwright": ["../dist/index.js"]
+    }
+  }
+}
