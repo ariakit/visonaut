@@ -2,7 +2,6 @@ import { spawn } from "node:child_process";
 import { appendFile, realpath, symlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCli } from "visonaut";
 import { bindSignedJob } from "./context.mjs";
 import { measureEnvironment } from "./environment.mjs";
 import { rebindManifest, verifyMeasuredProfiles } from "./rebind.mjs";
@@ -260,6 +259,7 @@ export async function upload({ options, environment = process.env, fetchImpl = f
     bundleSha256: options["--bundle-sha256"],
     context: signedJob,
   });
+  const { runCli } = await import("visonaut");
   const code = await runCli({
     argv: ["upload", "--dir", outputDirectory],
     environment: { ...environment, VISONAUT_SERVER: server },
