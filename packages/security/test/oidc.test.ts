@@ -129,7 +129,7 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
     ).toMatchObject({ event: "push", testedSha, jobId: "30", sourceHead: testedSha });
   });
   it("requires the exact pinned cross-repository job workflow ref", async () => {
-    const reusableWorkflowRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${workflowSha}`;
+    const reusableWorkflowRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${workflowSha}`;
     const crossRepositoryConfiguration = { ...configuration, reusableWorkflowRef };
     expect(
       await verifyGitHubOidc({

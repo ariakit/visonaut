@@ -101,7 +101,7 @@ export function workflowConfiguration(context: ApiContext) {
       ) ||
       (context.configuration.github.repository === "ariakit/ariakit" &&
         configuration.reusableWorkflowRef ===
-          `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${configuration.reusableWorkflowSha}`)
+          `ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${configuration.reusableWorkflowSha}`)
     ) ||
     !configuration.reusableWorkflowRef.endsWith(`@${configuration.reusableWorkflowSha}`)
   ) {
