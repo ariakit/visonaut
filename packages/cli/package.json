@@ -1,6 +1,6 @@
 {
   "name": "visonaut",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Upload visual captures and inspect Visonaut review status",
   "license": "MIT",
   "repository": {
@@ -30,6 +30,9 @@
     "build": "tsup",
     "test": "vitest run",
     "typecheck": "tsc6 --noEmit"
+  },
+  "dependencies": {
+    "@visonaut/playwright": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "24.13.6",

@@ -25,7 +25,12 @@ export interface ReporterOptions {
   run: RunProvenance;
   shard: Manifest["shard"];
   /** Package digest and repository root for workflow-owned collection discovery. */
-  discovery?: { executorDigest: string; repositoryRoot: string };
+  discovery?: {
+    executorDigest: string;
+    repositoryRoot: string;
+    expectedInvocation?: string[];
+    expectedProjects?: string[];
+  };
 }
 
 function record(value: unknown, label: string): Record<string, unknown> {
@@ -105,7 +110,8 @@ export default class VisonautReporter implements Reporter {
     await rm(this.outputFile, { force: true });
     await rm(this.receiptFile, { force: true });
     if (this.options.discovery) {
-      const { repositoryRoot, executorDigest } = this.options.discovery;
+      const { repositoryRoot, executorDigest, expectedInvocation, expectedProjects } =
+        this.options.discovery;
       if (!path.isAbsolute(repositoryRoot)) {
         throw new Error("Trusted discovery requires an absolute repositoryRoot");
       }
@@ -114,6 +120,8 @@ export default class VisonautReporter implements Reporter {
         suite,
         executorDigest,
         repositoryRoot,
+        expectedInvocation,
+        expectedProjects,
       });
     }
   }

@@ -85,21 +85,7 @@ test("render options are generic and reject a malformed shard or missing policy"
     invalid[invalid.indexOf("--shard") + 1] = "../escape";
     parseArguments(["render", ...invalid]);
   }, /invalid/);
-  const uploadFlags = [
-    "upload",
-    "--shard",
-    "desktop-42",
-    "--comparison-policy-digest",
-    policyDigest,
-    "--bundle-sha256",
-    bundleSha256,
-    "--input",
-    "/tmp/shard.enc",
-    "--output-directory",
-    "/tmp/upload",
-  ];
-  assert.equal(parseArguments(uploadFlags).options["--shard"], "desktop-42");
-  assert.throws(() => parseArguments([...uploadFlags, "--workflow-sha", workflowSha]), /known/);
+  assert.throws(() => parseArguments(["upload", ...flags]), /Choose render/);
 });
 
 test("render rejects OIDC before reading any candidate workspace", async () => {

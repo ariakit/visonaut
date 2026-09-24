@@ -10,6 +10,7 @@ import type { ExitCode } from "./errors.js";
 import { loadCapture, readImage, validateImages } from "./files.js";
 import type { LocalManifest } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
+import { runWorkflowCommand } from "./workflow.js";
 
 export type { ExitCode } from "./errors.js";
 
@@ -19,6 +20,8 @@ const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
 const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
 
 const HELP = `Usage:
+  visonaut pack --dir <capture-directory> --output <encrypted-file>
+  visonaut upload --bundle <encrypted-file>
   visonaut upload [--dir <capture-directory>] [--server <origin>] [--json]
   visonaut submit [--run <id> | --dir <capture-directory>] [--server <origin>] [--json]
   visonaut status --run <id> [--server <origin>] [--json]
@@ -466,6 +469,16 @@ export async function runCli({
     if (argv.length === 1 && argv[0] === "--help") {
       stdout(HELP);
       return 0;
+    }
+    const workflow = await runWorkflowCommand(argv, environment);
+    if (workflow === "packed") return 0;
+    if (workflow) {
+      return runCli({
+        argv: ["upload", "--dir", workflow.directory],
+        environment: { ...environment, VISONAUT_SERVER: workflow.server },
+        stdout,
+        stderr,
+      });
     }
     const options = argumentsFrom(argv, environment);
     const origin = serverOrigin(options.server ?? environment.VISONAUT_SERVER);

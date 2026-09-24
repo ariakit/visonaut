@@ -26,24 +26,12 @@ const renderFlags = [
   "--bundle-sha256",
   "--output",
 ];
-const uploadFlags = [
-  "--shard",
-  "--comparison-policy-digest",
-  "--bundle-sha256",
-  "--input",
-  "--output-directory",
-];
-
 export function parseArguments(argv) {
   const [command, ...args] = argv;
-  if (command !== "render" && command !== "upload") {
-    throw new Error("Choose render or upload. Use --help for usage.");
+  if (command !== "render") {
+    throw new Error("Choose render. Use --help for usage.");
   }
-  const requiredFlags = command === "render" ? renderFlags : uploadFlags;
-  const allowedFlags =
-    command === "render"
-      ? [...renderFlags, "--font-package", "--retries", "--workers"]
-      : [...uploadFlags, "--font-package"];
+  const allowedFlags = [...renderFlags, "--font-package", "--retries", "--workers"];
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const flag = args[index];
@@ -58,7 +46,7 @@ export function parseArguments(argv) {
     }
     options[flag] = value;
   }
-  if (requiredFlags.some((flag) => !Object.hasOwn(options, flag))) {
+  if (renderFlags.some((flag) => !Object.hasOwn(options, flag))) {
     throw new Error("The workflow capture command is missing an option");
   }
   if (
@@ -250,7 +238,13 @@ export async function upload({ options, environment = process.env, fetchImpl = f
   if (!privateKey.startsWith("-----BEGIN PRIVATE KEY-----\n")) {
     throw new Error("Visonaut returned an invalid transfer key");
   }
-  await decryptTransfer(options["--input"], outputDirectory, options["--shard"], privateKey);
+  await decryptTransfer(
+    options["--input"],
+    outputDirectory,
+    options["--shard"],
+    privateKey,
+    environment,
+  );
   const signedEnvironment = await measureEnvironment({
     comparisonPolicyDigest: options["--comparison-policy-digest"],
     comparisonEngineVersion: settings.comparisonEngineVersion,
@@ -282,11 +276,6 @@ export async function upload({ options, environment = process.env, fetchImpl = f
     bundleSha256: options["--bundle-sha256"],
     context: signedJob,
   });
-  const { runCli } = await import("visonaut");
-  const code = await runCli({
-    argv: ["upload", "--dir", outputDirectory],
-    environment: { ...environment, VISONAUT_SERVER: server },
-  });
-  if (code !== 0) throw new Error(`Visonaut upload failed with exit ${code}`);
   await appendFile(required(environment, "GITHUB_OUTPUT"), `name=${receipt.artifactName}\n`);
+  return { directory: outputDirectory, server };
 }

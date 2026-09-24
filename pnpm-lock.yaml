@@ -333,6 +333,10 @@ importers:
         version: 4.136.1(@cloudflare/workers-types@5.20260922.1)(@types/node@24.13.6)
 
   packages/cli:
+    dependencies:
+      '@visonaut/playwright':
+        specifier: workspace:*
+        version: link:../playwright
     devDependencies:
       '@types/node':
         specifier: 24.13.6
@@ -362,11 +366,8 @@ importers:
   packages/playwright:
     dependencies:
       pngjs:
-        specifier: ^7.0.0
+        specifier: 7.0.0
         version: 7.0.0
-      visonaut:
-        specifier: workspace:*
-        version: link:../cli
     devDependencies:
       '@playwright/test':
         specifier: 1.63.0

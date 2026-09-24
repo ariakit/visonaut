@@ -1,13 +1,28 @@
 import path from "node:path";
 import { digestJson } from "@visonaut/protocol";
 import type { CandidateDiscovery, TestOutcome, TrustedCollection } from "@visonaut/protocol";
-import type { FullConfig, Suite } from "@playwright/test/reporter";
+import type { FullConfig } from "@playwright/test/reporter";
+
+interface DiscoveryConfig extends Pick<FullConfig, "argv" | "configFile" | "forbidOnly" | "shard"> {
+  projects: Array<
+    Pick<
+      FullConfig["projects"][number],
+      "name" | "testDir" | "testMatch" | "testIgnore" | "grep" | "grepInvert" | "repeatEach"
+    >
+  >;
+}
+
+interface DiscoverySuite {
+  allTests(): Array<Parameters<typeof inventoryEntry>[0]>;
+}
 
 interface DiscoverParams {
-  config: FullConfig;
-  suite: Suite;
+  config: DiscoveryConfig;
+  suite: DiscoverySuite;
   executorDigest: string;
   repositoryRoot: string;
+  expectedInvocation?: string[];
+  expectedProjects?: string[];
 }
 
 function expressions(value: RegExp | RegExp[] | null) {
@@ -30,7 +45,7 @@ export function repositoryPath(file: string, repositoryRoot: string): string {
   return relative || ".";
 }
 
-function assertFullInvocation(config: FullConfig) {
+function assertFullInvocation(config: DiscoveryConfig) {
   const args = config.argv.slice(2);
   if (args.shift() !== "test") {
     throw new Error("Trusted discovery requires the full Playwright test invocation");
@@ -63,34 +78,51 @@ export async function discoverInventory({
   suite,
   executorDigest,
   repositoryRoot,
+  expectedInvocation,
+  expectedProjects,
 }: DiscoverParams): Promise<CandidateDiscovery> {
   if (!/^[a-f0-9]{64}$/.test(executorDigest)) {
     throw new Error("Capture needs a verified package digest");
   }
-  assertFullInvocation(config);
-  if (config.projects.length !== 1) {
-    throw new Error("A trusted discovery shard must select one fixed project");
+  if (expectedInvocation) {
+    if (
+      config.argv[2] !== "test" ||
+      JSON.stringify(config.argv.slice(3)) !== JSON.stringify(expectedInvocation) ||
+      !expectedProjects?.length ||
+      JSON.stringify(config.projects.map((project) => project.name)) !==
+        JSON.stringify(expectedProjects) ||
+      !config.forbidOnly
+    ) {
+      throw new Error("Trusted discovery requires the workflow's full visual invocation");
+    }
+  } else {
+    assertFullInvocation(config);
+    if (config.projects.length !== 1) {
+      throw new Error("A trusted discovery shard must select one fixed project");
+    }
   }
-  const project = config.projects[0];
-  if (!project) {
+  const collections = config.projects.map((project): TrustedCollection => {
+    if (project.repeatEach !== 1) {
+      throw new Error("Discovered suite must run every selected test once");
+    }
+    return {
+      projectName: project.name,
+      testDir: repositoryPath(project.testDir, repositoryRoot),
+      testMatch: patterns(project.testMatch),
+      testIgnore: patterns(project.testIgnore),
+      grep: expressions(project.grep),
+      grepInvert: expressions(project.grepInvert),
+      shard: config.shard,
+      repeatEach: 1,
+    };
+  });
+  const collection = collections[0];
+  if (!collection) {
     throw new Error("Trusted discovery project is missing");
-  }
-  const collection: TrustedCollection = {
-    projectName: project.name,
-    testDir: repositoryPath(project.testDir, repositoryRoot),
-    testMatch: patterns(project.testMatch),
-    testIgnore: patterns(project.testIgnore),
-    grep: expressions(project.grep),
-    grepInvert: expressions(project.grepInvert),
-    shard: config.shard,
-    repeatEach: 1,
-  };
-  if (project.repeatEach !== 1) {
-    throw new Error("Discovered suite must run every selected test once");
   }
   return {
     executorDigest,
-    configurationDigest: await digestJson(collection),
+    configurationDigest: await digestJson(expectedInvocation ? collections : collection),
     inventoryDigest: await digestJson(
       suite.allTests().map((test) => inventoryEntry(test, repositoryRoot)),
     ),
