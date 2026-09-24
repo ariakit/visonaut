@@ -28,14 +28,17 @@ await visual(page, {
 });
 ```
 
-Configure the reporter and trusted capture workflow before uploading. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, retries, and the reporter. The [CLI guide](packages/cli/README.md) explains GitHub Actions OIDC and upload status.
+Configure the reporter and pinned capture workflow before uploading. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, and retries. The [CLI guide](packages/cli/README.md) explains the signed upload and submit jobs.
 
 ```sh
-pnpm exec visonaut upload --manifest .visonaut/manifest.json
-pnpm exec visonaut finalize --manifest .visonaut/manifest.json
+# In each signed upload job, after its browser capture succeeds:
+pnpm exec visonaut upload --dir visonaut
+
+# In the final signed job, after every upload job succeeds:
+pnpm exec visonaut submit --run "$GITHUB_RUN_ID"
 ```
 
-The service verifies the complete capture plan and job results. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
+The service verifies the complete pinned workflow and its staged capture jobs. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
 
 ## Work on the repository
 
@@ -55,7 +58,7 @@ For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite s
 | `apps/web`            | TanStack Start app, private API, review UI, and operations |
 | `apps/compare`        | Independent image comparison Worker                        |
 | `packages/playwright` | Public Playwright adapter and reporter                     |
-| `packages/cli`        | Public `visonaut` upload, finalize, and status commands    |
+| `packages/cli`        | Public `visonaut` upload, submit, and status commands      |
 | `packages/protocol`   | Capture and service contracts                              |
 | `packages/service`    | Run, review, acceptance, and baseline transitions          |
 | `packages/security`   | Authentication, authorization, OIDC, and GitHub checks     |

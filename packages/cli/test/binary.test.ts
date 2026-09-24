@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -62,7 +62,9 @@ it("runs the built executable with a shebang and returns exact usage exit codes"
   expect((await readFile(bin, "utf8")).startsWith("#!/usr/bin/env node\n")).toBe(true);
   const help = await command({ argv: [bin, "--help"] });
   expect(help.code).toBe(0);
-  expect(help.stdout).toContain("visonaut upload --manifest");
+  expect(help.stdout).toContain("visonaut upload [--dir");
+  expect(help.stdout).toContain("visonaut submit [--run");
+  expect(help.stdout).not.toContain("visonaut finalize");
   const invalid = await command({ argv: [bin, "approve", "--json"] });
   expect(invalid.code).toBe(2);
   expect(JSON.parse(invalid.stderr)).toMatchObject({ exitCode: 2 });
@@ -104,9 +106,13 @@ it("reads status through the built executable and a real HTTP boundary", async (
   expect(JSON.parse(result.stdout)).toMatchObject({ state: "needs-review", runId: "run-123" });
 });
 
-it("runs upload and finalize through the built binary with no workspace protocol dependency", async () => {
+it("stages the reporter's default capture directory through the built binary", async () => {
   const local = await fixture();
   temporary.push(local.directory);
+  const captureDirectory = join(local.directory, "visonaut");
+  await mkdir(captureDirectory);
+  await copyFile(local.manifestPath, join(captureDirectory, "manifest.json"));
+  await copyFile(join(local.directory, "capture.png"), join(captureDirectory, "capture.png"));
   // The preload models GitHub's HTTPS endpoint; production has no fetch override.
   const preload = join(local.directory, "service.mjs");
   await writeFile(
@@ -139,7 +145,7 @@ globalThis.fetch = async (input, options) => {
       return new Response(null,{status:204});
     } else if (url.pathname.endsWith('/finalize')) {
       assert.equal(JSON.parse(options.body).manifestDigest,digest);
-      result = {schemaVersion:'1.0',runId:'run-123',state:'comparing',reviewUrl:'/runs/run-123',completedShards:1,expectedShards:1,errors:[]};
+      result = {schemaVersion:'1.0',runId:'run-123',shardKey:'chrome-1',manifestDigest:digest,state:'staged'};
     } else throw new Error('Unexpected request');
   }
   return new Response(JSON.stringify(result), {headers:{'Content-Type':'application/json'}});
@@ -151,16 +157,21 @@ globalThis.fetch = async (input, options) => {
     ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
     ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
   };
-  for (const operation of ["upload", "finalize"]) {
-    const result = await command({
-      argv: ["--import", preload, bin, operation, "--manifest", local.manifestPath, "--json"],
-      environment,
-    });
-    expect(result.stderr).toBe("");
-    expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({ operation, visualApproval: false });
-    expect(result.stdout).not.toContain("secret");
-  }
+  const result = await command({
+    argv: ["--import", preload, bin, "upload", "--json"],
+    cwd: local.directory,
+    environment,
+  });
+  expect(result.stderr).toBe("");
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    operation: "upload",
+    runId: "run-123",
+    shardKey: "chrome-1",
+    shardStaged: true,
+    visualApproval: false,
+  });
+  expect(result.stdout).not.toContain("secret");
 });
 
 it("packs a self-contained public package and runs a clean pnpm exec install", async () => {

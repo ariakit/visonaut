@@ -40,9 +40,9 @@ async function readBounded(file: string, maximum: number): Promise<Buffer<ArrayB
   return bytes.subarray(0, length);
 }
 
-export async function loadManifest(file: string): Promise<LocalManifest> {
+export async function loadCapture(directory: string): Promise<LocalManifest> {
   try {
-    const path = resolve(file);
+    const path = resolve(directory, "manifest.json");
     const bytes = await readBounded(path, MAX_MANIFEST_BYTES);
     const manifest = parseManifest(JSON.parse(bytes.toString("utf8")));
     await validateManifestProfiles(manifest);

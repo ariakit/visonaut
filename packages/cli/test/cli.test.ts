@@ -9,6 +9,8 @@ import { fixture, imageBytes } from "./fixture.js";
 
 const environment = {
   VISONAUT_SERVER: "https://review.example.test",
+  GITHUB_RUN_ID: "456",
+  GITHUB_RUN_ATTEMPT: "1",
   ACTIONS_ID_TOKEN_REQUEST_URL:
     "https://run.actions.githubusercontent.com/id-token?api-version=2.0",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
@@ -54,7 +56,6 @@ async function localFixture() {
 interface MockServiceOptions {
   local: Awaited<ReturnType<typeof fixture>>;
   change?: (url: URL, response: unknown) => unknown;
-  finalState?: string;
   requestToken?: string;
   oidcToken?: string;
 }
@@ -62,7 +63,6 @@ interface MockServiceOptions {
 async function mockService({
   local,
   change,
-  finalState = "comparing",
   requestToken = "github-request-secret",
   oidcToken = "oidc-secret",
 }: MockServiceOptions) {
@@ -73,7 +73,9 @@ async function mockService({
     requests.push({ url, options });
     let response: unknown;
     if (url.hostname.endsWith(".actions.githubusercontent.com")) {
-      expect(url.searchParams.get("audience")).toBe(environment.VISONAUT_SERVER);
+      expect([environment.VISONAUT_SERVER, `${environment.VISONAUT_SERVER}/submit`]).toContain(
+        url.searchParams.get("audience"),
+      );
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${requestToken}`);
       response = { value: oidcToken };
     } else if (url.pathname === "/v1/runs") {
@@ -112,11 +114,22 @@ async function mockService({
       response = {
         schemaVersion: "1.0",
         runId: "run-123",
-        state: finalState,
-        reviewUrl: "/runs/run-123",
-        completedShards: 1,
-        expectedShards: 2,
-        errors: [],
+        shardKey: "chrome-1",
+        manifestDigest,
+        state: "staged",
+      };
+    } else if (url.pathname === "/v1/runs/456/submit") {
+      expect(options?.method).toBe("POST");
+      expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
+      expect(JSON.parse(String(options?.body))).toEqual({
+        schemaVersion: "1.0",
+        workflowAttempt: 1,
+      });
+      response = {
+        schemaVersion: "1.0",
+        runId: "run-123",
+        state: "submitted",
+        submittedAt: 1790200000000,
       };
     } else {
       throw new Error("Unexpected request");
@@ -127,22 +140,23 @@ async function mockService({
   return { requests, fetch };
 }
 
-describe("public upload and finalize commands", () => {
+describe("public upload command", () => {
   it("uploads with GitHub runner and OIDC credentials larger than ordinary text fields", async () => {
     const local = await localFixture();
     const requestToken = "request-" + "a".repeat(8192);
     const oidcToken = "oidc-" + "b".repeat(12288);
     const { requests } = await mockService({ local, requestToken, oidcToken });
-    const result = await execute(["upload", "--manifest", local.manifestPath, "--json"], {
+    const result = await execute(["upload", "--dir", local.directory, "--json"], {
       ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken,
     });
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({ dataAccepted: true, visualApproval: false });
+    expect(JSON.parse(result.stdout)).toMatchObject({ shardStaged: true, visualApproval: false });
     expect(requests.map(({ url }) => url.pathname)).toEqual([
       "/id-token",
       "/v1/runs",
       "/v1/runs/run-123/shards/chrome-1",
       "/v1/uploads/ticket-1",
+      "/v1/runs/run-123/finalize",
     ]);
     expect(result.stdout + result.stderr).not.toContain(requestToken);
     expect(result.stdout + result.stderr).not.toContain(oidcToken);
@@ -153,7 +167,7 @@ describe("public upload and finalize commands", () => {
     async (requestToken) => {
       const local = await localFixture();
       const { fetch } = await mockService({ local });
-      const result = await execute(["upload", "--manifest", local.manifestPath], {
+      const result = await execute(["upload", "--dir", local.directory], {
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken,
       });
       expect(result.code).toBe(4);
@@ -166,26 +180,27 @@ describe("public upload and finalize commands", () => {
     const local = await localFixture();
     const oidcToken = "b".repeat(65537);
     const { fetch } = await mockService({ local, oidcToken });
-    const result = await execute(["upload", "--manifest", local.manifestPath]);
+    const result = await execute(["upload", "--dir", local.directory]);
     expect(result.code).toBe(4);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(result.stdout + result.stderr).not.toContain(oidcToken);
   });
 
-  it("uploads exact bytes, uses distinct OIDC/capability scopes, and does not wait for review", async () => {
+  it("stages exact bytes with a stable run identity and does not wait for review", async () => {
     const local = await localFixture();
     const { requests } = await mockService({ local });
-    const result = await execute(["upload", "--manifest", local.manifestPath, "--json"]);
+    const result = await execute(["upload", "--dir", local.directory, "--json"]);
     expect(result.code).toBe(0);
     expect(result.stderr).toBe("");
     expect(JSON.parse(result.stdout)).toEqual({
       schemaVersion: "1.0",
       operation: "upload",
       runId: "run-123",
+      state: "staged",
       shardKey: "chrome-1",
       manifestDigest: await digestJson(local.manifest),
       uploadedImages: 1,
-      dataAccepted: true,
+      shardStaged: true,
       visualApproval: false,
     });
     expect(requests.map((item) => item.url.pathname)).toEqual([
@@ -193,9 +208,60 @@ describe("public upload and finalize commands", () => {
       "/v1/runs",
       "/v1/runs/run-123/shards/chrome-1",
       "/v1/uploads/ticket-1",
+      "/v1/runs/run-123/finalize",
     ]);
     expect(requests.every((item) => item.options?.redirect === "error")).toBe(true);
     expect(result.stdout).not.toContain("secret");
+  });
+
+  it("accepts the workflow-owned staged receipt without inventing expected shards", async () => {
+    const local = await localFixture();
+    const manifestDigest = await digestJson(local.manifest);
+    await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/finalize")
+          ? {
+              schemaVersion: "1.0",
+              runId: "run-123",
+              shardKey: "chrome-1",
+              manifestDigest,
+              state: "staged",
+            }
+          : response,
+    });
+    const result = await execute(["upload", "--dir", local.directory, "--json"]);
+    expect(result.code).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      operation: "upload",
+      schemaVersion: "1.0",
+      runId: "run-123",
+      shardKey: "chrome-1",
+      manifestDigest,
+      state: "staged",
+      uploadedImages: 1,
+      shardStaged: true,
+      visualApproval: false,
+    });
+    expect(result.stdout).not.toContain("expectedShards");
+  });
+
+  it("rejects a staged receipt for a different manifest", async () => {
+    const local = await localFixture();
+    await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/finalize")
+          ? {
+              schemaVersion: "1.0",
+              runId: "run-123",
+              shardKey: "chrome-1",
+              manifestDigest: "f".repeat(64),
+              state: "staged",
+            }
+          : response,
+    });
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
   });
 
   it("keeps compatible optional manifest fields in the declared digest", async () => {
@@ -203,31 +269,28 @@ describe("public upload and finalize commands", () => {
     Object.assign(local.manifest, { schemaVersion: "1.4", futureMetadata: { text: "compatible" } });
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const { requests } = await mockService({ local });
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(0);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(0);
     expect(JSON.parse(String(requests[2]?.options?.body))).toEqual(local.manifest);
   });
 
-  it.each(["comparing", "needs-review", "rejected", "incomplete", "passed"])(
-    "finalize returns after shard acceptance with state %s",
-    async (finalState) => {
-      const local = await localFixture();
-      await rm(join(local.directory, "capture.png"));
-      const { requests } = await mockService({ local, finalState });
-      const result = await execute(["finalize", "--manifest", local.manifestPath, "--json"]);
-      expect(result.code).toBe(0);
-      expect(JSON.parse(result.stdout)).toMatchObject({
-        operation: "finalize",
-        state: finalState,
-        visualApproval: false,
-      });
-      expect(requests).toHaveLength(3);
-    },
-  );
-
-  it.each(["failed", "superseded"])("finalize fails for %s", async (finalState) => {
+  it("rejects a legacy run-status response instead of treating it as a staged shard", async () => {
     const local = await localFixture();
-    await mockService({ local, finalState });
-    expect((await execute(["finalize", "--manifest", local.manifestPath])).code).toBe(1);
+    await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/finalize")
+          ? {
+              schemaVersion: "1.0",
+              runId: "run-123",
+              state: "passed",
+              reviewUrl: "/runs/run-123",
+              completedShards: 1,
+              expectedShards: 2,
+              errors: [],
+            }
+          : response,
+    });
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
   });
 
   it("refuses a mismatched declaration digest", async () => {
@@ -239,7 +302,7 @@ describe("public upload and finalize commands", () => {
           ? { schemaVersion: "1.0", manifestDigest: "unused", uploads: [] }
           : response,
     });
-    const result = await execute(["upload", "--manifest", local.manifestPath]);
+    const result = await execute(["upload", "--dir", local.directory]);
     expect(result.code).toBe(1);
     expect(requests).toHaveLength(3);
   });
@@ -254,10 +317,14 @@ describe("public upload and finalize commands", () => {
           ? { schemaVersion: "1.0", manifestDigest, uploads: [] }
           : response,
     });
-    const result = await execute(["upload", "--manifest", local.manifestPath, "--json"]);
+    const result = await execute(["upload", "--dir", local.directory, "--json"]);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 0, visualApproval: false });
-    expect(requests).toHaveLength(3);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      uploadedImages: 0,
+      shardStaged: true,
+      visualApproval: false,
+    });
+    expect(requests).toHaveLength(4);
   });
 
   it("checks the image again if it changes after preflight", async () => {
@@ -271,7 +338,7 @@ describe("public upload and finalize commands", () => {
         return response;
       },
     });
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(1);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
     expect(requests).toHaveLength(3);
   });
 
@@ -289,7 +356,7 @@ describe("public upload and finalize commands", () => {
             }
           : response,
     });
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(4);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(4);
     expect(requests).toHaveLength(2);
   });
 
@@ -309,7 +376,7 @@ describe("public upload and finalize commands", () => {
             }
           : response,
     });
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(1);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
     expect(requests).toHaveLength(3);
   });
 
@@ -319,10 +386,105 @@ describe("public upload and finalize commands", () => {
       "fetch",
       vi.fn(async () => json({ message: environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, 500)),
     );
-    const result = await execute(["upload", "--manifest", local.manifestPath, "--json"]);
+    const result = await execute(["upload", "--dir", local.directory, "--json"]);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("HTTP 500");
     expect(result.stderr).not.toContain("secret");
+  });
+});
+
+describe("public submit command", () => {
+  it("uses a separate OIDC audience and sends the signed workflow attempt", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({ local });
+    const result = await execute(["submit", "--run", "456", "--json"]);
+    expect(result.code).toBe(0);
+    expect(requests.map(({ url }) => url.pathname)).toEqual(["/id-token", "/v1/runs/456/submit"]);
+    expect(requests[0]?.url.searchParams.get("audience")).toBe(
+      "https://review.example.test/submit",
+    );
+    expect(JSON.parse(result.stdout)).toEqual({
+      operation: "submit",
+      schemaVersion: "1.0",
+      runId: "run-123",
+      state: "submitted",
+      submittedAt: 1790200000000,
+      visualApproval: false,
+    });
+  });
+
+  it("uploads and submits one pinned job with --dir", async () => {
+    const local = await localFixture();
+    const manifestDigest = await digestJson(local.manifest);
+    const { requests } = await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/finalize")
+          ? {
+              schemaVersion: "1.0",
+              runId: "run-123",
+              shardKey: "chrome-1",
+              manifestDigest,
+              state: "staged",
+            }
+          : response,
+    });
+    const result = await execute(["submit", "--dir", local.directory, "--json"]);
+    expect(result.code).toBe(0);
+    expect(requests.map(({ url }) => url.pathname)).toEqual([
+      "/id-token",
+      "/v1/runs",
+      "/v1/runs/run-123/shards/chrome-1",
+      "/v1/uploads/ticket-1",
+      "/v1/runs/run-123/finalize",
+      "/id-token",
+      "/v1/runs/456/submit",
+    ]);
+    expect(requests[5]?.url.searchParams.get("audience")).toBe(
+      "https://review.example.test/submit",
+    );
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      operation: "submit",
+      runId: "run-123",
+      state: "submitted",
+      shardKey: "chrome-1",
+      manifestDigest,
+      uploadedImages: 1,
+      visualApproval: false,
+    });
+  });
+
+  it("rejects the wrong run or attempt before requesting OIDC", async () => {
+    const local = await localFixture();
+    const { fetch } = await mockService({ local });
+    expect((await execute(["submit", "--run", "457"])).code).toBe(4);
+    expect((await execute(["submit", "--run", "456"], { GITHUB_RUN_ATTEMPT: "0" })).code).toBe(2);
+    expect((await execute(["submit", "--run", "not-a-run"])).code).toBe(2);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a one-job capture from another attempt before staging", async () => {
+    const local = await localFixture();
+    const { fetch } = await mockService({ local });
+    const result = await execute(["submit", "--dir", local.directory], {
+      GITHUB_RUN_ATTEMPT: "2",
+    });
+    expect(result.code).toBe(4);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a submission receipt for a different internal run", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/submit") && typeof response === "object" && response !== null
+          ? { ...response, runId: "other-run" }
+          : response,
+    });
+    const result = await execute(["submit", "--dir", local.directory]);
+    expect(result.code).toBe(1);
+    expect(requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
   });
 });
 
@@ -363,7 +525,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    const result = await execute(["upload", "--manifest", local.manifestPath]);
+    const result = await execute(["upload", "--dir", local.directory]);
     expect(result.code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -382,7 +544,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(1);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -393,7 +555,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(["upload", "--manifest", local.manifestPath])).code).toBe(1);
+    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -403,7 +565,7 @@ describe("local data validation before network access", () => {
     const file = join(directory, "manifest.json");
     await writeFile(file, "{}");
     await truncate(file, 8 * 1024 * 1024 + 1);
-    expect((await execute(["upload", "--manifest", file])).code).toBe(1);
+    expect((await execute(["submit", "--dir", directory])).code).toBe(1);
   });
 });
 
@@ -519,11 +681,16 @@ describe("argument and transport boundaries", () => {
     [
       [],
       ["approve"],
-      ["upload"],
+      ["finalize"],
       ["status"],
       ["status", "--run", "one", "--run", "two"],
       ["status", "--run", "one", "--token", "secret"],
       ["status", "--run", "one", "--manifest", "manifest.json"],
+      ["status", "--run", "one", "--dir", "visonaut"],
+      ["upload", "--run", "one"],
+      ["upload", "--manifest", "manifest.json"],
+      ["submit", "--run", "one", "--dir", "visonaut"],
+      ["submit", "--manifest", "manifest.json"],
     ].map((argv) => ({ argv })),
   )("rejects unsupported arguments $argv", async ({ argv }) => {
     expect((await execute(argv)).code).toBe(2);
@@ -546,7 +713,7 @@ describe("argument and transport boundaries", () => {
     const local = await localFixture();
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    const result = await execute(["upload", "--manifest", local.manifestPath], {
+    const result = await execute(["upload", "--dir", local.directory], {
       ACTIONS_ID_TOKEN_REQUEST_URL: "https://attacker.example.test/id-token",
     });
     expect(result.code).toBe(4);

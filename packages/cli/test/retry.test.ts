@@ -159,6 +159,7 @@ describe("public commands under temporary service backpressure", () => {
     async (operation) => {
       const local = await fixture();
       directories.push(local.directory);
+      const manifestDigest = await digestJson(local.manifest);
       const paths: string[] = [];
       const fetch = vi.fn(async (input: string | URL | Request) => {
         const url = new URL(input instanceof Request ? input.url : input);
@@ -176,11 +177,13 @@ describe("public commands under temporary service backpressure", () => {
                 expiresAt: new Date(Date.now() + 60_000).toISOString(),
               });
         }
+        if (operation === "finalize" && url.pathname.includes("/shards/")) {
+          return Response.json({ schemaVersion: "1.0", manifestDigest, uploads: [] });
+        }
         return busy();
       });
       vi.stubGlobal("fetch", fetch);
-      const command = operation === "finalize" ? "finalize" : "upload";
-      expect((await execute([command, "--manifest", local.manifestPath])).code).toBe(1);
+      expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
       expect(new Set(paths).size).toBe(paths.length);
     },
   );
@@ -221,6 +224,17 @@ describe("public commands under temporary service backpressure", () => {
             ],
           }),
         );
+      } else if (incoming.url?.endsWith("/finalize")) {
+        response.setHeader("Content-Type", "application/json");
+        response.end(
+          JSON.stringify({
+            schemaVersion: "1.0",
+            runId: "run-123",
+            shardKey: local.manifest.shard.key,
+            manifestDigest,
+            state: "staged",
+          }),
+        );
       } else {
         received.push(Buffer.concat(chunks));
         if (received.length === 1) {
@@ -247,11 +261,11 @@ describe("public commands under temporary service backpressure", () => {
       return realFetch(input, init);
     });
     const result = await execute(
-      ["upload", "--manifest", local.manifestPath, "--json"],
+      ["upload", "--dir", local.directory, "--json"],
       `http://127.0.0.1:${address.port}`,
     );
     expect(result.code).toBe(0);
     expect(received).toEqual([imageBytes, imageBytes]);
-    expect(JSON.parse(result.stdout)).toMatchObject({ dataAccepted: true, visualApproval: false });
+    expect(JSON.parse(result.stdout)).toMatchObject({ shardStaged: true, visualApproval: false });
   });
 });
