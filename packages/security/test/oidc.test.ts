@@ -31,7 +31,7 @@ const keys = await generateKeyPair("RS256");
 const publicKey = await exportJWK(keys.publicKey);
 const keySet = createLocalJWKSet({ keys: [{ ...publicKey, kid: "test-key", alg: "RS256" }] });
 
-async function token(overrides: Record<string, unknown> = {}) {
+async function token(overrides: Record<string, unknown> = {}, audience = configuration.audience) {
   return new SignJWT({
     repository,
     repository_id: "10",
@@ -49,7 +49,7 @@ async function token(overrides: Record<string, unknown> = {}) {
   })
     .setProtectedHeader({ alg: "RS256", kid: "test-key" })
     .setIssuer("https://token.actions.githubusercontent.com")
-    .setAudience(configuration.audience)
+    .setAudience(audience)
     .setSubject(String(overrides.sub ?? `repo:${repository}:ref:refs/heads/main`))
     .setIssuedAt()
     .setNotBefore("0s")
@@ -58,7 +58,10 @@ async function token(overrides: Record<string, unknown> = {}) {
     .sign(keys.privateKey);
 }
 
-function github(overrides: Record<string, unknown> = {}): GitHubClient {
+function github(
+  overrides: Record<string, unknown> = {},
+  jobName = "capture / chromium",
+): GitHubClient {
   const run = {
     id: 20,
     run_attempt: 2,
@@ -83,7 +86,7 @@ function github(overrides: Record<string, unknown> = {}): GitHubClient {
               id: 30,
               run_id: 20,
               run_attempt: 2,
-              name: "capture / chromium",
+              name: jobName,
               check_run_url: `https://api.github.com/repos/${repository}/check-runs/40`,
               status: "in_progress",
               conclusion: null,
@@ -124,6 +127,34 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         keySet,
       }),
     ).toMatchObject({ event: "push", testedSha, jobId: "30", sourceHead: testedSha });
+  });
+  it("accepts the submit audience only from the pinned submit job", async () => {
+    const submitAudience = "https://preview.example/submit";
+    const submitConfiguration: OidcConfiguration = {
+      ...configuration,
+      audience: submitAudience,
+      shards: [{ key: "submit", jobName: "Visonaut / submit" }],
+    };
+    const submitRequest = { ...request, shardKey: "submit" };
+    const signed = await token({}, submitAudience);
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request: submitRequest,
+        configuration: submitConfiguration,
+        github: github(),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request: submitRequest,
+        configuration: submitConfiguration,
+        github: github({}, "Visonaut / submit"),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ jobId: "30", shardKey: "submit" });
   });
   it("accepts GitHub's new immutable numeric subject format", async () => {
     expect(

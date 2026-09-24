@@ -20,7 +20,10 @@ export interface TrustedShard {
   key: string;
   /** Verified identity for compatible shard inheritance. */
   profileDigest: string;
+  environmentProfilePolicy?: "measured";
   environmentProfileDigests?: string[];
+  /** Original signed upload attempt for a GitHub-carried successful job. */
+  sourceAttempt?: number;
   discovery?: { executorDigest: string; configurationDigest: string };
   tests: string[];
   captures: PlanCapture[];
@@ -34,6 +37,15 @@ export interface TrustedPlan {
 export interface ReserveRunParams {
   /** Trusted deployment admission bound; repeat reservations remain available. */
   maximumActiveRuns?: number;
+  /** Existing App-owned check, verified for this exact workflow attempt by the API. */
+  precreatedCheck?: {
+    repositoryId: string;
+    testedSha: string;
+    workflowRunId: string;
+    workflowAttempt: number;
+    externalId: string;
+    checkId: string;
+  };
   id: string;
   projectId: string;
   externalRunId: string;

@@ -20,6 +20,21 @@ interface CheckCreation {
   lease_until: number | null;
 }
 
+/** A rerun can supersede an App check before its old service run is archived. */
+export async function isCurrentPreRunCheck(
+  database: OperationsContext["database"],
+  checkId: string,
+) {
+  const superseded = await database
+    .prepare(`SELECT 1 AS found FROM pre_run_checks previous WHERE previous.check_id = ?
+      AND (previous.state != 'active' OR EXISTS (
+        SELECT 1 FROM pre_run_checks newer WHERE newer.tested_sha = previous.tested_sha
+          AND newer.generation > previous.generation))`)
+    .bind(checkId)
+    .first();
+  return superseded === null;
+}
+
 async function createChecks(context: OperationsContext, report: OperationReport) {
   const { database, budget } = context;
   await database
@@ -241,7 +256,9 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
           testedSha: run.tested_sha,
           origin: context.origin,
           isCurrent: async () =>
-            (await isCurrent()) && (await service.isStatusIntentCurrent(latest)),
+            (await isCurrent()) &&
+            (await service.isStatusIntentCurrent(latest)) &&
+            (await isCurrentPreRunCheck(database, latest.check_id)),
         }),
     });
     if (result === "delivered") {

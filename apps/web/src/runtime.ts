@@ -11,6 +11,7 @@ import {
 import {
   apiContext,
   reconcileIngest,
+  reconcileStagedWorkflows,
   reconcileWebhooks,
   type ApiBindings,
   type ApiConfiguration,
@@ -30,6 +31,7 @@ import {
   type CapacityPolicy,
 } from "./capacity.ts";
 import { recordEvent, validateBudget } from "./operations/common.ts";
+import { expireStagedAttempts } from "./api/workflow-retention.ts";
 
 function required(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is not configured.`);
@@ -171,6 +173,35 @@ async function assertExportProject(env: Env, exportId: string) {
 export function apiBindings(env: Env): ApiBindings {
   const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
   const auth = authConfiguration(env);
+  const workflowOwnedValue = (env as Env & { VISONAUT_WORKFLOW_OWNED?: string })
+    .VISONAUT_WORKFLOW_OWNED;
+  const workflowOwned = workflowOwnedValue
+    ? configurationObject(workflowOwnedValue, "VISONAUT_WORKFLOW_OWNED")
+    : undefined;
+  const workflowOwnedConfiguration = workflowOwned
+    ? {
+        callerWorkflowPath: required(
+          workflowOwned.callerWorkflowPath,
+          "VISONAUT_WORKFLOW_OWNED.callerWorkflowPath",
+        ),
+        captureJobPrefix: required(
+          workflowOwned.captureJobPrefix,
+          "VISONAUT_WORKFLOW_OWNED.captureJobPrefix",
+        ),
+        submitJobName: required(
+          workflowOwned.submitJobName,
+          "VISONAUT_WORKFLOW_OWNED.submitJobName",
+        ),
+        reusableWorkflowRef: required(
+          workflowOwned.reusableWorkflowRef,
+          "VISONAUT_WORKFLOW_OWNED.reusableWorkflowRef",
+        ),
+        reusableWorkflowSha: required(
+          workflowOwned.reusableWorkflowSha,
+          "VISONAUT_WORKFLOW_OWNED.reusableWorkflowSha",
+        ),
+      }
+    : undefined;
   const configuration: ApiConfiguration = {
     origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
     projectId: required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID"),
@@ -186,15 +217,16 @@ export function apiBindings(env: Env): ApiBindings {
     allowMainDispatch:
       enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
-    trustedPlanPath: required(env.VISONAUT_TRUSTED_PLAN_PATH, "VISONAUT_TRUSTED_PLAN_PATH"),
-    reusableWorkflowRef: required(
-      env.VISONAUT_REUSABLE_WORKFLOW_REF,
-      "VISONAUT_REUSABLE_WORKFLOW_REF",
-    ),
-    reusableWorkflowSha: required(
-      env.VISONAUT_REUSABLE_WORKFLOW_SHA,
-      "VISONAUT_REUSABLE_WORKFLOW_SHA",
-    ),
+    trustedPlanPath: workflowOwned
+      ? (env.VISONAUT_TRUSTED_PLAN_PATH ?? "")
+      : required(env.VISONAUT_TRUSTED_PLAN_PATH, "VISONAUT_TRUSTED_PLAN_PATH"),
+    workflowOwned: workflowOwnedConfiguration,
+    reusableWorkflowRef:
+      workflowOwnedConfiguration?.reusableWorkflowRef ??
+      required(env.VISONAUT_REUSABLE_WORKFLOW_REF, "VISONAUT_REUSABLE_WORKFLOW_REF"),
+    reusableWorkflowSha:
+      workflowOwnedConfiguration?.reusableWorkflowSha ??
+      required(env.VISONAUT_REUSABLE_WORKFLOW_SHA, "VISONAUT_REUSABLE_WORKFLOW_SHA"),
     trustedExecutorDigest: required(
       env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
       "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
@@ -204,6 +236,9 @@ export function apiBindings(env: Env): ApiBindings {
       maximumImageBytes: positive(limits.maximumImageBytes, "maximumImageBytes"),
       maximumShardBytes: positive(limits.maximumShardBytes, "maximumShardBytes"),
       maximumRunBytes: positive(limits.maximumRunBytes, "maximumRunBytes"),
+      maximumStagedBytes: workflowOwnedConfiguration
+        ? positive(limits.maximumStagedBytes, "maximumStagedBytes")
+        : undefined,
       maximumManifestBytes: positive(limits.maximumManifestBytes, "maximumManifestBytes"),
       maximumPlanBytes: positive(limits.maximumPlanBytes, "maximumPlanBytes"),
       maximumCaptures: positive(limits.maximumCaptures, "maximumCaptures"),
@@ -213,7 +248,8 @@ export function apiBindings(env: Env): ApiBindings {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    transferPrivateKey: env.VISONAUT_TRANSFER_PRIVATE_KEY,
+    transferPrivateKey: (env as Env & { VISONAUT_TRANSFER_PRIVATE_KEY?: string })
+      .VISONAUT_TRANSFER_PRIVATE_KEY,
     comparator: { fetch: (request, init) => env.COMPARATOR.fetch(request, init) },
     operations: {
       async send(message) {
@@ -277,13 +313,14 @@ export async function runScheduledOperations(env: Env) {
   let reconcileMore = false;
   for (const [kind, reconcile] of [
     ["webhooks", reconcileWebhooks],
+    ["staged", reconcileStagedWorkflows],
     ["ingest", reconcileIngest],
   ] as const) {
     try {
       const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
       const failed = "pending" in result ? result.pending.length : result.errors.length;
       const progressed =
-        kind === "ingest"
+        kind === "ingest" || kind === "staged"
           ? "progressed" in result && typeof result.progressed === "number" && result.progressed > 0
           : failed < result.checked;
       if (result.checked >= context.budget.tasksPerStep && progressed) reconcileMore = true;
@@ -302,6 +339,22 @@ export async function runScheduledOperations(env: Env) {
         kind,
         subject: "scheduler",
         code: "reconciliation-failed",
+        now: Date.now(),
+      });
+    }
+  }
+  if (apiBindings(env).configuration.workflowOwned) {
+    try {
+      const expired = await expireStagedAttempts(context);
+      if (expired.hasMore) reconcileMore = true;
+      if (expired.attention.length === 0) {
+        await resolveSchedulerFailure(env, "staged-retention", "step-failed");
+      }
+    } catch {
+      await recordEvent(env.DB, {
+        kind: "staged-retention",
+        subject: "scheduler",
+        code: "step-failed",
         now: Date.now(),
       });
     }

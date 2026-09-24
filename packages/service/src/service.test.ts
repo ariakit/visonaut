@@ -121,6 +121,8 @@ interface FixtureInput {
   external?: string;
   ancestorShas?: string[];
   compare?: (task: ComparisonTask) => ComparisonResult;
+  captureProfileDigest?: string;
+  measuredEnvironmentProfile?: boolean;
 }
 
 async function fixture(service: Service, input: FixtureInput) {
@@ -146,6 +148,9 @@ async function fixture(service: Service, input: FixtureInput) {
         {
           key: "chromium",
           profileDigest: "profile",
+          ...(input.measuredEnvironmentProfile
+            ? { environmentProfilePolicy: "measured" as const }
+            : {}),
           tests: ["test"],
           captures: items.map((itemKey) => ({ itemKey, variantKey: "light", testId: "test" })),
         },
@@ -183,7 +188,7 @@ async function fixture(service: Service, input: FixtureInput) {
       variantKey: "light",
       ordinal,
       imageId: `image-${input.id}-${itemKey}`,
-      profileDigest: "profile",
+      profileDigest: input.captureProfileDigest ?? "profile",
       environmentProfileDigest: "profile",
       testId: "test",
       testRetry: 1,
@@ -320,6 +325,118 @@ function count(database: TestDatabase, table: string) {
   return database.connection.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count;
 }
 
+describe("pre-created App check adoption", () => {
+  it("adopts the exact check atomically and preserves the old run when its successor is stale", async () => {
+    using database = new TestDatabase();
+    database.connection.exec(
+      readFileSync(
+        new URL("../../../apps/web/migrations/0019_staged_workflows.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    database.connection.exec(
+      readFileSync(
+        new URL("../../../apps/web/migrations/0020_pre_run_checks.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    const service = new Service(database);
+    await setup(service);
+    const testedSha = "a".repeat(40);
+    const baseSha = "b".repeat(40);
+    const insertStage = (id: string, attempt: number) => {
+      database.connection
+        .prepare(
+          "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at) VALUES (?,'123','77',?,?,'source','.github/workflows/visual.yml','ariakit/ariakit/.github/workflows/capture.yml@pinned','capture / ','submit','{}',1,0)",
+        )
+        .run(id, attempt, testedSha);
+    };
+    const insertCheck = (generation: number, attempt: number, checkId: string) => {
+      const externalId = `visonaut:pre:${testedSha}${generation ? `:${generation}` : ""}`;
+      database.connection
+        .prepare(
+          "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,?,?,?,'main','refs/heads/main',0,?,?,'active','77',?,0,0)",
+        )
+        .run(testedSha, generation, "123", testedSha, baseSha, externalId, checkId, attempt);
+      return {
+        repositoryId: "123",
+        testedSha,
+        workflowRunId: "77",
+        workflowAttempt: attempt,
+        externalId,
+        checkId,
+      };
+    };
+    const plan = {
+      digest: "plan",
+      shards: [
+        {
+          key: "chromium",
+          profileDigest: "profile",
+          tests: ["test"],
+          captures: [{ itemKey: "dialog", variantKey: "light", testId: "test" }],
+        },
+      ],
+    };
+    const input = {
+      id: "first",
+      projectId: "project",
+      externalRunId: "77",
+      attempt: 1,
+      kind: "main" as const,
+      testedSha,
+      lineageKey: "main",
+      plan,
+      verifiedRelatedRunIds: [],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified-github-proof",
+      rerunShardKeys: ["chromium"],
+      precreatedCheck: insertCheck(0, 1, "999"),
+      now: 1,
+    };
+    insertStage("first", 1);
+    const first = await service.reserveRun(input);
+    expect(await service.reserveRun({ ...input, id: "replayed" })).toEqual(first);
+    expect(
+      database.connection
+        .prepare(
+          "SELECT external_id,check_id,state FROM operations_check_creations WHERE run_id='first'",
+        )
+        .get(),
+    ).toEqual({
+      external_id: input.precreatedCheck.externalId,
+      check_id: "999",
+      state: "complete",
+    });
+    insertStage("second", 2);
+    const successor = insertCheck(1, 2, "1000");
+    database.beforeBatch = () => {
+      database.connection
+        .prepare("UPDATE pre_run_checks SET state='failed' WHERE external_id=?")
+        .run(successor.externalId);
+    };
+    await expect(
+      service.reserveRun({ ...input, id: "second", attempt: 2, precreatedCheck: successor }),
+    ).rejects.toThrow();
+    expect(count(database, "visonaut_runs")).toBe(1);
+    expect(count(database, "operations_check_creations")).toBe(1);
+    expect((await service.run("first")).active).toBe(1);
+    database.connection
+      .prepare("UPDATE pre_run_checks SET state='active' WHERE external_id=?")
+      .run(successor.externalId);
+    database.beforeBatch = () => {
+      database.connection
+        .prepare("UPDATE ingest_staged_runs SET retention_state='deleting' WHERE id='second'")
+        .run();
+    };
+    await expect(
+      service.reserveRun({ ...input, id: "second", attempt: 2, precreatedCheck: successor }),
+    ).rejects.toThrow();
+    expect(count(database, "visonaut_runs")).toBe(1);
+    expect((await service.run("first")).active).toBe(1);
+  });
+});
+
 describe("rejection of inherited acceptance", () => {
   it("blocks an existing related main candidate and Undo restores eligibility", async () => {
     using database = new TestDatabase();
@@ -362,6 +479,28 @@ describe("rejection of inherited acceptance", () => {
 });
 
 describe("full run and immutable comparison state", () => {
+  it("requires review when a signed capture measures a new full environment profile", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, {
+      id: "new-profile",
+      kind: "pull_request",
+      measuredEnvironmentProfile: true,
+      captureProfileDigest: "new-full-profile",
+      compare: () => ({
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        engineVersion: "engine",
+        codecVersion: "codec",
+      }),
+    });
+    const rows = await service.comparisonRows("comparison-new-profile");
+    expect(rows.map((row) => row.outcome)).toEqual(["changed"]);
+    expect((await service.status("new-profile")).status).toBe("needs-review");
+  });
+
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {
     using database = new TestDatabase();
     const service = new Service(database);

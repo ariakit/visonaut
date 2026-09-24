@@ -39,6 +39,8 @@ export function archiveEligibilitySql(runAlias: string) {
     AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin
       WHERE pin.run_id=${runAlias}.id AND NOT (
         pin.reason='comparison' AND (
+          pin.owner='workflow-rerun:' || ${runAlias}.id
+          OR
           EXISTS (SELECT 1 FROM visonaut_runs dependent
             WHERE dependent.active=0 AND pin.owner='inherited-by:' || dependent.id)
           OR EXISTS (SELECT 1 FROM visonaut_comparisons comparison

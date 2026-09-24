@@ -400,10 +400,22 @@ function assertTrustedPlan(value: unknown): asserts value is TrustedPlan {
     shardKeys.push(shard.key);
     required(shard, "jobName", string);
     jobNames.push(shard.jobName);
-    const digests = field(shard, "environmentProfileDigests");
-    list(digests, "environmentProfileDigests", 1, 10_000);
-    for (const digest of digests) {
-      validateDigest(digest);
+    const profilePolicy = Object.hasOwn(shard, "environmentProfilePolicy")
+      ? field(shard, "environmentProfilePolicy")
+      : undefined;
+    if (profilePolicy === "measured") {
+      if (Object.hasOwn(shard, "environmentProfileDigests")) {
+        fail("Measured profiles cannot include an environment allow-list");
+      }
+    } else {
+      if (profilePolicy !== undefined) {
+        fail("Unknown environment profile policy");
+      }
+      const digests = field(shard, "environmentProfileDigests");
+      list(digests, "environmentProfileDigests", 1, 10_000);
+      for (const digest of digests) {
+        validateDigest(digest);
+      }
     }
     if (discovery !== undefined) {
       required(shard, "collection", validateCollection);
@@ -526,16 +538,18 @@ export async function validateShardDeclaration(
       }
     }
   }
-  const allowedEnvironments = new Set(shard.environmentProfileDigests);
-  const allowedProfiles = new Set<string>();
-  for (const profile of manifest.profiles) {
-    if (allowedEnvironments.has(await digestEnvironmentProfile(profile.profile))) {
-      allowedProfiles.add(profile.digest);
+  if (shard.environmentProfilePolicy !== "measured") {
+    const allowedEnvironments = new Set(shard.environmentProfileDigests);
+    const allowedProfiles = new Set<string>();
+    for (const profile of manifest.profiles) {
+      if (allowedEnvironments.has(await digestEnvironmentProfile(profile.profile))) {
+        allowedProfiles.add(profile.digest);
+      }
     }
-  }
-  for (const capture of manifest.captures) {
-    if (!allowedProfiles.has(capture.profileDigest)) {
-      fail("Capture environment profile is not allowed by the trusted plan");
+    for (const capture of manifest.captures) {
+      if (!allowedProfiles.has(capture.profileDigest)) {
+        fail("Capture environment profile is not allowed by the trusted plan");
+      }
     }
   }
   await validateManifestProfiles(manifest);

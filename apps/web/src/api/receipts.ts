@@ -11,7 +11,7 @@ import { object } from "./input.js";
 export async function discoveryEvidence(
   github: GitHubClient,
   manifest: Manifest,
-  plan: TrustedPlan,
+  plan: Pick<TrustedPlan, "discovery">,
   workflowHeadSha: string,
 ): Promise<VerifiedDiscoveryEvidence | undefined> {
   if (!plan.discovery) return undefined;
