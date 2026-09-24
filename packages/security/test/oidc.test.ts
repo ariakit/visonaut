@@ -61,6 +61,7 @@ async function token(overrides: Record<string, unknown> = {}, audience = configu
 function github(
   overrides: Record<string, unknown> = {},
   jobName = "capture / chromium",
+  heads: { pullBase?: string; main?: string; mergeBase?: string } = {},
 ): GitHubClient {
   const run = {
     id: 20,
@@ -98,11 +99,13 @@ function github(
           state: "open",
           merge_commit_sha: testedSha,
           head: { ref: "feature", sha: sourceHead, repo: { id: 10 } },
-          base: { ref: "main", sha: targetHead, repo: { id: 10 } },
+          base: { ref: "main", sha: heads.pullBase ?? targetHead, repo: { id: 10 } },
           user: { id: 42 },
         };
       if (path.includes("/git/commits/"))
-        return { parents: [{ sha: targetHead }, { sha: sourceHead }] };
+        return { parents: [{ sha: heads.mergeBase ?? targetHead }, { sha: sourceHead }] };
+      if (path.endsWith("/git/ref/heads/main"))
+        return { object: { sha: heads.main ?? targetHead } };
       if (path.startsWith("/user/")) return { id: 42, login: "maintainer" };
       if (path.endsWith("/permission"))
         return { permission: "write", role_name: "maintain", user: { id: 42 } };
@@ -245,6 +248,50 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       targetHead,
       testedSha,
     });
+  });
+  it("accepts a current merge when GitHub's pull base SHA is stale", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          pullBase: "f".repeat(40),
+        }),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ event: "pull_request", targetHead });
+  });
+  it("rejects a merge whose base is no longer current main", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          main: "f".repeat(40),
+        }),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
   });
   it("logs only the fixed failed check when signed PR provenance differs", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});

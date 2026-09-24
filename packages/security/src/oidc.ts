@@ -224,7 +224,8 @@ export async function verifyGitHubOidc({
     requireEqual(run.head_sha, head.sha, "pull.workflow_head_sha");
     await requireRepositoryWrite(github, numericId(record(pull.user).id));
     const sourceHead = sha(head.sha);
-    const targetHead = sha(target.sha);
+    const mainRef = record(await github.request(`${root}/git/ref/heads/main`));
+    const targetHead = sha(record(mainRef.object).sha);
     const commit = record(await github.request(`${root}/git/commits/${request.testedSha}`));
     const parents = Array.isArray(commit.parents)
       ? commit.parents.map((parent) => sha(record(parent).sha))

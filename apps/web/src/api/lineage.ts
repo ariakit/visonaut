@@ -165,12 +165,13 @@ export async function verifyLineage(
 
   if (target.event === "pull_request" && !frozen) {
     const current = await pull(integer(target.pullRequestNumber, 1));
+    const mainRef = object(await request(`/repos/${github.repository}/git/ref/heads/main`));
     if (
       !targetsMain(current) ||
       current.state !== "open" ||
       current.merge_commit_sha !== target.testedSha ||
       object(current.head).sha !== target.sourceHead ||
-      object(current.base).sha !== target.targetHead
+      object(mainRef.object).sha !== target.targetHead
     ) {
       throw new SecurityError(
         "stale_pull_request",
