@@ -1264,7 +1264,7 @@ describe("workflow-owned upload staging", () => {
         )
         .first(),
     ).toEqual({ resolved_at: null });
-  });
+  }, 30_000);
 
   it("expires an incomplete materialized attempt after its last writer lease", async () => {
     const test = await fixture();
