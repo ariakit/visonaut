@@ -128,6 +128,28 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       }),
     ).toMatchObject({ event: "push", testedSha, jobId: "30", sourceHead: testedSha });
   });
+  it("requires the exact pinned cross-repository job workflow ref", async () => {
+    const reusableWorkflowRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${workflowSha}`;
+    const crossRepositoryConfiguration = { ...configuration, reusableWorkflowRef };
+    expect(
+      await verifyGitHubOidc({
+        token: await token({ job_workflow_ref: reusableWorkflowRef }),
+        request,
+        configuration: crossRepositoryConfiguration,
+        github: github(),
+        keySet,
+      }),
+    ).toMatchObject({ jobId: "30" });
+    await expect(
+      verifyGitHubOidc({
+        token: await token({ job_workflow_ref: configuration.reusableWorkflowRef }),
+        request,
+        configuration: crossRepositoryConfiguration,
+        github: github(),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
+  });
   it("accepts the submit audience only from the pinned submit job", async () => {
     const submitAudience = "https://preview.example/submit";
     const submitConfiguration: OidcConfiguration = {

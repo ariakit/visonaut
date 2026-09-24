@@ -22,6 +22,7 @@ import {
   finalizeStaged,
   reserveVerifiedStagedRun,
   uploadStagedImage,
+  workflowConfiguration,
 } from "./workflow-owned.js";
 import { reconcileWorkflowJobSet } from "./workflow-reconcile.js";
 import { materializeWorkflowRun, reconcileStagedWorkflows } from "./workflow-materialize.js";
@@ -488,6 +489,35 @@ function retention(now: number, objectsPerStep: number) {
 }
 
 describe("workflow-owned upload staging", () => {
+  it("accepts only Ariakit's pinned diagnostics workflow across repositories", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) throw new Error("Expected pinned workflow configuration.");
+
+    const diagnosticsRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${pin}`;
+    configuration.reusableWorkflowRef = diagnosticsRef;
+    expect(workflowConfiguration(test.context)).toBe(configuration);
+
+    for (const ref of [
+      `ariakit/other/.github/workflows/visonaut-capture.yml@${pin}`,
+      `other/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${pin}`,
+      `ariakit/visonaut-diagnostics/.github/workflows/other.yml@${pin}`,
+      `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${"a".repeat(40)}`,
+      "ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@refs/heads/main",
+    ]) {
+      configuration.reusableWorkflowRef = ref;
+      expect(() => workflowConfiguration(test.context)).toThrowError(
+        "The trusted workflow is not configured.",
+      );
+    }
+
+    configuration.reusableWorkflowRef = diagnosticsRef;
+    test.context.configuration.github.repository = "ariakit/other";
+    expect(() => workflowConfiguration(test.context)).toThrowError(
+      "The trusted workflow is not configured.",
+    );
+  });
+
   it("checks D1 admission once for a new signed attempt, while immutable replays stay available", async () => {
     const test = await fixture();
     let admissionChecks = 0;
