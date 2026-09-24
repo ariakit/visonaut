@@ -94,8 +94,14 @@ export function workflowConfiguration(context: ApiContext) {
     !configuration.submitJobName ||
     configuration.submitJobName.length > 256 ||
     !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
-    !configuration.reusableWorkflowRef.startsWith(
-      `${context.configuration.github.repository}/.github/workflows/`,
+    // Only Ariakit may call the public diagnostics workflow as its pinned source.
+    !(
+      configuration.reusableWorkflowRef.startsWith(
+        `${context.configuration.github.repository}/.github/workflows/`,
+      ) ||
+      (context.configuration.github.repository === "ariakit/ariakit" &&
+        configuration.reusableWorkflowRef ===
+          `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${configuration.reusableWorkflowSha}`)
     ) ||
     !configuration.reusableWorkflowRef.endsWith(`@${configuration.reusableWorkflowSha}`)
   ) {
