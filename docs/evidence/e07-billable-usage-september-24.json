@@ -1,0 +1,30 @@
+{
+  "observedAt": "2026-09-24T23:09Z",
+  "source": "Cloudflare Billable Usage dashboard, authenticated read-only view",
+  "billingCycle": {
+    "start": "2026-09-09",
+    "end": "2026-10-08",
+    "observedThrough": "2026-09-24"
+  },
+  "accountWideUsd": {
+    "total": 102.98,
+    "d1RowsWritten": 102,
+    "r2Storage": 0.98,
+    "workers": 0,
+    "queues": 0,
+    "containers": 0,
+    "projectedCycleCost": 193.08
+  },
+  "d1RowsWritten": {
+    "displayedTotalMillions": 151.67,
+    "displayedBillableMillions": 101.67,
+    "sharedIncludedMillions": 50
+  },
+  "attribution": {
+    "priorPreciseAnalyticsTotal": 151659178,
+    "fiveDeletedSyntheticDatabases": 144767914,
+    "counterfactualWithoutFiveFixtures": 6891264,
+    "method": "Subtract fixture writes from the same pre-cleanup analytics counter. The result is below the shared 50-million-write allowance.",
+    "limits": "The dashboard is account-wide and delayed. Resource analytics are not invoice line items. The R2 storage charge has no project-level byte-month attribution here. The projected cycle cost extrapolates a one-off synthetic spike and is not a recurring Visonaut forecast."
+  }
+}
