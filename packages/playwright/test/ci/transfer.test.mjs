@@ -173,6 +173,30 @@ test("render encrypts for the selected server's key, not the preview key", async
   }
 });
 
+test("transfer helpers use the supplied run context", async () => {
+  const { root, source } = await fixture();
+  const originalRun = process.env.GITHUB_RUN_ID;
+  const originalSha = process.env.GITHUB_SHA;
+  process.env.GITHUB_RUN_ID = "999";
+  process.env.GITHUB_SHA = "b".repeat(40);
+  const environment = { GITHUB_RUN_ID: runId, GITHUB_SHA: testedSha };
+  try {
+    const encrypted = path.join(root, "capture.enc");
+    await encryptTransferWithPublicKey(source, shard, encrypted, publicKey, environment);
+    await decryptTransfer(encrypted, path.join(root, "decrypted"), shard, privateKey, environment);
+    await assert.rejects(
+      decryptTransfer(encrypted, path.join(root, "wrong-run"), shard, privateKey),
+      /another run or commit/,
+    );
+  } finally {
+    if (originalRun === undefined) delete process.env.GITHUB_RUN_ID;
+    else process.env.GITHUB_RUN_ID = originalRun;
+    if (originalSha === undefined) delete process.env.GITHUB_SHA;
+    else process.env.GITHUB_SHA = originalSha;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("transfer errors preserve caller-owned files and directories", async () => {
   const originalRun = process.env.GITHUB_RUN_ID;
   const originalSha = process.env.GITHUB_SHA;

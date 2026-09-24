@@ -61,11 +61,28 @@ export function encryptTransfer(
   outputFile: string,
   publicKeyFile: string,
 ): Promise<void>;
+export function encryptTransferWithPublicKey(
+  directory: string,
+  shard: string,
+  outputFile: string,
+  publicKey: string,
+  environment?: Record<string, string | undefined>,
+): Promise<void>;
+export function loadTransferPublicKey(
+  environment: Record<string, string | undefined>,
+  fetchImpl?: typeof fetch,
+): Promise<string>;
+export function uploadEncryptedTransfer(options: {
+  options: Record<string, string>;
+  environment?: Record<string, string | undefined>;
+  fetchImpl?: typeof fetch;
+}): Promise<{ directory: string; server: string }>;
 export function decryptTransfer(
   inputFile: string,
   outputDirectory: string,
   shard: string,
   privateKey: string,
+  environment?: Record<string, string | undefined>,
 ): Promise<void>;
 export function measureEnvironment(
   options: {

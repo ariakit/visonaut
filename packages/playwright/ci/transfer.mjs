@@ -112,12 +112,12 @@ async function pack(root, shard, archivePath) {
   await writeAll(archive, lengthPrefix(0));
 }
 
-function context(shard) {
+function context(shard, environment) {
   if (!shardPattern.test(shard)) {
     throw new Error("Invalid opaque shard key");
   }
-  const runId = process.env.GITHUB_RUN_ID;
-  const testedSha = process.env.GITHUB_SHA;
+  const runId = environment.GITHUB_RUN_ID;
+  const testedSha = environment.GITHUB_SHA;
   if (!/^[1-9][0-9]*$/.test(runId ?? "") || !/^[a-f0-9]{40}$/.test(testedSha ?? "")) {
     throw new Error("A signed GitHub run and commit are required");
   }
@@ -130,8 +130,14 @@ export async function encryptTransfer(root, shard, output, publicKeyPath) {
 }
 
 /** Used by the pinned runner after it obtains the selected server's public key. */
-export async function encryptTransferWithPublicKey(root, shard, output, publicKey) {
-  const selected = context(shard);
+export async function encryptTransferWithPublicKey(
+  root,
+  shard,
+  output,
+  publicKey,
+  environment = process.env,
+) {
+  const selected = context(shard, environment);
   const temporary = await mkdtemp(path.join(path.dirname(output), ".visonaut-transfer-"));
   const plain = path.join(temporary, "archive");
   let outputCreated = false;
@@ -243,7 +249,13 @@ async function unpack(archivePath, outputDir, shard) {
   }
 }
 
-export async function decryptTransfer(input, outputDir, shard, privateKey) {
+export async function decryptTransfer(
+  input,
+  outputDir,
+  shard,
+  privateKey,
+  environment = process.env,
+) {
   const temporary = await mkdtemp(path.join(path.dirname(input), ".visonaut-transfer-"));
   const plain = path.join(temporary, "archive");
   let outputCreated = false;
@@ -259,7 +271,7 @@ export async function decryptTransfer(input, outputDir, shard, privateKey) {
     }
     const header = await readExact(encrypted, headerSize, 4);
     const metadata = JSON.parse(header.toString("utf8"));
-    const selected = context(shard);
+    const selected = context(shard, environment);
     if (
       metadata.version !== 1 ||
       metadata.runId !== selected.runId ||

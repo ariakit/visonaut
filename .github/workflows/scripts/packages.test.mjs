@@ -23,7 +23,7 @@ const ciFiles = JSON.parse(readFileSync("packages/playwright/package.json", "utf
 function packFixture(
   name = "visonaut",
   extraFiles = {},
-  dependencies = name === "@visonaut/playwright" ? { visonaut: "1.2.3" } : {},
+  dependencies = name === "visonaut" ? { "@visonaut/playwright": "1.2.3" } : {},
   version = "1.2.3",
 ) {
   const directory = resolve(temporary, `fixture-${fixtureId++}`);
@@ -96,8 +96,11 @@ test("the public package audit accepts actual npm archives and rejects private f
     () => auditTarball(extraCi.bytes, extraCi.expected),
     /Unexpected public package file/,
   );
-  const rangedCli = packFixture("@visonaut/playwright", {}, { visonaut: "^1.2.3" });
-  assert.throws(() => auditTarball(rangedCli.bytes, rangedCli.expected), /exact CLI version/);
+  const rangedAdapter = packFixture("visonaut", {}, { "@visonaut/playwright": "^1.2.3" });
+  assert.throws(
+    () => auditTarball(rangedAdapter.bytes, rangedAdapter.expected),
+    /exact adapter version/,
+  );
   const runtimeLock = JSON.parse(readFileSync("packages/playwright/ci/runtime-lock.json"));
   runtimeLock.packages["node_modules/visonaut"].integrity = "";
   const unlocked = packFixture("@visonaut/playwright", {
@@ -110,8 +113,8 @@ test("artifact verification binds both tarballs and their hashes to one source c
   const directory = resolve(temporary, "artifact");
   mkdirSync(directory);
   const packages = [
-    packFixture(),
-    packFixture("@visonaut/playwright", {}, { visonaut: "1.2.3" }, "1.2.4"),
+    packFixture("@visonaut/playwright", {}, {}, "1.2.4"),
+    packFixture("visonaut", {}, { "@visonaut/playwright": "1.2.4" }),
   ].map((fixture) => {
     writeFileSync(resolve(directory, fixture.filename), fixture.bytes);
     return {
@@ -129,7 +132,7 @@ test("artifact verification binds both tarballs and their hashes to one source c
     JSON.stringify({ schemaVersion: 1, sourceCommit, packages }),
   );
   assert.equal((await verifyPackages(directory, sourceCommit)).length, 2);
-  const mismatchedCli = packFixture("@visonaut/playwright", {}, { visonaut: "1.2.2" }, "1.2.4");
+  const mismatchedCli = packFixture("visonaut", {}, { "@visonaut/playwright": "1.2.2" });
   writeFileSync(resolve(directory, packages[1].filename), mismatchedCli.bytes);
   packages[1].bytes = mismatchedCli.bytes.length;
   packages[1].sha256 = createHash("sha256").update(mismatchedCli.bytes).digest("hex");
@@ -138,7 +141,10 @@ test("artifact verification binds both tarballs and their hashes to one source c
     resolve(directory, "manifest.json"),
     JSON.stringify({ schemaVersion: 1, sourceCommit, packages }),
   );
-  await assert.rejects(verifyPackages(directory, sourceCommit), /does not match the packed CLI/);
+  await assert.rejects(
+    verifyPackages(directory, sourceCommit),
+    /does not match the packed adapter/,
+  );
   await assert.rejects(verifyPackages(directory, "b".repeat(40)), /source commit mismatch/);
   writeFileSync(resolve(directory, packages[0].filename), "changed after CI");
   await assert.rejects(verifyPackages(directory, sourceCommit), /byte count mismatch/);

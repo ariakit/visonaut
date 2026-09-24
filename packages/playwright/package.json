@@ -1,6 +1,6 @@
 {
   "name": "@visonaut/playwright",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Prepared visual capture and final-successful-attempt reporting for Visonaut",
   "license": "MIT",
   "repository": {
@@ -60,8 +60,7 @@
     "test": "vitest run test"
   },
   "dependencies": {
-    "pngjs": "^7.0.0",
-    "visonaut": "workspace:*"
+    "pngjs": "7.0.0"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

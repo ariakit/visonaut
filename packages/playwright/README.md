@@ -58,36 +58,19 @@ The adapter does not set CI gates. Ariakit's integration must retain its `CI` an
 
 ## Workflow capture
 
-The published 0.1 adapter must stay paired with CLI 0.1 because CLI 0.2 removes `finalize` and `--manifest`. The workflow-owned runner described below ships with the adapter 0.2 release.
+Keep the application's Playwright configuration and visual test command. Call `measureEnvironment` from `@visonaut/playwright/ci` before the visual run, with `outputDirectory` set to the capture directory. It writes the `environment.json` required by `visonaut pack`. Set the returned profile on the visual projects and add the Visonaut reporter with its manifest in that same directory. The existing `visual()` helper calls this adapter from the prepared page. The reporter writes the successful manifest and images there.
 
-The workflow-owned `visonaut-capture` runner executes one complete visual collection from Ariakit's approved `app.yml` jobs. Those jobs declare the browser, operating system, project, test-file patterns, app preview commands, and comparator policy. The service checks the Git blob of `app.yml` in the tested commit against its approved blob. The runner does not load the candidate Playwright config or a trusted-plan file. It forces one project, `@visual`, no ignored tests, one execution per test, and `forbidOnly`. The reporter records the discovered test inventory and requires every selected test to finish successfully. A zero-test shard fails.
-
-Install `@visonaut/playwright` in the app workspace like any other development dependency. The adapter depends on the matching `visonaut` CLI and uses the app's `@playwright/test` peer. Render runs from the app workspace without a second Playwright install. The signed upload and submit jobs install the published packages from verified npm tarballs in a separate directory; they do not check out or install candidate code.
+In the visual job, run the existing tests and then encrypt the result:
 
 ```sh
-pnpm --filter app exec visonaut-capture render --repository-root "$GITHUB_WORKSPACE" \
-  --test-dir app/src --test-patterns '["/test[^/]*-browser"]' \
-  --project chrome --browser chromium --device "Desktop Chrome" \
-  --base-url http://localhost:4321 --shard chrome-1 \
-  --font-package @fontsource-variable/inter \
-  --comparison-policy-digest "$APPROVED_POLICY_SHA" \
-  --bundle-sha256 "$VERIFIED_TARBALL_SHA" \
-  --output "$RUNNER_TEMP/chrome-1.enc"
+VISUAL_TEST=true pnpm -F app exec playwright test --project chrome firefox --grep @visual --output test-results/test-visual
+pnpm -F app exec visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
 ```
 
-Ariakit's app workflow supplies `VISONAUT_WEB_SERVERS` as a JSON array of its preview commands, working directories, ports, and environment settings. `--test-patterns` is a JSON array of regular-expression sources. Ariakit's preview imports `@fontsource-variable/inter`, so its workflow passes that package to both render and upload. The runner records operating-system, system-font, and application-font hashes once; each `visual()` call records the actual browser version, viewport, media state, and screenshot options. There is no catalogue of hypothetical profile digests.
+The visual job has no GitHub OIDC permission. A separate signed job downloads the encrypted artifact and runs `visonaut upload --bundle`. The final job runs `visonaut submit --run "$GITHUB_RUN_ID"`. This separation keeps the upload credential away from pull-request test code and keeps plaintext screenshots out of GitHub artifacts. The upload job independently measures its operating system and system fonts and binds the result to the approved workflow source.
 
-The render job has no OIDC permission. It writes only an encrypted manifest and images. A separate upload job has `id-token: write`, does not check out candidate code, and uses a checksum-verified package:
+The application checkout controls its test files, Playwright configuration, and installed reporter. Visonaut verifies the signed upload job and validates the bundle, but it cannot attest that collaborator-controlled test code ran an immutable suite. Review changes to visual test selection and dependencies as code.
 
-```sh
-visonaut-capture upload --shard chrome-1 \
-  --font-package @fontsource-variable/inter \
-  --comparison-policy-digest "$APPROVED_POLICY_SHA" \
-  --bundle-sha256 "$VERIFIED_TARBALL_SHA" \
-  --input "$RUNNER_TEMP/chrome-1.enc" \
-  --output-directory "$RUNNER_TEMP/visonaut-upload"
-```
-
-The upload job independently measures its OS and system fonts. It checks those values against the encrypted transfer, the pinned comparison policy, and the application-font package named by the workflow. Runner-image drift is a failed upload that can be retried without rendering again. The upload job then binds the manifest to its signed GitHub job ID and approved workflow source, stages the shard with `visonaut upload`, and emits the exact receipt artifact name through `GITHUB_OUTPUT`. The workflow uploads only `receipt.json`; it does not publish plaintext screenshots. `VISONAUT_SERVER` selects `https://visonaut.com` by default; trusted preview and diagnostic workflows can set the exact `https://preview.visonaut.com` or `https://diagnostics.visonaut.com` origin. Before candidate tests run, the runner fetches the public transfer key from that exact server; the server derives it from its own private key, so preview, production, and diagnostics keep separate secrets. The runner rejects other origins before requesting a GitHub identity token. After every upload job succeeds, a final job calls `visonaut submit --run "$GITHUB_RUN_ID"`. The service resolves that external run ID from the signed final job, verifies one staged shard per successful upload job and the whole workflow result, then determines the Visonaut check. Staging or submitting is not visual approval.
+The older `visonaut-capture render` command remains available for pinned diagnostic workflows. New application integrations should use their existing Playwright jobs.
 
 The reporter selects only the final successful attempt of each test. If a test captures blue, fails later, then captures green and passes on retry, only green enters the manifest. A failed run, exhausted retry, missing image, duplicate identity, caught capture failure, or empty capture set produces no successful manifest. The reporter deletes any prior manifest before the new run starts, so a failed rerun cannot upload old success.

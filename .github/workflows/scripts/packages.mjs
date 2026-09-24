@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
 
 const packages = [
-  { name: "visonaut", directory: "packages/cli" },
   { name: "@visonaut/playwright", directory: "packages/playwright" },
+  { name: "visonaut", directory: "packages/cli" },
 ];
 const sourcePattern = /^[a-f0-9]{40}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -108,7 +108,11 @@ export function auditTarball(bytes, expected) {
     manifest.peerDependencies,
   ]) {
     for (const [name, range] of Object.entries(dependencies ?? {})) {
-      assert(!name.startsWith("@visonaut/"), "Internal runtime dependency escaped bundling");
+      assert(
+        !name.startsWith("@visonaut/") ||
+          (expected.name === "visonaut" && name === "@visonaut/playwright"),
+        "Internal runtime dependency escaped bundling",
+      );
       assert(!/^(?:workspace|file|link):/.test(range), "Local runtime dependency escaped packing");
     }
   }
@@ -116,8 +120,12 @@ export function auditTarball(bytes, expected) {
     if (!name.startsWith("package/dist/") && !name.startsWith("package/ci/")) {
       continue;
     }
+    const source =
+      expected.name === "visonaut"
+        ? content.toString().replaceAll('"@visonaut/playwright/ci"', '""')
+        : content.toString();
     assert(
-      !/(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)["']@visonaut\//.test(content.toString()),
+      !/(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)["']@visonaut\//.test(source),
       "Internal runtime or declaration import escaped bundling",
     );
     assert(
@@ -135,13 +143,14 @@ export function auditTarball(bytes, expected) {
   }
   if (expected.name === "visonaut") {
     assert(files.has("package/dist/bin.js"), "CLI binary is missing");
+    assert(
+      versionPattern.test(manifest.dependencies?.["@visonaut/playwright"] ?? ""),
+      "CLI needs an exact adapter version",
+    );
   } else {
     assert(files.has("package/dist/reporter.js"), "Playwright reporter is missing");
     assert.equal(manifest.bin?.["visonaut-capture"], "./ci/bin.mjs");
-    assert(
-      versionPattern.test(manifest.dependencies?.visonaut ?? ""),
-      "Adapter needs an exact CLI version",
-    );
+    assert.equal(manifest.dependencies?.visonaut, undefined, "Adapter must not depend on CLI");
     for (const file of playwrightCiFiles) {
       assert(files.has(file), `Trusted CI helper is missing: ${file}`);
     }
@@ -239,9 +248,9 @@ export async function verifyPackages(directory, sourceCommit) {
     records.push(record);
   }
   assert.equal(
-    manifests.get("@visonaut/playwright")?.dependencies.visonaut,
-    manifests.get("visonaut")?.version,
-    "The adapter dependency does not match the packed CLI",
+    manifests.get("visonaut")?.dependencies["@visonaut/playwright"],
+    manifests.get("@visonaut/playwright")?.version,
+    "The CLI dependency does not match the packed adapter",
   );
   assert.deepEqual(
     (await readdir(directory)).sort(),

@@ -174,7 +174,7 @@ globalThis.fetch = async (input, options) => {
   expect(result.stdout).not.toContain("secret");
 });
 
-it("packs a self-contained public package and runs a clean pnpm exec install", async () => {
+it("packs both public packages and runs a clean install", async () => {
   const directory = await mkdtemp(join(tmpdir(), "visonaut-cli-pack-"));
   temporary.push(directory);
   const packed = await command({
@@ -206,6 +206,18 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
       /^(dist\/[^/]+\.(js|d\.ts)|README\.md|LICENSE|package\.json)$/u.test(file.path),
     ),
   ).toBe(true);
+  const cliArchive = join(directory, "visonaut.tgz");
+  const adapterArchive = join(directory, "visonaut-playwright.tgz");
+  for (const [packagePath, archive] of [
+    [packageDirectory, cliArchive],
+    [resolve(packageDirectory, "../playwright"), adapterArchive],
+  ] as const) {
+    const result = await command({
+      executable: "pnpm",
+      argv: ["--dir", packagePath, "pack", "--out", archive],
+    });
+    expect(result.code, result.stderr).toBe(0);
+  }
   await writeFile(
     join(directory, "package.json"),
     JSON.stringify({
@@ -215,16 +227,8 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
     }),
   );
   const installed = await command({
-    executable: "pnpm",
-    argv: [
-      "add",
-      "--ignore-scripts",
-      "--store-dir",
-      join(directory, "store"),
-      "--registry",
-      "http://127.0.0.1:1",
-      join(directory, details.filename),
-    ],
+    executable: "npm",
+    argv: ["install", "--ignore-scripts", "--no-audit", "--no-fund", adapterArchive, cliArchive],
     cwd: directory,
   });
   expect(installed.code, installed.stderr).toBe(0);
@@ -251,15 +255,15 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
   });
   expect(types.code, types.stdout + types.stderr).toBe(0);
   const help = await command({
-    executable: "pnpm",
-    argv: ["exec", "visonaut", "--help"],
+    executable: join(directory, "node_modules/.bin/visonaut"),
+    argv: ["--help"],
     cwd: directory,
   });
   expect(help.code, help.stderr).toBe(0);
   expect(help.stdout).toContain("Status requires VISONAUT_TOKEN");
   const status = await command({
-    executable: "pnpm",
-    argv: ["exec", "visonaut", "status", "--json"],
+    executable: join(directory, "node_modules/.bin/visonaut"),
+    argv: ["status", "--json"],
     cwd: directory,
     environment: { VISONAUT_SERVER: "https://review.example.test", VISONAUT_RUN: "run-123" },
   });
@@ -269,6 +273,6 @@ it("packs a self-contained public package and runs a clean pnpm exec install", a
     await readFile(join(directory, "node_modules/visonaut/package.json"), "utf8"),
   );
   expect(installedPackage.name).toBe("visonaut");
-  expect(installedPackage.dependencies).toBeUndefined();
+  expect(installedPackage.dependencies).toEqual({ "@visonaut/playwright": "0.3.0" });
   expect(installedPackage.bin).toEqual({ visonaut: "./dist/bin.js" });
 }, 30_000);
