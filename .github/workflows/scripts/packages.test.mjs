@@ -5,7 +5,13 @@ import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { after, test } from "node:test";
-import { assertRelease, auditTarball, publicationNeeded, verifyPackages } from "./packages.mjs";
+import {
+  assertRelease,
+  auditTarball,
+  publicationNeeded,
+  selectedReleaseRecords,
+  verifyPackages,
+} from "./packages.mjs";
 
 const temporary = mkdtempSync(resolve(tmpdir(), "visonaut-release-test-"));
 after(() => rmSync(temporary, { recursive: true, force: true }));
@@ -133,6 +139,7 @@ test("publication requires the exact main commit with completed launch readiness
     GITHUB_SHA: "a".repeat(40),
     VISONAUT_RELEASE_COMMIT: "a".repeat(40),
     VISONAUT_RELEASE_TAG: "latest",
+    VISONAUT_RELEASE_PACKAGE: "both",
   };
   assert.doesNotThrow(() => assertRelease(environment));
   for (const field of [
@@ -141,9 +148,22 @@ test("publication requires the exact main commit with completed launch readiness
     "GITHUB_EVENT_NAME",
     "VISONAUT_RELEASE_COMMIT",
     "VISONAUT_RELEASE_TAG",
+    "VISONAUT_RELEASE_PACKAGE",
   ]) {
     assert.throws(() => assertRelease({ ...environment, [field]: "untrusted" }));
   }
+});
+
+test("a staged release publishes only the selected verified package", () => {
+  const records = [{ name: "visonaut" }, { name: "@visonaut/playwright" }];
+  assert.deepEqual(selectedReleaseRecords(records, "visonaut"), [records[0]]);
+  assert.deepEqual(selectedReleaseRecords(records, "@visonaut/playwright"), [records[1]]);
+  assert.deepEqual(selectedReleaseRecords(records, "both"), records);
+  assert.throws(() => selectedReleaseRecords(records, "untrusted"), /Invalid npm release package/);
+  assert.throws(
+    () => selectedReleaseRecords([records[0]], "@visonaut/playwright"),
+    /Selected npm package is missing/,
+  );
 });
 
 test("a partial publication can resume only when existing bytes and tags match", () => {

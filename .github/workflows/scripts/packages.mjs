@@ -12,6 +12,7 @@ const packages = [
 ];
 const sourcePattern = /^[a-f0-9]{40}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const releasePackages = ["both", ...packages.map((entry) => entry.name)];
 const playwrightCiFiles = new Set([
   "package/ci/config.mjs",
   "package/ci/context.mjs",
@@ -135,6 +136,20 @@ export function assertRelease(environment) {
     "Source commit has not passed launch readiness",
   );
   assert(["latest", "next"].includes(environment.VISONAUT_RELEASE_TAG), "Invalid npm tag");
+  assert(
+    releasePackages.includes(environment.VISONAUT_RELEASE_PACKAGE),
+    "Invalid npm release package",
+  );
+}
+
+export function selectedReleaseRecords(records, selection) {
+  assert(releasePackages.includes(selection), "Invalid npm release package");
+  if (selection === "both") {
+    return records;
+  }
+  const selected = records.filter((record) => record.name === selection);
+  assert.equal(selected.length, 1, "Selected npm package is missing");
+  return selected;
 }
 
 export function publicationNeeded(record, registry, tag) {
@@ -241,7 +256,7 @@ async function publish(directory) {
   const records = await verifyPackages(directory, process.env.GITHUB_SHA);
   const tag = process.env.VISONAUT_RELEASE_TAG;
   const pending = [];
-  for (const record of records) {
+  for (const record of selectedReleaseRecords(records, process.env.VISONAUT_RELEASE_PACKAGE)) {
     if (publicationNeeded(record, await registryPackage(record.name), tag)) {
       pending.push(record);
     }

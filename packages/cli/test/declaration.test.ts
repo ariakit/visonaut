@@ -107,7 +107,7 @@ async function execute(local: Awaited<ReturnType<typeof fixture>>) {
   let stdout = "";
   let stderr = "";
   const code = await runCli({
-    argv: ["upload", "--manifest", local.manifestPath, "--json"],
+    argv: ["upload", "--dir", local.directory, "--json"],
     environment,
     stdout: (value) => {
       stdout += value;
@@ -147,6 +147,15 @@ function mockService({ local, response, upload, reserve }: MockServiceParams) {
     if (url.pathname.includes("/shards/")) {
       expect(JSON.parse(String(options?.body))).toEqual(local.manifest);
       return response();
+    }
+    if (url.pathname.endsWith("/finalize")) {
+      return Response.json({
+        schemaVersion: "1.0",
+        runId,
+        shardKey: local.manifest.shard.key,
+        manifestDigest: await digestJson(local.manifest),
+        state: "staged",
+      });
     }
     if (url.pathname.startsWith("/v1/uploads/")) {
       return (
@@ -188,11 +197,11 @@ it.each([3000, 12300])(
     expect(result.code).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       uploadedImages: count,
-      dataAccepted: true,
+      shardStaged: true,
       visualApproval: false,
     });
     expect(pending.size).toBe(0);
-    expect(paths).toHaveLength(count + 3);
+    expect(paths).toHaveLength(count + 4);
   },
   120_000,
 );
@@ -304,7 +313,7 @@ it("renews credentials and pending tickets without repeating successful uploads"
   expect(result.code).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 4 });
   expect(pending.size).toBe(0);
-  expect(reservations).toBe(2);
+  expect(reservations).toBe(3);
   expect(declarations).toBe(2);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(4);
 });
@@ -389,13 +398,20 @@ it.each(["oidc", "reserve", "finalize"])(
           expiresAt: new Date(Date.now() + 600_000).toISOString(),
         });
       }
+      if (url.pathname.includes("/shards/") && stage === "finalize") {
+        return Response.json({
+          schemaVersion: "1.0",
+          manifestDigest: await digestJson(local.manifest),
+          uploads: [],
+        });
+      }
       return new Response(" ".repeat(2 * 1024 * 1024 + 1), {
         headers: { "Content-Type": "application/json" },
       });
     });
     let stderr = "";
     const code = await runCli({
-      argv: ["finalize", "--manifest", local.manifestPath],
+      argv: ["upload", "--dir", local.directory],
       environment,
       stdout: () => {},
       stderr: (value) => {
@@ -404,6 +420,6 @@ it.each(["oidc", "reserve", "finalize"])(
     });
     expect(code).toBe(1);
     expect(stderr).toContain("response exceeds");
-    expect(requests).toBe(stage === "oidc" ? 1 : stage === "reserve" ? 2 : 3);
+    expect(requests).toBe(stage === "oidc" ? 1 : stage === "reserve" ? 2 : 4);
   },
 );

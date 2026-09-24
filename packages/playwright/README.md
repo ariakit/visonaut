@@ -58,6 +58,8 @@ The adapter does not set CI gates. Ariakit's integration must retain its `CI` an
 
 ## Trusted CI helpers
 
+This section describes the published **0.1 adapter paired with CLI 0.1**. Its trusted-plan workflow cannot use CLI 0.2, which removes `finalize` and `--manifest`. The workflow-owned adapter 0.2 release will replace these helpers. Pin the adapter and CLI together until that release.
+
 `@visonaut/playwright/ci` is an opt-in Node.js subpath for a pinned GitHub Actions capture executor. It does not add a CLI command. The caller still owns its fixed test collection, browser projects, web servers, runner allowlist, and trusted plan. Install this package and `visonaut` from an exact npm lockfile in a directory outside the candidate checkout. Bind the lockfile and caller configuration to the trusted plan's executor digest.
 
 ```js
@@ -67,7 +69,7 @@ await verifyTrustedPlan({ directory: trustedExecutor, planFile: trustedPlan });
 await encryptTransfer(results, browser, encryptedArtifact, publicKeyFile);
 ```
 
-The render job uses GitHub OIDC to download the pinned packages, but the test process runs without OIDC credentials. It has no private key and uploads only the encrypted shard. A separate trusted submission job never checks out candidate code. It redeems the private key once with its signed GitHub identity, decrypts and verifies the shard, binds it to the current job, and runs the existing `visonaut upload` and `visonaut finalize` commands. The service independently checks the pinned reusable workflow SHA, exact tested commit, source plan, and completed job. The public repository artifact contains no plaintext screenshot or manifest.
+The 0.1 render job uses GitHub OIDC to download its pinned packages, but the test process runs without OIDC credentials. It has no private key and uploads only the encrypted shard. A separate trusted submission job never checks out candidate code. It redeems the private key once with its signed GitHub identity, decrypts and verifies the shard, binds it to the current job, and runs the paired 0.1 CLI's upload and finalize commands. The service independently checks the pinned reusable workflow SHA, exact tested commit, source plan, and completed job. The public repository artifact contains no plaintext screenshot or manifest.
 
 ## Reporter
 
@@ -103,6 +105,7 @@ The reporter uses suite declaration order and call order, not worker completion 
 A failed run, exhausted retry, missing image, duplicate identity, or empty capture set produces no successful manifest and fails the command. A prior manifest is removed when the reporter starts, so a failed rerun cannot upload old success. Pass an optional `plan` object to the reporter for an early exact test/capture check. The server always performs its own trusted-plan check.
 
 ```sh
+# Only for the paired adapter/CLI 0.1 workflow described above:
 pnpm exec visonaut upload --manifest visonaut/manifest.json
 pnpm exec visonaut finalize --manifest visonaut/manifest.json
 ```

@@ -4,10 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: npm distribution tag for both packages
+        description: npm distribution tag for the selected package
         type: choice
         options: [latest, next]
         default: latest
+        required: true
+      package:
+        description: Package to publish from the verified artifact
+        type: choice
+        options: [both, visonaut, "@visonaut/playwright"]
+        default: both
         required: true
 
 permissions:
@@ -52,3 +58,4 @@ jobs:
         run: node .github/workflows/scripts/packages.mjs publish "$RUNNER_TEMP/public-packages"
         env:
           VISONAUT_RELEASE_TAG: ${{ inputs.tag }}
+          VISONAUT_RELEASE_PACKAGE: ${{ inputs.package }}
