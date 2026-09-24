@@ -25,7 +25,6 @@
     "VISONAUT_PROJECT_ID": "ariakit",
     "VISONAUT_OIDC_AUDIENCE": "https://preview.visonaut.com",
     "VISONAUT_TRUSTED_PLAN_PATH": ".github/visonaut-plan.json",
-    "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/visonaut.yml\",\"captureJobPrefix\":\"capture / upload / \",\"submitJobName\":\"capture / submit\",\"reusableWorkflowRef\":\"ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@db352bcf3f2cd6c54f847a05344b51cc0e1c0a39\",\"reusableWorkflowSha\":\"db352bcf3f2cd6c54f847a05344b51cc0e1c0a39\"}",
     "VISONAUT_REUSABLE_WORKFLOW_REF": "ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@db352bcf3f2cd6c54f847a05344b51cc0e1c0a39",
     "VISONAUT_REUSABLE_WORKFLOW_SHA": "db352bcf3f2cd6c54f847a05344b51cc0e1c0a39",
     "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8af1fa25b4a43693fdbfbe939810a0a08e551571bc2f4544879f013338ea5738",
