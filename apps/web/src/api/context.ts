@@ -28,6 +28,7 @@ export interface ApiConfiguration {
     submitJobName: string;
     reusableWorkflowRef: string;
     reusableWorkflowSha: string;
+    trustedWorkflowPath?: string;
   };
   reusableWorkflowRef: string;
   reusableWorkflowSha: string;

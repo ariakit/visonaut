@@ -61,7 +61,7 @@ async function token(overrides: Record<string, unknown> = {}, audience = configu
 function github(
   overrides: Record<string, unknown> = {},
   jobName = "capture / chromium",
-  heads: { pullBase?: string; main?: string; mergeBase?: string } = {},
+  heads: { pullBase?: string; main?: string; mergeBase?: string; workflowBlob?: string } = {},
 ): GitHubClient {
   const run = {
     id: 20,
@@ -80,6 +80,13 @@ function github(
     repository,
     repositoryId: "10",
     request: vi.fn(async (path: string) => {
+      if (path.includes("/contents/.github/workflows/app.yml?ref=")) {
+        return {
+          type: "file",
+          path: ".github/workflows/app.yml",
+          sha: heads.workflowBlob ?? workflowSha,
+        };
+      }
       if (path.includes("/jobs?"))
         return {
           jobs: [
@@ -117,6 +124,89 @@ function github(
 
 beforeAll(() => {
   expect(publicKey.kty).toBe("RSA");
+});
+
+describe("direct Ariakit app workflow", () => {
+  const direct: OidcConfiguration = {
+    ...configuration,
+    workflowPath: ".github/workflows/ci.yml",
+    trustedWorkflowPath: ".github/workflows/app.yml",
+  };
+
+  it("accepts an unchanged approved app workflow in a PR merge commit", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${direct.workflowPath}@${ref}`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@${ref}`,
+      job_workflow_sha: testedSha,
+    });
+    expect(
+      await verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github({ event: "pull_request", path: direct.workflowPath, head_sha: sourceHead }),
+        keySet,
+      }),
+    ).toMatchObject({ event: "pull_request", testedSha });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github(
+          { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },
+          "capture / chromium",
+          { workflowBlob: "f".repeat(40) },
+        ),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("accepts a main job called from the existing CI workflow", async () => {
+    const signed = await token({
+      workflow_ref: `${repository}/${direct.workflowPath}@refs/heads/main`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@refs/heads/main`,
+      job_workflow_sha: testedSha,
+    });
+    expect(
+      await verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github({ path: direct.workflowPath }),
+        keySet,
+      }),
+    ).toMatchObject({ event: "push", testedSha });
+  });
+
+  it("rejects a different called workflow or a different tested commit", async () => {
+    for (const claim of [
+      { job_workflow_ref: `${repository}/.github/workflows/other.yml@refs/heads/main` },
+      { job_workflow_sha: sourceHead },
+    ]) {
+      await expect(
+        verifyGitHubOidc({
+          token: await token({
+            workflow_ref: `${repository}/${direct.workflowPath}@refs/heads/main`,
+            job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@refs/heads/main`,
+            job_workflow_sha: testedSha,
+            ...claim,
+          }),
+          request,
+          configuration: direct,
+          github: github({ path: direct.workflowPath }),
+          keySet,
+        }),
+      ).rejects.toMatchObject({ status: 403 });
+    }
+  });
 });
 
 describe("GitHub OIDC plus trusted REST provenance", () => {

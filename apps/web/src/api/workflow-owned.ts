@@ -88,13 +88,18 @@ export function workflowConfiguration(context: ApiContext) {
     !maximumStagedBytes ||
     maximumStagedBytes < 1 ||
     !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.callerWorkflowPath) ||
+    (configuration.trustedWorkflowPath !== undefined &&
+      !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.trustedWorkflowPath)) ||
     configuration.captureJobPrefix.length < 12 ||
     configuration.captureJobPrefix.length > 200 ||
     !configuration.captureJobPrefix.endsWith(" / ") ||
     !configuration.submitJobName ||
     configuration.submitJobName.length > 256 ||
     !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
-    // Only Ariakit may call the public diagnostics workflow as its pinned source.
+    (configuration.trustedWorkflowPath !== undefined &&
+      configuration.reusableWorkflowRef !==
+        `${context.configuration.github.repository}/${configuration.trustedWorkflowPath}@${configuration.reusableWorkflowSha}`) ||
+    // The older Ariakit diagnostic pin remains valid until the direct app jobs cut over.
     !(
       configuration.reusableWorkflowRef.startsWith(
         `${context.configuration.github.repository}/.github/workflows/`,
@@ -156,6 +161,7 @@ async function verifyWorkflowJob(
       workflowPath: configuration.callerWorkflowPath,
       reusableWorkflowRef: configuration.reusableWorkflowRef,
       reusableWorkflowSha: configuration.reusableWorkflowSha,
+      trustedWorkflowPath: configuration.trustedWorkflowPath,
       planDigest: identity.planDigest,
       shards: [{ key: identity.shardKey, jobName }],
       loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),
