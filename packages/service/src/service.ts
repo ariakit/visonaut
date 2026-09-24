@@ -1475,9 +1475,9 @@ export class Service {
     const conclusion =
       status.status === "passed"
         ? "success"
-        : status.status === "needs-review" ||
-            status.status === "rejected" ||
-            status.status === "failed"
+        : status.status === "rejected" ||
+            status.status === "failed" ||
+            (status.status === "needs-review" && run.kind !== "merge_group")
           ? "failure"
           : "pending";
     const comparison = run.comparison_id ? await this.comparison(run.comparison_id) : null;
