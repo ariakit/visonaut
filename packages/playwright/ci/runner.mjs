@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { appendFile, realpath, symlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bindSignedJob } from "./context.mjs";
+import { bindSignedJob, githubOidcRequestUrl } from "./context.mjs";
 import { measureEnvironment } from "./environment.mjs";
 import { rebindManifest, verifyMeasuredProfiles } from "./rebind.mjs";
 import { writeRenderContext } from "./render-context.mjs";
@@ -188,11 +188,7 @@ export async function render({ options, environment = process.env }) {
 }
 
 async function identityToken(environment, audience, fetchImpl) {
-  const url = new URL(required(environment, "ACTIONS_ID_TOKEN_REQUEST_URL"));
-  if (url.protocol !== "https:" || url.hostname !== "token.actions.githubusercontent.com") {
-    throw new Error("GitHub OIDC must use its Actions HTTPS endpoint");
-  }
-  url.searchParams.set("audience", audience);
+  const url = githubOidcRequestUrl(required(environment, "ACTIONS_ID_TOKEN_REQUEST_URL"), audience);
   const response = await fetchImpl(url, {
     headers: { Authorization: `Bearer ${required(environment, "ACTIONS_ID_TOKEN_REQUEST_TOKEN")}` },
     redirect: "error",

@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
-import { bindSignedJob } from "../../ci/context.mjs";
+import { bindSignedJob, githubOidcRequestUrl } from "../../ci/context.mjs";
 import { createCaptureConfig } from "../../ci/config.mjs";
 import { measureEnvironment } from "../../ci/environment.mjs";
 import { writeRenderContext } from "../../ci/render-context.mjs";
@@ -129,6 +129,23 @@ test("signed upload only sends GitHub identity to Visonaut-owned origins", () =>
   }
 });
 
+test("GitHub identity requests accept the runner endpoint but reject altered authorities", () => {
+  const audience = "https://diagnostics.visonaut.com";
+  const request = githubOidcRequestUrl(
+    "https://run.actions.githubusercontent.com/id-token?api-version=2.0",
+    audience,
+  );
+  assert.equal(request.searchParams.get("audience"), audience);
+  for (const endpoint of [
+    "http://run.actions.githubusercontent.com/id-token",
+    "https://run.actions.githubusercontent.com.evil.example/id-token",
+    "https://user@run.actions.githubusercontent.com/id-token",
+    "https://run.actions.githubusercontent.com/id-token#fragment",
+  ]) {
+    assert.throws(() => githubOidcRequestUrl(endpoint, audience), /GitHub OIDC/);
+  }
+});
+
 test("workflow-owned config forces a complete visual project and ignores candidate selection", async () => {
   const root = await fixture();
   const environment = githubEnvironment(root);
@@ -247,7 +264,7 @@ test("signed upload job selects its exact check run and pinned workflow source",
       workflowRunId: "456",
       workflowAttempt: 2,
       testedSha,
-      tokenRequestUrl: "https://token.actions.githubusercontent.com/request",
+      tokenRequestUrl: "https://run.actions.githubusercontent.com/request",
       tokenRequestToken: "disposable-test-token",
       githubToken: "disposable-test-token",
       fetchImpl,
@@ -267,7 +284,7 @@ test("signed upload job selects its exact check run and pinned workflow source",
         workflowRunId: "456",
         workflowAttempt: 2,
         testedSha,
-        tokenRequestUrl: "https://token.actions.githubusercontent.com/request",
+        tokenRequestUrl: "https://run.actions.githubusercontent.com/request",
         tokenRequestToken: "disposable-test-token",
         githubToken: "disposable-test-token",
         fetchImpl: async () => ({ ok: true, json: async () => ({ value: invalidToken }) }),
