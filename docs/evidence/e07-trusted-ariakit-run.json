@@ -1,0 +1,84 @@
+{
+  "before": "2026-09-24T20:25:46Z",
+  "after": "2026-09-24T21:10:22Z",
+  "githubRunId": "36054765510",
+  "visonautRunId": "fd59db1d-aa12-43d5-8f58-eaf9164713c8",
+  "note": "Project-level meter delta around a hosted run; D1 daily counter, delayed/sampled analytics, concurrent traffic. Not exact bill attribution.",
+  "workers": {
+    "visonaut": {
+      "requests": 1823,
+      "errors": 0,
+      "subrequests": 1260
+    },
+    "visonaut-compare": {
+      "requests": 1008,
+      "errors": 0,
+      "subrequests": 0
+    },
+    "visonaut-webhook": {
+      "requests": 117,
+      "errors": 0,
+      "subrequests": 230
+    }
+  },
+  "d1": {
+    "visonaut-production": {
+      "rowsRead": 1005713,
+      "rowsWritten": 45962,
+      "readQueries": 75887,
+      "writeQueries": 10890
+    }
+  },
+  "r2Operations": {
+    "visonaut-production-images": {
+      "PutObject": {
+        "requests": 1010
+      },
+      "HeadBucket": {
+        "requests": 0
+      },
+      "GetObject": {
+        "requests": 1128
+      }
+    },
+    "visonaut-production-quarantine": {
+      "PutObject": {
+        "requests": 4
+      },
+      "HeadBucket": {
+        "requests": 0
+      },
+      "GetObject": {
+        "requests": 6
+      }
+    },
+    "visonaut-production-backups": {
+      "PutObject": {
+        "requests": 0
+      },
+      "HeadBucket": {
+        "requests": 0
+      },
+      "GetObject": {
+        "requests": 0
+      }
+    }
+  },
+  "queues": {
+    "visonaut-production-comparisons": {},
+    "visonaut-production-operations": {
+      "DeleteMessage": {
+        "billableOperations": 11,
+        "bytes": 209
+      },
+      "WriteMessage": {
+        "billableOperations": 11,
+        "bytes": 209
+      },
+      "ReadMessage": {
+        "billableOperations": 11,
+        "bytes": 209
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "observedDateUtc": "2026-09-24",
+  "source": "Read-only Cloudflare D1 query on visonaut-production, database 15fcd402-dccb-4359-a1ce-280ff67ca596",
+  "query": "SELECT id,state,created_at,completed_at,database_bytes,substr(database_digest,1,8) AS digest_prefix,required_count,object_count,image_bytes FROM operations_backups WHERE id IN ('2026-09-24T00Z','2026-09-24T12Z') ORDER BY id",
+  "rows": [
+    {
+      "id": "2026-09-24T00Z",
+      "state": "complete",
+      "createdAt": 1790208100810,
+      "completedAt": 1790208154562,
+      "databaseBytes": 103416940,
+      "digestPrefix": "b61bd0b2",
+      "requiredCount": 0,
+      "objectCount": 0,
+      "imageBytes": 0
+    },
+    {
+      "id": "2026-09-24T12Z",
+      "state": "complete",
+      "createdAt": 1790251235042,
+      "completedAt": 1790251288441,
+      "databaseBytes": 131691912,
+      "digestPrefix": "da34619b",
+      "requiredCount": 0,
+      "objectCount": 0,
+      "imageBytes": 0
+    }
+  ],
+  "readOnlyQuery": true,
+  "rowsWritten": 0,
+  "boundary": "D1 completion rows only. This observation did not re-stream the SQL objects, verify R2 backup objects, or perform a restore. Both slots preceded the first full Ariakit visual ingestion."
+}
