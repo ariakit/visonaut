@@ -138,6 +138,10 @@ export function auditTarball(bytes, expected) {
   } else {
     assert(files.has("package/dist/reporter.js"), "Playwright reporter is missing");
     assert.equal(manifest.bin?.["visonaut-capture"], "./ci/bin.mjs");
+    assert(
+      versionPattern.test(manifest.dependencies?.visonaut ?? ""),
+      "Adapter needs an exact CLI version",
+    );
     for (const file of playwrightCiFiles) {
       assert(files.has(file), `Trusted CI helper is missing: ${file}`);
     }
@@ -217,6 +221,7 @@ export async function verifyPackages(directory, sourceCommit) {
   assert.equal(manifest.sourceCommit, sourceCommit, "Package source commit mismatch");
   assert.equal(manifest.packages?.length, packages.length);
   const records = [];
+  const manifests = new Map();
   for (const expected of packages) {
     const record = manifest.packages.find((entry) => entry.name === expected.name);
     assert(record && versionPattern.test(record.version), "Missing or invalid package version");
@@ -230,9 +235,14 @@ export async function verifyPackages(directory, sourceCommit) {
       `sha512-${hash(bytes, "sha512", "base64")}`,
       "Package integrity mismatch",
     );
-    auditTarball(bytes, { ...expected, version: record.version });
+    manifests.set(expected.name, auditTarball(bytes, { ...expected, version: record.version }));
     records.push(record);
   }
+  assert.equal(
+    manifests.get("@visonaut/playwright")?.dependencies.visonaut,
+    manifests.get("visonaut")?.version,
+    "The adapter dependency does not match the packed CLI",
+  );
   assert.deepEqual(
     (await readdir(directory)).sort(),
     ["manifest.json", ...records.map((record) => record.filename)].sort(),
@@ -256,6 +266,39 @@ export async function verifyCiRuntimeArchive(archive) {
     assert.match(
       execFileSync("node", [resolve(runtime, "bin.mjs"), "--help"], { encoding: "utf8" }),
       /visonaut-capture render/,
+    );
+  } finally {
+    await rm(destination, { recursive: true, force: true });
+  }
+}
+
+async function verifyNormalInstall(directory, records) {
+  const destination = await mkdtemp(resolve(tmpdir(), "visonaut-normal-install-"));
+  try {
+    execFileSync(
+      "npm",
+      [
+        "install",
+        "--prefix",
+        destination,
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        ...records.map((record) => resolve(directory, record.filename)),
+      ],
+      { stdio: "inherit" },
+    );
+    assert.match(
+      execFileSync(resolve(destination, "node_modules/.bin/visonaut-capture"), ["--help"], {
+        encoding: "utf8",
+      }),
+      /visonaut-capture render/,
+    );
+    assert.match(
+      execFileSync(resolve(destination, "node_modules/.bin/visonaut"), ["--help"], {
+        encoding: "utf8",
+      }),
+      /visonaut submit/,
     );
   } finally {
     await rm(destination, { recursive: true, force: true });
@@ -300,6 +343,7 @@ async function pack(directory) {
       integrity: `sha512-${hash(bytes, "sha512", "base64")}`,
     });
   }
+  await verifyNormalInstall(directory, records);
   await writeFile(
     resolve(directory, "manifest.json"),
     `${JSON.stringify({ schemaVersion: 1, sourceCommit, packages: records }, null, 2)}\n`,
