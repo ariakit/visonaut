@@ -8,6 +8,21 @@ function nonzeroId(value) {
   return String(value);
 }
 
+export function githubOidcRequestUrl(endpoint, audience) {
+  const url = new URL(endpoint);
+  if (
+    url.protocol !== "https:" ||
+    !url.hostname.endsWith(".actions.githubusercontent.com") ||
+    url.username ||
+    url.password ||
+    url.hash
+  ) {
+    throw new Error("GitHub OIDC must use its Actions HTTPS endpoint");
+  }
+  url.searchParams.set("audience", audience);
+  return url;
+}
+
 export async function bindSignedJob({
   directory,
   repository,
@@ -32,11 +47,7 @@ export async function bindSignedJob({
     throw new Error("The signed GitHub job context is invalid");
   }
   const origin = new URL(server).origin;
-  const request = new URL(tokenRequestUrl);
-  if (request.protocol !== "https:" || request.hostname !== "token.actions.githubusercontent.com") {
-    throw new Error("GitHub OIDC must use its Actions HTTPS endpoint");
-  }
-  request.searchParams.set("audience", origin);
+  const request = githubOidcRequestUrl(tokenRequestUrl, origin);
   const tokenResponse = await fetchImpl(request, {
     headers: { Authorization: `Bearer ${tokenRequestToken}` },
     redirect: "error",
