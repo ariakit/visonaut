@@ -30,7 +30,6 @@ const playwrightCiFiles = new Set([
   "package/ci/runner.mjs",
   "package/ci/runtime-lock.json",
   "package/ci/settings.mjs",
-  "package/ci/transfer-public.txt",
   "package/ci/transfer.mjs",
   "package/ci/tsconfig.json",
 ]);
@@ -162,12 +161,6 @@ export function auditTarball(bytes, expected) {
       assert.equal(entry.version, ciRuntimeVersions[name]);
       assert(entry.resolved.startsWith("https://registry.npmjs.org/"));
     }
-    assert(
-      files
-        .get("package/ci/transfer-public.txt")
-        .toString()
-        .startsWith("-----BEGIN PUBLIC KEY-----\n"),
-    );
   }
   return manifest;
 }

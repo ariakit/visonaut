@@ -125,6 +125,12 @@ function context(shard) {
 }
 
 export async function encryptTransfer(root, shard, output, publicKeyPath) {
+  const publicKey = await readFile(publicKeyPath);
+  await encryptTransferWithPublicKey(root, shard, output, publicKey);
+}
+
+/** Used by the pinned runner after it obtains the selected server's public key. */
+export async function encryptTransferWithPublicKey(root, shard, output, publicKey) {
   const selected = context(shard);
   const temporary = await mkdtemp(path.join(path.dirname(output), ".visonaut-transfer-"));
   const plain = path.join(temporary, "archive");
@@ -133,7 +139,6 @@ export async function encryptTransfer(root, shard, output, publicKeyPath) {
     await pack(root, shard, plain);
     const key = randomBytes(32);
     const nonce = randomBytes(12);
-    const publicKey = await readFile(publicKeyPath);
     const wrappedKey = publicEncrypt({ key: publicKey, oaepHash: "sha256" }, key).toString(
       "base64",
     );

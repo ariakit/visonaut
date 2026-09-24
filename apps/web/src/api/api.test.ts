@@ -1,6 +1,7 @@
 import { prepareHistoricalCaptures } from "../operations/historical-captures.ts";
 import { TestDatabase, context as operationsContext } from "../operations/test-fixtures.ts";
 import { readFile } from "node:fs/promises";
+import { createPublicKey } from "node:crypto";
 import { createRequire } from "node:module";
 import { decodeImage, validateImage } from "@visonaut/compare";
 import { createCodecs } from "@visonaut/compare/jsquash";
@@ -2088,10 +2089,17 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       };
       const transferToken = await signed();
       test.bindings.transferPrivateKey = undefined;
+      expect((await test.send("/v1/transfer/public-key", { method: "GET" })).status).toBe(503);
       expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
         503,
       );
       test.bindings.transferPrivateKey = privateKey;
+      const publicResponse = await test.send("/v1/transfer/public-key", { method: "GET" });
+      expect(publicResponse.status).toBe(200);
+      expect(publicResponse.headers.get("cache-control")).toBe("no-store");
+      const publicKey = await publicResponse.text();
+      expect(publicKey).toBe(createPublicKey(privateKey).export({ type: "spki", format: "pem" }));
+      expect(publicKey).not.toContain("BEGIN PRIVATE KEY");
       const transfers = await Promise.all([
         test.send(transferRoute, test.json(transferBody, transferToken)),
         test.send(transferRoute, test.json(transferBody, transferToken)),

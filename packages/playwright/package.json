@@ -28,7 +28,6 @@
     "ci/render-context.mjs",
     "ci/runner.mjs",
     "ci/settings.mjs",
-    "ci/transfer-public.txt",
     "ci/transfer.mjs",
     "ci/tsconfig.json",
     "README.md",
