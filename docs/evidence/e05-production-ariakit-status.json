@@ -1,0 +1,46 @@
+{
+  "observedAt": "2026-09-24T23:15:08Z",
+  "source": "Cloudflare dashboard production D1 console, read-only SELECT",
+  "database": "visonaut-production",
+  "githubCheck": "https://github.com/ariakit/ariakit/runs/107857484011",
+  "queries": [
+    {
+      "sql": "SELECT revision, conclusion, state, attempts, last_error FROM work_status_outbox WHERE check_id='107857484011' AND revision IN (14,15,16) ORDER BY revision;",
+      "rows": [
+        {
+          "revision": 14,
+          "conclusion": "success",
+          "state": "complete",
+          "attempts": 1,
+          "last_error": null
+        },
+        {
+          "revision": 15,
+          "conclusion": "failure",
+          "state": "complete",
+          "attempts": 1,
+          "last_error": null
+        },
+        {
+          "revision": 16,
+          "conclusion": "success",
+          "state": "complete",
+          "attempts": 1,
+          "last_error": null
+        }
+      ]
+    },
+    {
+      "sql": "SELECT id, desired_revision, delivered_revision, ambiguous FROM work_checks WHERE id='107857484011';",
+      "rows": [
+        {
+          "id": "107857484011",
+          "desired_revision": 16,
+          "delivered_revision": 16,
+          "ambiguous": 0
+        }
+      ]
+    }
+  ],
+  "limits": "The live GitHub check URL shows only the final success. The D1 outbox records the delivered intermediate failure but does not independently capture the earlier GitHub response body."
+}

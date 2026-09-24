@@ -1,0 +1,17 @@
+# Production Ariakit review and status transition
+
+On September 24, 2026, the deployed Visonaut review for [Ariakit PR #7635](https://github.com/ariakit/ariakit/pull/7635) sealed workflow [attempt 2](https://github.com/ariakit/ariakit/actions/runs/36063004213/attempts/2) against tested merge commit [`bb101ea`](https://github.com/ariakit/ariakit/commit/bb101eabe6775ca78db1e5cf6c6a2c8df7541103). The review is [run `11c0ab48-b66e-4243-97d2-43d132bc9eef`](https://visonaut.com/runs/11c0ab48-b66e-4243-97d2-43d132bc9eef). Production deployment [36069387227](https://github.com/ariakit/visonaut/actions/runs/36069387227) passed on Visonaut main commit [`81d04cb`](https://github.com/ariakit/visonaut/commit/81d04cb80485c290c3b03c48541798dce6f8a602) before the review mutation. That main commit added evidence documentation after the [production workflow pin deployment](https://github.com/ariakit/visonaut/actions/runs/36066009614); it did not change review code.
+
+The run contained 1,058 variants in 183 items. Four new images required review: one dark forced-colors button, one dark focused input, and the light and dark versions of a scrolled table row. I inspected each image in the deployed review and approved it. The review then showed zero variants needing review and “Check passed.” [This screenshot](https://github.com/user-attachments/assets/b6a2f492-5d63-4acc-ae64-9bf50fab5b2c) shows the final PR revision and accepted state. The two signed upload jobs, submit job, and Ariakit Gate passed in the linked workflow.
+
+I then tested a saved rejection and Undo on the dark `ariakit-ui-table/scrolled-row/pending-static` variant. The deployed UI confirmed each command and the GitHub-owned [Visonaut check](https://github.com/ariakit/ariakit/runs/107857484011) followed the review state:
+
+| Action                            | UI comparison revision and state            | GitHub check observation |
+| --------------------------------- | ------------------------------------------- | ------------------------ |
+| Four inspected approvals complete | 11, Check passed                            | Success at 22:41:13 UTC  |
+| Reject selected approved variant  | 13, Rejected changes                        | Failure at 22:56:01 UTC  |
+| Undo that rejection               | 15, Check passed; selected variant Approved | Success at 23:01:38 UTC  |
+
+The [sanitized production D1 receipt](./e05-production-ariakit-status.json), captured with read-only queries after Undo, records `work_status_outbox` revisions 14 (`success`), 15 (`failure`), and 16 (`success`) all `complete`, each with one delivery attempt and no stored error. The `work_checks` row for check `107857484011` had `desired_revision = delivered_revision = 16` and `ambiguous = 0`. This establishes the deployed review-to-GitHub failure and recovery transition for this exact run. The check URL now shows the final success, while the outbox retains the intermediate failure record.
+
+This pass used the maintainer's existing production session and browser controls. It did not test keyboard shortcuts, a stale second session, another user's permission, reload-cleared Undo, recompare, export, or OAuth revocation. The [earlier diagnostic mutation record](./deployed-review/REPORT.md) covers some of those behaviors on a previous deployment; it does not establish them on this final production source. E05 and the complete launch gate remain open.
