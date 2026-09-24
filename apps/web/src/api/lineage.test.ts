@@ -141,6 +141,7 @@ function fixture() {
     queueEntry(2, queueTwo, queueOne, secondHead),
   ];
   let refSha = queueTwo;
+  let mainSha = base;
   let associations = [2];
   const calls: string[] = [];
   const isAncestor = (before: string, after: string): boolean =>
@@ -162,6 +163,7 @@ function fixture() {
             },
           },
         };
+      if (path.endsWith("/git/ref/heads/main")) return { object: { sha: mainSha } };
       if (path.includes("/git/ref/")) return { object: { sha: refSha } };
       const comparison = /\/compare\/([a-f0-9]{40})\.\.\.([a-f0-9]{40})/.exec(path);
       if (comparison?.[1] && comparison[2])
@@ -194,6 +196,9 @@ function fixture() {
     },
     setRef(value: string) {
       refSha = value;
+    },
+    setMain(value: string) {
+      mainSha = value;
     },
     setAssociations(value: number[]) {
       associations = value;
@@ -250,6 +255,19 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
     await expect(verifyLineage(test.github, target("pull_request"), sources)).rejects.toMatchObject(
       { code: "stale_pull_request" },
     );
+  });
+  it("uses current main when the live PR base field is stale", async () => {
+    const test = fixture();
+    const current = pull(1, { merged: false, merge: oid(31) });
+    current.base.sha = oid(99);
+    test.pulls.set(1, current);
+    expect((await verifyLineage(test.github, target("pull_request"), [])).proof.testedSha).toBe(
+      oid(31),
+    );
+    test.setMain(oid(98));
+    await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
+      code: "stale_pull_request",
+    });
   });
   it("binds a complete queue prefix to the actual group SHA and its open PRs", async () => {
     const test = fixture();

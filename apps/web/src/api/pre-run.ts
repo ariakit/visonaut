@@ -131,6 +131,11 @@ export async function candidateForWebhook(
         "The pull request merge commit is not ready.",
       );
     }
+    const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
+    const currentBaseSha = sha(object(mainRef.object).sha);
+    if (!currentBaseSha) {
+      throw new SecurityError("merge_not_ready", 503, "The main ref is not ready.");
+    }
     const ref = object(await github.request(`${root}/git/ref/pull/${number}/merge`));
     if (object(ref.object).sha !== testedSha) {
       throw new SecurityError("merge_not_ready", 503, "The pull request merge ref is not ready.");
@@ -139,7 +144,7 @@ export async function candidateForWebhook(
     if (
       !Array.isArray(commit.parents) ||
       commit.parents.length !== 2 ||
-      object(commit.parents[0]).sha !== baseSha ||
+      object(commit.parents[0]).sha !== currentBaseSha ||
       object(commit.parents[1]).sha !== sourceSha
     ) {
       throw new SecurityError(
@@ -151,7 +156,7 @@ export async function candidateForWebhook(
     const candidate: Candidate = {
       testedSha,
       sourceSha,
-      baseSha,
+      baseSha: currentBaseSha,
       kind: "pull_request",
       ref: `refs/pull/${number}/merge`,
       pullRequestNumber: number,
@@ -673,10 +678,12 @@ async function workflowCandidate(
   const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
   const base = object(pull.base);
   const head = object(pull.head);
+  const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
   if (
     pull.state !== "open" ||
     pull.merge_commit_sha !== row.tested_sha ||
-    base.sha !== row.base_sha ||
+    base.ref !== "main" ||
+    object(mainRef.object).sha !== row.base_sha ||
     head.sha !== row.source_sha ||
     head.ref !== run.head_branch ||
     numericId(object(base.repo).id) !== github.repositoryId ||
