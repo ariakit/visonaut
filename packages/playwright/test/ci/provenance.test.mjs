@@ -296,6 +296,56 @@ test("signed upload job selects its exact check run and pinned workflow source",
   }
 });
 
+test("direct upload binds the approved workflow blob to this tested commit", async () => {
+  const root = await fixture();
+  try {
+    const token = `e.${Buffer.from(
+      JSON.stringify({ check_run_id: "789", job_workflow_sha: testedSha }),
+    ).toString("base64url")}.s`;
+    const fetchImpl = async (url) => ({
+      ok: true,
+      json: async () =>
+        String(url).includes("api.github.com")
+          ? {
+              jobs: [
+                {
+                  name: "App / upload / desktop-42",
+                  id: 456,
+                  check_run_url: "https://api.github.com/repos/ariakit/example/check-runs/789",
+                },
+              ],
+            }
+          : { value: token },
+    });
+    const request = {
+      directory: root,
+      repository: "ariakit/example",
+      server: "https://visonaut.com",
+      shard: "desktop-42",
+      workflowRunId: "456",
+      workflowAttempt: 2,
+      testedSha,
+      trustedWorkflowSha: workflowSha,
+      tokenRequestUrl: "https://run.actions.githubusercontent.com/request",
+      tokenRequestToken: "disposable-test-token",
+      githubToken: "disposable-test-token",
+      fetchImpl,
+    };
+    const context = await bindSignedJob(request);
+    assert.equal(context.workflowSha, workflowSha);
+    await assert.rejects(
+      bindSignedJob({
+        ...request,
+        directory: path.join(root, "invalid"),
+        testedSha: "c".repeat(40),
+      }),
+      /did not use this commit's app workflow/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("render context binds the tested commit", async () => {
   const root = await fixture();
   try {

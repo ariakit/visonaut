@@ -200,6 +200,12 @@ export function apiBindings(env: Env): ApiBindings {
           workflowOwned.reusableWorkflowSha,
           "VISONAUT_WORKFLOW_OWNED.reusableWorkflowSha",
         ),
+        trustedWorkflowPath: workflowOwned.trustedWorkflowPath
+          ? required(
+              workflowOwned.trustedWorkflowPath,
+              "VISONAUT_WORKFLOW_OWNED.trustedWorkflowPath",
+            )
+          : undefined,
       }
     : undefined;
   const configuration: ApiConfiguration = {

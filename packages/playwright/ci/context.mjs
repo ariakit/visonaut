@@ -34,6 +34,7 @@ export async function bindSignedJob({
   tokenRequestUrl,
   tokenRequestToken,
   githubToken,
+  trustedWorkflowSha,
   fetchImpl = fetch,
 }) {
   nonzeroId(workflowRunId);
@@ -57,7 +58,10 @@ export async function bindSignedJob({
   // These unverified claims identify the job and workflow source locally. The service verifies the signed token.
   const claims = JSON.parse(Buffer.from(value.split(".")[1], "base64url").toString());
   const checkRunId = nonzeroId(claims.check_run_id);
-  const workflowSha = claims.job_workflow_sha;
+  if (trustedWorkflowSha && claims.job_workflow_sha !== testedSha) {
+    throw new Error("Signed upload job did not use this commit's app workflow");
+  }
+  const workflowSha = trustedWorkflowSha ?? claims.job_workflow_sha;
   if (!/^[a-f0-9]{40}$/.test(workflowSha ?? "")) {
     throw new Error("Signed upload job has no reusable workflow source SHA");
   }

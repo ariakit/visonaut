@@ -23,6 +23,8 @@ export interface OidcConfiguration {
   workflowPath: string;
   reusableWorkflowRef: string;
   reusableWorkflowSha: string;
+  /** Approved Git blob for direct jobs in this repository's app workflow. */
+  trustedWorkflowPath?: string;
   planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
@@ -123,16 +125,31 @@ export async function verifyGitHubOidc({
     configuration.repositoryOwnerId,
     "claim.repository_owner_id",
   );
-  requireEqual(
-    claims.job_workflow_ref,
-    configuration.reusableWorkflowRef,
-    "claim.job_workflow_ref",
-  );
-  requireEqual(
-    claims.job_workflow_sha,
-    configuration.reusableWorkflowSha,
-    "claim.job_workflow_sha",
-  );
+  if (configuration.trustedWorkflowPath) {
+    const source = configuration.trustedWorkflowPath;
+    const claimedSource = claims.job_workflow_sha;
+    requireEqual(sha(claimedSource), sha(claims.sha), "claim.direct_workflow_sha");
+    if (!String(claims.job_workflow_ref ?? "").startsWith(`${github.repository}/${source}@`)) {
+      throw new SecurityError("untrusted_run", 403, "The workflow source is not trusted.");
+    }
+    const file = record(
+      await github.request(`/repos/${github.repository}/contents/${source}?ref=${claimedSource}`),
+    );
+    requireEqual(file.type, "file", "rest.direct_workflow_type");
+    requireEqual(file.path, source, "rest.direct_workflow_path");
+    requireEqual(file.sha, configuration.reusableWorkflowSha, "rest.direct_workflow_blob");
+  } else {
+    requireEqual(
+      claims.job_workflow_ref,
+      configuration.reusableWorkflowRef,
+      "claim.job_workflow_ref",
+    );
+    requireEqual(
+      claims.job_workflow_sha,
+      configuration.reusableWorkflowSha,
+      "claim.job_workflow_sha",
+    );
+  }
   requireEqual(request.repositoryId, github.repositoryId, "request.repository_id");
   requireEqual(request.repository, github.repository, "request.repository");
   requireEqual(request.planDigest, configuration.planDigest, "request.plan_digest");
@@ -140,11 +157,6 @@ export async function verifyGitHubOidc({
   requireEqual(attemptNumber(claims.run_attempt), request.workflowAttempt, "claim.run_attempt");
   requireEqual(sha(claims.sha), sha(request.testedSha), "claim.sha");
   const ref = textField(claims.ref);
-  requireEqual(
-    claims.workflow_ref,
-    `${github.repository}/${configuration.workflowPath}@${ref}`,
-    "claim.workflow_ref",
-  );
   const event = claims.event_name;
   if (
     event !== "push" &&
@@ -154,6 +166,11 @@ export async function verifyGitHubOidc({
   ) {
     throw new SecurityError("unsupported_event", 403, "This workflow event is not supported.");
   }
+  requireEqual(
+    claims.workflow_ref,
+    `${github.repository}/${configuration.workflowPath}@${ref}`,
+    "claim.workflow_ref",
+  );
   const [owner, repository] = github.repository.split("/");
   const subjectSuffix = event === "pull_request" ? "pull_request" : `ref:${ref}`;
   const legacySubject = `repo:${github.repository}:${subjectSuffix}`;

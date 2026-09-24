@@ -268,6 +268,7 @@ export async function upload({ options, environment = process.env, fetchImpl = f
     tokenRequestUrl: required(environment, "ACTIONS_ID_TOKEN_REQUEST_URL"),
     tokenRequestToken: required(environment, "ACTIONS_ID_TOKEN_REQUEST_TOKEN"),
     githubToken: required(environment, "GH_TOKEN"),
+    trustedWorkflowSha: environment.VISONAUT_WORKFLOW_SOURCE_SHA,
     fetchImpl,
   });
   const receipt = await rebindManifest({

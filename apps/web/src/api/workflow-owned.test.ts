@@ -519,6 +519,114 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
+  it("accepts the approved direct app workflow only for the configured repository", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) throw new Error("Expected workflow configuration.");
+    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
+    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
+    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${configuration.reusableWorkflowSha}`;
+    expect(workflowConfiguration(test.context)).toBe(configuration);
+    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/other.yml@${configuration.reusableWorkflowSha}`;
+    expect(() => workflowConfiguration(test.context)).toThrowError(
+      "The trusted workflow is not configured.",
+    );
+  });
+
+  it("redeems a transfer key for a signed job in the approved app workflow", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) throw new Error("Expected workflow configuration.");
+    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
+    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
+    configuration.captureJobPrefix = "App / upload / ";
+    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${configuration.reusableWorkflowSha}`;
+    const testedSha = test.manifest.run.testedSha;
+    const runId = test.manifest.run.workflowRunId;
+    const base = `/repos/ariakit/ariakit/actions/runs/${runId}`;
+    const run = {
+      id: Number(runId),
+      run_attempt: 1,
+      repository: { id: Number(test.manifest.run.repositoryId), owner: { id: 5 } },
+      event: "push",
+      path: configuration.callerWorkflowPath,
+      status: "in_progress",
+      head_sha: testedSha,
+      head_branch: "main",
+    };
+    test.githubResponses.set(base, run);
+    test.githubResponses.set(`${base}/attempts/1`, run);
+    test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
+      jobs: [
+        {
+          id: Number(test.jobId),
+          run_id: Number(runId),
+          run_attempt: 1,
+          name: `${configuration.captureJobPrefix}${test.shardKey}`,
+          check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
+          status: "in_progress",
+        },
+      ],
+    });
+    test.githubResponses.set(
+      `/repos/ariakit/ariakit/contents/${configuration.trustedWorkflowPath}?ref=${testedSha}`,
+      { type: "file", path: configuration.trustedWorkflowPath, sha: pin },
+    );
+    const keys = await generateKeyPair("RS256");
+    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "direct-key", alg: "RS256" };
+    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
+        throw new Error("Unexpected test network request");
+      }
+      return Response.json({ keys: [jwk] });
+    });
+    try {
+      test.context.transferPrivateKey = privateKey;
+      const token = await new SignJWT({
+        repository: "ariakit/ariakit",
+        repository_id: test.manifest.run.repositoryId,
+        repository_owner_id: "5",
+        run_id: runId,
+        run_attempt: "1",
+        sha: testedSha,
+        check_run_id: test.jobId,
+        event_name: "push",
+        ref: "refs/heads/main",
+        workflow_ref: `ariakit/ariakit/${configuration.callerWorkflowPath}@refs/heads/main`,
+        job_workflow_ref: `ariakit/ariakit/${configuration.trustedWorkflowPath}@refs/heads/main`,
+        job_workflow_sha: testedSha,
+      })
+        .setProtectedHeader({ alg: "RS256", kid: "direct-key" })
+        .setIssuer("https://token.actions.githubusercontent.com")
+        .setAudience("https://preview.example/transfer-key")
+        .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+        .setIssuedAt()
+        .setNotBefore("0s")
+        .setExpirationTime("5m")
+        .setJti(crypto.randomUUID())
+        .sign(keys.privateKey);
+      const response = await handleApi(
+        new Request("https://preview.example/v1/transfer/private-key", {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            shardKey: test.shardKey,
+            workflowRunId: runId,
+            workflowAttempt: 1,
+            testedSha,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(response?.status).toBe(200);
+      expect(await response?.text()).toBe(privateKey);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("checks D1 admission once for a new signed attempt, while immutable replays stay available", async () => {
     const test = await fixture();
     let admissionChecks = 0;
