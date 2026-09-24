@@ -1351,6 +1351,26 @@ describe("restoration and workflow attempt inheritance", () => {
     expect(fresh.revision).toBe(desired);
   });
 
+  it("keeps merge-group review pending until approval or rejection", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "queue", kind: "merge_group", color: "red" });
+    const input = {
+      runId: "queue",
+      checkId: "queue-check",
+      detailsUrl: "https://visonaut.example/runs/queue",
+      maxAttempts: 3,
+      now: 10,
+    };
+    expect((await service.status("queue")).status).toBe("needs-review");
+    expect((await service.prepareStatusIntent(input)).conclusion).toBe("pending");
+    await review(service, "comparison-queue");
+    expect((await service.prepareStatusIntent({ ...input, now: 11 })).conclusion).toBe("success");
+    await review(service, "comparison-queue", { verdict: "rejected" });
+    expect((await service.prepareStatusIntent({ ...input, now: 12 })).conclusion).toBe("failure");
+  });
+
   it("does not revive an invalidated comparison in place", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
