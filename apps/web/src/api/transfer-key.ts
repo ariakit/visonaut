@@ -1,3 +1,4 @@
+import { createPublicKey } from "node:crypto";
 import {
   digestJson,
   parseTrustedPlan,
@@ -18,6 +19,30 @@ import { workflowConfiguration } from "./workflow-owned.js";
 
 const browsers = new Set(["chromium", "firefox", "webkit"]);
 const maximumKeyBytes = 4096;
+
+/** Derive the public key from this Worker's private secret so key rotation stays atomic. */
+export function transferPublicKey(privateKey: string | undefined): Response {
+  if (!privateKey || new TextEncoder().encode(privateKey).byteLength > maximumKeyBytes) {
+    throw new SecurityError("transfer_key_unavailable", 503, "The transfer key is unavailable.");
+  }
+  let publicKey: string;
+  try {
+    const key = createPublicKey(privateKey);
+    if (key.asymmetricKeyType !== "rsa" || (key.asymmetricKeyDetails?.modulusLength ?? 0) < 2048) {
+      throw new Error("The transfer key is not RSA-2048 or stronger");
+    }
+    publicKey = key.export({ type: "spki", format: "pem" }).toString();
+  } catch {
+    throw new SecurityError("transfer_key_unavailable", 503, "The transfer key is unavailable.");
+  }
+  return new Response(publicKey, {
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
 
 /** Gives the pinned capture job its local transfer key after GitHub provenance checks. */
 export async function transferPrivateKey({

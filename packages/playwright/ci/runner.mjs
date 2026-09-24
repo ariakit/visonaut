@@ -1,19 +1,19 @@
 import { spawn } from "node:child_process";
 import { appendFile, realpath, symlink } from "node:fs/promises";
 import path from "node:path";
+import { createPublicKey } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { bindSignedJob, githubOidcRequestUrl } from "./context.mjs";
 import { measureEnvironment } from "./environment.mjs";
 import { rebindManifest, verifyMeasuredProfiles } from "./rebind.mjs";
 import { writeRenderContext } from "./render-context.mjs";
 import { settings, trustedServer } from "./settings.mjs";
-import { decryptTransfer, encryptTransfer } from "./transfer.mjs";
+import { decryptTransfer, encryptTransferWithPublicKey } from "./transfer.mjs";
 
 const directory = import.meta.dirname;
 const playwrightCli = fileURLToPath(
   new URL("./node_modules/@playwright/test/cli.js", import.meta.url),
 );
-const publicKey = fileURLToPath(new URL("./transfer-public.txt", import.meta.url));
 const shardPattern = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 const renderFlags = [
   "--repository-root",
@@ -141,11 +141,34 @@ async function linkRuntimeDependencies() {
   }
 }
 
-export async function render({ options, environment = process.env }) {
+export async function loadTransferPublicKey(environment, fetchImpl = fetch) {
+  const server = trustedServer(environment);
+  const response = await fetchImpl(new URL("/v1/transfer/public-key", server), {
+    redirect: "error",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error(`Visonaut public key request failed: ${response.status}`);
+  const key = await response.text();
+  if (key.length > 4096 || !key.startsWith("-----BEGIN PUBLIC KEY-----\n")) {
+    throw new Error("Visonaut returned an invalid transfer public key");
+  }
+  const parsed = createPublicKey(key);
+  if (
+    parsed.asymmetricKeyType !== "rsa" ||
+    (parsed.asymmetricKeyDetails?.modulusLength ?? 0) < 2048
+  ) {
+    throw new Error("Visonaut returned an invalid transfer public key");
+  }
+  return key;
+}
+
+export async function render({ options, environment = process.env, fetchImpl = fetch }) {
   if (environment.ACTIONS_ID_TOKEN_REQUEST_URL || environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN) {
     throw new Error("The candidate render job must not receive GitHub OIDC permission");
   }
   const context = githubContext(environment);
+  // Fetch before candidate code runs; it must not choose or replace the transfer key.
+  const publicKey = await loadTransferPublicKey(environment, fetchImpl);
   const root = await realpath(options["--repository-root"]);
   if (root !== (await realpath(required(environment, "GITHUB_WORKSPACE")))) {
     throw new Error("The candidate root must be the current GitHub workspace");
@@ -184,7 +207,7 @@ export async function render({ options, environment = process.env }) {
     VISONAUT_WORKERS: options["--workers"] ?? "4",
     VISONAUT_WEB_SERVERS: required(environment, "VISONAUT_WEB_SERVERS"),
   });
-  await encryptTransfer(results, options["--shard"], options["--output"], publicKey);
+  await encryptTransferWithPublicKey(results, options["--shard"], options["--output"], publicKey);
 }
 
 async function identityToken(environment, audience, fetchImpl) {

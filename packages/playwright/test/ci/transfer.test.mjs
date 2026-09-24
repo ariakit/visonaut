@@ -10,7 +10,12 @@ import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
-import { decryptTransfer, encryptTransfer } from "../../ci/transfer.mjs";
+import {
+  decryptTransfer,
+  encryptTransfer,
+  encryptTransferWithPublicKey,
+} from "../../ci/transfer.mjs";
+import { loadTransferPublicKey } from "../../ci/runner.mjs";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
@@ -122,6 +127,49 @@ test("transfer keeps images private and binds them to the exact run and commit",
     } else {
       process.env.GITHUB_SHA = originalSha;
     }
+  }
+});
+
+test("render encrypts for the selected server's key, not the preview key", async () => {
+  const diagnosticKeys = generateKeyPairSync("rsa", {
+    modulusLength: 2048,
+    publicKeyEncoding: { type: "spki", format: "pem" },
+    privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  });
+  const requested = [];
+  const diagnosticPublicKey = await loadTransferPublicKey(
+    { VISONAUT_SERVER: "https://diagnostics.visonaut.com" },
+    async (url, options) => {
+      requested.push({ url: url.href, redirect: options.redirect });
+      return new Response(diagnosticKeys.publicKey);
+    },
+  );
+  assert.deepEqual(requested, [
+    {
+      url: "https://diagnostics.visonaut.com/v1/transfer/public-key",
+      redirect: "error",
+    },
+  ]);
+  const originalRun = process.env.GITHUB_RUN_ID;
+  const originalSha = process.env.GITHUB_SHA;
+  process.env.GITHUB_RUN_ID = runId;
+  process.env.GITHUB_SHA = testedSha;
+  try {
+    const { root, source } = await fixture();
+    const encrypted = path.join(root, "diagnostic.enc");
+    await encryptTransferWithPublicKey(source, shard, encrypted, diagnosticPublicKey);
+    await assert.rejects(decryptTransfer(encrypted, path.join(root, "preview"), shard, privateKey));
+    await decryptTransfer(
+      encrypted,
+      path.join(root, "diagnostic"),
+      shard,
+      diagnosticKeys.privateKey,
+    );
+  } finally {
+    if (originalRun === undefined) delete process.env.GITHUB_RUN_ID;
+    else process.env.GITHUB_RUN_ID = originalRun;
+    if (originalSha === undefined) delete process.env.GITHUB_SHA;
+    else process.env.GITHUB_SHA = originalSha;
   }
 });
 
