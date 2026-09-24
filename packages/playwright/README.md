@@ -56,81 +56,38 @@ export default defineConfig({
 
 The adapter does not set CI gates. Ariakit's integration must retain its `CI` and `VISUAL_TEST` checks before calling it.
 
-## Trusted CI helpers
+## Workflow capture
 
-This section describes the published **0.1 adapter paired with CLI 0.1**. Its trusted-plan workflow cannot use CLI 0.2, which removes `finalize` and `--manifest`. The workflow-owned adapter 0.2 release will replace these helpers. Pin the adapter and CLI together until that release.
+The published 0.1 adapter must stay paired with CLI 0.1 because CLI 0.2 removes `finalize` and `--manifest`. The workflow-owned runner described below ships with the adapter 0.2 release.
 
-`@visonaut/playwright/ci` is an opt-in Node.js subpath for a pinned GitHub Actions capture executor. It does not add a CLI command. The caller still owns its fixed test collection, browser projects, web servers, runner allowlist, and trusted plan. Install this package and `visonaut` from an exact npm lockfile in a directory outside the candidate checkout. Bind the lockfile and caller configuration to the trusted plan's executor digest.
+The workflow-owned `visonaut-capture` runner executes one complete visual collection from a pinned GitHub reusable workflow. That workflow declares the browser, operating system, project, test-file patterns, app preview commands, and comparator policy. The runner does not load the candidate Playwright config or a trusted-plan file. It forces one project, `@visual`, no ignored tests, one execution per test, and `forbidOnly`. The reporter records the discovered test inventory and requires every selected test to finish successfully. A zero-test shard fails.
 
-```js
-import { verifyTrustedPlan, encryptTransfer } from "@visonaut/playwright/ci";
-
-await verifyTrustedPlan({ directory: trustedExecutor, planFile: trustedPlan });
-await encryptTransfer(results, browser, encryptedArtifact, publicKeyFile);
-```
-
-The 0.1 render job uses GitHub OIDC to download its pinned packages, but the test process runs without OIDC credentials. It has no private key and uploads only the encrypted shard. A separate trusted submission job never checks out candidate code. It redeems the private key once with its signed GitHub identity, decrypts and verifies the shard, binds it to the current job, and runs the paired 0.1 CLI's upload and finalize commands. The service independently checks the pinned reusable workflow SHA, exact tested commit, source plan, and completed job. The public repository artifact contains no plaintext screenshot or manifest.
-
-## Reporter
-
-Add the reporter with the verified workflow context and local shard identity. The service independently verifies this context with GitHub and its trusted plan. Client fields do not prove that a run is complete.
-
-```ts
-reporter: [
-  ["list"],
-  [
-    "@visonaut/playwright/reporter",
-    {
-      outputFile: "visonaut/manifest.json",
-      run: {
-        repository: "ariakit/ariakit",
-        repositoryId: process.env.GITHUB_REPOSITORY_ID,
-        workflowRunId: process.env.GITHUB_RUN_ID,
-        workflowAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-        testedSha: process.env.VISONAUT_TESTED_SHA,
-        planDigest: process.env.VISONAUT_PLAN_DIGEST,
-      },
-      shard: {
-        key: process.env.VISONAUT_SHARD_KEY,
-        jobId: process.env.VISONAUT_JOB_ID,
-        sourceAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
-      },
-    },
-  ],
-];
-```
-
-The reporter uses suite declaration order and call order, not worker completion order. It selects only the final successful attempt of each test. If a test captures blue, fails later, then captures green and passes on retry, the manifest contains only green. Failed-attempt attachments remain local Playwright diagnostics. They are not selected for upload.
-
-A failed run, exhausted retry, missing image, duplicate identity, or empty capture set produces no successful manifest and fails the command. A prior manifest is removed when the reporter starts, so a failed rerun cannot upload old success. Pass an optional `plan` object to the reporter for an early exact test/capture check. The server always performs its own trusted-plan check.
+The workflow verifies the adapter tarball SHA-256 before extraction. It then copies `ci/runtime-lock.json` to `ci/package-lock.json` and runs `npm ci --ignore-scripts --no-audit --no-fund` from the extracted `package/ci` directory. This installs the exact published CLI and Playwright versions from the package-owned integrity lock.
 
 ```sh
-# Only for the paired adapter/CLI 0.1 workflow described above:
-pnpm exec visonaut upload --manifest visonaut/manifest.json
-pnpm exec visonaut finalize --manifest visonaut/manifest.json
+node package/ci/bin.mjs render --repository-root "$GITHUB_WORKSPACE" \
+  --test-dir app/src --test-patterns '["/test[^/]*-browser"]' \
+  --project chrome --browser chromium --device "Desktop Chrome" \
+  --base-url http://localhost:4321 --shard chrome-1 \
+  --font-package @fontsource-variable/inter \
+  --comparison-policy-digest "$APPROVED_POLICY_SHA" \
+  --bundle-sha256 "$VERIFIED_TARBALL_SHA" \
+  --output "$RUNNER_TEMP/chrome-1.enc"
 ```
 
-Run capture and upload as separate steps. The capture job does not wait for human review.
+The pinned workflow supplies `VISONAUT_WEB_SERVERS` as a JSON array of its preview commands, working directories, ports, and environment settings. `--test-patterns` is a JSON array of regular-expression sources. Ariakit's preview imports `@fontsource-variable/inter`, so its pinned workflow passes that package to both render and upload. The runner records operating-system, system-font, and application-font hashes once; each `visual()` call records the actual browser version, viewport, media state, and screenshot options. There is no catalogue of hypothetical profile digests.
 
-## Trusted candidate discovery
+The render job has no OIDC permission. It writes only an encrypted manifest and images. A separate upload job has `id-token: write`, does not check out candidate code, and uses the same verified package:
 
-Use discovery mode in the immutable trusted-main capture executor. The trusted plan fixes all expected jobs, environment profiles, and collection settings. Pass `plan` and the absolute candidate `repositoryRoot` to the injected reporter. Each job uses one fixed project and shard. Set `forbidOnly: true`. Put all selection settings in the trusted configuration; the only supported command-line arguments are `test --config <trusted-config>`.
-
-```ts
-const collection = {
-  projectName: "chrome",
-  testDir: "app/src",
-  testMatch: ["**/*-test.tsx"],
-  testIgnore: [],
-  grep: [{ source: "@visual", flags: "" }],
-  grepInvert: [],
-  shard: { current: 1, total: 3 },
-  repeatEach: 1,
-};
+```sh
+node package/ci/bin.mjs upload --shard chrome-1 \
+  --font-package @fontsource-variable/inter \
+  --comparison-policy-digest "$APPROVED_POLICY_SHA" \
+  --bundle-sha256 "$VERIFIED_TARBALL_SHA" \
+  --input "$RUNNER_TEMP/chrome-1.enc" \
+  --output-directory "$RUNNER_TEMP/visonaut-upload"
 ```
 
-The reporter freezes the test inventory before execution. It requires every collected test to finish successfully, using its final successful retry. Capture calls record both start and completion markers. A caught capture error still fails the report. The candidate may add, remove, or rename tests and explicit capture keys without changing the trusted collection policy.
+The upload job checks the transferred profile against its own OS and system-font measurement, the pinned comparison policy, and the application-font package named by the workflow. It rejects a capture call that supplies an older profile. It then binds the manifest to its signed GitHub job ID and reusable workflow source SHA, stages the shard with `visonaut upload`, and emits the exact receipt artifact name through `GITHUB_OUTPUT`. The workflow uploads only `receipt.json`; it does not publish plaintext screenshots. `VISONAUT_SERVER` selects `https://visonaut.com` by default; trusted preview and diagnostic workflows can set the exact `https://preview.visonaut.com` or `https://diagnostics.visonaut.com` origin. The runner rejects other origins before requesting a GitHub identity token. After every upload job succeeds, a final job calls `visonaut submit --run "$GITHUB_RUN_ID"`. The service resolves that external run ID from the signed final job, verifies one staged shard per successful pinned upload job and the whole workflow result, then determines the Visonaut check. Staging or submitting is not visual approval.
 
-After success, the reporter writes `receipt.json` beside the manifest. The fixed workflow uploads that file with the receipt's `artifactName` using the pinned GitHub artifact action. Use `overwrite: false` and `if-no-files-found: error`. Do not accept an artifact name or reporter configuration from candidate code. The service stages uploads first, then waits for the exact GitHub job to succeed and independently verifies the receipt artifact before accepting candidate discovery.
-
-A trusted workflow and receipt bind the selected manifest to a complete successful execution. They do not prove that candidate code captured truthful screenshots.
+The reporter selects only the final successful attempt of each test. If a test captures blue, fails later, then captures green and passes on retry, only green enters the manifest. A failed run, exhausted retry, missing image, duplicate identity, caught capture failure, or empty capture set produces no successful manifest. The reporter deletes any prior manifest before the new run starts, so a failed rerun cannot upload old success.

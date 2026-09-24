@@ -6,12 +6,11 @@ import {
   publicEncrypt,
   randomBytes,
 } from "node:crypto";
-import { appendFile, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 import { decryptTransfer, encryptTransfer } from "../../ci/transfer.mjs";
-import { executorDigest } from "../../ci/plan.mjs";
 
 const { publicKey, privateKey } = generateKeyPairSync("rsa", {
   modulusLength: 2048,
@@ -20,6 +19,7 @@ const { publicKey, privateKey } = generateKeyPairSync("rsa", {
 });
 const runId = "123456";
 const testedSha = "a".repeat(40);
+const shard = "render-42";
 
 function prefixed(bytes) {
   const prefix = Buffer.alloc(4);
@@ -27,8 +27,7 @@ function prefixed(bytes) {
   return Buffer.concat([prefix, bytes]);
 }
 
-function record(name, bytes) {
-  const digest = createHash("sha256").update(bytes).digest("hex");
+function record(name, bytes, digest = createHash("sha256").update(bytes).digest("hex")) {
   return Buffer.concat([
     prefixed(Buffer.from(JSON.stringify({ name, bytes: bytes.length, digest }))),
     bytes,
@@ -44,7 +43,7 @@ async function encryptCrafted(records, output) {
       version: 1,
       runId,
       testedSha,
-      browser: "chromium",
+      shard,
       wrappedKey,
       nonce: nonce.toString("base64"),
     }),
@@ -67,14 +66,17 @@ async function fixture() {
   await writeFile(path.join(source, "images", `${digest}.png`), bytes);
   const manifest = {
     run: { workflowRunId: runId, testedSha },
-    shard: { key: "chromium", jobId: "1", sourceAttempt: 1 },
+    shard: { key: shard, jobId: "1", sourceAttempt: 1 },
     captures: [{ image: { path: `images/${digest}.png`, digest, bytes: bytes.length } }],
   };
   await writeFile(path.join(source, "manifest.json"), JSON.stringify(manifest));
-  await writeFile(path.join(source, "environment-chromium.json"), "{}\n");
+  const environmentBytes = Buffer.from(
+    '{"osImage":{"os":"linux"},"profile":{"fontsDigest":"test"},"fonts":[]}\n',
+  );
+  await writeFile(path.join(source, "environment.json"), environmentBytes);
   const publicPath = path.join(root, "public.pem");
   await writeFile(publicPath, publicKey);
-  return { root, source, publicPath, manifest, bytes };
+  return { root, source, publicPath, manifest, bytes, environmentBytes };
 }
 
 test("transfer keeps images private and binds them to the exact run and commit", async () => {
@@ -83,27 +85,30 @@ test("transfer keeps images private and binds them to the exact run and commit",
   process.env.GITHUB_RUN_ID = runId;
   process.env.GITHUB_SHA = testedSha;
   try {
-    const { root, source, publicPath, bytes } = await fixture();
+    const { root, source, publicPath, bytes, environmentBytes } = await fixture();
     const encrypted = path.join(root, "capture.enc");
-    await encryptTransfer(source, "chromium", encrypted, publicPath);
+    await encryptTransfer(source, shard, encrypted, publicPath);
     const payload = await readFile(encrypted);
     assert.equal(payload.includes(bytes), false);
     assert.equal(payload.includes(Buffer.from("manifest.json")), false);
+    assert.equal(payload.includes(environmentBytes), false);
     const destination = path.join(root, "decrypted");
-    await decryptTransfer(encrypted, destination, "chromium", privateKey);
+    await decryptTransfer(encrypted, destination, shard, privateKey);
+    assert.equal((await stat(destination)).mode & 0o777, 0o700);
     const files = await readFile(path.join(destination, "manifest.json"), "utf8");
-    assert.equal(JSON.parse(files).shard.key, "chromium");
+    assert.equal(JSON.parse(files).shard.key, shard);
+    assert.deepEqual(await readFile(path.join(destination, "environment.json")), environmentBytes);
 
     const tampered = Buffer.from(payload);
     tampered[tampered.length - 20] ^= 1;
     const tamperedPath = path.join(root, "tampered.enc");
     await writeFile(tamperedPath, tampered);
     await assert.rejects(
-      decryptTransfer(tamperedPath, path.join(root, "tampered-output"), "chromium", privateKey),
+      decryptTransfer(tamperedPath, path.join(root, "tampered-output"), shard, privateKey),
     );
     process.env.GITHUB_SHA = "b".repeat(40);
     await assert.rejects(
-      decryptTransfer(encrypted, path.join(root, "wrong-commit"), "chromium", privateKey),
+      decryptTransfer(encrypted, path.join(root, "wrong-commit"), shard, privateKey),
       /another run or commit/,
     );
   } finally {
@@ -131,7 +136,7 @@ test("transfer errors preserve caller-owned files and directories", async () => 
     const existingPlain = `${existing}.plain`;
     await writeFile(existing, "existing encrypted output");
     await writeFile(existingPlain, "existing plaintext file");
-    await assert.rejects(encryptTransfer(source, "chromium", existing, publicPath), {
+    await assert.rejects(encryptTransfer(source, shard, existing, publicPath), {
       code: "EEXIST",
     });
     assert.equal(await readFile(existing, "utf8"), "existing encrypted output");
@@ -140,11 +145,11 @@ test("transfer errors preserve caller-owned files and directories", async () => 
     const encrypted = path.join(root, "capture.enc");
     const inputPlain = `${encrypted}.plain`;
     await writeFile(inputPlain, "existing decrypt plaintext");
-    await encryptTransfer(source, "chromium", encrypted, publicPath);
+    await encryptTransfer(source, shard, encrypted, publicPath);
     const destination = path.join(root, "existing-output");
     await mkdir(destination);
     await writeFile(path.join(destination, "keep.txt"), "caller data");
-    await assert.rejects(decryptTransfer(encrypted, destination, "chromium", privateKey), {
+    await assert.rejects(decryptTransfer(encrypted, destination, shard, privateKey), {
       code: "EEXIST",
     });
     assert.equal(await readFile(path.join(destination, "keep.txt"), "utf8"), "caller data");
@@ -173,7 +178,7 @@ test("transfer rejects image paths that do not match their digest", async () => 
     manifest.captures[0].image.path = "../../private.png";
     await writeFile(path.join(source, "manifest.json"), JSON.stringify(manifest));
     await assert.rejects(
-      encryptTransfer(source, "chromium", path.join(root, "unsafe.enc"), publicPath),
+      encryptTransfer(source, shard, path.join(root, "unsafe.enc"), publicPath),
       /unsafe image path/,
     );
   } finally {
@@ -190,29 +195,112 @@ test("transfer rejects image paths that do not match their digest", async () => 
   }
 });
 
+test("transfer requires a size-bounded environment record during packing", async () => {
+  const { root, source, publicPath } = await fixture();
+  const originalRun = process.env.GITHUB_RUN_ID;
+  const originalSha = process.env.GITHUB_SHA;
+  process.env.GITHUB_RUN_ID = runId;
+  process.env.GITHUB_SHA = testedSha;
+  try {
+    await writeFile(path.join(source, "environment.json"), Buffer.alloc(8 * 1024 * 1024 + 1));
+    await assert.rejects(
+      encryptTransfer(source, shard, path.join(root, "oversized.enc"), publicPath),
+      /transfer file is missing or too large: environment\.json/,
+    );
+  } finally {
+    if (originalRun === undefined) {
+      delete process.env.GITHUB_RUN_ID;
+    } else {
+      process.env.GITHUB_RUN_ID = originalRun;
+    }
+    if (originalSha === undefined) {
+      delete process.env.GITHUB_SHA;
+    } else {
+      process.env.GITHUB_SHA = originalSha;
+    }
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("transfer rejects missing, oversized, or digest-tampered environment records", async () => {
+  const { root, manifest, bytes, environmentBytes } = await fixture();
+  const originalRun = process.env.GITHUB_RUN_ID;
+  const originalSha = process.env.GITHUB_SHA;
+  process.env.GITHUB_RUN_ID = runId;
+  process.env.GITHUB_SHA = testedSha;
+  try {
+    const manifestRecord = record("manifest.json", Buffer.from(JSON.stringify(manifest)));
+    const imageRecord = record(manifest.captures[0].image.path, bytes);
+
+    const missing = path.join(root, "missing-environment.enc");
+    await encryptCrafted([manifestRecord, imageRecord], missing);
+    await assert.rejects(
+      decryptTransfer(missing, path.join(root, "missing-environment-output"), shard, privateKey),
+      /transfer archive is incomplete/,
+    );
+
+    const tampered = path.join(root, "tampered-environment.enc");
+    await encryptCrafted(
+      [manifestRecord, record("environment.json", environmentBytes, "0".repeat(64)), imageRecord],
+      tampered,
+    );
+    await assert.rejects(
+      decryptTransfer(tampered, path.join(root, "tampered-environment-output"), shard, privateKey),
+      /transfer file failed its digest check/,
+    );
+
+    const oversized = path.join(root, "oversized-environment.enc");
+    await encryptCrafted(
+      [manifestRecord, record("environment.json", Buffer.alloc(8 * 1024 * 1024 + 1)), imageRecord],
+      oversized,
+    );
+    await assert.rejects(
+      decryptTransfer(
+        oversized,
+        path.join(root, "oversized-environment-output"),
+        shard,
+        privateKey,
+      ),
+      /transfer record path, size, or digest is invalid/,
+    );
+  } finally {
+    if (originalRun === undefined) {
+      delete process.env.GITHUB_RUN_ID;
+    } else {
+      process.env.GITHUB_RUN_ID = originalRun;
+    }
+    if (originalSha === undefined) {
+      delete process.env.GITHUB_SHA;
+    } else {
+      process.env.GITHUB_SHA = originalSha;
+    }
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("validly encrypted attacker records cannot escape or omit a declared image", async () => {
   const originalRun = process.env.GITHUB_RUN_ID;
   const originalSha = process.env.GITHUB_SHA;
   process.env.GITHUB_RUN_ID = runId;
   process.env.GITHUB_SHA = testedSha;
   try {
-    const { root, manifest } = await fixture();
+    const { root, manifest, environmentBytes } = await fixture();
     const manifestRecord = record("manifest.json", Buffer.from(JSON.stringify(manifest)));
-    const environmentRecord = record("environment-chromium.json", Buffer.from("{}\n"));
+    const environmentRecord = record("environment.json", environmentBytes);
     const traversal = path.join(root, "traversal.enc");
     await encryptCrafted(
-      [manifestRecord, record("../outside.png", Buffer.from("untrusted")), environmentRecord],
+      [manifestRecord, environmentRecord, record("../outside.png", Buffer.from("untrusted"))],
       traversal,
     );
     await assert.rejects(
-      decryptTransfer(traversal, path.join(root, "traversal-output"), "chromium", privateKey),
+      decryptTransfer(traversal, path.join(root, "traversal-output"), shard, privateKey),
       /record path, size, or digest is invalid/,
     );
 
     const missing = path.join(root, "missing.enc");
     await encryptCrafted([manifestRecord, environmentRecord], missing);
     await assert.rejects(
-      decryptTransfer(missing, path.join(root, "missing-output"), "chromium", privateKey),
+      decryptTransfer(missing, path.join(root, "missing-output"), shard, privateKey),
       /capture images do not match/,
     );
   } finally {
@@ -227,26 +315,4 @@ test("validly encrypted attacker records cannot escape or omit a declared image"
       process.env.GITHUB_SHA = originalSha;
     }
   }
-});
-
-test("rotating the public transfer key changes the trusted executor digest", async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), "visonaut-key-pin-test-"));
-  await writeFile(path.join(directory, "transfer-public.pem"), publicKey);
-  await writeFile(path.join(directory, "settings.json"), "{}");
-  await writeFile(
-    path.join(directory, "package-lock.json"),
-    JSON.stringify({
-      packages: {
-        "node_modules/@visonaut/playwright": {
-          version: "0.1.0",
-          integrity: `sha512-${"A".repeat(86)}==`,
-        },
-        "node_modules/visonaut": { version: "0.1.0", integrity: `sha512-${"B".repeat(86)}==` },
-      },
-    }),
-  );
-  const before = await executorDigest(directory);
-  await appendFile(path.join(directory, "transfer-public.pem"), "\n");
-  const after = await executorDigest(directory);
-  assert.notEqual(before, after);
 });

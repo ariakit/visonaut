@@ -1,114 +1,165 @@
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
-import { verifyTrustedPlan } from "./plan.mjs";
 
 const reporter = fileURLToPath(new URL("../dist/reporter.js", import.meta.url));
 
-export async function createTrustedPlaywrightConfig({
-  directory,
-  planFile,
+function within(root, file) {
+  const relative = path.relative(root, file);
+  if (relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error("The visual test directory must stay inside the candidate repository");
+  }
+}
+
+function testPatterns(value) {
+  const sources = JSON.parse(value);
+  if (
+    !Array.isArray(sources) ||
+    !sources.length ||
+    sources.length > 16 ||
+    sources.some((source) => typeof source !== "string" || !source || source.length > 256)
+  ) {
+    throw new Error("The pinned workflow needs complete visual test patterns");
+  }
+  return sources.map((source) => new RegExp(source));
+}
+
+function webServers(value, root) {
+  const servers = JSON.parse(value);
+  if (!Array.isArray(servers) || !servers.length || servers.length > 8) {
+    throw new Error("The pinned workflow needs its preview server commands");
+  }
+  return servers.map((server) => {
+    if (
+      !server ||
+      typeof server.command !== "string" ||
+      !server.command ||
+      typeof server.cwd !== "string"
+    ) {
+      throw new Error("The pinned workflow has an invalid preview server");
+    }
+    const cwd = path.resolve(root, server.cwd);
+    within(root, cwd);
+    return { ...server, cwd, reuseExistingServer: false };
+  });
+}
+
+/** Build one complete workflow-owned collection without reading candidate test selection. */
+export async function createCaptureConfig({
   repositoryRoot,
-  browserName,
-  project,
-  settings,
-  webServer,
+  testDir,
+  patterns,
+  projectName,
+  browser,
+  device,
+  baseUrl,
+  shardKey,
+  bundleSha256,
+  retries = 1,
+  workers = 4,
+  webServerJson,
 }) {
   if (process.env.CI !== "true" || process.env.GITHUB_ACTIONS !== "true") {
-    throw new Error("Trusted captures run only in GitHub Actions");
+    throw new Error("Workflow capture runs only in GitHub Actions");
   }
-  if (!/^(chromium|firefox|webkit)$/.test(browserName) || !devices[project?.device]) {
-    throw new Error("Unknown browser shard or Playwright device");
-  }
-  const { plan, planDigest } = await verifyTrustedPlan({ directory, planFile });
   if (
-    plan.repositoryId !== settings.repositoryId ||
-    plan.workflow !== settings.workflow ||
-    JSON.stringify(plan.invocation) !==
-      JSON.stringify(["playwright", "test", "--config", "playwright.config.mjs"])
+    !/^[a-f0-9]{64}$/.test(bundleSha256) ||
+    !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(shardKey) ||
+    !["chromium", "firefox", "webkit"].includes(browser) ||
+    devices[device]?.defaultBrowserType !== browser ||
+    typeof projectName !== "string" ||
+    !projectName ||
+    projectName.length > 80 ||
+    !Number.isInteger(retries) ||
+    retries < 0 ||
+    retries > 3 ||
+    !Number.isInteger(workers) ||
+    workers < 1 ||
+    workers > 16
   ) {
-    throw new Error("Trusted plan does not match the repository configuration");
+    throw new Error("The workflow capture project, device, or package digest is invalid");
   }
-  const shard = plan.shards.find((entry) => entry.key === browserName);
-  if (!shard || shard.collection.projectName !== project.name) {
-    throw new Error("Trusted plan has no matching browser collection");
-  }
-  const app = path.join(repositoryRoot, "app");
-  const environment = JSON.parse(
-    await readFile(path.join(app, `.visonaut-results/environment-${browserName}.json`), "utf8"),
-  );
-  const context = JSON.parse(
-    await readFile(path.join(app, ".visonaut-results/context.json"), "utf8"),
-  );
+  const origin = new URL(baseUrl);
   if (
-    environment.browser !== browserName ||
-    !Array.isArray(environment.environmentProfiles) ||
-    !environment.environmentProfiles.length ||
-    environment.environmentProfiles.some(
-      (entry) => !shard.environmentProfileDigests.includes(entry.digest),
-    )
+    origin.protocol !== "http:" ||
+    !["localhost", "127.0.0.1"].includes(origin.hostname) ||
+    origin.pathname !== "/" ||
+    origin.search ||
+    origin.hash
   ) {
-    throw new Error("The runner environment is outside the trusted capture plan");
+    throw new Error("Visual captures need the pinned loopback app origin");
   }
-  // Playwright's internal font promise can stay pending in Firefox after a
-  // navigation. The visual adapter waits for the font faces themselves.
+  const root = await realpath(repositoryRoot);
+  const selectedTestDir = await realpath(path.resolve(root, testDir));
+  within(root, selectedTestDir);
+  const results = path.join(root, ".visonaut-results");
+  const environment = JSON.parse(await readFile(path.join(results, "environment.json"), "utf8"));
+  const profile = environment.profile;
+  if (
+    !profile ||
+    !["osImageDigest", "fontsDigest", "comparisonPolicyDigest"].every((key) =>
+      /^[a-f0-9]{64}$/.test(profile[key]),
+    ) ||
+    typeof profile.comparisonEngineVersion !== "string"
+  ) {
+    throw new Error("The measured capture environment is invalid");
+  }
+  const workflowAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+  if (!Number.isSafeInteger(workflowAttempt) || workflowAttempt < 1) {
+    throw new Error("GitHub workflow attempt is invalid");
+  }
   process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY = "1";
   process.env.VISUAL_TEST = "true";
   return defineConfig({
-    tsconfig: path.join(directory, "tsconfig.json"),
-    forbidOnly: true,
-    fullyParallel: true,
-    workers: "100%",
-    reportSlowTests: null,
-    testDir: path.join(app, "src"),
-    testMatch: shard.collection.testMatch,
+    tsconfig: path.join(import.meta.dirname, "tsconfig.json"),
+    testDir: selectedTestDir,
+    testMatch: testPatterns(patterns),
     testIgnore: [],
     grep: /@visual/,
     grepInvert: [],
+    forbidOnly: true,
+    fullyParallel: true,
+    workers,
     repeatEach: 1,
-    retries: browserName === "webkit" ? 3 : browserName === "firefox" ? 2 : 1,
-    outputDir: path.join(app, ".visonaut-test-results"),
+    retries,
+    outputDir: path.join(root, ".visonaut-test-results"),
     reporter: [
       ["github"],
       ["dot"],
       [
         reporter,
         {
-          outputFile: path.join(app, ".visonaut-results/manifest.json"),
-          repositoryRoot,
-          plan,
+          outputFile: path.join(results, "manifest.json"),
           run: {
-            repository: settings.repository,
-            repositoryId: settings.repositoryId,
-            workflowRunId: context.workflowRunId,
-            workflowAttempt: context.workflowAttempt,
-            testedSha: context.testedSha,
-            planDigest,
+            repository: process.env.GITHUB_REPOSITORY,
+            repositoryId: process.env.GITHUB_REPOSITORY_ID,
+            workflowRunId: process.env.GITHUB_RUN_ID,
+            workflowAttempt,
+            testedSha: process.env.GITHUB_SHA,
+            // Rebound to the signed reusable-workflow source by the upload job.
+            planDigest: bundleSha256,
           },
-          shard: {
-            key: browserName,
-            jobId: context.jobId,
-            sourceAttempt: context.workflowAttempt,
-          },
+          shard: { key: shardKey, jobId: "1", sourceAttempt: workflowAttempt },
+          discovery: { executorDigest: bundleSha256, repositoryRoot: root },
         },
       ],
     ],
-    webServer,
+    webServer: webServers(webServerJson, root),
     projects: [
       {
-        name: project.name,
-        metadata: { visonaut: { profile: environment.profile } },
+        name: projectName,
+        metadata: { visonaut: { profile } },
         use: {
-          ...devices[project.device],
-          viewport: { width: 1280, height: 800 },
-          baseURL: "http://localhost:4321",
+          ...devices[device],
+          browserName: browser,
+          baseURL: origin.href,
           locale: "en-US",
           timezoneId: "UTC",
           reducedMotion: "reduce",
           screenshot: "only-on-failure",
           trace: "on-first-retry",
-          ...(browserName === "chromium" ? { channel: "chromium" } : {}),
+          ...(browser === "chromium" ? { channel: "chromium" } : {}),
           launchOptions: { timeout: 45_000 },
         },
       },

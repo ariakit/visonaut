@@ -6,9 +6,8 @@ import {
   parseManifest,
   sha256,
   validateManifestProfiles,
-  validateShardDeclaration,
 } from "@visonaut/protocol";
-import type { CandidateDiscovery, Manifest, RunProvenance, TrustedPlan } from "@visonaut/protocol";
+import type { CandidateDiscovery, Manifest, RunProvenance } from "@visonaut/protocol";
 import type {
   FullConfig,
   FullResult,
@@ -25,10 +24,8 @@ export interface ReporterOptions {
   outputFile?: string;
   run: RunProvenance;
   shard: Manifest["shard"];
-  /** Optional local early check; the service independently loads its trusted plan. */
-  plan?: TrustedPlan;
-  /** Required in discovery mode; fixed by the trusted executor. */
-  repositoryRoot?: string;
+  /** Package digest and repository root for workflow-owned collection discovery. */
+  discovery?: { executorDigest: string; repositoryRoot: string };
 }
 
 function record(value: unknown, label: string): Record<string, unknown> {
@@ -73,6 +70,17 @@ async function playwrightVersion(): Promise<string> {
   return packageInfo.version;
 }
 
+async function adapterVersion(): Promise<string> {
+  const value: unknown = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const packageInfo = record(value, "adapter package");
+  if (typeof packageInfo.version !== "string") {
+    throw new Error("Cannot determine adapter version");
+  }
+  return packageInfo.version;
+}
+
 /** Writes only final successful attempts. A failed run produces no manifest. */
 export default class VisonautReporter implements Reporter {
   private collectedTests: { test: TestCase; identity: ReturnType<typeof inventoryEntry> }[] = [];
@@ -86,10 +94,7 @@ export default class VisonautReporter implements Reporter {
   async onBegin(config: FullConfig, suite: Suite): Promise<void> {
     this.collectedTests = suite.allTests().map((test) => ({
       test,
-      identity: inventoryEntry(
-        test,
-        this.options.plan?.discovery ? this.options.repositoryRoot : undefined,
-      ),
+      identity: inventoryEntry(test, this.options.discovery?.repositoryRoot),
     }));
     this.outputFile = path.resolve(
       config.rootDir,
@@ -99,16 +104,16 @@ export default class VisonautReporter implements Reporter {
     this.receiptFile = path.join(path.dirname(this.outputFile), "receipt.json");
     await rm(this.outputFile, { force: true });
     await rm(this.receiptFile, { force: true });
-    if (this.options.plan?.discovery) {
-      if (!this.options.repositoryRoot || !path.isAbsolute(this.options.repositoryRoot)) {
+    if (this.options.discovery) {
+      const { repositoryRoot, executorDigest } = this.options.discovery;
+      if (!path.isAbsolute(repositoryRoot)) {
         throw new Error("Trusted discovery requires an absolute repositoryRoot");
       }
       this.discovery = await discoverInventory({
         config,
         suite,
-        plan: this.options.plan,
-        shardKey: this.options.shard.key,
-        repositoryRoot: this.options.repositoryRoot,
+        executorDigest,
+        repositoryRoot,
       });
     }
   }
@@ -218,7 +223,7 @@ export default class VisonautReporter implements Reporter {
         schemaVersion: "1.0",
         producer: {
           name: "@visonaut/playwright",
-          version: "0.1.0",
+          version: await adapterVersion(),
           nodeVersion: process.versions.node,
           playwrightVersion: await playwrightVersion(),
         },
@@ -230,9 +235,6 @@ export default class VisonautReporter implements Reporter {
         ...(this.discovery ? { discovery: this.discovery } : {}),
       });
       await validateManifestProfiles(manifest);
-      if (this.options.plan) {
-        await validateShardDeclaration(manifest, this.options.plan);
-      }
       const temporary = `${this.outputFile}.${process.pid}.tmp`;
       await writeFile(temporary, `${JSON.stringify(manifest, null, 2)}\n`);
       await rename(temporary, this.outputFile);
@@ -254,4 +256,4 @@ export default class VisonautReporter implements Reporter {
   }
 }
 
-export type { RunProvenance, TrustedCollection, TrustedPlan } from "@visonaut/protocol";
+export type { RunProvenance } from "@visonaut/protocol";

@@ -1,7 +1,6 @@
 import { readdir, readFile, realpath, mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { chromium, firefox, webkit, devices } from "@playwright/test";
 import { digestJson, sha256 } from "./identity.mjs";
 
 async function fontFiles(directory, relative = "") {
@@ -29,29 +28,30 @@ async function fontFiles(directory, relative = "") {
 export async function measureEnvironment({
   appPackageFile,
   outputDirectory,
-  browserName,
-  device,
-  viewports,
-  comparisonPolicy,
+  comparisonPolicyDigest,
   comparisonEngineVersion,
   applicationFontPackage,
   systemFontRoots,
 }) {
-  const engine = { chromium, firefox, webkit }[browserName];
-  if (!engine || !devices[device] || !Array.isArray(viewports) || !viewports.length) {
-    throw new Error("Trusted environment probe needs a fixed browser, device, and viewports");
+  if (
+    !/^[a-f0-9]{64}$/.test(comparisonPolicyDigest) ||
+    typeof comparisonEngineVersion !== "string" ||
+    !comparisonEngineVersion
+  ) {
+    throw new Error("Capture needs an approved comparator digest and engine version");
   }
-  const require = createRequire(appPackageFile);
-  const fontSource = await realpath(
-    path.dirname(require.resolve(`${applicationFontPackage}/package.json`)),
-  );
-  const roots = [
-    ...(systemFontRoots ??
-      (process.platform === "darwin"
-        ? ["/System/Library/Fonts", "/Library/Fonts"]
-        : ["/usr/share/fonts", "/usr/local/share/fonts"])),
-    fontSource,
-  ];
+  const systemRoots =
+    systemFontRoots ??
+    (process.platform === "darwin"
+      ? ["/System/Library/Fonts", "/Library/Fonts"]
+      : ["/usr/share/fonts", "/usr/local/share/fonts"]);
+  const roots = [...systemRoots];
+  if (applicationFontPackage) {
+    const require = createRequire(appPackageFile);
+    roots.push(
+      await realpath(path.dirname(require.resolve(`${applicationFontPackage}/package.json`))),
+    );
+  }
   const fonts = [];
   for (const [index, root] of roots.entries()) {
     for (const file of await fontFiles(root)) fonts.push({ root: index, ...file });
@@ -65,77 +65,19 @@ export async function measureEnvironment({
   const profile = {
     osImageDigest: digestJson(osImage),
     fontsDigest: digestJson(fonts),
-    comparisonPolicyDigest: digestJson(comparisonPolicy),
+    comparisonPolicyDigest,
     comparisonEngineVersion,
   };
-  const browser = await engine.launch(browserName === "chromium" ? { channel: "chromium" } : {});
-  const profiles = new Map();
-  try {
-    for (const viewport of viewports) {
-      const context = await browser.newContext({
-        ...devices[device],
-        viewport,
-        locale: "en-US",
-        timezoneId: "UTC",
-        reducedMotion: "reduce",
-      });
-      try {
-        const page = await context.newPage();
-        for (const colorScheme of ["light", "dark"]) {
-          for (const contrast of ["no-preference", "more"]) {
-            for (const forcedColors of ["none", "active"]) {
-              await page.emulateMedia({ colorScheme, contrast, forcedColors });
-              const media = await page.evaluate(() => ({
-                viewport: { width: innerWidth, height: innerHeight },
-                deviceScaleFactor: devicePixelRatio,
-                locale: navigator.language,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches
-                  ? "reduce"
-                  : "no-preference",
-                colorScheme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light",
-                contrast: matchMedia("(prefers-contrast: more)").matches ? "more" : "no-preference",
-                forcedColors: matchMedia("(forced-colors: active)").matches ? "active" : "none",
-              }));
-              for (const fullPage of [false, true]) {
-                const value = {
-                  ...profile,
-                  browser: browserName,
-                  browserVersion: browser.version(),
-                  ...media,
-                  animationPolicy: "disabled",
-                  captureOptions: {
-                    type: "png",
-                    animations: "disabled",
-                    caret: "hide",
-                    scale: "css",
-                    fullPage,
-                    omitBackground: false,
-                  },
-                };
-                profiles.set(digestJson(value), value);
-              }
-            }
-          }
-        }
-      } finally {
-        await context.close();
-      }
-    }
-  } finally {
-    await browser.close();
-  }
   const result = {
-    browser: browserName,
     osImage,
     profile,
     fonts,
-    environmentProfiles: [...profiles].map(([digest, value]) => ({ digest, profile: value })),
+    systemFontRootCount: systemRoots.length,
+    fontPackage: applicationFontPackage ?? null,
   };
-  await mkdir(outputDirectory, { recursive: true });
-  await writeFile(
-    path.join(outputDirectory, `environment-${browserName}.json`),
-    `${JSON.stringify(result, null, 2)}\n`,
-  );
+  if (outputDirectory) {
+    await mkdir(outputDirectory, { recursive: true });
+    await writeFile(path.join(outputDirectory, "environment.json"), `${JSON.stringify(result)}\n`);
+  }
   return result;
 }

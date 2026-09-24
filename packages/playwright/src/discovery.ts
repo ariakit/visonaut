@@ -1,18 +1,12 @@
 import path from "node:path";
-import { canonicalJson, digestJson } from "@visonaut/protocol";
-import type {
-  CandidateDiscovery,
-  TestOutcome,
-  TrustedCollection,
-  TrustedPlan,
-} from "@visonaut/protocol";
+import { digestJson } from "@visonaut/protocol";
+import type { CandidateDiscovery, TestOutcome, TrustedCollection } from "@visonaut/protocol";
 import type { FullConfig, Suite } from "@playwright/test/reporter";
 
 interface DiscoverParams {
   config: FullConfig;
   suite: Suite;
-  plan: TrustedPlan;
-  shardKey: string;
+  executorDigest: string;
   repositoryRoot: string;
 }
 
@@ -24,10 +18,7 @@ function expressions(value: RegExp | RegExp[] | null) {
 function patterns(value: string | RegExp | (string | RegExp)[]): string[] {
   const values = Array.isArray(value) ? value : [value];
   return values.map((pattern) => {
-    if (typeof pattern !== "string") {
-      throw new Error("Trusted discovery requires explicit string file patterns");
-    }
-    return pattern;
+    return typeof pattern === "string" ? pattern : `regex:${pattern.source}/${pattern.flags}`;
   });
 }
 
@@ -70,15 +61,11 @@ function assertFullInvocation(config: FullConfig) {
 export async function discoverInventory({
   config,
   suite,
-  plan,
-  shardKey,
+  executorDigest,
   repositoryRoot,
 }: DiscoverParams): Promise<CandidateDiscovery> {
-  const policy = plan.discovery;
-  const plannedShard = plan.shards.find((entry) => entry.key === shardKey);
-  const expected = plannedShard?.collection;
-  if (!policy || !expected) {
-    throw new Error("Trusted discovery policy is missing");
+  if (!/^[a-f0-9]{64}$/.test(executorDigest)) {
+    throw new Error("Capture needs a verified package digest");
   }
   assertFullInvocation(config);
   if (config.projects.length !== 1) {
@@ -98,11 +85,11 @@ export async function discoverInventory({
     shard: config.shard,
     repeatEach: 1,
   };
-  if (project.repeatEach !== 1 || canonicalJson(collection) !== canonicalJson(expected)) {
-    throw new Error("Discovered suite does not use the trusted full collection configuration");
+  if (project.repeatEach !== 1) {
+    throw new Error("Discovered suite must run every selected test once");
   }
   return {
-    executorDigest: policy.executorDigest,
+    executorDigest,
     configurationDigest: await digestJson(collection),
     inventoryDigest: await digestJson(
       suite.allTests().map((test) => inventoryEntry(test, repositoryRoot)),

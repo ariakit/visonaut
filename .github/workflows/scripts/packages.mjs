@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gunzipSync } from "node:zlib";
@@ -14,17 +15,37 @@ const sourcePattern = /^[a-f0-9]{40}$/;
 const versionPattern = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const releasePackages = ["both", ...packages.map((entry) => entry.name)];
 const playwrightCiFiles = new Set([
+  "package/ci/bin.mjs",
+  "package/ci/bootstrap-cli.mjs",
   "package/ci/config.mjs",
   "package/ci/context.mjs",
   "package/ci/environment.mjs",
   "package/ci/identity.mjs",
   "package/ci/index.d.mts",
   "package/ci/index.mjs",
-  "package/ci/plan.mjs",
+  "package/ci/package.json",
+  "package/ci/playwright.config.mjs",
   "package/ci/rebind.mjs",
   "package/ci/render-context.mjs",
+  "package/ci/runner.mjs",
+  "package/ci/runtime-lock.json",
+  "package/ci/settings.mjs",
+  "package/ci/transfer-public.txt",
   "package/ci/transfer.mjs",
+  "package/ci/tsconfig.json",
 ]);
+const ciRuntimeDependencies = {
+  "@playwright/test": "1.63.0",
+  pngjs: "7.0.0",
+  visonaut: "0.1.0",
+};
+const ciRuntimeVersions = {
+  "node_modules/@playwright/test": "1.63.0",
+  "node_modules/playwright": "1.63.0",
+  "node_modules/playwright-core": "1.63.0",
+  "node_modules/pngjs": "7.0.0",
+  "node_modules/visonaut": "0.1.0",
+};
 
 function hash(bytes, algorithm = "sha256", encoding = "hex") {
   return createHash(algorithm).update(bytes).digest(encoding);
@@ -100,7 +121,10 @@ export function auditTarball(bytes, expected) {
       !/(?:from\s*|import\s*(?:\(\s*)?|require\s*\(\s*)["']@visonaut\//.test(content.toString()),
       "Internal runtime or declaration import escaped bundling",
     );
-    assert(!content.includes(Buffer.from("PRIVATE KEY-----")), "Private key in public package");
+    assert(
+      !/(?:^|\n)-----BEGIN PRIVATE KEY-----\n/.test(content.toString()),
+      "Private key in public package",
+    );
   }
   for (const required of [
     "package/README.md",
@@ -114,9 +138,36 @@ export function auditTarball(bytes, expected) {
     assert(files.has("package/dist/bin.js"), "CLI binary is missing");
   } else {
     assert(files.has("package/dist/reporter.js"), "Playwright reporter is missing");
+    assert.equal(manifest.bin?.["visonaut-capture"], "./ci/bin.mjs");
     for (const file of playwrightCiFiles) {
       assert(files.has(file), `Trusted CI helper is missing: ${file}`);
     }
+    const runtime = JSON.parse(files.get("package/ci/package.json").toString());
+    const lock = JSON.parse(files.get("package/ci/runtime-lock.json").toString());
+    assert.deepEqual(
+      runtime.dependencies,
+      ciRuntimeDependencies,
+      "Unexpected CI runtime dependency",
+    );
+    assert.equal(lock.lockfileVersion, 3, "Unexpected CI runtime lock version");
+    assert.deepEqual(lock.packages?.[""].dependencies, ciRuntimeDependencies);
+    assert.deepEqual(
+      Object.keys(lock.packages).sort(),
+      ["", ...Object.keys(ciRuntimeVersions)].sort(),
+      "Unexpected CI runtime lock entry",
+    );
+    for (const [name, entry] of Object.entries(lock.packages)) {
+      if (!name) continue;
+      assert(/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(entry.integrity));
+      assert.equal(entry.version, ciRuntimeVersions[name]);
+      assert(entry.resolved.startsWith("https://registry.npmjs.org/"));
+    }
+    assert(
+      files
+        .get("package/ci/transfer-public.txt")
+        .toString()
+        .startsWith("-----BEGIN PUBLIC KEY-----\n"),
+    );
   }
   return manifest;
 }
@@ -197,6 +248,27 @@ export async function verifyPackages(directory, sourceCommit) {
   return records;
 }
 
+export async function verifyCiRuntimeArchive(archive) {
+  const destination = await mkdtemp(resolve(tmpdir(), "visonaut-ci-runtime-"));
+  try {
+    execFileSync("tar", ["-xzf", archive, "-C", destination]);
+    const runtime = resolve(destination, "package/ci");
+    const lock = await readFile(resolve(runtime, "runtime-lock.json"));
+    await copyFile(resolve(runtime, "runtime-lock.json"), resolve(runtime, "package-lock.json"));
+    execFileSync("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], {
+      cwd: runtime,
+      stdio: "inherit",
+    });
+    assert.deepEqual(await readFile(resolve(runtime, "package-lock.json")), lock);
+    assert.match(
+      execFileSync("node", [resolve(runtime, "bin.mjs"), "--help"], { encoding: "utf8" }),
+      /visonaut-capture render/,
+    );
+  } finally {
+    await rm(destination, { recursive: true, force: true });
+  }
+}
+
 async function pack(directory) {
   const sourceCommit = process.env.GITHUB_SHA;
   assert(sourcePattern.test(sourceCommit ?? ""), "GITHUB_SHA is required");
@@ -223,6 +295,9 @@ async function pack(directory) {
     );
     const bytes = await readFile(resolve(directory, filename));
     auditTarball(bytes, { ...expected, version: manifest.version });
+    if (expected.name === "@visonaut/playwright") {
+      await verifyCiRuntimeArchive(resolve(directory, filename));
+    }
     records.push({
       name: expected.name,
       version: manifest.version,

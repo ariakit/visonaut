@@ -1,62 +1,44 @@
 import type { PlaywrightTestConfig } from "@playwright/test";
-import type { TrustedCollection, TrustedPlan } from "../dist/reporter.js";
-
-export interface CISettings {
-  repository: string;
-  repositoryId: string;
-  workflow: string;
-  server: string;
-  comparisonPolicy: unknown;
-  comparisonEngineVersion: string;
-}
 
 export interface CIContext {
   workflowRunId: string;
   workflowAttempt: number;
   testedSha: string;
   jobId: string;
-}
-
-export interface CIShard {
-  key: string;
+  workflowSha: string;
   jobName: string;
-  collection: TrustedCollection;
 }
 
 export interface EnvironmentProfile {
-  digest: string;
-  profile: unknown;
+  osImageDigest: string;
+  fontsDigest: string;
+  comparisonPolicyDigest: string;
+  comparisonEngineVersion: string;
 }
 
-export function executorDigest(directory: string): Promise<string>;
-export function createTrustedPlan(options: {
-  directory: string;
-  settings: CISettings;
-  shards: CIShard[];
-  environmentProfileDigests: Record<string, string[]>;
-}): Promise<{ plan: TrustedPlan; planDigest: string }>;
-export function verifyTrustedPlan(options: {
-  directory: string;
-  planFile: string;
-}): Promise<{ plan: TrustedPlan; planDigest: string }>;
-export function writeTrustedPlan(
-  destination: string,
-  options: Parameters<typeof createTrustedPlan>[0],
-): Promise<{
-  plan: TrustedPlan;
-  planDigest: string;
-}>;
+export interface MeasuredEnvironment {
+  osImage: { os: string; imageVersion: string; architecture: string };
+  profile: EnvironmentProfile;
+  fonts: { root: number; file: string; digest: string }[];
+  systemFontRootCount: number;
+  fontPackage: string | null;
+}
+
+type ApplicationFontOptions =
+  | { applicationFontPackage: string; appPackageFile: string }
+  | { applicationFontPackage?: undefined; appPackageFile?: string };
+
 export function writeRenderContext(options: {
   directory: string;
   workflowRunId: string;
   workflowAttempt: number;
   testedSha: string;
-}): Promise<CIContext>;
+}): Promise<Omit<CIContext, "workflowSha" | "jobName">>;
 export function bindSignedJob(options: {
   directory: string;
   repository: string;
   server: string;
-  browser: "chromium" | "firefox" | "webkit";
+  shard: string;
   workflowRunId: string;
   workflowAttempt: number;
   testedSha: string;
@@ -67,40 +49,43 @@ export function bindSignedJob(options: {
 }): Promise<CIContext>;
 export function rebindManifest(options: {
   directory: string;
-  browser: "chromium" | "firefox" | "webkit";
+  shard: string;
   repository: string;
   repositoryId: string;
+  bundleSha256: string;
   context: CIContext;
 }): Promise<{ artifactName: string; manifestDigest: string; jobId: string }>;
 export function encryptTransfer(
   directory: string,
-  browser: string,
+  shard: string,
   outputFile: string,
   publicKeyFile: string,
 ): Promise<void>;
 export function decryptTransfer(
   inputFile: string,
   outputDirectory: string,
-  browser: string,
+  shard: string,
   privateKey: string,
 ): Promise<void>;
-export function measureEnvironment(options: {
-  appPackageFile: string;
-  outputDirectory: string;
-  browserName: "chromium" | "firefox" | "webkit";
-  device: string;
-  viewports: { width: number; height: number }[];
-  comparisonPolicy: unknown;
-  comparisonEngineVersion: string;
-  applicationFontPackage: string;
-  systemFontRoots?: string[];
-}): Promise<{ browser: string; environmentProfiles: EnvironmentProfile[] }>;
-export function createTrustedPlaywrightConfig(options: {
-  directory: string;
-  planFile: string;
+export function measureEnvironment(
+  options: {
+    outputDirectory?: string;
+    comparisonPolicyDigest: string;
+    comparisonEngineVersion: string;
+    systemFontRoots?: string[];
+  } & ApplicationFontOptions,
+): Promise<MeasuredEnvironment>;
+export function createCaptureConfig(options: {
   repositoryRoot: string;
-  browserName: "chromium" | "firefox" | "webkit";
-  project: { name: string; device: string };
-  settings: CISettings;
-  webServer: PlaywrightTestConfig["webServer"];
+  testDir: string;
+  patterns: string;
+  projectName: string;
+  browser: "chromium" | "firefox" | "webkit";
+  device: string;
+  baseUrl: string;
+  shardKey: string;
+  bundleSha256: string;
+  retries?: number;
+  workers?: number;
+  webServerJson: string;
 }): Promise<PlaywrightTestConfig>;

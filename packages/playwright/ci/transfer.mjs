@@ -16,7 +16,7 @@ const MAX_ENVIRONMENT_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const MAX_ARCHIVE_BYTES = 550 * 1024 * 1024;
 const MAX_IMAGES = 40_000;
-const browserNames = new Set(["chromium", "firefox", "webkit"]);
+const shardPattern = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
 
 async function readExact(file, length, position) {
   const bytes = Buffer.alloc(length);
@@ -87,12 +87,12 @@ async function appendRecord(archive, root, name, maximum) {
   await writeAll(archive, bytes);
 }
 
-async function pack(root, browser, archivePath) {
+async function pack(root, shard, archivePath) {
   const manifest = JSON.parse(await readFile(path.join(root, "manifest.json"), "utf8"));
-  if (manifest.shard?.key !== browser) {
-    throw new Error("The manifest names another browser");
+  if (manifest.shard?.key !== shard) {
+    throw new Error("The manifest names another shard");
   }
-  const names = ["manifest.json", `environment-${browser}.json`, ...imageNames(manifest)];
+  const names = ["manifest.json", "environment.json", ...imageNames(manifest)];
   await using archive = await open(archivePath, "wx", 0o600);
   for (const name of names) {
     await appendRecord(
@@ -101,7 +101,7 @@ async function pack(root, browser, archivePath) {
       name,
       name === "manifest.json"
         ? MAX_MANIFEST_BYTES
-        : name.startsWith("environment-")
+        : name === "environment.json"
           ? MAX_ENVIRONMENT_BYTES
           : MAX_IMAGE_BYTES,
     );
@@ -112,25 +112,25 @@ async function pack(root, browser, archivePath) {
   await writeAll(archive, lengthPrefix(0));
 }
 
-function context(browser) {
-  if (!browserNames.has(browser)) {
-    throw new Error("Unknown browser shard");
+function context(shard) {
+  if (!shardPattern.test(shard)) {
+    throw new Error("Invalid opaque shard key");
   }
   const runId = process.env.GITHUB_RUN_ID;
   const testedSha = process.env.GITHUB_SHA;
   if (!/^[1-9][0-9]*$/.test(runId ?? "") || !/^[a-f0-9]{40}$/.test(testedSha ?? "")) {
     throw new Error("A signed GitHub run and commit are required");
   }
-  return { runId, testedSha, browser };
+  return { runId, testedSha, shard };
 }
 
-export async function encryptTransfer(root, browser, output, publicKeyPath) {
-  const selected = context(browser);
+export async function encryptTransfer(root, shard, output, publicKeyPath) {
+  const selected = context(shard);
   const temporary = await mkdtemp(path.join(path.dirname(output), ".visonaut-transfer-"));
   const plain = path.join(temporary, "archive");
   let outputCreated = false;
   try {
-    await pack(root, browser, plain);
+    await pack(root, shard, plain);
     const key = randomBytes(32);
     const nonce = randomBytes(12);
     const publicKey = await readFile(publicKeyPath);
@@ -169,7 +169,7 @@ export async function encryptTransfer(root, browser, output, publicKeyPath) {
   }
 }
 
-async function unpack(archivePath, outputDir, browser) {
+async function unpack(archivePath, outputDir, shard) {
   await mkdir(path.join(outputDir, "images"));
   const seen = new Set();
   let offset = 0;
@@ -192,7 +192,7 @@ async function unpack(archivePath, outputDir, browser) {
     const maximum =
       name === "manifest.json"
         ? MAX_MANIFEST_BYTES
-        : name === `environment-${browser}.json`
+        : name === "environment.json"
           ? MAX_ENVIRONMENT_BYTES
           : /^images\/[a-f0-9]{64}\.png$/.test(name)
             ? MAX_IMAGE_BYTES
@@ -225,12 +225,12 @@ async function unpack(archivePath, outputDir, browser) {
     await using destination = await open(path.join(outputDir, name), "wx", 0o600);
     await writeAll(destination, bytes);
   }
-  if (offset !== size || !seen.has("manifest.json") || !seen.has(`environment-${browser}.json`)) {
+  if (offset !== size || !seen.has("manifest.json") || !seen.has("environment.json")) {
     throw new Error("The transfer archive is incomplete");
   }
   const manifest = JSON.parse(await readFile(path.join(outputDir, "manifest.json"), "utf8"));
-  if (manifest.shard?.key !== browser) {
-    throw new Error("The decrypted manifest names another browser");
+  if (manifest.shard?.key !== shard) {
+    throw new Error("The decrypted manifest names another shard");
   }
   const expected = imageNames(manifest);
   if (expected.length !== seen.size - 2 || expected.some((name) => !seen.has(name))) {
@@ -238,7 +238,7 @@ async function unpack(archivePath, outputDir, browser) {
   }
 }
 
-export async function decryptTransfer(input, outputDir, browser, privateKey) {
+export async function decryptTransfer(input, outputDir, shard, privateKey) {
   const temporary = await mkdtemp(path.join(path.dirname(input), ".visonaut-transfer-"));
   const plain = path.join(temporary, "archive");
   let outputCreated = false;
@@ -254,12 +254,12 @@ export async function decryptTransfer(input, outputDir, browser, privateKey) {
     }
     const header = await readExact(encrypted, headerSize, 4);
     const metadata = JSON.parse(header.toString("utf8"));
-    const selected = context(browser);
+    const selected = context(shard);
     if (
       metadata.version !== 1 ||
       metadata.runId !== selected.runId ||
       metadata.testedSha !== selected.testedSha ||
-      metadata.browser !== browser
+      metadata.shard !== shard
     ) {
       throw new Error("The encrypted transfer belongs to another run or commit");
     }
@@ -287,9 +287,9 @@ export async function decryptTransfer(input, outputDir, browser, privateKey) {
     }
     await writeAll(archive, decipher.final());
     await mkdir(path.dirname(outputDir), { recursive: true });
-    await mkdir(outputDir);
+    await mkdir(outputDir, { mode: 0o700 });
     outputCreated = true;
-    await unpack(plain, outputDir, browser);
+    await unpack(plain, outputDir, shard);
   } catch (error) {
     if (outputCreated) {
       await rm(outputDir, { recursive: true, force: true });

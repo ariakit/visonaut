@@ -8,9 +8,29 @@
     "url": "https://github.com/ariakit/visonaut",
     "directory": "packages/playwright"
   },
+  "bin": {
+    "visonaut-capture": "./ci/bin.mjs"
+  },
   "files": [
     "dist",
-    "ci",
+    "ci/bin.mjs",
+    "ci/bootstrap-cli.mjs",
+    "ci/config.mjs",
+    "ci/context.mjs",
+    "ci/environment.mjs",
+    "ci/identity.mjs",
+    "ci/index.d.mts",
+    "ci/index.mjs",
+    "ci/runtime-lock.json",
+    "ci/package.json",
+    "ci/playwright.config.mjs",
+    "ci/rebind.mjs",
+    "ci/render-context.mjs",
+    "ci/runner.mjs",
+    "ci/settings.mjs",
+    "ci/transfer-public.txt",
+    "ci/transfer.mjs",
+    "ci/tsconfig.json",
     "README.md",
     "LICENSE"
   ],

@@ -5,8 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
-import { chromium } from "@playwright/test";
-import { digestEnvironmentProfile, digestJson, parseManifest, sha256 } from "@visonaut/protocol";
+import { digestJson, parseManifest, sha256 } from "@visonaut/protocol";
 
 const require = createRequire(import.meta.url);
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
@@ -40,54 +39,6 @@ async function runFixture(
     path.dirname(require.resolve("@playwright/test/package.json")),
     path.join(modules, "@playwright/test"),
   );
-  const environmentBrowser = discovery ? await chromium.launch() : undefined;
-  const environmentProfile = {
-    ...metadata.visonaut.profile,
-    browser: "chromium" as const,
-    browserVersion: environmentBrowser?.version() ?? "unused",
-    viewport: { width: 32, height: 32 },
-    deviceScaleFactor: 1,
-    locale: "en-US",
-    timezone: "UTC",
-    reducedMotion: "reduce" as const,
-    colorScheme: "light" as const,
-    contrast: "no-preference" as const,
-    forcedColors: "none" as const,
-    animationPolicy: "disabled" as const,
-    captureOptions: {
-      type: "png",
-      animations: "disabled",
-      caret: "hide",
-      scale: "css",
-      fullPage: false,
-      omitBackground: false,
-    },
-  };
-  await environmentBrowser?.close();
-  const plan = {
-    schemaVersion: "1.0",
-    repositoryId: "123",
-    workflow: ".github/workflows/capture.yml",
-    invocation: ["playwright", "test"],
-    discovery: { executorDigest: "f".repeat(64) },
-    shards: [
-      {
-        key: "chromium-1",
-        jobName: "chrome",
-        environmentProfileDigests: [await digestEnvironmentProfile(environmentProfile)],
-        collection: {
-          projectName: "",
-          testDir: ".",
-          testMatch: ["capture.spec.ts"],
-          testIgnore: [],
-          grep: [{ source: ".*", flags: "" }],
-          grepInvert: [],
-          shard: null,
-          repeatEach: 1 as const,
-        },
-      },
-    ],
-  };
   const config = {
     forbidOnly: true,
     testDir: directory,
@@ -115,10 +66,12 @@ async function runFixture(
             workflowRunId: "456",
             workflowAttempt: 1,
             testedSha: "d".repeat(40),
-            planDigest: discovery ? await digestJson(plan) : "e".repeat(64),
+            planDigest: "e".repeat(64),
           },
           shard: { key: "chromium-1", jobId: "789", sourceAttempt: 1 },
-          ...(discovery ? { plan, repositoryRoot: directory } : {}),
+          ...(discovery
+            ? { discovery: { executorDigest: "f".repeat(64), repositoryRoot: directory } }
+            : {}),
         },
       ],
     ],
@@ -187,6 +140,10 @@ describe("published adapter and reporter", () => {
     `);
     expect(fixture.code, fixture.output).toBe(0);
     const manifest = await manifestAt(fixture.directory);
+    const packageInfo = JSON.parse(
+      await readFile(path.join(packageDirectory, "package.json"), "utf8"),
+    );
+    expect(manifest.producer.version).toBe(packageInfo.version);
     expect(manifest.captures.map((capture) => capture.itemKey)).toEqual(["fonts/settled"]);
   }, 20000);
 

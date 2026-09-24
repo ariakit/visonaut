@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": { "lib": ["ES2023", "DOM"], "noEmit": true, "ignoreDeprecations": "6.0" },
-  "include": ["src", "tsup.config.ts"]
+  "include": ["src", "tsup.config.ts", "test/ci/environment.contract.ts"]
 }

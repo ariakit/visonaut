@@ -1,144 +1,227 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 import { bindSignedJob } from "../../ci/context.mjs";
-import { createTrustedPlaywrightConfig } from "../../ci/config.mjs";
-import { createTrustedPlan, verifyTrustedPlan } from "../../ci/plan.mjs";
+import { createCaptureConfig } from "../../ci/config.mjs";
+import { measureEnvironment } from "../../ci/environment.mjs";
 import { writeRenderContext } from "../../ci/render-context.mjs";
+import { parseArguments, render } from "../../ci/runner.mjs";
+import { trustedServer } from "../../ci/settings.mjs";
 
-const sha = "a".repeat(40);
-const lock = {
-  packages: {
-    "node_modules/@visonaut/playwright": {
-      version: "0.1.0",
-      integrity: `sha512-${"A".repeat(86)}==`,
-    },
-    "node_modules/visonaut": { version: "0.1.0", integrity: `sha512-${"B".repeat(86)}==` },
-  },
-};
+const testedSha = "a".repeat(40);
+const workflowSha = "b".repeat(40);
+const bundleSha256 = "c".repeat(64);
+const policyDigest = "d".repeat(64);
 
 async function fixture() {
-  const directory = await mkdtemp(path.join(tmpdir(), "visonaut-ci-test-"));
-  await writeFile(path.join(directory, "package-lock.json"), JSON.stringify(lock));
+  const root = await mkdtemp(path.join(tmpdir(), "visonaut-ci-test-"));
+  await mkdir(path.join(root, "app/src"), { recursive: true });
+  await mkdir(path.join(root, "fonts"));
+  await writeFile(path.join(root, "fonts/fixture.ttf"), "synthetic font");
+  await writeFile(path.join(root, "app/package.json"), "{}\n");
+  await mkdir(path.join(root, ".visonaut-results"));
   await writeFile(
-    path.join(directory, "settings.json"),
-    JSON.stringify({ repository: "ariakit/example" }),
+    path.join(root, ".visonaut-results/environment.json"),
+    JSON.stringify({
+      profile: {
+        osImageDigest: "e".repeat(64),
+        fontsDigest: "f".repeat(64),
+        comparisonPolicyDigest: policyDigest,
+        comparisonEngineVersion: "rgba-visible-1",
+      },
+    }),
   );
-  return directory;
+  return root;
 }
 
-test("trusted plan pins the executor files and package integrity", async () => {
-  const directory = await fixture();
+function githubEnvironment(root) {
+  return {
+    CI: "true",
+    GITHUB_ACTIONS: "true",
+    GITHUB_REPOSITORY: "ariakit/example",
+    GITHUB_REPOSITORY_ID: "123",
+    GITHUB_EVENT_NAME: "pull_request",
+    GITHUB_RUN_ID: "456",
+    GITHUB_RUN_ATTEMPT: "2",
+    GITHUB_SHA: testedSha,
+    GITHUB_WORKSPACE: root,
+  };
+}
+
+test("render options are generic and reject a malformed shard or missing policy", () => {
+  const flags = [
+    "--repository-root",
+    "/tmp/work",
+    "--test-dir",
+    "app/src",
+    "--test-patterns",
+    '["/test[^/]*-browser"]',
+    "--project",
+    "desktop",
+    "--browser",
+    "chromium",
+    "--device",
+    "Desktop Chrome",
+    "--base-url",
+    "http://localhost:4321",
+    "--shard",
+    "desktop-42",
+    "--comparison-policy-digest",
+    policyDigest,
+    "--bundle-sha256",
+    bundleSha256,
+    "--output",
+    "/tmp/shard.enc",
+  ];
+  assert.equal(parseArguments(["render", ...flags]).options["--shard"], "desktop-42");
+  assert.throws(
+    () => parseArguments(["render", ...flags.slice(0, -4), "--output", "/tmp/shard.enc"]),
+    /missing an option/,
+  );
+  assert.throws(() => {
+    const invalid = [...flags];
+    invalid[invalid.indexOf("--shard") + 1] = "../escape";
+    parseArguments(["render", ...invalid]);
+  }, /invalid/);
+  const uploadFlags = [
+    "upload",
+    "--shard",
+    "desktop-42",
+    "--comparison-policy-digest",
+    policyDigest,
+    "--bundle-sha256",
+    bundleSha256,
+    "--input",
+    "/tmp/shard.enc",
+    "--output-directory",
+    "/tmp/upload",
+  ];
+  assert.equal(parseArguments(uploadFlags).options["--shard"], "desktop-42");
+  assert.throws(() => parseArguments([...uploadFlags, "--workflow-sha", workflowSha]), /known/);
+});
+
+test("render rejects OIDC before reading any candidate workspace", async () => {
+  await assert.rejects(
+    render({ options: {}, environment: { ACTIONS_ID_TOKEN_REQUEST_URL: "present" } }),
+    /must not receive GitHub OIDC/,
+  );
+});
+
+test("signed upload only sends GitHub identity to Visonaut-owned origins", () => {
+  assert.equal(trustedServer({}), "https://visonaut.com");
+  assert.equal(
+    trustedServer({ VISONAUT_SERVER: "https://diagnostics.visonaut.com" }),
+    "https://diagnostics.visonaut.com",
+  );
+  assert.equal(
+    trustedServer({ VISONAUT_SERVER: "https://preview.visonaut.com" }),
+    "https://preview.visonaut.com",
+  );
+  for (const server of [
+    "http://diagnostics.visonaut.com",
+    "https://visonaut.com.evil.example",
+    "https://visonaut.com@evil.example",
+    "https://visonaut.com/private",
+  ]) {
+    assert.throws(() => trustedServer({ VISONAUT_SERVER: server }), /untrusted/);
+  }
+});
+
+test("workflow-owned config forces a complete visual project and ignores candidate selection", async () => {
+  const root = await fixture();
+  const environment = githubEnvironment(root);
+  const previous = Object.fromEntries(
+    [
+      "CI",
+      "GITHUB_ACTIONS",
+      "GITHUB_REPOSITORY",
+      "GITHUB_REPOSITORY_ID",
+      "GITHUB_RUN_ID",
+      "GITHUB_RUN_ATTEMPT",
+      "GITHUB_SHA",
+    ].map((key) => [key, process.env[key]]),
+  );
+  Object.assign(process.env, environment);
   try {
-    const { plan } = await createTrustedPlan({
-      directory,
-      settings: { repositoryId: "123", workflow: ".github/workflows/visonaut.yml" },
-      shards: [
-        { key: "chromium", jobName: "capture / chromium", collection: { projectName: "chrome" } },
-      ],
-      environmentProfileDigests: { chromium: ["c".repeat(64)] },
-    });
-    const planFile = `${directory}.plan`;
-    await writeFile(planFile, JSON.stringify(plan));
-    assert.deepEqual((await verifyTrustedPlan({ directory, planFile })).plan, plan);
     await writeFile(
-      path.join(directory, "settings.json"),
-      JSON.stringify({ repository: "ariakit/other" }),
+      path.join(root, "app/playwright.config.ts"),
+      'export default { testMatch: ["nothing"], testIgnore: ["**/*"], grepInvert: /@visual/ };\n',
     );
-    await assert.rejects(verifyTrustedPlan({ directory, planFile }), /does not match/);
-  } finally {
-    await rm(`${directory}.plan`, { force: true });
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("plan rejects missing npm integrity before creating a capture plan", async () => {
-  const directory = await fixture();
-  try {
-    await writeFile(path.join(directory, "package-lock.json"), JSON.stringify({ packages: {} }));
+    const config = await createCaptureConfig({
+      repositoryRoot: root,
+      testDir: "app/src",
+      patterns: '["/test[^/]*-browser","/tests/[^/]*-browser"]',
+      projectName: "desktop",
+      browser: "chromium",
+      device: "Desktop Chrome",
+      baseUrl: "http://localhost:4321",
+      shardKey: "desktop-42",
+      bundleSha256,
+      webServerJson: JSON.stringify([
+        { command: "pnpm run preview --port 4321", cwd: "app", port: 4321 },
+      ]),
+    });
+    assert.equal(config.projects.length, 1);
+    assert.equal(config.projects[0].name, "desktop");
+    assert.equal(config.projects[0].use.browserName, "chromium");
+    assert.equal(config.projects[0].use.baseURL, "http://localhost:4321/");
+    assert.deepEqual(config.testIgnore, []);
+    assert.deepEqual(config.grepInvert, []);
+    assert.equal(config.grep.source, "@visual");
+    assert.equal(config.testMatch.length, 2);
+    assert.equal(config.webServer[0].cwd, path.join(await realpath(root), "app"));
     await assert.rejects(
-      createTrustedPlan({
-        directory,
-        settings: { repositoryId: "123", workflow: ".github/workflows/visonaut.yml" },
-        shards: [{ key: "chromium", jobName: "capture / chromium", collection: {} }],
-        environmentProfileDigests: { chromium: ["c".repeat(64)] },
+      createCaptureConfig({
+        repositoryRoot: root,
+        testDir: "app/src",
+        patterns: '["/test[^/]*-browser"]',
+        projectName: "desktop",
+        browser: "webkit",
+        device: "Desktop Chrome",
+        baseUrl: "http://localhost:4321",
+        shardKey: "desktop-42",
+        bundleSha256,
+        webServerJson: '[{"command":"true","cwd":"app"}]',
       }),
-      /complete package integrity mode/,
+      /project, device/,
     );
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    await rm(root, { recursive: true, force: true });
   }
 });
 
-test("prepublication plan binds both reviewed package tarball hashes", async () => {
-  const directory = await fixture();
+test("environment records font and OS base without a hypothetical profile catalogue", async () => {
+  const root = await fixture();
   try {
-    await writeFile(path.join(directory, "package-lock.json"), JSON.stringify({ packages: {} }));
-    await writeFile(
-      path.join(directory, "package.json"),
-      JSON.stringify({
-        dependencies: { "@playwright/test": "1.63.0" },
-      }),
-    );
-    const settings = {
-      packages: {
-        playwright: { sha256: "a".repeat(64) },
-        cli: { sha256: "b".repeat(64) },
-      },
-    };
-    await writeFile(path.join(directory, "settings.json"), JSON.stringify(settings));
-    const { executorDigest } = await createTrustedPlan({
-      directory,
-      settings: { ...settings, repositoryId: "123", workflow: ".github/workflows/visonaut.yml" },
-      shards: [{ key: "chromium", jobName: "capture / chromium", collection: {} }],
-      environmentProfileDigests: { chromium: ["c".repeat(64)] },
-    }).then(({ plan }) => ({ executorDigest: plan.discovery.executorDigest }));
-    assert.match(executorDigest, /^[a-f0-9]{64}$/);
-    settings.packages.cli.sha256 = "d".repeat(64);
-    await writeFile(path.join(directory, "settings.json"), JSON.stringify(settings));
-    const changed = await createTrustedPlan({
-      directory,
-      settings: { ...settings, repositoryId: "123", workflow: ".github/workflows/visonaut.yml" },
-      shards: [{ key: "chromium", jobName: "capture / chromium", collection: {} }],
-      environmentProfileDigests: { chromium: ["c".repeat(64)] },
+    const result = await measureEnvironment({
+      appPackageFile: path.join(root, "app/package.json"),
+      outputDirectory: path.join(root, "measured"),
+      comparisonPolicyDigest: policyDigest,
+      comparisonEngineVersion: "rgba-visible-1",
+      systemFontRoots: [path.join(root, "fonts")],
     });
-    assert.notEqual(changed.plan.discovery.executorDigest, executorDigest);
+    assert.equal(result.fonts.length, 1);
+    assert.equal(result.profile.comparisonPolicyDigest, policyDigest);
+    assert.equal(Object.hasOwn(result, "environmentProfiles"), false);
+    const file = JSON.parse(await readFile(path.join(root, "measured/environment.json"), "utf8"));
+    assert.equal(file.profile.fontsDigest, result.profile.fontsDigest);
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
   }
 });
 
-test("render context binds to tested SHA and refuses malformed identity", async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), "visonaut-context-test-"));
+test("signed upload job selects its exact check run and pinned workflow source", async () => {
+  const root = await fixture();
   try {
-    await writeRenderContext({
-      directory,
-      workflowRunId: "123",
-      workflowAttempt: 1,
-      testedSha: sha,
-    });
-    const value = JSON.parse(await readFile(path.join(directory, "context.json"), "utf8"));
-    assert.deepEqual(value, {
-      workflowRunId: "123",
-      workflowAttempt: 1,
-      testedSha: sha,
-      jobId: "1",
-    });
-    await assert.rejects(
-      writeRenderContext({ directory, workflowRunId: "bad", workflowAttempt: 1, testedSha: sha }),
-      /GitHub run/,
-    );
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("signed job binding selects only the exact check run and browser", async () => {
-  const directory = await mkdtemp(path.join(tmpdir(), "visonaut-job-test-"));
-  try {
-    const token = `e.${Buffer.from(JSON.stringify({ check_run_id: "789" })).toString("base64url")}.s`;
+    const token = `e.${Buffer.from(
+      JSON.stringify({ check_run_id: "789", job_workflow_sha: workflowSha }),
+    ).toString("base64url")}.s`;
     const calls = [];
     const fetchImpl = async (url) => {
       calls.push(String(url));
@@ -148,137 +231,74 @@ test("signed job binding selects only the exact check run and browser", async ()
         json: async () => ({
           jobs: [
             {
-              name: "capture / firefox",
+              name: "App / Visonaut / upload / desktop-42",
               id: 456,
               check_run_url: "https://api.github.com/repos/ariakit/example/check-runs/789",
-            },
-            {
-              name: "capture / chromium",
-              id: 999,
-              check_run_url: "https://api.github.com/repos/ariakit/example/check-runs/999",
             },
           ],
         }),
       };
     };
     const context = await bindSignedJob({
-      directory,
+      directory: root,
       repository: "ariakit/example",
-      server: "https://visonaut.example",
-      browser: "firefox",
-      workflowRunId: "123",
+      server: "https://visonaut.com",
+      shard: "desktop-42",
+      workflowRunId: "456",
       workflowAttempt: 2,
-      testedSha: sha,
+      testedSha,
       tokenRequestUrl: "https://token.actions.githubusercontent.com/request",
       tokenRequestToken: "disposable-test-token",
       githubToken: "disposable-test-token",
       fetchImpl,
     });
     assert.equal(context.jobId, "456");
-    assert.match(calls[0], /audience=https%3A%2F%2Fvisonaut\.example/);
-    assert.match(calls[1], /\/ariakit\/example\/actions\/runs\/123\/attempts\/2\/jobs/);
+    assert.equal(context.workflowSha, workflowSha);
+    assert.match(calls[1], /page=1/);
+    const invalidToken = `e.${Buffer.from(
+      JSON.stringify({ check_run_id: "789", job_workflow_sha: "not-a-sha" }),
+    ).toString("base64url")}.s`;
+    await assert.rejects(
+      bindSignedJob({
+        directory: path.join(root, "missing"),
+        repository: "ariakit/example",
+        server: "https://visonaut.com",
+        shard: "desktop-42",
+        workflowRunId: "456",
+        workflowAttempt: 2,
+        testedSha,
+        tokenRequestUrl: "https://token.actions.githubusercontent.com/request",
+        tokenRequestToken: "disposable-test-token",
+        githubToken: "disposable-test-token",
+        fetchImpl: async () => ({ ok: true, json: async () => ({ value: invalidToken }) }),
+      }),
+      /no reusable workflow source SHA/,
+    );
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
   }
 });
 
-test("capture config uses only a pinned plan and measured allowlisted runner", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "visonaut-config-test-"));
-  const directory = path.join(root, "executor");
-  const results = path.join(root, "app/.visonaut-results");
-  const planFile = path.join(root, "visonaut-plan.json");
-  const settings = {
-    repository: "ariakit/example",
-    repositoryId: "123",
-    workflow: ".github/workflows/visonaut.yml",
-  };
-  const oldCI = process.env.CI;
-  const oldActions = process.env.GITHUB_ACTIONS;
-  const oldVisual = process.env.VISUAL_TEST;
-  const oldFontWait = process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY;
+test("render context binds the tested commit", async () => {
+  const root = await fixture();
   try {
-    await mkdir(directory);
-    await mkdir(results, { recursive: true });
-    await writeFile(path.join(directory, "package-lock.json"), JSON.stringify(lock));
-    await writeFile(path.join(directory, "settings.json"), JSON.stringify(settings));
-    const digest = "c".repeat(64);
-    const { plan } = await createTrustedPlan({
-      directory,
-      settings,
-      shards: [
-        {
-          key: "chromium",
-          jobName: "capture / chromium",
-          collection: {
-            projectName: "chrome",
-            testDir: "app/src",
-            testMatch: ["**/test-browser.ts"],
-            testIgnore: [],
-            grep: [{ source: "@visual", flags: "" }],
-            grepInvert: [],
-            shard: null,
-            repeatEach: 1,
-          },
-        },
-      ],
-      environmentProfileDigests: { chromium: [digest] },
+    const value = await writeRenderContext({
+      directory: path.join(root, "context"),
+      workflowRunId: "456",
+      workflowAttempt: 2,
+      testedSha,
     });
-    await writeFile(planFile, JSON.stringify(plan));
-    await writeFile(
-      path.join(results, "environment-chromium.json"),
-      JSON.stringify({
-        browser: "chromium",
-        profile: {},
-        environmentProfiles: [{ digest }],
-      }),
-    );
-    await writeFile(
-      path.join(results, "context.json"),
-      JSON.stringify({
-        workflowRunId: "123",
-        workflowAttempt: 1,
-        testedSha: sha,
-        jobId: "1",
-      }),
-    );
-    process.env.CI = "true";
-    process.env.GITHUB_ACTIONS = "true";
-    delete process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY;
-    const options = {
-      directory,
-      planFile,
-      repositoryRoot: root,
-      browserName: "chromium",
-      project: { name: "chrome", device: "Desktop Chrome" },
-      settings,
-      webServer: [],
-    };
-    const config = await createTrustedPlaywrightConfig(options);
-    assert.deepEqual(config.testMatch, ["**/test-browser.ts"]);
-    assert.equal(config.forbidOnly, true);
-    assert.equal(config.projects[0].name, "chrome");
-    assert.equal(process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY, "1");
-    await writeFile(
-      path.join(results, "environment-chromium.json"),
-      JSON.stringify({
-        browser: "chromium",
-        profile: {},
-        environmentProfiles: [{ digest: "d".repeat(64) }],
-      }),
-    );
+    assert.equal(value.testedSha, testedSha);
     await assert.rejects(
-      createTrustedPlaywrightConfig(options),
-      /outside the trusted capture plan/,
+      writeRenderContext({
+        directory: path.join(root, "invalid"),
+        workflowRunId: "bad",
+        workflowAttempt: 2,
+        testedSha,
+      }),
+      /GitHub run/,
     );
   } finally {
-    if (oldCI === undefined) delete process.env.CI;
-    else process.env.CI = oldCI;
-    if (oldActions === undefined) delete process.env.GITHUB_ACTIONS;
-    else process.env.GITHUB_ACTIONS = oldActions;
-    if (oldVisual === undefined) delete process.env.VISUAL_TEST;
-    else process.env.VISUAL_TEST = oldVisual;
-    if (oldFontWait === undefined) delete process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY;
-    else process.env.PW_TEST_SCREENSHOT_NO_FONTS_READY = oldFontWait;
     await rm(root, { recursive: true, force: true });
   }
 });

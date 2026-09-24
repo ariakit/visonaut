@@ -16,18 +16,9 @@ import {
 const temporary = mkdtempSync(resolve(tmpdir(), "visonaut-release-test-"));
 after(() => rmSync(temporary, { recursive: true, force: true }));
 let fixtureId = 0;
-const ciFiles = [
-  "config.mjs",
-  "context.mjs",
-  "environment.mjs",
-  "identity.mjs",
-  "index.d.mts",
-  "index.mjs",
-  "plan.mjs",
-  "rebind.mjs",
-  "render-context.mjs",
-  "transfer.mjs",
-];
+const ciFiles = JSON.parse(readFileSync("packages/playwright/package.json", "utf8")).files.filter(
+  (file) => file.startsWith("ci/"),
+);
 
 function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
   const directory = resolve(temporary, `fixture-${fixtureId++}`);
@@ -41,6 +32,7 @@ function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
     version: "1.2.3",
     repository: { url: "https://github.com/ariakit/visonaut", directory: packageDirectory },
     dependencies,
+    ...(name === "@visonaut/playwright" ? { bin: { "visonaut-capture": "./ci/bin.mjs" } } : {}),
   };
   const files = {
     "package.json": JSON.stringify(manifest),
@@ -52,12 +44,7 @@ function packFixture(name = "visonaut", extraFiles = {}, dependencies = {}) {
     "dist/reporter.js": "export default class Reporter {}",
     ...(name === "@visonaut/playwright"
       ? Object.fromEntries(
-          ciFiles.map((file) => [
-            `ci/${file}`,
-            file.endsWith(".d.mts")
-              ? "export declare const ready: true;"
-              : "export const ready = true;",
-          ]),
+          ciFiles.map((file) => [file, readFileSync(resolve("packages/playwright", file))]),
         )
       : {}),
     ...extraFiles,
@@ -104,6 +91,12 @@ test("the public package audit accepts actual npm archives and rejects private f
     () => auditTarball(extraCi.bytes, extraCi.expected),
     /Unexpected public package file/,
   );
+  const runtimeLock = JSON.parse(readFileSync("packages/playwright/ci/runtime-lock.json"));
+  runtimeLock.packages["node_modules/visonaut"].integrity = "";
+  const unlocked = packFixture("@visonaut/playwright", {
+    "ci/runtime-lock.json": JSON.stringify(runtimeLock),
+  });
+  assert.throws(() => auditTarball(unlocked.bytes, unlocked.expected));
 });
 
 test("artifact verification binds both tarballs and their hashes to one source commit", async () => {
