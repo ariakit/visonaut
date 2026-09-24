@@ -127,6 +127,15 @@ afterAll(async () => {
   await runtime?.dispose();
 });
 
+it("enables automatic Ariakit pre-run checks only in production", () => {
+  expect(apiBindings(env).configuration.workflowOwned).toBeUndefined();
+  const production = unstable_readConfig({
+    config: fileURLToPath(new URL("../wrangler.jsonc", import.meta.url)),
+    env: "production",
+  });
+  expect(production.vars?.VISONAUT_WORKFLOW_OWNED).toBeTruthy();
+});
+
 beforeEach(async () => {
   env = {
     ...env,
