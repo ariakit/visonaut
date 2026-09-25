@@ -12,7 +12,12 @@ import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { trySealRun } from "./ingest.js";
-import { candidateForWebhook, ensurePreRunCheck, settlePreRunWorkflow } from "./pre-run.js";
+import {
+  candidateForWebhook,
+  ensurePreRunCheck,
+  hasPinnedMainWorkflow,
+  settlePreRunWorkflow,
+} from "./pre-run.js";
 import { materializeWorkflowRun } from "./workflow-materialize.js";
 
 interface AppLifecycle {
@@ -157,7 +162,9 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
   if (webhook.event === "push" && context.configuration.workflowOwned) {
     const github = await createGitHubClient(context.configuration.github);
     const candidate = await candidateForWebhook(github, webhook);
-    if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
+    if (candidate && (await hasPinnedMainWorkflow(context, github, candidate.testedSha))) {
+      await ensurePreRunCheck(context, github, candidate, webhook);
+    }
   }
   if (webhook.event === "merge_group") {
     if (webhook.payload.action === "checks_requested") {
