@@ -267,14 +267,16 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   const captureJobs = latestJobs.filter(
     (job) => typeof job.name === "string" && job.name.startsWith(run.capture_job_prefix),
   );
+  // The signed Submit job stages the combined bundle.
   if (!captureJobs.length) {
-    throw new IncompleteError("The workflow did not execute a trusted capture job.");
+    captureJobs.push(submitJobs[0]);
   }
   const keys = new Set<string>();
   const bundles: ReconciledBundle[] = [];
   for (const job of captureJobs) {
     const name = String(job.name);
-    const key = name.slice(run.capture_job_prefix.length);
+    const key =
+      job.id === submitJobs[0].id ? "combined" : name.slice(run.capture_job_prefix.length);
     validateKey(key, "shardKey");
     if (keys.has(key)) {
       throw new IncompleteError("The workflow has duplicate capture job names.");

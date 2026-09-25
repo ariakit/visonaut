@@ -219,7 +219,7 @@ test("environment records font and OS base without a hypothetical profile catalo
   }
 });
 
-test("signed upload job selects its exact check run and pinned workflow source", async () => {
+test("signed job selects its exact check run without a shard suffix in its name", async () => {
   const root = await fixture();
   try {
     const token = `e.${Buffer.from(
@@ -234,7 +234,12 @@ test("signed upload job selects its exact check run and pinned workflow source",
         json: async () => ({
           jobs: [
             {
-              name: "App / Visonaut / upload / desktop-42",
+              name: "App / Visual / Submit",
+              id: 455,
+              check_run_url: "https://api.github.com/repos/ariakit/example/check-runs/788",
+            },
+            {
+              name: "App / Visual / Submit",
               id: 456,
               check_run_url: "https://api.github.com/repos/ariakit/example/check-runs/789",
             },
@@ -256,6 +261,7 @@ test("signed upload job selects its exact check run and pinned workflow source",
       fetchImpl,
     });
     assert.equal(context.jobId, "456");
+    assert.equal(context.jobName, "App / Visual / Submit");
     assert.equal(context.workflowSha, workflowSha);
     assert.match(calls[1], /page=1/);
     const invalidToken = `e.${Buffer.from(

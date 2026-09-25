@@ -15,7 +15,7 @@ import {
 import type { JWTVerifyGetKey } from "jose";
 import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, string } from "./input.js";
-import { workflowConfiguration } from "./workflow-owned.js";
+import { workflowConfiguration, workflowStagingJobName } from "./workflow-owned.js";
 
 const browsers = new Set(["chromium", "firefox", "webkit"]);
 const maximumKeyBytes = 4096;
@@ -75,7 +75,7 @@ export async function transferPrivateKey({
   let reusableWorkflowSha = context.configuration.reusableWorkflowSha;
   if (workflowOwned) {
     planDigest = await workflowSourceDigest(workflowOwned.reusableWorkflowSha);
-    jobName = `${workflowOwned.captureJobPrefix}${shardKey}`;
+    jobName = workflowStagingJobName(workflowOwned, shardKey);
     workflowPath = workflowOwned.callerWorkflowPath;
     reusableWorkflowRef = workflowOwned.reusableWorkflowRef;
     reusableWorkflowSha = workflowOwned.reusableWorkflowSha;

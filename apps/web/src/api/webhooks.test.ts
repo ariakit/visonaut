@@ -945,8 +945,11 @@ describe("pre-run App checks", () => {
     });
   });
 
-  it("leaves a signed submitted workflow pending after Gate fails", async () => {
+  it("leaves a signed submit-only workflow pending after Gate fails", async () => {
     const fixture = preRunFixture();
+    const submit = fixture.state.jobs.find((job) => job.name === preRunConfiguration.submitJobName);
+    if (!submit) throw new Error("Missing Submit job");
+    fixture.state.jobs = [submit];
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
     if (!candidate) throw new Error("Missing candidate");

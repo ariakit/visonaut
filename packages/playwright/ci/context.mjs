@@ -81,10 +81,12 @@ export async function bindSignedJob({
     if (!jobs.ok) throw new Error(`Cannot locate current workflow job: ${jobs.status}`);
     const body = await jobs.json();
     if (!Array.isArray(body.jobs)) throw new Error("GitHub returned an invalid job list");
+    // The service verifies the signed token and expected job name. This lookup
+    // only ties its check-run ID to GitHub's numeric job ID.
     matches.push(
       ...body.jobs.filter(
         (job) =>
-          job.name?.endsWith(` / ${shard}`) &&
+          typeof job.name === "string" &&
           new URL(job.check_run_url).pathname.endsWith(`/${checkRunId}`),
       ),
     );
