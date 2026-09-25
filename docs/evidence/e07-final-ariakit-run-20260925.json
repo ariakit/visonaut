@@ -1,0 +1,86 @@
+{
+  "workflowRun": "https://github.com/ariakit/ariakit/actions/runs/36139573940",
+  "head": "7eeeb5bada6b8b0f95feb605245c0cb7d5649b0a",
+  "testedSha": "d79137e9fa2123b38ae16dfe7b44d13ac1b4bbe1",
+  "comparisonRun": "94149fff-af8d-4f24-b11f-232e15268970",
+  "source": "Cloudflare GraphQL project-resource analytics, read-only",
+  "before": {
+    "queriedAt": "2026-09-25T12:55:39Z",
+    "window": {
+      "startInclusive": "2026-09-25T12:00:00Z",
+      "endExclusive": "2026-09-25T12:50:00Z"
+    }
+  },
+  "after": {
+    "queriedAt": "2026-09-25T13:56:50Z",
+    "window": {
+      "startInclusive": "2026-09-25T12:00:00Z",
+      "endExclusive": "2026-09-25T13:55:00Z"
+    }
+  },
+  "capture": {
+    "reviewVariants": 1058,
+    "distinctImages": 993,
+    "captureJobs": 2,
+    "submitJobs": 1,
+    "humanApprovedVariants": 3,
+    "reusedDecisionVariants": 1055
+  },
+  "delta": {
+    "workers": {
+      "visonaut": {
+        "errors": 0,
+        "requests": 1743,
+        "subrequests": 1850
+      },
+      "visonaut-compare": {
+        "errors": 0,
+        "requests": 1021,
+        "subrequests": 0
+      },
+      "visonaut-webhook": {
+        "errors": 0,
+        "requests": 370,
+        "subrequests": 580
+      }
+    },
+    "d1DayToQuery": {
+      "visonaut-production": {
+        "readQueries": 93754,
+        "rowsRead": 2093260,
+        "rowsWritten": 36681,
+        "writeQueries": 10406
+      }
+    },
+    "r2Operations": {
+      "visonaut-production-images": {
+        "GetObject": 1304,
+        "HeadBucket": 4,
+        "PutObject": 1049
+      },
+      "visonaut-production-quarantine": {
+        "GetObject": 6,
+        "HeadBucket": 2,
+        "PutObject": 3
+      },
+      "visonaut-production-backups": {
+        "GetObject": 2,
+        "HeadBucket": 2,
+        "PutObject": 13
+      }
+    },
+    "queueOperations": {
+      "visonaut-production-comparisons": {},
+      "visonaut-production-operations": {
+        "DeleteMessage": 23,
+        "ReadMessage": 23,
+        "WriteMessage": 23
+      }
+    }
+  },
+  "limits": [
+    "Worker, R2, and Queue deltas are between two cumulative UTC windows and may include unrelated project traffic.",
+    "D1 analytics use a full UTC calendar-day filter and are time-of-query differences, not the same 65-minute interval.",
+    "Cloudflare GraphQL datasets can be sampled or delayed. This receipt is not billable usage or a monthly cost."
+  ]
+}

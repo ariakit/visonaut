@@ -1,0 +1,27 @@
+{
+  "slot": "2026-09-25T12Z",
+  "state": "complete",
+  "createdAt": 1790337641917,
+  "completionMarkerCreatedAt": 1790337641917,
+  "completionMarkerCompletedAt": 1790338458666,
+  "completedAt": 1790338466618,
+  "durationSeconds": 824.701,
+  "previousCompletionSpacingSeconds": 43262.027,
+  "groups": 16,
+  "pages": 1,
+  "objects": 5171,
+  "imageBytes": 324530910,
+  "sqlBytes": 218571585,
+  "readback": {
+    "sqlSha256": "bf7b60ccdbf9828c6c8ab8cabc275da24022de75989fc42e7ea909d24434ef2c",
+    "membershipPageBytes": 4731,
+    "membershipPageSha256": "e3f69ff691381fdd5c0606980f988149d6924f22f0bf783311a8d3dfb3ae4dea",
+    "completionMarkerBytes": 551,
+    "completionMarkerSha256": "58085eaf17f8bc94d2d305a606c41ca820ceaadc2b9a97f75bfb6236f04e941b"
+  },
+  "completionMarkerSnapshotFieldsMatchDatabaseRow": true,
+  "membershipPageLengthMatches": true,
+  "membershipPageDigestMatches": true,
+  "sqlLengthAndDigestMatch": true,
+  "limits": "Read-only verification of one completed production slot; no restore or future-cadence claim."
+}
