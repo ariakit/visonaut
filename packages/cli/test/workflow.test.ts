@@ -14,8 +14,15 @@ const adapter = vi.hoisted(() => ({
     server: "https://visonaut.com",
   })),
 }));
+const submit = vi.hoisted(() => ({
+  prepareBundleSubmission: vi.fn(async () => ({
+    directory: "/tmp/combined",
+    server: "https://visonaut.com",
+  })),
+}));
 
 vi.mock("@visonaut/playwright/ci", () => adapter);
+vi.mock("../src/bundle-submit.js", () => submit);
 
 const directories: string[] = [];
 
@@ -79,7 +86,11 @@ describe("workflow artifact commands", () => {
         VISONAUT_FONT_PACKAGE: "@fontsource-variable/inter",
       },
     );
-    expect(result).toEqual({ directory: "/tmp/upload", server: "https://visonaut.com" });
+    expect(result).toEqual({
+      command: "upload",
+      directory: "/tmp/upload",
+      server: "https://visonaut.com",
+    });
     expect(adapter.uploadEncryptedTransfer).toHaveBeenCalledWith({
       options: {
         "--shard": "linux",
@@ -107,5 +118,41 @@ describe("workflow artifact commands", () => {
       options: expect.not.objectContaining({ "--font-package": expect.anything() }),
       environment: expect.anything(),
     });
+  });
+
+  it("routes named encrypted packs to one signed Submit job", async () => {
+    const result = await runWorkflowCommand(
+      ["submit", "--bundle", "linux=/tmp/linux.enc", "--bundle", "safari=/tmp/safari.enc"],
+      environment,
+    );
+    expect(result).toEqual({
+      command: "submit",
+      directory: "/tmp/combined",
+      server: "https://visonaut.com",
+    });
+    expect(submit.prepareBundleSubmission).toHaveBeenCalledWith(
+      [
+        { shard: "linux", file: "/tmp/linux.enc" },
+        { shard: "safari", file: "/tmp/safari.enc" },
+      ],
+      environment,
+    );
+    await expect(
+      runWorkflowCommand(
+        ["submit", "--bundle", "linux=/tmp/linux.enc", "--bundle", "linux=/tmp/safari.enc"],
+        environment,
+      ),
+    ).rejects.toMatchObject({ exitCode: 2 });
+  });
+
+  it("lets a signed bundle submission select its service origin", async () => {
+    await runWorkflowCommand(
+      ["submit", "--bundle", "linux=/tmp/linux.enc", "--server", "https://preview.visonaut.com"],
+      environment,
+    );
+    expect(submit.prepareBundleSubmission).toHaveBeenCalledWith(
+      [{ shard: "linux", file: "/tmp/linux.enc" }],
+      { ...environment, VISONAUT_SERVER: "https://preview.visonaut.com" },
+    );
   });
 });

@@ -1079,6 +1079,38 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
+  it("accepts one signed Submit job that stages the combined capture bundle", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) throw new Error("Expected workflow configuration.");
+    configuration.captureJobPrefix = "App / Submit / ";
+    configuration.submitJobName = `${configuration.captureJobPrefix}${test.shardKey}`;
+    await database
+      .prepare("UPDATE ingest_staged_runs SET capture_job_prefix=?, submit_job_name=? WHERE id=?")
+      .bind(configuration.captureJobPrefix, configuration.submitJobName, test.runId)
+      .run();
+    await database
+      .prepare("UPDATE ingest_staged_bundles SET job_name=? WHERE run_id=?")
+      .bind(configuration.submitJobName, test.runId)
+      .run();
+    const { manifestDigest } = await stage(test);
+    const github = await terminalGitHub(test, manifestDigest);
+    test.githubResponses.set(`${github.base}/attempts/1/jobs?per_page=100&page=1`, {
+      total_count: 1,
+      jobs: [github.capture],
+    });
+    await database
+      .prepare(
+        "UPDATE ingest_staged_runs SET submit_job_id=?, submit_check_run_id=?, submit_verified_json=? WHERE id=?",
+      )
+      .bind(test.jobId, test.jobId, JSON.stringify(test.verified), test.runId)
+      .run();
+    const complete = await reconcileWorkflowJobSet(test.context, test.runId);
+    expect(complete.bundles.map(({ key, jobId }) => ({ key, jobId }))).toEqual([
+      { key: test.shardKey, jobId: test.jobId },
+    ]);
+  });
+
   it("accepts a failed Gate only after pinned capture and submit jobs succeed", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);
