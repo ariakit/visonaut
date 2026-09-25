@@ -216,6 +216,11 @@ export function publicationNeeded(record, registry, tag) {
   }
   assert.equal(existing.dist?.integrity, record.integrity, "Published version has different bytes");
   assert.equal(
+    existing.dist?.attestations?.provenance?.predicateType,
+    "https://slsa.dev/provenance/v1",
+    "Published version has no provenance attestation",
+  );
+  assert.equal(
     registry["dist-tags"]?.[tag],
     record.version,
     "Published bytes match, but the requested npm tag must be set separately",
@@ -393,7 +398,7 @@ async function publish(directory) {
         "--tag",
         tag,
         "--ignore-scripts",
-        "--provenance=false",
+        "--provenance",
       ],
       { stdio: "inherit" },
     );

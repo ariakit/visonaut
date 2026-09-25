@@ -189,13 +189,32 @@ test("a partial publication can resume only when existing bytes and tags match",
   const record = { version: "1.2.3", integrity: "sha512-expected" };
   assert.equal(publicationNeeded(record, null, "latest"), true);
   const registry = {
-    versions: { "1.2.3": { dist: { integrity: record.integrity } } },
+    versions: {
+      "1.2.3": {
+        dist: {
+          integrity: record.integrity,
+          attestations: { provenance: { predicateType: "https://slsa.dev/provenance/v1" } },
+        },
+      },
+    },
     "dist-tags": { latest: "1.2.3" },
   };
   assert.equal(publicationNeeded(record, registry, "latest"), false);
   assert.throws(
     () => publicationNeeded({ ...record, integrity: "sha512-other" }, registry, "latest"),
     /different bytes/,
+  );
+  assert.throws(
+    () =>
+      publicationNeeded(
+        record,
+        {
+          ...registry,
+          versions: { "1.2.3": { dist: { integrity: record.integrity } } },
+        },
+        "latest",
+      ),
+    /no provenance attestation/,
   );
   assert.throws(() => publicationNeeded(record, registry, "next"), /tag must be set separately/);
 });
