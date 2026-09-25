@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { loadCapture, validateImages } from "./files.js";
 import { CliError } from "./errors.js";
+import { prepareBundleSubmission } from "./bundle-submit.js";
 
 function required(environment: Record<string, string | undefined>, name: string): string {
   const value = environment[name];
@@ -14,7 +15,9 @@ function required(environment: Record<string, string | undefined>, name: string)
 export async function runWorkflowCommand(
   argv: string[],
   environment: Record<string, string | undefined>,
-): Promise<"packed" | { directory: string; server: string } | undefined> {
+): Promise<
+  "packed" | { command: "upload" | "submit"; directory: string; server: string } | undefined
+> {
   if (argv[0] === "pack") {
     if (argv.length !== 5 || argv[1] !== "--dir" || argv[3] !== "--output") {
       throw new CliError("Pack requires --dir <capture-directory> --output <encrypted-file>.", 2);
@@ -48,13 +51,51 @@ export async function runWorkflowCommand(
     );
     return "packed";
   }
+  if (argv[0] === "submit" && argv.includes("--bundle")) {
+    const bundles: { shard: string; file: string }[] = [];
+    const shards = new Set<string>();
+    let server: string | undefined;
+    if (argv.length < 3 || argv.length > 35 || argv.length % 2 !== 1) {
+      throw new CliError("Submit requires 1–16 --bundle pairs and an optional --server.", 2);
+    }
+    for (let index = 1; index < argv.length; index += 2) {
+      const value = argv[index + 1] ?? "";
+      if (argv[index] === "--server") {
+        if (server || !value) {
+          throw new CliError("Submit accepts one --server <origin>.", 2);
+        }
+        server = value;
+        continue;
+      }
+      const separator = value.indexOf("=");
+      const shard = value.slice(0, separator);
+      const file = value.slice(separator + 1);
+      if (
+        argv[index] !== "--bundle" ||
+        separator < 1 ||
+        !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(shard) ||
+        !file ||
+        shards.has(shard)
+      ) {
+        throw new CliError("Each bundle needs a unique shard and an encrypted file.", 2);
+      }
+      shards.add(shard);
+      bundles.push({ shard, file });
+    }
+    if (!bundles.length) {
+      throw new CliError("Submit requires at least one --bundle.", 2);
+    }
+    const selected = server ? { ...environment, VISONAUT_SERVER: server } : environment;
+    const prepared = await prepareBundleSubmission(bundles, selected);
+    return { command: "submit", ...prepared };
+  }
   if (argv[0] !== "upload" || !argv.includes("--bundle")) return;
   if (argv.length !== 3 || argv[1] !== "--bundle" || !argv[2]) {
     throw new CliError("Upload --bundle requires one encrypted file.", 2);
   }
   const shard = required(environment, "VISONAUT_SHARD");
   const { uploadEncryptedTransfer } = await import("@visonaut/playwright/ci");
-  return uploadEncryptedTransfer({
+  const uploaded = await uploadEncryptedTransfer({
     options: {
       "--shard": shard,
       "--comparison-policy-digest": required(environment, "VISONAUT_COMPARISON_POLICY_DIGEST"),
@@ -67,4 +108,5 @@ export async function runWorkflowCommand(
     },
     environment,
   });
+  return { command: "upload", ...uploaded };
 }

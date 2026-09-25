@@ -1,5 +1,17 @@
 # visonaut
 
+## 0.3.1
+
+### Patch Changes
+
+- Submit encrypted visual packs in one signed job
+
+  `visonaut submit --bundle` now combines named capture packs, uploads their images, and submits the run from one trusted GitHub Actions job. Visual jobs still use `visonaut pack` without an OIDC token.
+
+  ```sh
+  visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
+  ```
+
 ## 0.2.0
 
 ### Minor Changes

@@ -4,49 +4,50 @@ The Visonaut CLI stages a capture shard, submits a trusted GitHub workflow run, 
 
 ```sh
 pnpm add -D visonaut @visonaut/playwright
-# In the OIDC-free visual job:
-pnpm exec visonaut pack --dir visonaut --output visonaut.enc
-# In a separate signed upload job:
-pnpm exec visonaut upload --bundle visonaut.enc
-# After every upload job succeeds:
-pnpm exec visonaut submit --run "$GITHUB_RUN_ID"
+# In each OIDC-free visual job:
+visonaut pack --dir visonaut-linux --output visonaut-linux.enc
+visonaut pack --dir visonaut-safari --output visonaut-safari.enc
+# After both encrypted files reach the signed Submit job:
+visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
 ```
 
 Set `VISONAUT_SERVER` to the service origin. You can also pass `--server https://your-service.example`. The origin must use HTTPS. Local development can use HTTP on `localhost`, `127.0.0.1`, or `::1`. Redirects are refused. The CLI sends all image bytes through the service.
 
-## GitHub Actions uploads
+## GitHub Actions submission
 
-Packing needs no GitHub OIDC permission. Upload and submit require GitHub Actions OIDC. Give only trusted upload and submit jobs `id-token: write`; run candidate tests in separate render jobs without OIDC. Upload requests the service origin as its audience. Submit requests the service origin followed by `/submit`. The service verifies the pinned workflow, job, run, attempt, and tested commit before it accepts either operation.
+Packing needs no GitHub OIDC permission. Give only the trusted Submit job `id-token: write`; run candidate tests in separate visual jobs without OIDC. Submit requests GitHub identity for the transfer key, upload, and final submit. The service verifies the pinned workflow, job, run, attempt, and tested commit before it accepts the run.
+
+The capture jobs report their own OS and font profile in each pack. Submit checks that profile data is well formed and keeps it with the images, but does not measure those machines again. The pinned workflow controls which capture jobs can feed Submit.
 
 ```yaml
 jobs:
-  visual:
+  visual-linux:
     permissions:
       contents: read
     steps:
       # Run the visual tests and produce the reporter's capture directory.
-      - run: pnpm exec visonaut pack --dir visonaut --output visonaut.enc
+      - run: visonaut pack --dir visonaut-linux --output visonaut-linux.enc
       # Upload the encrypted file as a short-lived Actions artifact.
-  upload:
-    needs: visual
+  visual-safari:
+    permissions:
+      contents: read
+    steps:
+      - run: visonaut pack --dir visonaut-safari --output visonaut-safari.enc
+      # Upload the encrypted file as a short-lived Actions artifact.
+  submit:
+    needs: [visual-linux, visual-safari]
     permissions:
       actions: read
       id-token: write
     steps:
-      # Download the encrypted artifact from the visual job.
-      - run: pnpm exec visonaut upload --bundle visonaut.enc
-  submit:
-    needs: upload
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - run: pnpm exec visonaut submit --run "$GITHUB_RUN_ID"
+      # Download both encrypted artifacts from the visual jobs.
+      - run: visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
+      # Upload the generated receipt as an Actions artifact.
 ```
 
-Set `VISONAUT_SERVER` in the visual and trusted jobs. The example shows the dependency, not a complete workflow. The pinned workflow owns the capture matrix and job names. `pack` requires the reporter's `manifest.json`, measured `environment.json`, and images in the same directory. `upload --bundle` decrypts and validates that artifact in the signed job before staging it. The plain `upload --dir` form reads `manifest.json` inside the capture directory (`visonaut` by default). Image paths must stay inside the directory and cannot contain symbolic links. Each image must match its declared byte count and SHA-256 digest. The service checks the actual format and decoded content again. A client manifest cannot prove that a run is complete.
+Set `VISONAUT_SERVER` in the visual and trusted jobs. The example shows the dependency, not a complete workflow. The pinned workflow owns the capture matrix and job names. `pack` requires the reporter's `manifest.json`, `environment.json`, and images in the same directory. `submit --bundle` decrypts every named pack, checks its contents, combines the captures into one manifest, uploads them, and records submit intent. The Submit job must publish the generated receipt artifact named by its `name` output. Image paths must stay inside the directory and cannot contain symbolic links. Each image must match its declared byte count and SHA-256 digest. The service checks the actual format and decoded content again. A client manifest cannot prove that a run is complete.
 
-`submit --run` takes the numeric GitHub workflow run ID from the final pinned job. It records submission intent and returns before the service verifies that the signed submit job and every pinned capture job succeeded and staged a valid bundle. The surrounding CI workflow may still be running while Gate waits for Visonaut review. For a pinned one-upload-job workflow, `submit --dir` uploads and submits from that one trusted job. The service refuses this form from a submit-only job in a multi-job workflow. A successful upload or submit does not grant visual approval. Neither command waits for a person.
+`submit --run` remains available for workflows with separate signed upload jobs. `submit --bundle` is for one signed job that receives all encrypted packs. Both return before the service verifies the completed Submit job and its receipt. The surrounding CI workflow may still be running while Gate waits for Visonaut review. A successful upload or submit does not grant visual approval. Neither command waits for a person.
 
 To retry an interrupted upload, use the same manifest. The service accepts identical shard replays and can omit tickets for images it already has. Changed files, conflicting shard data, or a superseded attempt fail. For image uploads and status reads, the CLI retries an explicit temporary `503` response with a valid `Retry-After` header up to five total attempts within one 30-second deadline. It resends the same validated image bytes. It does not retry authentication failures, invalid images, conflicts, network failures, or other commands.
 

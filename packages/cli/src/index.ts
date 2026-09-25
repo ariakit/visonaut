@@ -22,6 +22,7 @@ const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
 const HELP = `Usage:
   visonaut pack --dir <capture-directory> --output <encrypted-file>
   visonaut upload --bundle <encrypted-file>
+  visonaut submit --bundle <shard>=<encrypted-file> [--bundle <shard>=<encrypted-file> ...] [--server <origin>]
   visonaut upload [--dir <capture-directory>] [--server <origin>] [--json]
   visonaut submit [--run <id> | --dir <capture-directory>] [--server <origin>] [--json]
   visonaut status --run <id> [--server <origin>] [--json]
@@ -31,7 +32,8 @@ VISONAUT_RUN supplies the run ID when status has no --run.
 Upload and submit require GitHub Actions OIDC (id-token: write).
 Status requires VISONAUT_TOKEN, a maintainer session token.
 Upload stages one shard. Submit --run uses the numeric GitHub workflow run ID.
-Submit --dir uploads and submits from one pinned upload job. Neither is visual approval.
+Submit --bundle combines encrypted packs in one signed job, then uploads and submits them.
+Submit --dir uploads and submits from one pinned job. Neither is visual approval.
 
 Exit codes: 0 success, 1 operation failure, 2 invalid arguments,
             3 status is not passed, 4 authentication or permission failure.
@@ -474,7 +476,7 @@ export async function runCli({
     if (workflow === "packed") return 0;
     if (workflow) {
       return runCli({
-        argv: ["upload", "--dir", workflow.directory],
+        argv: [workflow.command, "--dir", workflow.directory],
         environment: { ...environment, VISONAUT_SERVER: workflow.server },
         stdout,
         stderr,
