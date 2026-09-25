@@ -203,7 +203,7 @@ const bundleSql = `
     ON manifest.run_id = bundle.run_id AND manifest.job_id = bundle.job_id
 `;
 
-/** Resolve only the matrix proved by the terminal pinned workflow. */
+/** Resolve only the matrix proved by successful pinned capture and submit jobs. */
 export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: string) {
   const configuration = context.configuration.workflowOwned;
   if (!configuration || !context.configuration.trustedExecutorDigest) {
@@ -242,12 +242,10 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   const github = await createGitHubClient(context.configuration.github);
   await workflowAttempt(github, submit);
   const attempt = await workflowAttempt(github, submit, run.workflow_attempt > 1);
-  if (
-    attempt.status !== "completed" ||
-    attempt.conclusion !== "success" ||
-    attempt.path !== run.caller_workflow_path
-  ) {
-    throw new IncompleteError("The complete pinned workflow has not succeeded.");
+  // Gate may still be running or may fail while a visual review is pending.
+  // The signed submit and every pinned capture job must succeed below.
+  if (attempt.path !== run.caller_workflow_path) {
+    throw new IncompleteError("The pinned workflow path changed.");
   }
   const attemptJobs = await completeWorkflowJobs(github, run.workflow_run_id, run.workflow_attempt);
   const latestJobs =
@@ -357,8 +355,8 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     throw new IncompleteError("A staged upload is absent from the final GitHub matrix.");
   }
   const current = await workflowAttempt(github, submit);
-  if (current.status !== "completed" || current.conclusion !== "success") {
-    throw new IncompleteError("The workflow conclusion changed during reconciliation.");
+  if (current.path !== run.caller_workflow_path) {
+    throw new IncompleteError("The pinned workflow path changed during reconciliation.");
   }
   return {
     run,

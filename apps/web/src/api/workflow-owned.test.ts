@@ -1079,7 +1079,7 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
-  it("rejects failed workflows and a submit job outside the pinned name", async () => {
+  it("accepts a failed Gate only after pinned capture and submit jobs succeed", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);
     const jobs = await terminalGitHub(test, manifestDigest);
@@ -1094,11 +1094,7 @@ describe("workflow-owned upload staging", () => {
     };
     test.githubResponses.set(jobs.base, completed);
     test.githubResponses.set(`${jobs.base}/attempts/1`, completed);
-    await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
-      "has not succeeded",
-    );
-    test.githubResponses.set(jobs.base, { ...completed, conclusion: "success" });
-    test.githubResponses.set(`${jobs.base}/attempts/1`, { ...completed, conclusion: "success" });
+    expect((await reconcileWorkflowJobSet(test.context, test.runId)).bundles).toHaveLength(1);
     test.githubResponses.set(`${jobs.base}/attempts/1/jobs?per_page=100&page=1`, {
       total_count: 2,
       jobs: [jobs.capture, { ...jobs.submit, name: "Visonaut / untrusted-submit" }],
@@ -1106,12 +1102,58 @@ describe("workflow-owned upload staging", () => {
     await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
       "unique trusted submit job",
     );
+    test.githubResponses.set(`${jobs.base}/attempts/1/jobs?per_page=100&page=1`, {
+      total_count: 2,
+      jobs: [
+        jobs.capture,
+        {
+          ...jobs.submit,
+          name: test.context.configuration.workflowOwned?.submitJobName,
+          conclusion: "failure",
+        },
+      ],
+    });
+    await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
+      "successful trusted job",
+    );
+    test.githubResponses.set(`${jobs.base}/attempts/1/jobs?per_page=100&page=1`, {
+      total_count: 2,
+      jobs: [{ ...jobs.capture, conclusion: "failure" }, jobs.submit],
+    });
+    await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
+      "successful trusted job",
+    );
   });
 
-  it("materializes the measured profile only after the full workflow succeeds", async () => {
+  it("materializes after signed jobs succeed while Gate is still pending", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);
-    await terminalGitHub(test, manifestDigest);
+    const jobs = await terminalGitHub(test, manifestDigest);
+    const inProgress = {
+      id: Number(test.manifest.run.workflowRunId),
+      run_attempt: 1,
+      head_sha: test.verified.sourceHead,
+      run_started_at: "2026-09-22T14:56:30Z",
+      status: "in_progress",
+      conclusion: null,
+      path: test.context.configuration.workflowOwned?.callerWorkflowPath,
+    };
+    test.githubResponses.set(jobs.base, inProgress);
+    test.githubResponses.set(`${jobs.base}/attempts/1`, inProgress);
+    test.githubResponses.set(`${jobs.base}/attempts/1/jobs?per_page=100&page=1`, {
+      total_count: 3,
+      jobs: [
+        jobs.capture,
+        jobs.submit,
+        {
+          ...jobs.submit,
+          id: Number(jobs.submit.id) + 1,
+          name: "Gate",
+          status: "in_progress",
+          conclusion: null,
+        },
+      ],
+    });
     const subject = `${test.manifest.run.workflowRunId}:1`;
     await recordEvent(database, {
       kind: "staged-reconciliation",
@@ -1183,9 +1225,9 @@ describe("workflow-owned upload staging", () => {
     );
     const completed = test.githubResponses.get(`${base}/attempts/1`);
     if (!completed || typeof completed !== "object") throw new Error("Expected a workflow run.");
-    const failed = { ...completed, conclusion: "failure" };
-    test.githubResponses.set(base, failed);
-    test.githubResponses.set(`${base}/attempts/1`, failed);
+    const changedWorkflow = { ...completed, path: ".github/workflows/other.yml" };
+    test.githubResponses.set(base, changedWorkflow);
+    test.githubResponses.set(`${base}/attempts/1`, changedWorkflow);
     for (let attempt = 0; attempt < 4; attempt += 1) {
       expect((await reconcileStagedWorkflows(test.context, 1)).checked).toBe(1);
     }

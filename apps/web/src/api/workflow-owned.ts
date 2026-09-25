@@ -28,6 +28,7 @@ import {
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "@visonaut/service";
 import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
+import { ensureSignedAttemptCheck } from "./pre-run.js";
 
 interface StagedRun {
   id: string;
@@ -227,6 +228,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     `${configuration.captureJobPrefix}${body.shardKey}`,
     context.configuration.oidcAudience,
   );
+  if (verified.workflowAttempt > 1) await ensureSignedAttemptCheck(context, github, verified);
   const run = await reserveVerifiedStagedRun(context, verified, sourceDigest);
   const jobName = `${configuration.captureJobPrefix}${body.shardKey}`;
   await context.database
@@ -766,6 +768,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     configuration.submitJobName,
     new URL("/submit", context.configuration.origin).href,
   );
+  if (verified.workflowAttempt > 1) await ensureSignedAttemptCheck(context, github, verified);
   if (!run) {
     run = await reserveVerifiedStagedRun(context, verified, seed.workflow_source_digest);
   }
