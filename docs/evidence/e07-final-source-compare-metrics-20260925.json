@@ -1,0 +1,106 @@
+{
+  "collectedAt": "2026-09-25T14:40:05Z",
+  "httpStatus": 200,
+  "dataset": "workersInvocationsAdaptive",
+  "scriptName": "visonaut-compare",
+  "windowUtc": {
+    "start": "2026-09-25T12:50:00.000Z",
+    "endExclusive": "2026-09-25T14:00:00.000Z"
+  },
+  "query": {
+    "accountTag": "<redacted>",
+    "alias": "compare",
+    "dataset": "workersInvocationsAdaptive",
+    "limit": 100,
+    "filter": {
+      "scriptName": "visonaut-compare",
+      "datetime_geq": "2026-09-25T12:50:00.000Z",
+      "datetime_lt": "2026-09-25T14:00:00.000Z"
+    },
+    "selectedFields": [
+      "sum.requests",
+      "sum.errors",
+      "avg.sampleInterval",
+      "max.cpuTime",
+      "max.memoryUsageBytes",
+      "max.wasmMemoryBytes",
+      "max.wallTime",
+      "quantiles.cpuTimeP50",
+      "quantiles.cpuTimeP90",
+      "quantiles.cpuTimeP99",
+      "quantiles.memoryUsageBytesP50",
+      "quantiles.memoryUsageBytesP90",
+      "quantiles.memoryUsageBytesP99",
+      "quantiles.wallTimeP50",
+      "quantiles.wallTimeP90",
+      "quantiles.wallTimeP99",
+      "dimensions.scriptVersion",
+      "dimensions.status"
+    ]
+  },
+  "graphqlErrors": null,
+  "resultRowCount": 2,
+  "scope": "Existing production telemetry; this window includes other requests and adaptive sampling may omit individual invocations",
+  "rows": [
+    {
+      "avg": {
+        "sampleInterval": 1
+      },
+      "dimensions": {
+        "scriptVersion": "c7eab191-ff64-410b-84f4-04fe2c20f4cd",
+        "status": "success"
+      },
+      "max": {
+        "cpuTime": 7725,
+        "memoryUsageBytes": 20459596,
+        "wallTime": 1605434,
+        "wasmMemoryBytes": 17891328
+      },
+      "quantiles": {
+        "cpuTimeP50": 6006,
+        "cpuTimeP90": 7725,
+        "cpuTimeP99": 7725,
+        "memoryUsageBytesP50": 20459596,
+        "memoryUsageBytesP90": 20459596,
+        "memoryUsageBytesP99": 20459596,
+        "wallTimeP50": 1539232,
+        "wallTimeP90": 1605434,
+        "wallTimeP99": 1605434
+      },
+      "sum": {
+        "errors": 0,
+        "requests": 4
+      }
+    },
+    {
+      "avg": {
+        "sampleInterval": 1.0473251028806585
+      },
+      "dimensions": {
+        "scriptVersion": "76644415-80d3-4204-be33-859852e7e2c0",
+        "status": "success"
+      },
+      "max": {
+        "cpuTime": 181365,
+        "memoryUsageBytes": 96748074,
+        "wallTime": 1600587,
+        "wasmMemoryBytes": 44171264
+      },
+      "quantiles": {
+        "cpuTimeP50": 31782,
+        "cpuTimeP90": 100356,
+        "cpuTimeP99": 141008,
+        "memoryUsageBytesP50": 69673510,
+        "memoryUsageBytesP90": 81951976,
+        "memoryUsageBytesP99": 90172980,
+        "wallTimeP50": 41325,
+        "wallTimeP90": 124745,
+        "wallTimeP99": 317296
+      },
+      "sum": {
+        "errors": 0,
+        "requests": 1018
+      }
+    }
+  ]
+}
