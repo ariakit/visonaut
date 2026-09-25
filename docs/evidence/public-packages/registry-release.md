@@ -13,7 +13,7 @@ A separate consumer, outside the workspace, installed the two public registry ve
 
 The exact-byte match verifies that the installed first versions correspond to the recorded current package source. It does not prove npm trusted-publisher configuration or a full Ariakit capture cycle. Those checks remain open before the required-check cutover. No `@visonaut/cli` alias was published or selected.
 
-## Current 0.3.0 registry check
+## Historical 0.3.0 registry check
 
 On September 25, 2026, the public registry served [`visonaut@0.3.0`](https://www.npmjs.com/package/visonaut/v/0.3.0) and [`@visonaut/playwright@0.3.0`](https://www.npmjs.com/package/@visonaut/playwright/v/0.3.0). Fresh `npm pack` downloads matched each version's registry SHA-512 integrity, byte count, and the repository's `auditTarball` packed-file allowlist.
 
@@ -25,3 +25,5 @@ On September 25, 2026, the public registry served [`visonaut@0.3.0`](https://www
 An isolated consumer installed the exact public versions with install scripts disabled, Node 24.18.0, pnpm 12.5.1, Playwright 1.63.0, and TypeScript 6.0.2. The adapter, reporter, and CLI ESM exports imported. A prepared `visual(page, { item, variant })` call type-checked under strict NodeNext and Bundler resolution and captured a local Chromium page. `pnpm exec visonaut --help` passed. Without `VISONAUT_TOKEN`, status returned exit 4. A loopback-only status fixture used a synthetic bearer token and returned the expected exits for passed (0), needs-review (3), permission denial (4), and invalid protocol state (1). It did not contact the deployed service.
 
 `npm audit signatures` with npm 12.0.1 verified registry signatures for all six installed packages, with zero missing or invalid signatures. Three Playwright packages had verified provenance attestations; neither Visonaut package did. The [0.3.0 release workflow](https://github.com/ariakit/visonaut/actions/runs/36046849182) explicitly disabled provenance, a setting retained from when this repository was private. Both packages now have trusted publishers and the repository is public. The release workflow fix requests provenance for the next immutable version; its actual attestation remains to be checked after publication.
+
+The [current 0.3.2 CLI and 0.3.1 adapter audit](./current-release-20260925.md) verifies the later public tarballs, clean consumer, and provenance. The 0.3.0 results above remain historical.
