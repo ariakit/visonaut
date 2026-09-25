@@ -1220,6 +1220,50 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
+  it("resolves retry alerts for submitted attempts whose App check failed", async () => {
+    const test = await fixture();
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    const subject = `${test.manifest.run.workflowRunId}:1`;
+    const check = await database
+      .prepare(
+        "SELECT check_id FROM pre_run_checks WHERE workflow_run_id = ? AND workflow_attempt = 1",
+      )
+      .bind(test.manifest.run.workflowRunId)
+      .first<{ check_id: string }>();
+    if (!check) throw new Error("Expected the App check.");
+    await database
+      .prepare("UPDATE pre_run_checks SET state='failed' WHERE check_id = ?")
+      .bind(check.check_id)
+      .run();
+    const checkPath = `/repos/ariakit/ariakit/check-runs/${check.check_id}`;
+    const remoteCheck = test.githubResponses.get(checkPath);
+    if (!remoteCheck || typeof remoteCheck !== "object") {
+      throw new Error("Expected the remote App check.");
+    }
+    test.githubResponses.set(checkPath, {
+      ...remoteCheck,
+      status: "completed",
+      conclusion: "failure",
+    });
+    await recordEvent(database, {
+      kind: "staged-reconciliation",
+      subject,
+      code: "retry-delayed",
+      now: Date.now(),
+    });
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 0,
+      progressed: 0,
+      errors: [],
+    });
+    const alert = await database
+      .prepare("SELECT resolved_at FROM operations_events WHERE kind = ? AND subject_id = ?")
+      .bind("staged-reconciliation", subject)
+      .first<{ resolved_at: number | null }>();
+    expect(alert?.resolved_at).not.toBeNull();
+  });
+
   it("recovers a transient missing original before the fifth retry", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);

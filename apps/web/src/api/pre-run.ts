@@ -758,17 +758,35 @@ async function workflowCandidate(
     );
   }
   const candidates: PreRunCheck[] = [];
-  for (const value of run.pull_requests) {
-    const association = object(value);
-    const number = association.number;
-    if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1) continue;
-    const row = await context.database
-      .prepare(
-        "SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? ORDER BY generation DESC LIMIT 1",
-      )
-      .bind(number, sourceSha)
-      .first<PreRunCheck>();
-    if (row?.repository_id === github.repositoryId) candidates.push(row);
+  const attempt = run.run_attempt;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    throw new SecurityError("workflow_candidate", 503, "The workflow attempt is unavailable.");
+  }
+  const bound = await attemptCheck(context, numericId(run.id), attempt);
+  if (bound) {
+    // Delayed webhooks must use their bound candidate, not a newer PR check.
+    if (
+      bound.repository_id !== github.repositoryId ||
+      bound.kind !== "pull_request" ||
+      bound.source_sha !== sourceSha ||
+      !run.pull_requests.some((value) => object(value).number === bound.pull_request_number)
+    ) {
+      throw new SecurityError("workflow_candidate", 503, "The bound candidate changed.");
+    }
+    candidates.push(bound);
+  } else {
+    for (const value of run.pull_requests) {
+      const association = object(value);
+      const number = association.number;
+      if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1) continue;
+      const row = await context.database
+        .prepare(
+          "SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? ORDER BY generation DESC LIMIT 1",
+        )
+        .bind(number, sourceSha)
+        .first<PreRunCheck>();
+      if (row?.repository_id === github.repositoryId) candidates.push(row);
+    }
   }
   if (candidates.length !== 1 || !candidates[0]) {
     throw new SecurityError(
@@ -799,6 +817,110 @@ async function workflowCandidate(
     throw new SecurityError("workflow_candidate", 503, "The pull-request merge ref changed.");
   }
   return row;
+}
+
+async function retireSupersededPullRequestAttempt(
+  context: ApiContext,
+  github: GitHubClient,
+  run: Record<string, unknown>,
+) {
+  if (run.event !== "pull_request" || run.status !== "completed") return false;
+  const runId = numericId(run.id);
+  const attempt = run.run_attempt;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  const row = await attemptCheck(context, runId, attempt);
+  if (
+    !row ||
+    row.repository_id !== github.repositoryId ||
+    row.kind !== "pull_request" ||
+    row.source_sha !== run.head_sha ||
+    row.pull_request_number === null ||
+    row.ref !== `refs/pull/${row.pull_request_number}/merge` ||
+    !Array.isArray(run.pull_requests) ||
+    !run.pull_requests.some((value) => object(value).number === row.pull_request_number)
+  ) {
+    return false;
+  }
+  const root = `/repos/${github.repository}`;
+  const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
+  const head = object(pull.head);
+  const base = object(pull.base);
+  const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
+  if (
+    numericId(object(head.repo).id) !== github.repositoryId ||
+    numericId(object(base.repo).id) !== github.repositoryId
+  ) {
+    throw new SecurityError("workflow_identity", 503, "The pull-request repository changed.");
+  }
+  // A delayed webhook must not keep an old check pending after the PR or its
+  // main base moves. A temporary merge-ref mismatch alone remains retryable.
+  if (
+    pull.state === "open" &&
+    base.ref === "main" &&
+    head.ref === run.head_branch &&
+    head.sha === row.source_sha &&
+    object(mainRef.object).sha === row.base_sha
+  ) {
+    return false;
+  }
+  if (!row.check_id) {
+    throw new SecurityError("check_pending", 503, "The superseded check is unavailable.");
+  }
+  const check = await verifiedCheck(github, row, row.check_id);
+  if (check.status === "completed") {
+    if (check.conclusion === "success" || check.conclusion === "neutral") return true;
+    if (check.conclusion !== "failure") {
+      throw new SecurityError("pre_run_check", 503, "The superseded check is incomplete.");
+    }
+  }
+  const fenced = await context.database
+    .prepare(`UPDATE pre_run_checks SET state='failed',updated_at=?
+      WHERE external_id=? AND state='active' AND check_id=?
+        AND NOT EXISTS (SELECT 1 FROM work_checks sender
+          WHERE sender.id=pre_run_checks.check_id
+            AND (sender.request_started=1 OR sender.ambiguous=1))
+      RETURNING external_id`)
+    .bind(Date.now(), row.external_id, row.check_id)
+    .first();
+  if (!fenced) {
+    const current = await storedExternalId(context, row.external_id);
+    const sending = await context.database
+      .prepare(
+        "SELECT 1 AS found FROM work_checks WHERE id=? AND (request_started=1 OR ambiguous=1)",
+      )
+      .bind(row.check_id)
+      .first();
+    if (current?.state !== "failed" || sending) {
+      throw new SecurityError("check_pending", 503, "The prior check delivery is still pending.");
+    }
+  }
+  const closed = await verifiedCheck(github, row, row.check_id);
+  if (closed.status === "completed") {
+    if (["success", "neutral", "failure"].includes(String(closed.conclusion))) return true;
+    throw new SecurityError("pre_run_check", 503, "The superseded check is incomplete.");
+  }
+  if (closed.status === "in_progress" || closed.status === "queued") {
+    await github.request(`${root}/check-runs/${row.check_id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "completed",
+        conclusion: "failure",
+        completed_at: new Date().toISOString(),
+        output: {
+          title: "Visual capture was superseded",
+          summary: "The pull request or its main base changed before capture completed.",
+        },
+      }),
+    });
+    const completed = await verifiedCheck(github, row, row.check_id);
+    if (completed.status !== "completed" || completed.conclusion !== "failure") {
+      throw new SecurityError("check_pending", 503, "The superseded check did not close.");
+    }
+    return true;
+  }
+  throw new SecurityError("pre_run_check", 503, "The superseded check has an unknown status.");
 }
 
 async function bindWorkflowCheck(
@@ -1022,7 +1144,19 @@ export async function settlePreRunWorkflow(
       dispatchCandidate(context, github, runId, Number(run.run_attempt)),
     );
   }
-  const candidate = await workflowCandidate(context, github, run);
+  let candidate: PreRunCheck | null;
+  try {
+    candidate = await workflowCandidate(context, github, run);
+  } catch (error) {
+    if (
+      !(error instanceof SecurityError) ||
+      error.code !== "workflow_candidate" ||
+      !(await retireSupersededPullRequestAttempt(context, github, run))
+    ) {
+      throw error;
+    }
+    return "historical" as const;
+  }
   if (!candidate || candidate.docs_only || candidate.state === "docs_complete") return;
   if (
     run.run_attempt > 1 &&
