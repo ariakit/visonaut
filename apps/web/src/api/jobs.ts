@@ -78,7 +78,7 @@ export async function workflowJobs(github: GitHubClient, externalRunId: string, 
   );
 }
 
-/** A terminal workflow must expose its whole job set, including carried successes. */
+/** Enumerate the complete current job list, including carried successes. */
 export async function completeWorkflowJobs(
   github: GitHubClient,
   externalRunId: string,

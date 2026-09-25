@@ -4,10 +4,12 @@ import {
   numericId,
   SecurityError,
   type GitHubClient,
+  type VerifiedRun,
   type VerifiedWebhook,
 } from "@visonaut/security";
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
+import { completeWorkflowJobs } from "./jobs.js";
 
 interface Candidate {
   testedSha: string;
@@ -827,7 +829,36 @@ async function bindWorkflowCheck(
   return (await attemptCheck(context, runId, attempt)) ?? next;
 }
 
-/** A terminal pinned workflow without a valid submit leaves an actionable failure. */
+/** Bind a fresh check when a signed capture or submit job really reruns. */
+export async function ensureSignedAttemptCheck(
+  context: ApiContext,
+  github: GitHubClient,
+  identity: Pick<VerifiedRun, "workflowRunId" | "workflowAttempt" | "testedSha" | "sourceHead">,
+) {
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration) {
+    throw new SecurityError("workflow_configuration", 503, "The trusted workflow is unavailable.");
+  }
+  const run = object(
+    await github.request(`/repos/${github.repository}/actions/runs/${identity.workflowRunId}`),
+  );
+  if (
+    numericId(run.id) !== identity.workflowRunId ||
+    run.run_attempt !== identity.workflowAttempt ||
+    run.head_sha !== identity.sourceHead ||
+    run.path !== configuration.callerWorkflowPath ||
+    numericId(object(run.repository).id) !== github.repositoryId
+  ) {
+    throw new SecurityError("workflow_identity", 503, "The signed workflow attempt changed.");
+  }
+  const candidate = await workflowCandidate(context, github, run);
+  if (!candidate || candidate.tested_sha !== identity.testedSha || candidate.docs_only) {
+    throw new SecurityError("workflow_candidate", 503, "The signed candidate is unavailable.");
+  }
+  await bindWorkflowCheck(context, github, run, candidate);
+}
+
+/** A terminal pinned workflow without successful signed jobs fails its App check. */
 export async function settlePreRunWorkflow(
   context: ApiContext,
   github: GitHubClient,
@@ -859,6 +890,9 @@ export async function settlePreRunWorkflow(
   }
   if (
     numericId(run.id) !== runId ||
+    typeof run.run_attempt !== "number" ||
+    !Number.isSafeInteger(run.run_attempt) ||
+    run.run_attempt < 1 ||
     run.run_attempt !== event.run_attempt ||
     run.head_sha !== event.head_sha ||
     run.path !== event.path ||
@@ -889,6 +923,23 @@ export async function settlePreRunWorkflow(
   }
   const candidate = await workflowCandidate(context, github, run);
   if (!candidate || candidate.docs_only || candidate.state === "docs_complete") return;
+  if (
+    run.run_attempt > 1 &&
+    candidate.workflow_run_id === runId &&
+    candidate.workflow_attempt !== null &&
+    candidate.workflow_attempt < Number(run.run_attempt) &&
+    !(await attemptCheck(context, runId, Number(run.run_attempt)))
+  ) {
+    const jobs = await completeWorkflowJobs(github, runId, Number(run.run_attempt));
+    // The Gate job carries the already reviewed capture jobs from its previous
+    // attempt. Do not replace that review with an empty attempt's check.
+    if (
+      jobs.length === 0 ||
+      (github.repository === "ariakit/ariakit" && jobs.length === 1 && jobs[0]?.name === "Gate")
+    ) {
+      return;
+    }
+  }
   const row = await bindWorkflowCheck(context, github, run, candidate);
   if (webhook.payload.action !== "completed") return;
   if (row.state === "failed") return;
@@ -917,15 +968,34 @@ export async function settlePreRunWorkflow(
   }
   const submitted = await context.database
     .prepare(
-      "SELECT 1 AS found FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=? AND tested_sha=? AND submitted_at IS NOT NULL",
+      "SELECT submit_job_id FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=? AND tested_sha=? AND submitted_at IS NOT NULL",
     )
     .bind(github.repositoryId, runId, run.run_attempt, row.tested_sha)
-    .first();
-  if (run.conclusion === "success" && submitted) return;
+    .first<{ submit_job_id: string | null }>();
+  // A signed submit stays eligible while Gate waits for review, even if Gate
+  // makes the enclosing workflow fail before reconciliation finishes.
+  if (submitted) {
+    const jobs = await completeWorkflowJobs(github, runId);
+    const captureJobs = jobs.filter(
+      (job) => typeof job.name === "string" && job.name.startsWith(configuration.captureJobPrefix),
+    );
+    const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
+    const pinnedJobs = [...captureJobs, ...submitJobs];
+    if (
+      captureJobs.length > 0 &&
+      submitJobs.length === 1 &&
+      String(submitJobs[0]?.id) === submitted.submit_job_id &&
+      pinnedJobs.every((job) => job.status === "completed" && job.conclusion === "success")
+    ) {
+      return;
+    }
+  }
   const reason =
-    run.conclusion === "success"
-      ? "The capture workflow finished without a signed Visonaut submit job."
-      : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
+    submitted !== null
+      ? "A pinned capture or submit job did not complete successfully."
+      : run.conclusion === "success"
+        ? "The capture workflow finished without a signed Visonaut submit job."
+        : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
   await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
     method: "PATCH",
     body: JSON.stringify({

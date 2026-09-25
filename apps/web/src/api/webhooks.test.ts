@@ -8,6 +8,7 @@ import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
   candidateForWebhook,
   ensurePreRunCheck,
+  ensureSignedAttemptCheck,
   findPreRunCheck,
   settlePreRunWorkflow,
 } from "./pre-run.ts";
@@ -130,7 +131,7 @@ beforeAll(async () => {
     .run();
   await database
     .prepare(
-      "CREATE TABLE IF NOT EXISTS ingest_staged_runs (id TEXT PRIMARY KEY, repository_id TEXT NOT NULL, workflow_run_id TEXT NOT NULL, workflow_attempt INTEGER NOT NULL, tested_sha TEXT NOT NULL, submitted_at INTEGER)",
+      "CREATE TABLE IF NOT EXISTS ingest_staged_runs (id TEXT PRIMARY KEY, repository_id TEXT NOT NULL, workflow_run_id TEXT NOT NULL, workflow_attempt INTEGER NOT NULL, tested_sha TEXT NOT NULL, submit_job_id TEXT, submitted_at INTEGER)",
     )
     .run();
 });
@@ -175,6 +176,11 @@ function preRunFixture() {
     pullBaseSha: baseSha,
     files: [{ filename: "README.md", status: "modified" }] as Record<string, unknown>[],
     checks: new Map<string, Record<string, unknown>>(),
+    jobs: [
+      { id: 101, name: "Visonaut / capture / linux", status: "completed", conclusion: "success" },
+      { id: 102, name: "Visonaut / submit", status: "completed", conclusion: "success" },
+    ],
+    attemptJobs: null as Record<string, unknown>[] | null,
     posts: 0,
     losePost: false,
     priorConclusion: "failure" as string | null,
@@ -220,6 +226,13 @@ function preRunFixture() {
         return { status: "ahead", files: state.files };
       }
       if (path.endsWith("/actions/runs/77")) return state.run;
+      if (path.includes("/actions/runs/77/jobs?filter=latest&")) {
+        return { total_count: state.jobs.length, jobs: state.jobs };
+      }
+      if (/\/actions\/runs\/77\/attempts\/[0-9]+\/jobs\?/.test(path)) {
+        const jobs = state.attemptJobs ?? state.jobs;
+        return { total_count: jobs.length, jobs };
+      }
       if (path.endsWith("/actions/runs/77/attempts/1")) {
         return {
           ...state.run,
@@ -544,16 +557,16 @@ describe("pre-run App checks", () => {
     ).toEqual({ state: "failed", workflow_run_id: "77" });
   });
 
-  it("fails success without submit but leaves a signed submitted workflow pending", async () => {
+  it("leaves a signed submitted workflow pending after Gate fails", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
     if (!candidate) throw new Error("Missing candidate");
     await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
-    fixture.state.run.conclusion = "success";
+    fixture.state.run.conclusion = "failure";
     await database
       .prepare(
-        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submitted_at) VALUES('staged','100','77',1,?,1)",
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submit_job_id,submitted_at) VALUES('staged','100','77',1,?,'102',1)",
       )
       .bind(mergeSha)
       .run();
@@ -563,6 +576,123 @@ describe("pre-run App checks", () => {
       fixture.workflowWebhook(),
     );
     expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
+  it.each(["capture", "submit"])("fails a signed submission when its %s job fails", async (job) => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    const jobIndex = job === "capture" ? 0 : 1;
+    const selectedJob = fixture.state.jobs[jobIndex];
+    if (!selectedJob) throw new Error("Missing pinned job");
+    fixture.state.jobs[jobIndex] = { ...selectedJob, conclusion: "failure" };
+    await database
+      .prepare(
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submit_job_id,submitted_at) VALUES('staged','100','77',1,?,'102',1)",
+      )
+      .bind(mergeSha)
+      .run();
+    await settlePreRunWorkflow(
+      apiContext(preRunBindings),
+      fixture.github,
+      fixture.workflowWebhook(),
+    );
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      status: "completed",
+      conclusion: "failure",
+    });
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "failed",
+    });
+  });
+
+  it("keeps the approved review when only Gate reruns", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+      testedSha: mergeSha,
+      workflowRunId: "77",
+      workflowAttempt: 1,
+    });
+    const approved = fixture.state.checks.get("1");
+    if (!approved) throw new Error("Missing first check");
+    approved.status = "completed";
+    approved.conclusion = "success";
+    fixture.state.run.run_attempt = 2;
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    fixture.state.attemptJobs = [{ id: 103, name: "Gate", status: "in_progress" }];
+    const inProgress = fixture.workflowWebhook();
+    inProgress.payload.action = "in_progress";
+    await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, inProgress);
+    expect(fixture.state.posts).toBe(1);
+    fixture.state.run.status = "completed";
+    fixture.state.run.conclusion = "success";
+    fixture.state.attemptJobs = [
+      { id: 103, name: "Gate", status: "completed", conclusion: "success" },
+    ];
+    await settlePreRunWorkflow(
+      apiContext(preRunBindings),
+      fixture.github,
+      fixture.workflowWebhook(),
+    );
+    expect(fixture.state.posts).toBe(1);
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      status: "completed",
+      conclusion: "success",
+    });
+    expect(await database.prepare("SELECT COUNT(*) AS count FROM pre_run_checks").first()).toEqual({
+      count: 1,
+    });
+  });
+
+  it("creates a fresh check when a signed job follows an unlisted rerun", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+      testedSha: mergeSha,
+      workflowRunId: "77",
+      workflowAttempt: 1,
+    });
+    fixture.state.run.run_attempt = 2;
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    fixture.state.attemptJobs = [];
+    const inProgress = fixture.workflowWebhook();
+    inProgress.payload.action = "in_progress";
+    await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, inProgress);
+    expect(fixture.state.posts).toBe(1);
+    await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
+      workflowRunId: "77",
+      workflowAttempt: 2,
+      testedSha: mergeSha,
+      sourceHead: sourceSha,
+    });
+    expect(fixture.state.posts).toBe(2);
+    expect(
+      await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 2,
+      }),
+    ).toMatchObject({ checkId: "2", workflowAttempt: 2 });
+  });
+
+  it("fails success without a signed submission", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    fixture.state.run.conclusion = "success";
     await database.prepare("DELETE FROM ingest_staged_runs").run();
     await settlePreRunWorkflow(
       apiContext(preRunBindings),
@@ -677,7 +807,7 @@ describe("pre-run App checks", () => {
     fixture.state.run.conclusion = "success";
     await database
       .prepare(
-        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submitted_at) VALUES('staged','100','77',2,?,1)",
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submit_job_id,submitted_at) VALUES('staged','100','77',2,?,'102',1)",
       )
       .bind(mergeSha)
       .run();

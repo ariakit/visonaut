@@ -401,8 +401,8 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     await materializeBundle(context, run, bundle, proof);
   }
   const current = await workflowAttempt(github, submit);
-  if (current.status !== "completed" || current.conclusion !== "success") {
-    throw new IncompleteError("The workflow changed before sealing.");
+  if (current.path !== staged.caller_workflow_path) {
+    throw new IncompleteError("The pinned workflow changed before sealing.");
   }
   await context.service.sealRun({ runId: run.id, now: Date.now() });
   await scheduleComparison(context, run.id);
