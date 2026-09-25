@@ -1,0 +1,55 @@
+{
+  "backupId": "2026-09-25T00Z",
+  "completionMarkerSha256": "af1ed4b163a0396efa02df664c9966b7e4bf97ba2fd042b1cf145a8be58aa59c",
+  "isolatedTargets": {
+    "database": "fe5a6bde-9020-40b2-b01e-e580db4496e9",
+    "imageBucket": "visonaut-e08-prod-restore-images-20260925",
+    "quarantineBucket": "visonaut-e08-prod-restore-quarantine-20260925"
+  },
+  "objects": {
+    "inventoryCount": 2055,
+    "inventoryBytes": 128032891,
+    "distinctKeys": 2055,
+    "targetPutAndGetDigestVerified": 2055
+  },
+  "database": {
+    "coreRowCounts": {
+      "visonaut_runs": {
+        "source": 2,
+        "target": 2
+      },
+      "visonaut_images": {
+        "source": 1986,
+        "target": 1986
+      },
+      "visonaut_captures": {
+        "source": 1058,
+        "target": 1058
+      },
+      "visonaut_comparison_rows": {
+        "source": 3174,
+        "target": 3174
+      },
+      "ingest_staged_images": {
+        "source": 3642,
+        "target": 3642
+      },
+      "github_webhook_delivery": {
+        "source": 10864,
+        "target": 10864
+      }
+    },
+    "foreignKeyViolations": 0,
+    "sessions": 0,
+    "activeRuns": 0,
+    "accountsWithTokens": 0,
+    "largeSqlRowsRepairedWithVerifiedBoundValues": 3
+  },
+  "localReplaySeconds": 9.181,
+  "readOnlyTargetVerificationAt": "2026-09-25T03:31:03Z",
+  "scopeLimitations": [
+    "Remote end-to-end recovery time was not recorded; the local replay duration is not RTO.",
+    "The isolated target was not activated and no credential rotation was tested on this production snapshot.",
+    "One image-bearing scheduled backup does not prove sustained real-time RPO reliability."
+  ]
+}
