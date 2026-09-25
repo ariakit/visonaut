@@ -1,0 +1,46 @@
+{
+  "environment": "production",
+  "backupId": "2026-09-25T00Z",
+  "observedAt": "2026-09-25T01:02:02Z",
+  "databaseRow": {
+    "state": "complete",
+    "createdAt": 1790294505753,
+    "completedAt": 1790295204591,
+    "requiredGroups": 7,
+    "objects": 2055,
+    "objectBytes": 128032891,
+    "failures": 0
+  },
+  "completionMarker": {
+    "version": 3,
+    "sha256": "af1ed4b163a0396efa02df664c9966b7e4bf97ba2fd042b1cf145a8be58aa59c",
+    "bytes": 549,
+    "groups": 7,
+    "objects": 2055,
+    "objectBytes": 128032891,
+    "membershipPage": {
+      "sha256": "ec74632f0ffd7c3cf16c92e1436b707954e69f6478f1c260138e2001cfed279d",
+      "bytes": 2066,
+      "groups": 7
+    }
+  },
+  "sqlReadback": {
+    "sha256": "978462f8a45896b40fb9bb5010ac9cb2a13f474289a3e3863afce637ff4f5523",
+    "bytes": 172982389,
+    "matchesCompletionMarker": true
+  },
+  "sampledImageReadback": {
+    "sourceRunId": "11c0ab48-b66e-4243-97d2-43d132bc9eef",
+    "groupManifestSha256": "529582b133026dc85a6ed1fc050d445f9fd21f5ca9dcd531f388d7d2a4feac87",
+    "inventoryPageSha256": "1708b5071e1f0256513cef1e3429256ecb8288ed8a4d484da611b4069fd491fb",
+    "expectedSha256": "8de355f37b6b7381d96235266f43aa2af00a455cd7e60db46b566f5cafd1a8f4",
+    "sha256": "8de355f37b6b7381d96235266f43aa2af00a455cd7e60db46b566f5cafd1a8f4",
+    "bytes": 104099,
+    "matchesGroupInventory": true
+  },
+  "limits": [
+    "The full 2055-object inventory was not replayed into a separate D1 and R2 target.",
+    "The completed backup has not yet passed a full manual restore drill.",
+    "One image-bearing backup and two earlier empty-inventory slots do not establish sustained recovery-point reliability."
+  ]
+}
