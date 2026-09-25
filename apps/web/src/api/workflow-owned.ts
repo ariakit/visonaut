@@ -26,7 +26,7 @@ import {
   type VerifiedRun,
 } from "@visonaut/security";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "@visonaut/service";
-import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
+import { loadVerifiedMergeGroup, type ApiConfiguration, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { ensureSignedAttemptCheck } from "./pre-run.js";
 
@@ -118,6 +118,15 @@ export function workflowConfiguration(context: ApiContext) {
     );
   }
   return configuration;
+}
+
+export function workflowStagingJobName(
+  configuration: NonNullable<ApiConfiguration["workflowOwned"]>,
+  shardKey: string,
+) {
+  return shardKey === "combined"
+    ? configuration.submitJobName
+    : `${configuration.captureJobPrefix}${shardKey}`;
 }
 
 function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
@@ -220,17 +229,17 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     throw new SecurityError("wrong_workflow_source", 403, "The workflow source changed.");
   }
   const github = await createGitHubClient(context.configuration.github);
+  const jobName = workflowStagingJobName(configuration, body.shardKey);
   const verified = await verifyWorkflowJob(
     request,
     context,
     github,
     body,
-    `${configuration.captureJobPrefix}${body.shardKey}`,
+    jobName,
     context.configuration.oidcAudience,
   );
   if (verified.workflowAttempt > 1) await ensureSignedAttemptCheck(context, github, verified);
   const run = await reserveVerifiedStagedRun(context, verified, sourceDigest);
-  const jobName = `${configuration.captureJobPrefix}${body.shardKey}`;
   await context.database
     .prepare(
       "INSERT INTO ingest_staged_bundles (run_id, job_id, check_run_id, shard_key, job_name, verified_json, created_at) SELECT ?, ?, ?, ?, ?, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT DO NOTHING",

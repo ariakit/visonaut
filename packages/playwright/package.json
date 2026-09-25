@@ -1,6 +1,6 @@
 {
   "name": "@visonaut/playwright",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Prepared visual capture and final-successful-attempt reporting for Visonaut",
   "license": "MIT",
   "repository": {

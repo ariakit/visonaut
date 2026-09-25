@@ -273,6 +273,6 @@ it("packs both public packages and runs a clean install", async () => {
     await readFile(join(directory, "node_modules/visonaut/package.json"), "utf8"),
   );
   expect(installedPackage.name).toBe("visonaut");
-  expect(installedPackage.dependencies).toEqual({ "@visonaut/playwright": "0.3.0" });
+  expect(installedPackage.dependencies).toEqual({ "@visonaut/playwright": "0.3.1" });
   expect(installedPackage.bin).toEqual({ visonaut: "./dist/bin.js" });
 }, 30_000);

@@ -1,5 +1,13 @@
 # visonaut
 
+## 0.3.2
+
+### Patch Changes
+
+- Allowed `visonaut submit` to use a signed workflow job whose name does not match its internal bundle key. The service still verifies the job's signed identity and configured role.
+- Updated dependencies
+  - @visonaut/playwright@0.3.1
+
 ## 0.3.1
 
 ### Patch Changes
@@ -10,6 +18,31 @@
 
   ```sh
   visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
+  ```
+
+- Allowed visual review to start after the signed capture and submit jobs succeed, while the CI Gate waits for review.
+
+## 0.3.0
+
+### Minor Changes
+
+- Use existing visual jobs for Visonaut capture.
+
+  **BREAKING** Workflows that use `visonaut-capture upload` must pack captures in the visual job and use the Visonaut CLI in a signed job.
+
+  Before:
+
+  ```sh
+  visonaut-capture upload --shard linux \
+    --comparison-policy-digest "$POLICY" --bundle-sha256 "$ADAPTER_SHA" \
+    --input "$RUNNER_TEMP/visonaut-linux.enc" --output-directory "$RUNNER_TEMP/visonaut-upload"
+  ```
+
+  After:
+
+  ```sh
+  visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
+  visonaut upload --bundle "$RUNNER_TEMP/visonaut-linux.enc"
   ```
 
 ## 0.2.0

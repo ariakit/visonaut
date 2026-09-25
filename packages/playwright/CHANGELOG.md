@@ -1,5 +1,38 @@
 # @visonaut/playwright
 
+## 0.3.1
+
+### Patch Changes
+
+- Allowed `visonaut submit` to use a signed workflow job whose name does not match its internal bundle key. The service still verifies the job's signed identity and configured role.
+
+## 0.3.0
+
+### Minor Changes
+
+- Use existing visual jobs for Visonaut capture.
+
+  **BREAKING** Workflows that use `visonaut-capture upload` must pack captures in the visual job and use the Visonaut CLI in a signed job. The reporter supports Chrome and Firefox in one visual job. Diagnostic workflows can still use `visonaut-capture render`.
+
+  Before:
+
+  ```sh
+  visonaut-capture upload --shard linux \
+    --comparison-policy-digest "$POLICY" --bundle-sha256 "$ADAPTER_SHA" \
+    --input "$RUNNER_TEMP/visonaut-linux.enc" --output-directory "$RUNNER_TEMP/visonaut-upload"
+  ```
+
+  After:
+
+  ```sh
+  visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
+  visonaut upload --bundle "$RUNNER_TEMP/visonaut-linux.enc"
+  ```
+
+### Patch Changes
+
+- Fixed `visonaut-capture` to run from a normal package install with the app's Playwright dependency.
+
 ## 0.2.0
 
 ### Minor Changes

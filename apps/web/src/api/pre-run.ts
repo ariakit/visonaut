@@ -1230,7 +1230,6 @@ export async function settlePreRunWorkflow(
     const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
     const pinnedJobs = [...captureJobs, ...submitJobs];
     if (
-      captureJobs.length > 0 &&
       submitJobs.length === 1 &&
       String(submitJobs[0]?.id) === submitted.submit_job_id &&
       pinnedJobs.every((job) => job.status === "completed" && job.conclusion === "success")

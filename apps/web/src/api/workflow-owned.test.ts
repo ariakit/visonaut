@@ -98,12 +98,12 @@ beforeAll(async () => {
 });
 afterAll(async () => runtime.dispose());
 
-async function fixture() {
+async function fixture(shardKeyOverride?: string) {
   identity += 10;
   const repositoryId = String(identity);
   const runId = crypto.randomUUID();
   const jobId = String(identity + 10_000);
-  const shardKey = `custom-shard-${identity}`;
+  const shardKey = shardKeyOverride ?? `custom-shard-${identity}`;
   const sourceHead = identity.toString(16).padStart(40, "d");
   const workflowOwned = {
     callerWorkflowPath: ".github/workflows/visonaut.yml",
@@ -533,13 +533,14 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
-  it("redeems a transfer key for a signed job in the approved app workflow", async () => {
-    const test = await fixture();
+  it("redeems a combined transfer key in the named Submit job", async () => {
+    const test = await fixture("combined");
     const configuration = test.context.configuration.workflowOwned;
     if (!configuration) throw new Error("Expected workflow configuration.");
     configuration.callerWorkflowPath = ".github/workflows/ci.yml";
     configuration.trustedWorkflowPath = ".github/workflows/app.yml";
     configuration.captureJobPrefix = "App / upload / ";
+    configuration.submitJobName = "App / Visual / Submit";
     configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${configuration.reusableWorkflowSha}`;
     const testedSha = test.manifest.run.testedSha;
     const runId = test.manifest.run.workflowRunId;
@@ -562,7 +563,7 @@ describe("workflow-owned upload staging", () => {
           id: Number(test.jobId),
           run_id: Number(runId),
           run_attempt: 1,
-          name: `${configuration.captureJobPrefix}${test.shardKey}`,
+          name: configuration.submitJobName,
           check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
           status: "in_progress",
         },
@@ -1080,11 +1081,11 @@ describe("workflow-owned upload staging", () => {
   });
 
   it("accepts one signed Submit job that stages the combined capture bundle", async () => {
-    const test = await fixture();
+    const test = await fixture("combined");
     const configuration = test.context.configuration.workflowOwned;
     if (!configuration) throw new Error("Expected workflow configuration.");
-    configuration.captureJobPrefix = "App / Submit / ";
-    configuration.submitJobName = `${configuration.captureJobPrefix}${test.shardKey}`;
+    configuration.captureJobPrefix = "App / upload / ";
+    configuration.submitJobName = "App / Visual / Submit";
     await database
       .prepare("UPDATE ingest_staged_runs SET capture_job_prefix=?, submit_job_name=? WHERE id=?")
       .bind(configuration.captureJobPrefix, configuration.submitJobName, test.runId)
@@ -1097,7 +1098,7 @@ describe("workflow-owned upload staging", () => {
     const github = await terminalGitHub(test, manifestDigest);
     test.githubResponses.set(`${github.base}/attempts/1/jobs?per_page=100&page=1`, {
       total_count: 1,
-      jobs: [github.capture],
+      jobs: [{ ...github.capture, name: configuration.submitJobName }],
     });
     await database
       .prepare(
