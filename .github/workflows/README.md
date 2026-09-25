@@ -45,7 +45,7 @@ The web build uses `CLOUDFLARE_ENV=production`. The [Vite plugin selects the env
 
 ## Ariakit client packages
 
-The public `visonaut` and `@visonaut/playwright` packages are available at version `0.3.0`. Ariakit pins them in its npm lockfile. Its capture workflow does not need a package-download credential.
+The public `visonaut@0.3.2` and `@visonaut/playwright@0.3.1` packages are the versions pinned by Ariakit. Its capture workflow does not need a package-download credential. The [current release audit](../../docs/evidence/public-packages/current-release-20260925.md) records their public tarballs and provenance.
 
 ## npm publication
 
@@ -55,4 +55,4 @@ The maintainer bootstraps each new npm package once, then configures its GitHub 
 
 Choose the `latest` or `next` npm tag and either one package or `both` when dispatching the workflow. CI still packs and audits both tarballs from the exact source commit, but publication and registry integrity checks apply only to the selected package. Release `visonaut` before `@visonaut/playwright` when the adapter's locked CI runtime needs the new CLI version. The packages can have independent versions. An interrupted selected release can resume: a published version is skipped only if its integrity hash, provenance attestation, and requested tag match. A conflicting published version stops the workflow. An existing version with a different tag requires a separate authenticated tag change. The workflow does not create source releases or public Git tags.
 
-The source repository is public. The trusted-publishing workflow requests npm provenance for each new release and checks the package bytes before publication. Existing `0.3.0` packages have valid registry signatures but no provenance attestations because their release disabled provenance; npm cannot add an attestation to an immutable published version. Verify the attestation on the next release with `npm audit signatures`. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) and [viewing package provenance](https://docs.npmjs.com/viewing-package-provenance/).
+The source repository is public. The trusted-publishing workflow requests npm provenance for each new release and checks the package bytes before publication. The historical `0.3.0` packages have valid registry signatures but no provenance attestations because their release disabled provenance; npm cannot add an attestation to an immutable published version. The current CLI and adapter have verified provenance, recorded in the [release audit](../../docs/evidence/public-packages/current-release-20260925.md). Verify each later release with `npm audit signatures`. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) and [viewing package provenance](https://docs.npmjs.com/viewing-package-provenance/).

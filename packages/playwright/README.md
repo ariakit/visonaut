@@ -60,16 +60,28 @@ The adapter does not set CI gates. Ariakit's integration must retain its `CI` an
 
 Keep the application's Playwright configuration and visual test command. Call `measureEnvironment` from `@visonaut/playwright/ci` before the visual run, with `outputDirectory` set to the capture directory. It writes the `environment.json` required by `visonaut pack`. Set the returned profile on the visual projects and add the Visonaut reporter with its manifest in that same directory. The existing `visual()` helper calls this adapter from the prepared page. The reporter writes the successful manifest and images there.
 
-In the visual job, run the existing tests and then encrypt the result:
+In each visual job, run the existing tests and then encrypt its result:
 
 ```sh
 VISUAL_TEST=true pnpm -F app exec playwright test --project chrome firefox --grep @visual --output test-results/test-visual
-pnpm -F app exec visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
+pnpm exec visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
 ```
 
-The visual job has no GitHub OIDC permission. A separate signed job downloads the encrypted artifact and runs `visonaut upload --bundle`. The final job runs `visonaut submit --run "$GITHUB_RUN_ID"`. This separation keeps the upload credential away from pull-request test code and keeps plaintext screenshots out of GitHub artifacts. The upload job independently measures its operating system and system fonts and binds the result to the approved workflow source.
+The visual jobs have no GitHub OIDC permission. Upload only the encrypted packs as short-lived Actions artifacts. One signed Submit job downloads every pack and submits the run:
 
-The application checkout controls its test files, Playwright configuration, and installed reporter. Visonaut verifies the signed upload job and validates the bundle, but it cannot attest that collaborator-controlled test code ran an immutable suite. Review changes to visual test selection and dependencies as code.
+```yaml
+- id: submit
+  run: pnpm exec visonaut submit --bundle "linux=$RUNNER_TEMP/visonaut-linux.enc" --bundle "safari=$RUNNER_TEMP/visonaut-safari.enc"
+- uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+  with:
+    name: ${{ steps.submit.outputs.name }}
+    path: ${{ steps.submit.outputs.path }}
+    if-no-files-found: error
+```
+
+Submit obtains the upload credential and validates the profile recorded by each capture job. Its generated receipt artifact is required for Visonaut to verify the completed job. Keep plaintext screenshots out of GitHub artifacts. The pinned workflow controls the capture jobs and the signed Submit job; Visonaut verifies that workflow source.
+
+The application checkout controls its test files, Playwright configuration, and installed reporter. Visonaut verifies the signed Submit job and validates the bundle, but it cannot attest that collaborator-controlled test code ran an immutable suite. Review changes to visual test selection and dependencies as code.
 
 The older `visonaut-capture render` command remains available for pinned diagnostic workflows. New application integrations should use their existing Playwright jobs.
 
