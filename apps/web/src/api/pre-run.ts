@@ -9,7 +9,7 @@ import {
 } from "@visonaut/security";
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
-import { completeWorkflowJobs } from "./jobs.js";
+import { completeWorkflowJobs, jobExecutedInAttempt } from "./jobs.js";
 
 interface Candidate {
   testedSha: string;
@@ -931,14 +931,27 @@ export async function settlePreRunWorkflow(
     !(await attemptCheck(context, runId, Number(run.run_attempt)))
   ) {
     const jobs = await completeWorkflowJobs(github, runId, Number(run.run_attempt));
-    // The Gate job carries the already reviewed capture jobs from its previous
-    // attempt. Do not replace that review with an empty attempt's check.
-    if (
-      jobs.length === 0 ||
-      (github.repository === "ariakit/ariakit" && jobs.length === 1 && jobs[0]?.name === "Gate")
-    ) {
-      return;
+    if (jobs.length === 0) return;
+    const attempt = object(
+      await github.request(
+        `/repos/${github.repository}/actions/runs/${runId}/attempts/${run.run_attempt}`,
+      ),
+    );
+    if (numericId(attempt.id) !== runId || attempt.run_attempt !== run.run_attempt) {
+      throw new SecurityError("workflow_identity", 503, "The workflow attempt changed.");
     }
+    const reranPinnedJob = jobs.some((job) => {
+      const name = job.name;
+      if (
+        typeof name !== "string" ||
+        (!name.startsWith(configuration.captureJobPrefix) && name !== configuration.submitJobName)
+      ) {
+        return false;
+      }
+      return jobExecutedInAttempt(job, attempt.run_started_at);
+    });
+    // GitHub copies successful jobs into a Gate-only rerun's new attempt list.
+    if (!reranPinnedJob) return;
   }
   const row = await bindWorkflowCheck(context, github, run, candidate);
   if (webhook.payload.action !== "completed") return;

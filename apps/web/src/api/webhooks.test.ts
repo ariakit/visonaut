@@ -177,8 +177,20 @@ function preRunFixture() {
     files: [{ filename: "README.md", status: "modified" }] as Record<string, unknown>[],
     checks: new Map<string, Record<string, unknown>>(),
     jobs: [
-      { id: 101, name: "Visonaut / capture / linux", status: "completed", conclusion: "success" },
-      { id: 102, name: "Visonaut / submit", status: "completed", conclusion: "success" },
+      {
+        id: 101,
+        name: "Visonaut / capture / linux",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-09-25T03:58:00Z",
+      },
+      {
+        id: 102,
+        name: "Visonaut / submit",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-09-25T04:00:00Z",
+      },
     ],
     attemptJobs: null as Record<string, unknown>[] | null,
     posts: 0,
@@ -239,6 +251,13 @@ function preRunFixture() {
           run_attempt: 1,
           status: "completed",
           conclusion: state.priorConclusion,
+        };
+      }
+      if (path.endsWith("/actions/runs/77/attempts/2")) {
+        return {
+          ...state.run,
+          run_attempt: 2,
+          run_started_at: "2026-09-25T03:57:01Z",
         };
       }
       if (path.includes("/commits/") && path.includes("/check-runs?")) {
@@ -626,7 +645,26 @@ describe("pre-run App checks", () => {
     fixture.state.run.run_attempt = 2;
     fixture.state.run.status = "in_progress";
     fixture.state.run.conclusion = null;
-    fixture.state.attemptJobs = [{ id: 103, name: "Gate", status: "in_progress" }];
+    const reusedJobs = [
+      {
+        id: 101,
+        name: "Visonaut / capture / linux",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-09-25T03:20:00Z",
+      },
+      {
+        id: 102,
+        name: "Visonaut / submit",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-09-25T03:37:53Z",
+      },
+    ];
+    fixture.state.attemptJobs = [
+      ...reusedJobs,
+      { id: 103, name: "Gate", status: "in_progress", started_at: "2026-09-25T03:57:10Z" },
+    ];
     const inProgress = fixture.workflowWebhook();
     inProgress.payload.action = "in_progress";
     await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, inProgress);
@@ -634,7 +672,14 @@ describe("pre-run App checks", () => {
     fixture.state.run.status = "completed";
     fixture.state.run.conclusion = "success";
     fixture.state.attemptJobs = [
-      { id: 103, name: "Gate", status: "completed", conclusion: "success" },
+      ...reusedJobs,
+      {
+        id: 103,
+        name: "Gate",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-09-25T03:57:10Z",
+      },
     ];
     await settlePreRunWorkflow(
       apiContext(preRunBindings),
