@@ -33,6 +33,63 @@ test("dashboard offers sign-in when the run list rejects its session", async ({ 
   expect(requests).not.toContain("/api/me");
 });
 
+test("dashboard keeps runs in a table and operation alerts in the header", async ({ page }) => {
+  await page.route("**/api/runs", (route) =>
+    route.fulfill({
+      json: {
+        runs: [
+          {
+            id: "run-42",
+            kind: "pull_request",
+            testedSha: "0123456789abcdef",
+            state: "passed",
+            attempt: 2,
+            createdAt: "2026-09-26T12:00:00Z",
+          },
+        ],
+        project: { repository: "ariakit/ariakit", baselineRevision: 3 },
+      },
+    }),
+  );
+  let operationsLoads = 0;
+  await page.route("**/api/operations", (route) => {
+    operationsLoads += 1;
+    return route.fulfill({
+      json: {
+        events: [
+          {
+            kind: "backup",
+            code: "rpo-exceeded",
+            subject: "freshness",
+            firstSeenAt: 1790000000000,
+            lastSeenAt: 1790000060000,
+          },
+        ],
+        checkedAt: 1790000060000,
+        hasMore: false,
+      },
+    });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
+  await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
+  await expect(page.getByRole("table", { name: "Recent runs" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("passed");
+  const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
+  await expect(alerts).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
+  await alerts.click();
+  await expect(page.getByRole("heading", { name: "Service attention" })).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss popup" }).click();
+  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Refresh runs" }).click();
+  await expect.poll(() => operationsLoads).toBe(2);
+  await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("table", { name: "Recent runs" })).toBeVisible();
+  await expect(page.getByText("ariakit/ariakit", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
 test("opening a historical link loads its selected comparison", async ({ page }) => {
   const errors: Error[] = [];
   page.on("pageerror", (error) => errors.push(error));
