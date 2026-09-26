@@ -88,7 +88,7 @@ test("page changes keep the current item visible without moving workspace focus 
   expect(await page.evaluate(() => scrollY)).toBe(scroll);
 });
 
-test("review auto-advance and Undo cross pages and pending selection wraps", async ({ page }) => {
+test("review auto-advance and Undo keep pending items visible", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     for (const [index, item] of model.items.entries()) {
@@ -99,17 +99,20 @@ test("review auto-advance and Undo cross pages and pending selection wraps", asy
     }
     window.reviewFixture.update(model);
   });
-  await page.getByRole("button", { name: "Next items" }).click();
+  await expect(page.getByRole("button", { name: "Accepted (97)" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await page.locator("#review-item-49").click();
   await page.getByLabel("Review workspace", { exact: true }).focus();
-  await page.keyboard.press("ArrowUp");
   await ready(page);
   await page.keyboard.press("a");
   await expect(page.getByRole("heading", { name: "Item 51", exact: true })).toBeVisible();
-  await expect(page.getByText("51–100 of 101 items", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Accepted (98)" })).toBeVisible();
   await ready(page);
   await page.keyboard.press("Control+z");
   await expect(page.getByRole("heading", { name: "Item 50", exact: true })).toBeVisible();
-  await expect(page.getByText("1–50 of 101 items", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Accepted (97)" })).toBeVisible();
   await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
   await ready(page);
   await page.keyboard.press("x");
@@ -120,7 +123,77 @@ test("review auto-advance and Undo cross pages and pending selection wraps", asy
   await ready(page);
   await page.keyboard.press("a");
   await expect(page.getByRole("heading", { name: "Item 1", exact: true })).toBeVisible();
-  await expect(page.getByText("1–50 of 101 items", { exact: true })).toBeVisible();
+  await expect(page.locator(".review-item")).toHaveCount(2);
+});
+
+test("accepted items stay collapsed and paginate only when opened", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    for (const [index, item] of model.items.entries()) {
+      if (index === 0) continue;
+      for (const variant of item.variants) variant.verdict = "approved";
+    }
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator(".review-item")).toHaveCount(1);
+  const accepted = page.getByRole("button", { name: "Accepted (100)" });
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await accepted.click();
+  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".review-item")).toHaveCount(51);
+  await expect(page.getByText("1–50 of 100 accepted", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next accepted" }).click();
+  await expect(page.locator("#review-item-51")).toBeFocused();
+  await expect(page.getByText("51–100 of 100 accepted", { exact: true })).toBeVisible();
+});
+
+test("an all-accepted run can close its accepted section", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    for (const item of model.items) {
+      for (const variant of item.variants) variant.verdict = "approved";
+    }
+    window.reviewFixture.update(model);
+  });
+  const accepted = page.getByRole("button", { name: "Accepted (101)" });
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".review-item")).toHaveCount(0);
+  await accepted.click();
+  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(".review-item")).toHaveCount(50);
+  await accepted.click();
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(".review-item")).toHaveCount(0);
+});
+
+test("accepted items stay in the horizontal sidebar at narrow widths", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.items = model.items.slice(0, 3);
+    for (const item of model.items.slice(1)) {
+      for (const variant of item.variants) variant.verdict = "approved";
+    }
+    window.reviewFixture.update(model);
+  });
+  const accepted = page.getByRole("button", { name: "Accepted (2)" });
+  await accepted.click();
+  const layout = await page.locator(".review-item-list").evaluate((list) => {
+    const toggle = list.querySelector(".review-accepted-toggle")?.getBoundingClientRect();
+    const first = list.querySelector("#review-item-0")?.getBoundingClientRect();
+    const acceptedRow = list.querySelector("#review-item-1")?.getBoundingClientRect();
+    if (!toggle || !first || !acceptedRow) throw new Error("Missing narrow sidebar items");
+    return {
+      listHeight: list.getBoundingClientRect().height,
+      toggleWidth: toggle.width,
+      firstWidth: first.width,
+      acceptedTop: acceptedRow.top,
+      toggleTop: toggle.top,
+    };
+  });
+  expect(layout.toggleWidth).toBeGreaterThan(layout.firstWidth - 20);
+  expect(layout.listHeight).toBeLessThan(160);
+  expect(Math.abs(layout.acceptedTop - layout.toggleTop)).toBeLessThan(20);
 });
 
 test("narrow item navigation scrolls the horizontal list across page boundaries", async ({

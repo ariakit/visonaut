@@ -2,7 +2,7 @@ import { cv } from "clava";
 import { includes } from "../utils/includes.ts";
 import { CHROMA_VALUES, COLOR_VALUES, HUE_VALUES, getScaledStyleClass } from "../utils/styles.ts";
 import type { ChromaValues, ColorValues, HueValues } from "../utils/styles.ts";
-import { layer } from "./layer.ts";
+import { layer } from "../components/layer.ariakit.react.tsx";
 
 export type EdgeColorValues = ColorValues;
 

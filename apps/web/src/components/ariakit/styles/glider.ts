@@ -1,8 +1,8 @@
 import { cv, cx } from "clava";
 import { getSpacingValue } from "../utils/styles.ts";
 import { controlGroup, controlSeparator } from "./control.ts";
-import { frame } from "./frame.ts";
-import { hasLayerBackground } from "./layer.ts";
+import { frame } from "../components/frame.ariakit.react.tsx";
+import { hasLayerBackground } from "../components/layer.ariakit.react.tsx";
 
 // A flat, bevel or folder glider takes the box of the control it follows, so
 // the glider and everything the control paints for itself land on the same

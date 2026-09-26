@@ -140,6 +140,28 @@ for (const changedProfile of [false, true]) {
     await capture("run", 1, changedProfile ? "profile-after" : "profile");
     const row = (await service.comparisonRows("comparison-run"))[0];
     if (!row) throw new Error("Missing comparison row.");
+    // reviewModel uses only these context members; D1 and SQLite share the SQL interface.
+    const privateContext = {} as PrivateContext;
+    Object.assign(privateContext, {
+      service,
+      database,
+      configuration: {
+        projectId: "project",
+        github: { repository: "ariakit/visonaut-diagnostics" },
+      },
+    });
+    const comparing = parseReviewModel(await reviewModel(privateContext, "run"));
+    expect(comparing.run.status).toBe("comparing");
+    expect(comparing.items[0]?.variants[0]).toMatchObject({ kind: "pending" });
+    expect(comparing.items[0]?.variants[0]?.error).toBeUndefined();
+    database.connection.prepare("UPDATE work_tasks SET state = 'dead' WHERE id = ?").run(row.id);
+    const failed = parseReviewModel(await reviewModel(privateContext, "run"));
+    expect(failed.run.status).toBe("failed");
+    expect(failed.items[0]?.variants[0]).toMatchObject({
+      kind: "error",
+      error: "Comparison stopped before evidence was available.",
+    });
+    database.connection.prepare("UPDATE work_tasks SET state = 'queued' WHERE id = ?").run(row.id);
     const task = await service.claimComparisonTask({
       taskId: row.id,
       owner: "worker",
@@ -178,16 +200,6 @@ for (const changedProfile of [false, true]) {
       }),
     ).rejects.toThrow("A comparison result is immutable.");
     await service.finalizeComparison({ comparisonId: "comparison-run", now: fixture.state.time });
-    // reviewModel uses only these context members; D1 and SQLite share the SQL interface.
-    const privateContext = {} as PrivateContext;
-    Object.assign(privateContext, {
-      service,
-      database,
-      configuration: {
-        projectId: "project",
-        github: { repository: "ariakit/visonaut-diagnostics" },
-      },
-    });
     const model = parseReviewModel(await reviewModel(privateContext, "run"));
     const variant = model.items[0]?.variants[0];
     if (!variant) throw new Error("Missing review variant.");

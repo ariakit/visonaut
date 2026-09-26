@@ -2,11 +2,9 @@
 @import "./components/ariakit/styles/ui.css";
 
 .review-workspace {
-  --review-border: #dcdfe4;
-  --review-muted: #626a75;
-  --review-surface: #f6f7f9;
-  color: #23272e;
-  background: #fff;
+  --review-border: color-mix(in oklch, currentColor 20%, transparent);
+  --review-muted: color-mix(in oklch, currentColor 66%, transparent);
+  --review-surface: color-mix(in oklch, currentColor 6%, transparent);
   font:
     14px/1.45 ui-sans-serif,
     system-ui,
@@ -27,7 +25,7 @@
 }
 .review-workspace :focus-visible,
 .review-help-dialog :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-brand);
   outline-offset: 3px;
 }
 .review-run-header {
@@ -71,7 +69,7 @@
 .review-banner {
   padding: 12px 28px;
   border-bottom: 1px solid var(--review-border);
-  background: #fff9e8;
+  background: color-mix(in oklch, var(--color-warning) 16%, transparent);
 }
 .review-shell {
   display: grid;
@@ -79,7 +77,6 @@
   min-height: 650px;
 }
 .review-sidebar {
-  background: #fafbfc;
   border-right: 1px solid var(--review-border);
   min-width: 0;
 }
@@ -128,11 +125,11 @@
   box-shadow: none;
 }
 .review-item:hover {
-  background: #f0f1f4;
+  background: var(--review-surface);
 }
 .review-item[aria-current="true"] {
-  background: #e9ecf1;
-  border-color: #cdd2dc;
+  background: color-mix(in oklch, currentColor 11%, transparent);
+  border-color: var(--review-border);
 }
 .review-item > span:last-child {
   min-width: 0;
@@ -153,7 +150,7 @@
   width: 44px;
   height: 40px;
   object-fit: contain;
-  background: #fff;
+  background: var(--color-canvas);
   border: 1px solid var(--review-border);
   border-radius: 3px;
   flex: 0 0 44px;
@@ -209,8 +206,8 @@
   font-size: 10px;
 }
 .review-variant[aria-selected="true"] {
-  color: #171b22;
-  border-bottom-color: #535e70;
+  color: inherit;
+  border-bottom-color: currentColor;
   background: var(--review-surface);
 }
 .review-result {
@@ -248,32 +245,13 @@
   gap: 8px;
   min-height: 30px;
   padding: 5px 9px;
-  border: 1px solid #d2d6dd;
-  border-radius: 5px;
-  color: inherit;
-  background: #fff;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
-  box-shadow: none;
-}
-.review-control:hover:not(:disabled):not([aria-disabled="true"]) {
-  background: #f0f2f5;
-}
-.review-control[aria-pressed="true"] {
-  background: #e8ebf0;
-  border-color: #aeb5c1;
-}
-.review-control:disabled,
-.review-control[aria-disabled="true"] {
-  color: #777e88;
-  background: #f5f6f8;
-  border-color: #e0e3e8;
-  cursor: not-allowed;
 }
 .review-control kbd {
   font-size: 10px;
-  color: #727987;
+  color: var(--review-muted);
 }
 .review-view-tools {
   padding: 0 24px 12px;
@@ -292,7 +270,7 @@
   position: relative;
   min-height: 380px;
   border-block: 1px solid var(--review-border);
-  background: #eceef1;
+  background: var(--review-surface);
 }
 .review-viewer {
   display: grid;
@@ -311,7 +289,7 @@
   flex-direction: column;
 }
 .review-pane figcaption {
-  background: #f5f6f8;
+  background: var(--review-surface);
   color: var(--review-muted);
   padding: 8px 14px;
   font-size: 11px;
@@ -322,12 +300,12 @@
   min-height: 320px;
   overflow: auto;
   padding: 18px;
-  background-color: #ebedf0;
+  background-color: var(--color-canvas);
   background-image:
-    linear-gradient(45deg, #e0e3e7 25%, transparent 25%),
-    linear-gradient(-45deg, #e0e3e7 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e0e3e7 75%),
-    linear-gradient(-45deg, transparent 75%, #e0e3e7 75%);
+    linear-gradient(45deg, var(--review-surface) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--review-surface) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--review-surface) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--review-surface) 75%);
   background-size: 20px 20px;
   background-position:
     0 0,
@@ -353,7 +331,7 @@
   display: grid;
   place-items: center;
   min-height: 280px;
-  color: #5b626e;
+  color: var(--review-muted);
   font-size: 13px;
 }
 .review-evidence-message {
@@ -366,7 +344,7 @@
   gap: 12px;
   padding: 28px;
   text-align: center;
-  background: #f1f3f6;
+  background: var(--color-canvas);
   color: var(--review-muted);
 }
 .review-evidence-message p,
@@ -425,12 +403,12 @@
   color: var(--review-muted);
 }
 .review-save-state[role="alert"] {
-  color: #8b321f;
+  color: var(--color-danger);
 }
 .review-announcement {
   padding: 0 24px 12px;
   min-height: 20px;
-  color: #444c58;
+  color: var(--review-muted);
   font-size: 12px;
 }
 .review-empty {
@@ -441,7 +419,7 @@
   margin-bottom: 8px;
 }
 .review-dialog-backdrop {
-  background: #171b2280;
+  background: #0008;
   position: fixed;
   inset: 0;
   z-index: 40;
@@ -454,16 +432,14 @@
   max-height: calc(100dvh - 32px);
   overflow: auto;
   z-index: 50;
-  background: #fff;
-  border: 1px solid #ccd1d9;
+  border: 1px solid var(--review-border);
   border-radius: 8px;
-  color: #23272e;
   padding: 24px;
   font:
     14px/1.5 ui-sans-serif,
     system-ui,
     sans-serif;
-  box-shadow: 0 15px 50px #171b2230;
+  box-shadow: 0 15px 50px #0003;
 }
 .review-help-dialog h1,
 .review-help-dialog h2 {

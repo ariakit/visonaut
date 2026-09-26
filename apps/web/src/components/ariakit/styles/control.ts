@@ -1,10 +1,10 @@
 import { cv, cx } from "clava";
 import { includes } from "../utils/includes.ts";
-import type { FrameRoundedValue } from "./frame.ts";
-import { frame, getFrameRoundedClass } from "./frame.ts";
-import { hasLayerBackground, isLayerColor, layer } from "./layer.ts";
-import { textFrame } from "./text-frame.ts";
-import { text } from "./text.ts";
+import type { FrameRoundedValue } from "../components/frame.ariakit.react.tsx";
+import { frame, getFrameRoundedClass } from "../components/frame.ariakit.react.tsx";
+import { hasLayerBackground, isLayerColor, layer } from "../components/layer.ariakit.react.tsx";
+import { textFrame } from "../components/text-frame.ariakit.react.tsx";
+import { text } from "../components/text.ariakit.react.tsx";
 
 // A control and a control group set their font size the same way, and every
 // other measurement in this file derives from it through 1cap, 1em and 1lh. The
