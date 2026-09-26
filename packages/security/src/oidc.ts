@@ -200,18 +200,28 @@ export async function verifyGitHubOidc({
   );
   requireEqual(run.event, event, "rest.event");
   requireEqual(run.path, configuration.workflowPath, "rest.workflow_path");
-  if (run.status !== "in_progress" && run.conclusion !== "success") {
+  const checkRunId = numericId(claims.check_run_id);
+  const job = await findSignedJob(github, request, checkRunId);
+  requireEqual(job.name, shard.jobName, "rest.job_name");
+  requireEqual(attemptNumber(job.run_attempt), request.workflowAttempt, "rest.job_attempt");
+  requireEqual(numericId(job.run_id), request.workflowRunId, "rest.job_run_id");
+  // GitHub can report an attempt as queued while its signed job is running.
+  // The current run must also remain active, so a cancelled run cannot pass.
+  const activeSignedJob = job.status === "in_progress" && job.conclusion === null;
+  const activeCurrentRun =
+    (current.status === "queued" || current.status === "in_progress") &&
+    current.conclusion === null;
+  if (
+    run.status !== "in_progress" &&
+    run.conclusion !== "success" &&
+    !(run.status === "queued" && run.conclusion === null && activeSignedJob && activeCurrentRun)
+  ) {
     throw new SecurityError(
       "inactive_run",
       409,
       "The workflow attempt is not active or successful.",
     );
   }
-  const checkRunId = numericId(claims.check_run_id);
-  const job = await findSignedJob(github, request, checkRunId);
-  requireEqual(job.name, shard.jobName, "rest.job_name");
-  requireEqual(attemptNumber(job.run_attempt), request.workflowAttempt, "rest.job_attempt");
-  requireEqual(numericId(job.run_id), request.workflowRunId, "rest.job_run_id");
   if (job.status !== "in_progress" && job.conclusion !== "success") {
     throw new SecurityError("inactive_job", 409, "The capture job is not active or successful.");
   }
