@@ -623,6 +623,22 @@ describe("workflow-owned upload staging", () => {
       );
       expect(response?.status).toBe(200);
       expect(await response?.text()).toBe(privateKey);
+      const retry = await handleApi(
+        new Request("https://preview.example/v1/transfer/private-key", {
+          method: "POST",
+          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            shardKey: test.shardKey,
+            workflowRunId: runId,
+            workflowAttempt: 1,
+            testedSha,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(retry?.status).toBe(200);
+      expect(await retry?.text()).toBe(privateKey);
     } finally {
       vi.unstubAllGlobals();
     }

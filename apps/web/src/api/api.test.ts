@@ -2125,14 +2125,24 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         test.send(transferRoute, test.json(transferBody, transferToken)),
         test.send(transferRoute, test.json(transferBody, transferToken)),
       ]);
-      expect(transfers.map((response) => response.status).sort()).toEqual([200, 409]);
+      expect(transfers.map((response) => response.status).sort()).toEqual([200, 200]);
       const transferResponse = transfers.find((response) => response.status === 200);
       if (!transferResponse) throw new Error("The transfer key was not redeemed.");
       expect(transferResponse.headers.get("cache-control")).toContain("no-store");
       expect(await transferResponse.text()).toBe(privateKey);
+      expect(await transfers.find((response) => response !== transferResponse)?.text()).toBe(
+        privateKey,
+      );
+      const firstRedemption = await database
+        .prepare(
+          "SELECT redeemed_at FROM transfer_key_redemptions WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND check_run_id = ?",
+        )
+        .bind(test.manifest.run.repositoryId, "457", 1, "999")
+        .first<{ redeemed_at: number }>();
+      expect(firstRedemption).toBeTruthy();
       const replay = await test.send(transferRoute, test.json(transferBody, transferToken));
-      expect(replay.status).toBe(409);
-      expect(await replay.text()).not.toContain(privateKey);
+      expect(replay.status).toBe(200);
+      expect(await replay.text()).toBe(privateKey);
       expect(
         (
           await test.send(
@@ -2140,7 +2150,14 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
             test.json(transferBody, await signed("https://preview.example/transfer-key")),
           )
         ).status,
-      ).toBe(409);
+      ).toBe(200);
+      const redemptions = await database
+        .prepare(
+          "SELECT redeemed_at FROM transfer_key_redemptions WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ?",
+        )
+        .bind(test.manifest.run.repositoryId, "457", 1)
+        .all<{ redeemed_at: number }>();
+      expect(redemptions.results).toEqual([firstRedemption]);
       signedJobName = "capture / render-chromium";
       expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
         403,
