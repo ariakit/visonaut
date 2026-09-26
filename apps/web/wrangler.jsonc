@@ -32,7 +32,7 @@
     "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
     "D1_DATABASE_ID": "395b539c-c423-4ce4-887c-a5792792a63b",
     "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS": "420000",
-    "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":536870912,\"databaseAdmissionBytes\":805306368,\"sqlWarningBytes\":402653184,\"sqlAdmissionBytes\":536870912,\"maximumActiveRuns\":2}",
+    "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":536870912,\"databaseAdmissionBytes\":805306368,\"sqlWarningBytes\":402653184,\"sqlAdmissionBytes\":536870912,\"maximumActiveRuns\":5}",
     "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
   },
   "d1_databases": [
@@ -118,7 +118,7 @@
         "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
         "D1_DATABASE_ID": "15fcd402-dccb-4359-a1ce-280ff67ca596",
         "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS": "420000",
-        "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":536870912,\"databaseAdmissionBytes\":805306368,\"sqlWarningBytes\":402653184,\"sqlAdmissionBytes\":536870912,\"maximumActiveRuns\":2}",
+        "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":536870912,\"databaseAdmissionBytes\":805306368,\"sqlWarningBytes\":402653184,\"sqlAdmissionBytes\":536870912,\"maximumActiveRuns\":5}",
         "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
       },
       "d1_databases": [
