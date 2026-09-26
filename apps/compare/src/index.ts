@@ -123,7 +123,8 @@ export default {
         if (!(error instanceof CodecBusyError)) {
           throw error;
         }
-        message.retry({ delaySeconds: 1 });
+        // Upload validation can occupy this isolate throughout a long submit.
+        message.retry({ delaySeconds: 60 });
       }
     }
   },
