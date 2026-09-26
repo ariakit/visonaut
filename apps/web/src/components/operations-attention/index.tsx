@@ -1,7 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BellIcon } from "lucide-react";
 import type { CapacitySnapshot } from "../../capacity.ts";
 import { ControlButton as Button } from "../control-button.tsx";
-import { Frame } from "../ariakit/components/frame.ariakit.react.tsx";
+import { Badge, BadgeLabel } from "../ariakit/components/badge.ariakit.react.tsx";
+import { ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
+import {
+  Popover,
+  PopoverDescription,
+  PopoverDisclosure,
+  PopoverDismiss,
+  PopoverHeading,
+  PopoverProvider,
+  PopoverScroll,
+} from "../ariakit/components/popover.ariakit.react.tsx";
 
 interface OperationEvent {
   kind: string;
@@ -194,6 +205,10 @@ function time(value: number) {
   return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
+function eventId(event: OperationEvent) {
+  return JSON.stringify([event.kind, event.code, event.subject, event.firstSeenAt]);
+}
+
 export function OperationsAttention({
   onAccessDenied,
 }: {
@@ -203,6 +218,10 @@ export function OperationsAttention({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
+  const [announcement, setAnnouncement] = useState("");
+  const knownEvents = useRef<Set<string> | null>(null);
+  const alertUpdate = useRef(0);
+  const refreshFailed = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
     let timeout: ReturnType<typeof setTimeout>;
@@ -221,10 +240,36 @@ export function OperationsAttention({
         if (!response.ok) throw new Error("Operation alerts are temporarily unavailable.");
         const data = parseStatus(await response.json());
         if (controller.signal.aborted) return;
+        const nextEvents = new Set(data.events.map(eventId));
+        const known = knownEvents.current;
+        const newlyVisible = known ? data.events.filter((event) => !known.has(eventId(event))) : [];
+        const first = newlyVisible[0];
+        if (known === null) {
+          setAnnouncement(
+            data.events.length
+              ? `Service attention: ${data.hasMore ? "at least " : ""}${data.events.length} unresolved service alert${data.events.length === 1 ? "" : "s"}.`
+              : "Service attention: no unresolved service alerts.",
+          );
+        } else if (first) {
+          alertUpdate.current += 1;
+          setAnnouncement(
+            `Service alert update ${alertUpdate.current}: ${newlyVisible.length} alert${newlyVisible.length === 1 ? "" : "s"} now visible. ${recovery(first).title}.`,
+          );
+        } else if (knownEvents.current?.size && data.events.length === 0) {
+          setAnnouncement("Service attention: all alerts resolved.");
+        } else if (refreshFailed.current) {
+          setAnnouncement("Service attention: alerts refreshed.");
+        }
+        knownEvents.current = nextEvents;
+        refreshFailed.current = false;
         setStatus(data);
         setError("");
       } catch (error) {
         if (controller.signal.aborted) return;
+        refreshFailed.current = true;
+        setAnnouncement(
+          "Service attention: alert refresh failed. Cached alerts may be out of date.",
+        );
         setError(error instanceof Error ? error.message : "Operation alerts could not be loaded.");
       } finally {
         if (!controller.signal.aborted) {
@@ -240,86 +285,117 @@ export function OperationsAttention({
     };
   }, [reload, onAccessDenied]);
 
+  const alertCount = status?.events.length ?? 0;
+  const alertLabel = error
+    ? alertCount
+      ? `Service attention: ${status?.hasMore ? "at least " : ""}${alertCount} cached alert${alertCount === 1 ? "" : "s"}; refresh failed`
+      : "Service attention: alert status unavailable"
+    : loading && !status
+      ? "Service attention: checking alerts"
+      : alertCount
+        ? `Service attention: ${status?.hasMore ? "at least " : ""}${alertCount} alert${alertCount === 1 ? "" : "s"}`
+        : "Service attention: no alerts";
+
   return (
-    <Frame
-      $layer
-      $lighten
-      $rounded="lg"
-      $border
-      render={<section />}
-      className="dashboard-attention"
-      aria-labelledby="operations-heading"
-    >
-      <div className="dashboard-attention-heading">
-        <div>
-          <h2 id="operations-heading">Service attention</h2>
-          <p>
-            Alerts refresh every minute while this dashboard is open. No external notifications are
-            sent.
-          </p>
+    <PopoverProvider placement="bottom-end">
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
+      <PopoverDisclosure
+        $kind="bevel"
+        $rounded="sm"
+        className="dashboard-alert-trigger"
+        aria-label={alertLabel}
+      >
+        <ButtonSlot>
+          <BellIcon aria-hidden="true" />
+        </ButtonSlot>
+        {alertCount > 0 && (
+          <Badge $layer="danger" className="dashboard-alert-count" aria-hidden="true">
+            <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
+          </Badge>
+        )}
+        {error && (
+          <span className="dashboard-alert-error-mark" aria-hidden="true">
+            !
+          </span>
+        )}
+      </PopoverDisclosure>
+      <Popover className="dashboard-alert-popover" portal>
+        <div className="dashboard-alert-heading">
+          <PopoverHeading>Service attention</PopoverHeading>
+          <PopoverDismiss />
         </div>
-        <Button
-          className="review-control"
-          disabled={loading}
-          onClick={() => {
-            setLoading(true);
-            setReload((value) => value + 1);
-          }}
-        >
-          {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
-        </Button>
-      </div>
-      {error && (
-        <p className="dashboard-attention-error" role="alert">
-          {error}{" "}
-          {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
-        </p>
-      )}
-      <p className="dashboard-attention-summary" role="status" aria-live="polite">
-        {status
-          ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
-          : loading
-            ? "Checking for unresolved operation alerts…"
-            : "No current alert data."}
-      </p>
-      {status?.capacity && (
-        <p className="dashboard-attention-meta">
-          Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
-          {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)} before
-          new runs pause.
-          <br />
-          Latest SQL backup:{" "}
-          {status.capacity.sqlBytes === null
-            ? "not measured yet"
-            : `${mebibytes(status.capacity.sqlBytes)}; ${mebibytes(status.capacity.sqlAdmissionBytes - status.capacity.sqlBytes)} before new runs pause`}
-          .
-          <br />
-          Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
-          Capacity sampled {time(status.capacity.observedAt)}.
-        </p>
-      )}
-      {status && status.events.length > 0 && (
-        <ul className="dashboard-attention-list">
-          {status.events.map((event) => {
-            const help = recovery(event);
-            return (
-              <li key={`${event.kind}:${event.subject}:${event.code}`}>
-                <h3>{help.title}</h3>
-                <p>{help.action}</p>
-                <p className="dashboard-attention-meta">
-                  {event.kind} · {event.code} · <code>{event.subject}</code>
-                  <br />
-                  First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {status?.hasMore && <p>Showing the 50 most recently reported unresolved alerts.</p>}
-      <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md">
-        Open the operations and recovery guide
-      </a>
-    </Frame>
+        <PopoverDescription>
+          Alerts refresh every minute while this dashboard is open. No external notifications are
+          sent.
+        </PopoverDescription>
+        <div className="dashboard-alert-toolbar">
+          <p className="dashboard-attention-summary">
+            {status
+              ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
+              : loading
+                ? "Checking for unresolved operation alerts…"
+                : "No current alert data."}
+          </p>
+          <Button
+            className="review-control"
+            disabled={loading}
+            onClick={() => {
+              setLoading(true);
+              setReload((value) => value + 1);
+            }}
+          >
+            {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
+          </Button>
+        </div>
+        <PopoverScroll className="dashboard-alert-scroll">
+          {error && (
+            <p className="dashboard-attention-error" role="alert">
+              {error}{" "}
+              {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
+            </p>
+          )}
+          {status?.capacity && (
+            <p className="dashboard-attention-meta">
+              Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
+              {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
+              before new runs pause.
+              <br />
+              Latest SQL backup:{" "}
+              {status.capacity.sqlBytes === null
+                ? "not measured yet"
+                : `${mebibytes(status.capacity.sqlBytes)}; ${mebibytes(status.capacity.sqlAdmissionBytes - status.capacity.sqlBytes)} before new runs pause`}
+              .
+              <br />
+              Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
+              Capacity sampled {time(status.capacity.observedAt)}.
+            </p>
+          )}
+          {status && status.events.length > 0 && (
+            <ul className="dashboard-attention-list">
+              {status.events.map((event) => {
+                const help = recovery(event);
+                return (
+                  <li key={`${event.kind}:${event.subject}:${event.code}`}>
+                    <h3>{help.title}</h3>
+                    <p>{help.action}</p>
+                    <p className="dashboard-attention-meta">
+                      {event.kind} · {event.code} · <code>{event.subject}</code>
+                      <br />
+                      First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {status?.hasMore && <p>Showing the 50 most recently reported unresolved alerts.</p>}
+        </PopoverScroll>
+        <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md">
+          Open the operations and recovery guide
+        </a>
+      </Popover>
+    </PopoverProvider>
   );
 }

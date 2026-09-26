@@ -2,9 +2,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
+import { Badge, BadgeLabel } from "../components/ariakit/components/badge.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
-import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { Shell } from "../components/ariakit/components/shell.ariakit.react.tsx";
+import {
+  Shell,
+  ShellHeader,
+  ShellHeaderCenter,
+  ShellMain,
+  ShellMainBody,
+} from "../components/ariakit/components/shell.ariakit.react.tsx";
+import {
+  Table,
+  TableCell,
+  TableRow,
+  TableRowGroup,
+} from "../components/ariakit/components/table.ariakit.react.tsx";
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
 import "../review.css";
 import "./dashboard.css";
@@ -77,6 +89,17 @@ function kindLabel(kind: string) {
 
 function stateLabel(state: string) {
   return state.replaceAll("_", " ").replaceAll("-", " ");
+}
+
+function stateColor(state: string): "success" | "warning" | "danger" | undefined {
+  if (state === "passed") return "success";
+  if (state === "needs-review" || state === "comparing" || state === "incomplete") {
+    return "warning";
+  }
+  if (state === "failed" || state === "rejected" || state === "needs-recompare") {
+    return "danger";
+  }
+  return;
 }
 
 function runDate(value: string | number) {
@@ -186,134 +209,156 @@ function Index() {
 
   return (
     <Shell className="dashboard">
-      <Layer
-        $layer
-        $lighten
-        render={<header />}
-        className="dashboard-header col-[shell] row-[header]"
-      >
-        <Link to="/" className="dashboard-brand">
-          Visonaut
-        </Link>
-        <span>{state.status === "ready" ? state.repository : "Repository"}</span>
-        {state.status !== "loading" && (
-          <Button
-            className="review-control"
-            disabled={action !== null}
-            onClick={() => void signOut()}
-          >
-            {action === "sign-out" ? "Signing out…" : "Sign out"}
-          </Button>
-        )}
-      </Layer>
-      <main className="dashboard-main col-[shell] row-[body]">
-        {actionError && (
-          <p className="dashboard-error" role="alert">
-            {actionError}
-          </p>
-        )}
-        {state.status === "loading" && <p role="status">Checking access and loading runs…</p>}
-        {(state.status === "error" || state.status === "forbidden") && (
-          <Frame
-            $layer
-            $lighten
-            $rounded="lg"
-            $border
-            render={<section />}
-            className="dashboard-empty"
-          >
-            <h1>
-              {state.status === "forbidden"
-                ? "Repository access required"
-                : "Runs could not be loaded"}
-            </h1>
-            <p role="alert">{state.message}</p>
-            <Button
-              className="review-control"
-              onClick={() => {
-                setState({ status: "loading" });
-                setReload((value) => value + 1);
-              }}
-            >
-              Retry
-            </Button>
-          </Frame>
-        )}
-        {state.status === "ready" && (
-          <>
-            <OperationsAttention onAccessDenied={onAccessDenied} />
-            <div className="dashboard-heading">
-              <div>
-                <p className="dashboard-eyebrow">Visual regression review</p>
-                <h1>Runs</h1>
-              </div>
-              <div className="dashboard-heading-actions">
-                <span>
-                  {state.baselineRevision > 0
-                    ? `Baseline revision ${state.baselineRevision}`
-                    : "No baseline yet"}
-                </span>
-                <Button
-                  className="review-control"
-                  onClick={() => {
-                    setState({ status: "loading" });
-                    setReload((value) => value + 1);
-                  }}
-                >
-                  Refresh runs
-                </Button>
-              </div>
-            </div>
-            {state.runs.length === 0 ? (
-              <Frame
-                $layer
-                $lighten
-                $rounded="lg"
-                $border
-                render={<section />}
-                className="dashboard-empty"
+      <ShellHeader
+        $height="lg"
+        $stackCenter
+        className="dashboard-shell-header"
+        start={
+          <Link to="/" className="dashboard-brand">
+            Visonaut
+          </Link>
+        }
+        center={
+          <ShellHeaderCenter $shrink>
+            <span className="dashboard-repository">
+              {state.status === "ready" ? state.repository : "Repository"}
+            </span>
+          </ShellHeaderCenter>
+        }
+        end={
+          <div className="dashboard-header-actions">
+            {state.status === "ready" && <OperationsAttention onAccessDenied={onAccessDenied} />}
+            {state.status !== "loading" && (
+              <Button
+                className="review-control"
+                disabled={action !== null}
+                onClick={() => void signOut()}
               >
-                <h2>No runs yet</h2>
-                <p>The first complete capture run will appear here.</p>
-              </Frame>
-            ) : (
-              <Frame $layer $rounded="lg" $border className="dashboard-table-scroll">
-                <table className="dashboard-runs">
-                  <thead>
-                    <tr>
-                      <th scope="col">Run</th>
-                      <th scope="col">Tested commit</th>
-                      <th scope="col">State</th>
-                      <th scope="col">Attempt</th>
-                      <th scope="col">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                {action === "sign-out" ? "Signing out…" : "Sign out"}
+              </Button>
+            )}
+          </div>
+        }
+      />
+      <ShellMain $maxWidth="80rem" $p="clamp(1rem, 2.5vw, 2rem)">
+        <ShellMainBody className="dashboard-main">
+          {actionError && (
+            <p className="dashboard-error" role="alert">
+              {actionError}
+            </p>
+          )}
+          {state.status === "loading" && <p role="status">Checking access and loading runs…</p>}
+          {(state.status === "error" || state.status === "forbidden") && (
+            <Frame
+              $layer
+              $lighten
+              $rounded="lg"
+              $border
+              render={<section />}
+              className="dashboard-empty"
+            >
+              <h1>
+                {state.status === "forbidden"
+                  ? "Repository access required"
+                  : "Runs could not be loaded"}
+              </h1>
+              <p role="alert">{state.message}</p>
+              <Button
+                className="review-control"
+                onClick={() => {
+                  setState({ status: "loading" });
+                  setReload((value) => value + 1);
+                }}
+              >
+                Retry
+              </Button>
+            </Frame>
+          )}
+          {state.status === "ready" && (
+            <>
+              <div className="dashboard-heading">
+                <div>
+                  <p className="dashboard-eyebrow">Visual regression review</p>
+                  <h1>
+                    Runs{" "}
+                    <Badge $layer>
+                      <BadgeLabel>{state.runs.length}</BadgeLabel>
+                    </Badge>
+                  </h1>
+                </div>
+                <div className="dashboard-heading-actions">
+                  <span>
+                    {state.baselineRevision > 0
+                      ? `Baseline revision ${state.baselineRevision}`
+                      : "No baseline yet"}
+                  </span>
+                  <Button
+                    className="review-control"
+                    onClick={() => {
+                      setState({ status: "loading" });
+                      setReload((value) => value + 1);
+                    }}
+                  >
+                    Refresh runs
+                  </Button>
+                </div>
+              </div>
+              {state.runs.length === 0 ? (
+                <Frame
+                  $layer
+                  $lighten
+                  $rounded="lg"
+                  $border
+                  render={<section />}
+                  className="dashboard-empty"
+                >
+                  <h2>No runs yet</h2>
+                  <p>The first complete capture run will appear here.</p>
+                </Frame>
+              ) : (
+                <Table
+                  className="dashboard-runs"
+                  caption={{ children: "Recent runs", className: "sr-only" }}
+                  container={{ $layer: true, $border: true, $rounded: "lg" }}
+                  $borderBlock
+                >
+                  <TableRowGroup group="head">
+                    <TableRow>
+                      <TableCell>Run</TableCell>
+                      <TableCell>Tested commit</TableCell>
+                      <TableCell>State</TableCell>
+                      <TableCell numeric>Attempt</TableCell>
+                      <TableCell>Created</TableCell>
+                    </TableRow>
+                  </TableRowGroup>
+                  <TableRowGroup>
                     {state.runs.map((run) => (
-                      <tr key={run.id}>
-                        <td>
+                      <TableRow key={run.id}>
+                        <TableCell header="row">
                           <Link to="/runs/$runId" params={{ runId: run.id }}>
                             <strong>{kindLabel(run.kind)}</strong>
                             <small>{run.id}</small>
                           </Link>
-                        </td>
-                        <td>
+                        </TableCell>
+                        <TableCell>
                           <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
-                        </td>
-                        <td>
-                          <span className="dashboard-run-state">{stateLabel(run.state)}</span>
-                        </td>
-                        <td>{run.attempt}</td>
-                        <td>{runDate(run.createdAt)}</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell>
+                          <Badge $layer={stateColor(run.state) ?? true}>
+                            <BadgeLabel>{stateLabel(run.state)}</BadgeLabel>
+                          </Badge>
+                        </TableCell>
+                        <TableCell numeric>{run.attempt}</TableCell>
+                        <TableCell>{runDate(run.createdAt)}</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
-              </Frame>
-            )}
-          </>
-        )}
-      </main>
+                  </TableRowGroup>
+                </Table>
+              )}
+            </>
+          )}
+        </ShellMainBody>
+      </ShellMain>
     </Shell>
   );
 }
