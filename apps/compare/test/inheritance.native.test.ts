@@ -9,6 +9,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { expect, it } from "vitest";
 import { Service, captureProfilesDigest } from "@visonaut/service";
 import { validateImage } from "@visonaut/compare";
+import { crc32, joinBytes } from "../../../packages/compare/src/binary.ts";
 import { TestDatabase } from "../../web/src/operations/test-fixtures.ts";
 
 function databaseStatements(database: TestDatabase) {
@@ -53,6 +54,20 @@ it("compares inherited captures through the native queue consumer after fifty fa
     await readFile(new URL("../../../packages/compare/test/fixtures/rgba.png", import.meta.url)),
   );
   const image = await validateImage(png);
+  // An ancillary chunk changes the original bytes without changing decoded pixels.
+  const metadata = new TextEncoder().encode("run\0candidate");
+  const textChunk = new Uint8Array(metadata.length + 12);
+  new DataView(textChunk.buffer).setUint32(0, metadata.length);
+  textChunk.set(new TextEncoder().encode("tEXt"), 4);
+  textChunk.set(metadata, 8);
+  new DataView(textChunk.buffer).setUint32(
+    textChunk.length - 4,
+    crc32(textChunk.subarray(4, textChunk.length - 4)),
+  );
+  const candidatePng = joinBytes([png.subarray(0, 33), textChunk, png.subarray(33)]);
+  const candidateImage = await validateImage(candidatePng);
+  expect(candidateImage.digest).not.toBe(image.digest);
+  expect(candidateImage.profile).toBe(image.profile);
   const objects = new Map<string, Uint8Array<ArrayBuffer>>();
   await service.createPolicy({
     digest: "policy",
@@ -82,19 +97,22 @@ it("compares inherited captures through the native queue consumer after fifty fa
     verificationDigest: "verified",
     now: 1000,
   };
+  const seedId = randomUUID();
   const commit = async (runId: string, key: string) => {
     const imageId = randomUUID();
     const objectKey = `runs/${runId}/${imageId}`;
-    objects.set(objectKey, png);
+    const bytes = runId === seedId ? png : candidatePng;
+    const validated = runId === seedId ? image : candidateImage;
+    objects.set(objectKey, bytes);
     await service.registerImage({
       id: imageId,
       runId,
-      digest: image.digest,
+      digest: validated.digest,
       objectKey,
       contentType: "image/png",
-      bytes: png.length,
-      width: image.width,
-      height: image.height,
+      bytes: bytes.length,
+      width: validated.width,
+      height: validated.height,
     });
     await service.commitShard({
       runId,
@@ -120,7 +138,6 @@ it("compares inherited captures through the native queue consumer after fifty fa
       now: 1001,
     });
   };
-  const seedId = randomUUID();
   await service.reserveRun({
     ...defaults,
     id: seedId,

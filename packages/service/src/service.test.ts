@@ -123,6 +123,7 @@ interface FixtureInput {
   compare?: (task: ComparisonTask) => ComparisonResult;
   captureProfileDigest?: string;
   measuredEnvironmentProfile?: boolean;
+  realDigest?: boolean;
 }
 
 async function fixture(service: Service, input: FixtureInput) {
@@ -166,10 +167,13 @@ async function fixture(service: Service, input: FixtureInput) {
     now: 1,
   });
   for (const item of items) {
+    const digestInput = `${item}-${input.color ?? "blue"}`;
     await service.registerImage({
       id: `image-${input.id}-${item}`,
       runId: input.id,
-      digest: `${item}-${input.color ?? "blue"}`,
+      digest: input.realDigest
+        ? createHash("sha256").update(digestInput).digest("hex")
+        : digestInput,
       objectKey: `runs/${input.id}/${item}`,
       contentType: "image/png",
       bytes: 80,
@@ -479,6 +483,77 @@ describe("rejection of inherited acceptance", () => {
 });
 
 describe("full run and immutable comparison state", () => {
+  it("accepts equal validated originals without scheduling pixel comparisons", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await setup(service);
+    await fixture(service, { id: "seed", items: ["dialog", "menu"], realDigest: true });
+    await promote(service, "seed");
+    await fixture(service, {
+      id: "identical",
+      items: ["dialog", "menu"],
+      kind: "pull_request",
+      realDigest: true,
+    });
+    const rows = await service.comparisonRows("comparison-identical");
+    expect(rows.map((row) => row.outcome)).toEqual(["unchanged", "unchanged"]);
+    expect(rows.map((row) => JSON.parse(row.result_json ?? "{}"))).toEqual([
+      expect.objectContaining({
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        engineVersion: "sha256-identical-1",
+        maskExpected: false,
+      }),
+      expect.objectContaining({
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        engineVersion: "sha256-identical-1",
+        maskExpected: false,
+      }),
+    ]);
+    expect(count(database, "work_tasks")).toBe(0);
+    expect((await service.status("identical")).status).toBe("passed");
+
+    await service.createComparison({
+      id: "recomparison-identical",
+      runId: "identical",
+      referenceSnapshotId: "snapshot-seed",
+      now: 20,
+      maxAttempts: 3,
+    });
+    expect(
+      (await service.comparisonRows("recomparison-identical")).map((row) => row.outcome),
+    ).toEqual(["unchanged", "unchanged"]);
+    expect(count(database, "work_tasks")).toBe(0);
+
+    await fixture(service, {
+      id: "profile-change",
+      items: ["dialog", "menu"],
+      kind: "pull_request",
+      realDigest: true,
+      measuredEnvironmentProfile: true,
+      captureProfileDigest: "new-full-profile",
+    });
+    expect(
+      (await service.comparisonRows("comparison-profile-change")).map((row) => row.outcome),
+    ).toEqual(["changed", "changed"]);
+    expect(count(database, "work_tasks")).toBe(2);
+
+    await fixture(service, {
+      id: "content-change",
+      items: ["dialog", "menu"],
+      kind: "pull_request",
+      realDigest: true,
+      color: "red",
+    });
+    expect(
+      (await service.comparisonRows("comparison-content-change")).map((row) => row.outcome),
+    ).toEqual(["changed", "changed"]);
+    expect(count(database, "work_tasks")).toBe(4);
+  });
+
   it("requires review when a signed capture measures a new full environment profile", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
