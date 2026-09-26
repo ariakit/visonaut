@@ -134,7 +134,7 @@ async function guardedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     assert.equal(body.external_id, externalId);
     assert.equal(body.details_url, detailsUrl);
     assert.equal(body.status, "in_progress");
-    assert.deepEqual(body.output, genericCheckOutput("pending"));
+    assert.deepEqual(body.output, genericCheckOutput("pending", detailsUrl));
     counts.POST += 1;
   } else if (checkId && url.pathname === `${checkPath}/${checkId}` && method === "GET") {
     counts.GET += 1;
@@ -145,7 +145,7 @@ async function guardedFetch(input: RequestInfo | URL, init?: RequestInit): Promi
     assert.equal(body.details_url, detailsUrl);
     assert.equal(body.status, "completed");
     assert.equal(body.conclusion, "failure");
-    assert.deepEqual(body.output, genericCheckOutput("failure"));
+    assert.deepEqual(body.output, genericCheckOutput("failure", detailsUrl));
     counts.PATCH += 1;
   } else {
     throw new Error("The diagnostic request target or method is outside its fixed scope.");
