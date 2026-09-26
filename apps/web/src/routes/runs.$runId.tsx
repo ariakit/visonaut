@@ -3,6 +3,7 @@ import { createAuthClient } from "better-auth/react";
 import { useEffect, useState } from "react";
 import { Button } from "../components/ariakit/components/button.ariakit.react.tsx";
 import { loadReview } from "../review/client.ts";
+import { ReviewCommandError } from "../review/model.ts";
 import { ReviewWorkspace } from "../review/review-workspace.tsx";
 import "./dashboard.css";
 
@@ -34,27 +35,22 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
     const controller = new AbortController();
     const load = async () => {
       try {
-        const access = await fetch("/api/me", {
-          credentials: "same-origin",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (access.status === 401) {
-          setState({ status: "guest" });
-          return;
-        }
-        if (access.status === 403)
-          throw new Error("Write access to this repository is required to open this run.");
-        if (!access.ok)
-          throw new Error("Your repository access could not be checked. Please retry.");
         const review = await loadReview(runId, comparisonId);
         if (!controller.signal.aborted) setState({ status: "ready", review });
       } catch (error) {
         if (controller.signal.aborted) return;
+        if (error instanceof ReviewCommandError && error.status === 401) {
+          setState({ status: "guest" });
+          return;
+        }
         setState({
           status: "error",
           message:
-            error instanceof Error ? error.message : "The run could not be loaded. Please retry.",
+            error instanceof ReviewCommandError && error.status === 403
+              ? "Write access to this repository is required to open this run."
+              : error instanceof Error
+                ? error.message
+                : "The run could not be loaded. Please retry.",
         });
       }
     };

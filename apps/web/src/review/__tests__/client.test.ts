@@ -54,6 +54,7 @@ test("the client binds every review and Undo to the server session for this page
     });
   });
   const review = await loadReview("run-42");
+  expect(requests.map(({ path }) => path)).toEqual(["/api/runs/run-42"]);
   const command = {
     commandId: "command-1",
     comparisonId: "comparison-2",
@@ -69,6 +70,7 @@ test("the client binds every review and Undo to the server session for this page
     ...command,
     reviewSessionId: "session-1",
   });
+  expect(requests.filter(({ path }) => path === "/api/review-sessions")).toHaveLength(1);
   await review.commands.undo({
     commandId: "saved-command",
     undoCommandId: "undo-1",
@@ -80,6 +82,7 @@ test("the client binds every review and Undo to the server session for this page
     expectedBaselineRevision: 4,
     reviewSessionId: "session-1",
   });
+  expect(requests.filter(({ path }) => path === "/api/review-sessions")).toHaveLength(1);
   for (const request of requests) {
     expect(request.init).toMatchObject({ credentials: "same-origin", cache: "no-store" });
   }

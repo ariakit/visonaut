@@ -191,6 +191,7 @@ async function request(path: string, body?: object): Promise<unknown> {
     const error = record(data.error);
     throw new ReviewCommandError(string(error.message), {
       conflict: response.status === 409,
+      status: response.status,
       model: data.model ? parseReviewModel(data.model) : undefined,
       reviewer: optionalString(data.reviewer),
     });
@@ -198,7 +199,7 @@ async function request(path: string, body?: object): Promise<unknown> {
   return result;
 }
 
-/** Creates a new, server-bound Undo session for this page load. */
+/** Loads review evidence before creating a session for a review command. */
 export async function loadReview(
   runId: string,
   comparisonId?: string,
@@ -209,15 +210,22 @@ export async function loadReview(
     selectedComparisonId
       ? `${runPath}?comparison=${encodeURIComponent(selectedComparisonId)}`
       : runPath;
-  const [session, run] = await Promise.all([
-    request("/api/review-sessions", {}),
-    request(selectedPath()),
-  ]);
-  const reviewSessionId = string(record(session).reviewSessionId);
+  const run = await request(selectedPath());
+  let sessionPromise: Promise<string> | undefined;
+  const reviewSession = () => {
+    sessionPromise ??= request("/api/review-sessions", {})
+      .then((session) => string(record(session).reviewSessionId))
+      .catch((error: unknown) => {
+        sessionPromise = undefined;
+        throw error;
+      });
+    return sessionPromise;
+  };
   return {
     model: parseReviewModel(run),
     commands: {
       async save(command) {
+        const reviewSessionId = await reviewSession();
         return commandResult(
           await request(`/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`, {
             ...command,
@@ -226,6 +234,7 @@ export async function loadReview(
         );
       },
       async undo(command) {
+        const reviewSessionId = await reviewSession();
         return commandResult(
           await request(`/api/commands/${encodeURIComponent(command.commandId)}/undo`, {
             undoCommandId: command.undoCommandId,
