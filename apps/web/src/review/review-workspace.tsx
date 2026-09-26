@@ -19,6 +19,7 @@ import type {
   ReviewCommands,
   ReviewModel,
   ReviewMode,
+  ReviewPollState,
   ReviewSelection,
   ReviewVerdict,
   ReviewZoom,
@@ -94,6 +95,21 @@ function runStatusLabel(status: string) {
     default:
       return status;
   }
+}
+
+function runStopped(status: string) {
+  return ["failed", "superseded", "needs-recompare"].includes(status);
+}
+
+function comparisonReady(state: ReviewPollState | ReviewModel) {
+  return (
+    !runStopped(state.run.status) &&
+    (state.reviewReady || (state.archived && state.comparisonState === "ready"))
+  );
+}
+
+function comparisonFailed(state: ReviewPollState | ReviewModel) {
+  return state.comparisonState === "invalidated" || runStopped(state.run.status);
 }
 
 function ShortcutHelp() {
@@ -208,32 +224,39 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
   useEffect(() => {
     if (!awaitingComparison) return;
     let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout>;
+    let finished = false;
+    let inFlight = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const schedule = (delay: number) => {
+      if (cancelled || finished || inFlight || document.visibilityState !== "visible") return;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => void poll(), delay);
+    };
     const poll = async () => {
+      if (cancelled || finished || inFlight || document.visibilityState !== "visible") return;
+      inFlight = true;
       try {
-        const current = await commands.refresh();
-        if (cancelled) return;
-        if (current.reviewReady || (current.archived && current.comparisonState === "ready")) {
-          setModel(current);
-          setPendingComparison(false);
-          setSaveState({ status: "idle", message: "The new comparison is ready." });
-          return;
-        }
-        if (
-          current.comparisonState === "invalidated" ||
-          ["failed", "superseded", "needs-recompare"].includes(current.run.status)
-        ) {
-          setModel(current);
-          setPendingComparison(false);
-          setSaveState({
-            status: "idle",
-            message: current.run.error ?? runStatusLabel(current.run.status),
-          });
-          return;
+        const state = await commands.pollStatus();
+        if (cancelled || document.visibilityState !== "visible") return;
+        if (comparisonReady(state) || comparisonFailed(state)) {
+          const current = await commands.refresh();
+          if (cancelled || document.visibilityState !== "visible") return;
+          if (comparisonReady(current) || comparisonFailed(current)) {
+            finished = true;
+            setModel(current);
+            setPendingComparison(false);
+            setSaveState({
+              status: "idle",
+              message: comparisonReady(current)
+                ? "The new comparison is ready."
+                : (current.run.error ?? runStatusLabel(current.run.status)),
+            });
+            return;
+          }
         }
         setSaveState({
           status: "idle",
-          message: `${runStatusLabel(current.run.status)}. Review actions are unavailable until it is ready.`,
+          message: `${runStatusLabel(state.run.status)}. Review actions are unavailable until it is ready.`,
         });
       } catch (error) {
         if (cancelled) return;
@@ -244,13 +267,24 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
               ? `Waiting for the new comparison. ${error.message}`
               : "Waiting for the new comparison. The service is unavailable.",
         });
+      } finally {
+        inFlight = false;
+        schedule(2000);
       }
-      timeout = setTimeout(poll, 2000);
     };
-    timeout = setTimeout(poll, 2000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        schedule(0);
+      } else {
+        clearTimeout(timeout);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    schedule(2000);
     return () => {
       cancelled = true;
       clearTimeout(timeout);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [awaitingComparison, commands]);
 

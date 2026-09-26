@@ -75,6 +75,54 @@ async function projectRun(context: PrivateContext, runId: string) {
 
 const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
+const historicalComparisonError =
+  "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.";
+
+export async function reviewPollState(
+  context: PrivateContext,
+  runId: string,
+  selectedComparisonId?: string,
+) {
+  const run = await projectRun(context, runId);
+  const selectedComparison = selectedComparisonId
+    ? await context.service.comparison(selectedComparisonId)
+    : null;
+  if (
+    selectedComparison &&
+    (selectedComparison.run_id !== run.id || selectedComparison.purpose !== "historical")
+  ) {
+    throw new SecurityError("not_found", 404, "The historical comparison was not found.");
+  }
+  const comparisonId = selectedComparison?.id ?? run.comparison_id;
+  const comparison = comparisonId
+    ? (selectedComparison ?? (await context.service.comparison(comparisonId)))
+    : null;
+  const historical = Boolean(selectedComparison);
+  const status = historical
+    ? comparison?.state === "ready"
+      ? "compared"
+      : comparison?.state === "invalidated"
+        ? "failed"
+        : "comparing"
+    : (await context.service.status(run.id)).status;
+  return {
+    run: {
+      status,
+      ...(historical && comparison?.state === "invalidated"
+        ? { error: historicalComparisonError }
+        : {}),
+    },
+    comparisonState: comparison?.state ?? "comparing",
+    reviewReady: Boolean(
+      !historical &&
+      run.active &&
+      run.sealed_at &&
+      comparison?.state === "ready" &&
+      !["needs-recompare", "failed", "superseded"].includes(status),
+    ),
+    archived: historical || !run.active,
+  };
+}
 
 function historyString(row: HistoryRow, key: string): string {
   const value = row[key];
@@ -446,8 +494,7 @@ export async function reviewModel(
         ? { error: archive.viewUnavailableReason }
         : historical && comparison?.state === "invalidated"
           ? {
-              error:
-                "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.",
+              error: historicalComparisonError,
             }
           : {}),
     },
@@ -592,6 +639,13 @@ export async function handleReview(
     const selected = new URL(request.url).searchParams.get("comparison");
     return Response.json(
       await reviewModel(context, uuid(runMatch[1]), selected ? uuid(selected) : undefined),
+    );
+  }
+  const runStateMatch = /^\/api\/runs\/([a-f0-9-]+)\/state$/.exec(path);
+  if (runStateMatch?.[1] && request.method === "GET") {
+    const selected = new URL(request.url).searchParams.get("comparison");
+    return Response.json(
+      await reviewPollState(context, uuid(runStateMatch[1]), selected ? uuid(selected) : undefined),
     );
   }
   const commandMatch = /^\/api\/comparisons\/([a-f0-9-]+)\/commands$/.exec(path);

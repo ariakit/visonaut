@@ -777,6 +777,64 @@ test("recompare keeps prior evidence visible and blocks review until the new com
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
 });
 
+test("pending comparisons poll only status and pause while the page is hidden", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.getByRole("button", { name: "Recompare stored run" }).click();
+  await page.clock.runFor(4100);
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 2,
+    model: 0,
+  });
+  await page.evaluate(() => window.reviewFixture.setVisibility("hidden"));
+  await page.clock.runFor(6100);
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 2,
+    model: 0,
+  });
+  await page.evaluate(() => {
+    window.reviewFixture.completeComparison();
+    window.reviewFixture.setVisibility("visible");
+  });
+  await page.clock.runFor(1);
+  await expect(page.getByText("The new comparison is ready.", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 3,
+    model: 1,
+  });
+  await page.clock.runFor(4100);
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 3,
+    model: 1,
+  });
+});
+
+test("a superseded comparison stops status polling after one final model load", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.getByRole("button", { name: "Recompare stored run" }).click();
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.run.status = "superseded";
+    model.archived = true;
+    model.comparisonState = "ready";
+    window.reviewFixture.update(model);
+  });
+  await page.clock.runFor(2100);
+  await expect(page.locator(".review-save-state")).toHaveText("A newer attempt is active");
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 1,
+    model: 1,
+  });
+  await page.clock.runFor(4100);
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 1,
+    model: 1,
+  });
+});
+
 test("archived history keeps navigation and export while blocking review, Undo, and recompare", async ({
   page,
 }) => {
@@ -921,6 +979,10 @@ test("a failed historical comparison stops polling and shows its failure reason"
   });
   await page.clock.runFor(2100);
   await expect(page.getByRole("alert")).toHaveText("A stored image could not be read.");
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 1,
+    model: 1,
+  });
   await expect(
     page.getByText("The previous comparison remains visible", { exact: false }),
   ).toHaveCount(0);

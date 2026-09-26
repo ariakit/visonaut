@@ -11,6 +11,8 @@ const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];
 let behavior = "normal";
 let pending: (() => void) | undefined;
+let statusReads = 0;
+let modelReads = 0;
 
 async function save(command: ReviewCommand): Promise<ReviewCommandResult> {
   calls.push(command);
@@ -85,7 +87,18 @@ function render() {
         commands={{
           save,
           undo,
+          pollStatus: async () => {
+            statusReads++;
+            if (behavior === "offline") throw new Error("Connection lost.");
+            return {
+              run: { status: model.run.status, error: model.run.error },
+              comparisonState: model.comparisonState ?? "comparing",
+              reviewReady: model.reviewReady,
+              archived: Boolean(model.archived),
+            };
+          },
           refresh: async () => {
+            modelReads++;
             if (behavior === "offline") throw new Error("Connection lost.");
             return model;
           },
@@ -141,6 +154,13 @@ Object.assign(window, {
     },
     model() {
       return structuredClone(model);
+    },
+    pollReads() {
+      return { status: statusReads, model: modelReads };
+    },
+    setVisibility(value: "visible" | "hidden") {
+      Object.defineProperty(document, "visibilityState", { configurable: true, value });
+      document.dispatchEvent(new Event("visibilitychange"));
     },
     completeComparison() {
       if (behavior === "comparison-failed") {

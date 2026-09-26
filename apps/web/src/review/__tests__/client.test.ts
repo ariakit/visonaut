@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { loadReview, parseReviewModel } from "../client.ts";
+import { loadReview, parseReviewModel, parseReviewPollState } from "../client.ts";
 import { ReviewCommandError } from "../model.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -149,6 +149,23 @@ test("unknown additive API fields stay compatible, but unsupported verdicts fail
   expect(() => parseReviewModel(raw)).toThrow("unsupported review state");
 });
 
+test("the compact poll response rejects invalid terminal state", () => {
+  const state = {
+    run: { status: "comparing" },
+    comparisonState: "comparing",
+    reviewReady: false,
+    archived: false,
+  };
+  expect(parseReviewPollState(state)).toEqual({
+    ...state,
+    run: { ...state.run, error: undefined },
+  });
+  expect(() => parseReviewPollState({ ...state, reviewReady: "true" })).toThrow("invalid state");
+  expect(() => parseReviewPollState({ ...state, comparisonState: "approved" })).toThrow(
+    "unsupported review state",
+  );
+});
+
 test("historical selection remains pinned during initial load, refresh, and recompare", async () => {
   const model = {
     ...fixtureModel(),
@@ -166,6 +183,13 @@ test("historical selection remains pinned during initial load, refresh, and reco
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
     if (path === "/api/runs/run-42/recompare")
       return json({ ...model, comparisonId: "history/two", comparisonState: "comparing" }, 202);
+    if (String(path).includes("/state"))
+      return json({
+        run: { status: "comparing" },
+        comparisonState: "comparing",
+        reviewReady: false,
+        archived: true,
+      });
     return json(model);
   });
   const review = await loadReview("run-42", "history/one");
@@ -177,7 +201,11 @@ test("historical selection remains pinned during initial load, refresh, and reco
   });
   await review.commands.refresh();
   expect(requests.at(-1)).toBe("/api/runs/run-42?comparison=history%2Fone");
+  await review.commands.pollStatus();
+  expect(requests.at(-1)).toBe("/api/runs/run-42/state?comparison=history%2Fone");
   await review.commands.recompare?.();
+  await review.commands.pollStatus();
+  expect(requests.at(-1)).toBe("/api/runs/run-42/state?comparison=history%2Ftwo");
   await review.commands.refresh();
   expect(requests.at(-1)).toBe("/api/runs/run-42?comparison=history%2Ftwo");
   expect(requests).not.toContain("/api/runs/run-42");
@@ -188,10 +216,19 @@ test("live recompare continues to follow the active comparison pointer", async (
   vi.stubGlobal("fetch", async (path: unknown) => {
     requests.push(path);
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
+    if (path === "/api/runs/run-42/state")
+      return json({
+        run: { status: "comparing" },
+        comparisonState: "comparing",
+        reviewReady: false,
+        archived: false,
+      });
     return json({ ...fixtureModel(), comparisonId: "new-live-comparison" });
   });
   const review = await loadReview("run-42");
   await review.commands.recompare?.();
+  await review.commands.pollStatus();
+  expect(requests.at(-1)).toBe("/api/runs/run-42/state");
   await review.commands.refresh();
   expect(requests.at(-1)).toBe("/api/runs/run-42");
   expect(requests.some((path) => String(path).includes("?comparison="))).toBe(false);
