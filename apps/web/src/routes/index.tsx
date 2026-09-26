@@ -102,24 +102,6 @@ function Index() {
     const controller = new AbortController();
     const load = async () => {
       try {
-        const access = await fetch("/api/me", {
-          credentials: "same-origin",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (access.status === 401) {
-          setState({ status: "guest" });
-          return;
-        }
-        if (access.status === 403) {
-          setState({
-            status: "forbidden",
-            message: "This GitHub account does not have write access to this repository.",
-          });
-          return;
-        }
-        if (!access.ok)
-          throw new Error("Your repository access could not be checked. Please retry.");
         const response = await fetch("/api/runs", {
           credentials: "same-origin",
           cache: "no-store",

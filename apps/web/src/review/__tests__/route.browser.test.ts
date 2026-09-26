@@ -4,6 +4,35 @@ import { fixtureModel } from "./fixture-model.ts";
 const entry = "/runs/run-42?comparison=history%2Fone";
 const fixtureUrl = `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
 
+test("dashboard loads its protected run list without a separate identity request", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    return route.fulfill({
+      json: { runs: [], project: { repository: "ariakit/ariakit", baselineRevision: 1 } },
+    });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
+  await expect(page.getByText("No runs yet")).toBeVisible();
+  expect(requests).toContain("/api/runs");
+  expect(requests).not.toContain("/api/me");
+});
+
+test("dashboard offers sign-in when the run list rejects its session", async ({ page }) => {
+  const requests: string[] = [];
+  await page.route("**/api/**", (route) => {
+    requests.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
+  await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+  expect(requests).toContain("/api/runs");
+  expect(requests).not.toContain("/api/me");
+});
+
 test("opening a historical link loads its selected comparison", async ({ page }) => {
   const errors: Error[] = [];
   page.on("pageerror", (error) => errors.push(error));
@@ -11,10 +40,6 @@ test("opening a historical link loads its selected comparison", async ({ page })
   await page.route("**/api/**", async (route) => {
     const url = new URL(route.request().url());
     requests.push(url.pathname + url.search);
-    if (url.pathname === "/api/me") {
-      await route.fulfill({ json: { user: { login: "maintainer" } } });
-      return;
-    }
     if (url.pathname === "/api/review-sessions") {
       await route.fulfill({ json: { reviewSessionId: "session-1" } });
       return;
@@ -34,6 +59,8 @@ test("opening a historical link loads its selected comparison", async ({ page })
   await expect(page.getByLabel("Review workspace", { exact: true })).toBeVisible();
   expect(requests).toContain("/api/runs/run-42?comparison=history%2Fone");
   expect(requests).not.toContain("/api/runs/run-42");
+  expect(requests).not.toContain("/api/me");
+  expect(requests).not.toContain("/api/review-sessions");
   await page.getByText("Comparison details", { exact: true }).click();
   await expect(page.locator(".review-metadata")).toContainText("history/one");
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
@@ -45,12 +72,20 @@ test("historical sign-in preserves the selected comparison in its return path", 
 }) => {
   const errors: Error[] = [];
   page.on("pageerror", (error) => errors.push(error));
-  await page.route("**/api/me", (route) => route.fulfill({ status: 401, json: {} }));
+  const requests: string[] = [];
+  await page.route("**/api/**", (route) => {
+    requests.push(new URL(route.request().url()).pathname);
+    return route.fulfill({
+      status: 401,
+      json: { error: { code: "sign_in_required", message: "Sign in with GitHub." } },
+    });
+  });
   await page.route("**/api/auth/sign-in/social", (route) =>
     route.fulfill({ status: 400, json: { code: "TEST", message: "Sign-in fixture" } }),
   );
   await page.goto(fixtureUrl);
   await expect(page.getByRole("heading", { name: "Sign in to review this run" })).toBeVisible();
+  expect(requests).not.toContain("/api/me");
   const request = page.waitForRequest("**/api/auth/sign-in/social");
   await page.getByRole("button", { name: "Sign in with GitHub" }).click();
   expect((await request).postDataJSON()).toMatchObject({ provider: "github", callbackURL: entry });

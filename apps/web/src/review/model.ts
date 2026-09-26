@@ -125,6 +125,7 @@ export class ReviewCommandError extends Error {
   readonly model?: ReviewModel;
   readonly reviewer?: string;
   readonly conflict: boolean;
+  readonly status?: number;
 
   constructor(
     message: string,
@@ -132,6 +133,7 @@ export class ReviewCommandError extends Error {
       model?: ReviewModel;
       reviewer?: string;
       conflict?: boolean;
+      status?: number;
     } = {},
   ) {
     super(message);
@@ -139,5 +141,6 @@ export class ReviewCommandError extends Error {
     this.model = options.model;
     this.reviewer = options.reviewer;
     this.conflict = options.conflict ?? false;
+    this.status = options.status;
   }
 }
