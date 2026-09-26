@@ -103,6 +103,28 @@ describe("public commands under temporary service backpressure", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("explains a capacity pause without retrying reserve", async () => {
+    const local = await fixture();
+    directories.push(local.directory);
+    const paths: string[] = [];
+    const fetch = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(input instanceof Request ? input.url : input);
+      if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+        return Response.json({ value: "oidc-secret" });
+      }
+      paths.push(url.pathname);
+      return busy("capacity_exceeded", "1");
+    });
+    vi.stubGlobal("fetch", fetch);
+    const result = await execute(["upload", "--dir", local.directory]);
+    expect(result.code).toBe(1);
+    expect(paths).toEqual(["/v1/runs"]);
+    expect(result.stderr).toContain("capacity limit");
+    expect(result.stderr).toContain("Service attention");
+    expect(result.stderr).toContain("Rerun this job");
+    expect(result.stderr).not.toContain("private-response-secret");
+  });
+
   it("does not retry network failures", async () => {
     const fetch = vi.fn(async () => {
       throw new Error("request-secret");

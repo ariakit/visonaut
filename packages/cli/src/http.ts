@@ -145,6 +145,22 @@ export async function request({
           4,
         );
       }
+      let failure: unknown;
+      if (response.status === 503) {
+        try {
+          failure = await responseJson(response, 16 * 1024);
+        } catch {
+          // An invalid error body must not replace the safe status message.
+        }
+      } else {
+        await response.body?.cancel();
+      }
+      const error = record(failure) && record(failure.error) ? failure.error : undefined;
+      if (method === "POST" && url.pathname === "/v1/runs" && error?.code === "capacity_exceeded") {
+        throw new CliError(
+          "Visonaut has paused new capture runs at its capacity limit. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.",
+        );
+      }
       const delay = retryDelay(response.headers.get("Retry-After"));
       if (
         retryUnavailable &&
@@ -154,19 +170,13 @@ export async function request({
         delay !== undefined &&
         performance.now() + delay < deadline
       ) {
-        const failure = await responseJson(response);
         if (
-          record(failure) &&
-          record(failure.error) &&
-          (failure.error.code === "validation_busy" ||
-            failure.error.code === "service_unavailable") &&
+          (error?.code === "validation_busy" || error?.code === "service_unavailable") &&
           performance.now() + delay < deadline
         ) {
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }
-      } else {
-        await response.body?.cancel();
       }
       throw new CliError(
         `The service refused the request (HTTP ${response.status}). No visual approval was granted.`,
