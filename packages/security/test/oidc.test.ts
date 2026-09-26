@@ -68,6 +68,10 @@ function github(
     workflowBlob?: string;
     authorPermission?: string;
     headRepositoryId?: number;
+    jobStatus?: string;
+    jobConclusion?: string | null;
+    currentStatus?: string;
+    currentConclusion?: string | null;
   } = {},
 ): GitHubClient {
   const run = {
@@ -103,8 +107,8 @@ function github(
               run_attempt: 2,
               name: jobName,
               check_run_url: `https://api.github.com/repos/${repository}/check-runs/40`,
-              status: "in_progress",
-              conclusion: null,
+              status: heads.jobStatus ?? "in_progress",
+              conclusion: heads.jobConclusion ?? null,
             },
           ],
         };
@@ -128,6 +132,13 @@ function github(
           user: { id: 42 },
         };
       if (path.includes("/git/ref/heads/gh-readonly-queue/")) return { object: { sha: testedSha } };
+      if (path.endsWith("/actions/runs/20")) {
+        return {
+          ...run,
+          status: heads.currentStatus ?? run.status,
+          conclusion: heads.currentConclusion ?? run.conclusion,
+        };
+      }
       return run;
     }),
   };
@@ -143,6 +154,60 @@ describe("direct Ariakit app workflow", () => {
     workflowPath: ".github/workflows/ci.yml",
     trustedWorkflowPath: ".github/workflows/app.yml",
   };
+
+  it("accepts an active signed job when GitHub still reports its workflow attempt as queued", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${direct.workflowPath}@${ref}`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@${ref}`,
+      job_workflow_sha: testedSha,
+    });
+    const queuedRun = { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead };
+    const verify = (
+      status: string,
+      options: {
+        jobStatus?: string;
+        jobConclusion?: string | null;
+        currentStatus?: string;
+        currentConclusion?: string | null;
+      } = {},
+    ) =>
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github({ ...queuedRun, status }, "capture / chromium", {
+          ...options,
+        }),
+        keySet,
+      });
+
+    await expect(verify("queued")).resolves.toMatchObject({
+      event: "pull_request",
+      testedSha,
+      jobId: "30",
+    });
+    await expect(verify("queued", { jobStatus: "completed" })).rejects.toMatchObject({
+      code: "inactive_run",
+      status: 409,
+    });
+    await expect(verify("queued", { jobConclusion: "failure" })).rejects.toMatchObject({
+      code: "inactive_run",
+      status: 409,
+    });
+    await expect(
+      verify("queued", { currentStatus: "completed", currentConclusion: "cancelled" }),
+    ).rejects.toMatchObject({ code: "inactive_run", status: 409 });
+    await expect(verify("completed")).rejects.toMatchObject({
+      code: "inactive_run",
+      status: 409,
+    });
+  });
 
   it("accepts an unchanged approved app workflow in a PR merge commit", async () => {
     const ref = "refs/pull/7/merge";
