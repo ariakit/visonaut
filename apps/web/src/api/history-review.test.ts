@@ -100,14 +100,19 @@ function fixture() {
         : sql.includes("purpose = 'historical'")
           ? async () => null
           : first,
-      all: async () => ({ results: [] }),
+      all: async () => ({
+        results: sql.includes("SELECT byte_state") ? [{ byte_state: "live" }] : [],
+      }),
     }),
   }));
+  const batch = vi.fn(async (statements: Array<{ all: () => Promise<{ results: unknown[] }> }>) =>
+    Promise.all(statements.map((statement) => statement.all())),
+  );
   // These routes use only the mocked context members assigned below.
   const context = {} as PrivateContext;
   Object.assign(context, {
     service,
-    database: { prepare },
+    database: { prepare, batch },
     configuration: {
       projectId: "project",
       github: { repository: "ariakit/visonaut-diagnostics" },
