@@ -1,9 +1,10 @@
 import * as ak from "@ariakit/react";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { Button } from "../components/ariakit/components/button.ariakit.react.tsx";
-import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { ControlButton as Button } from "../components/control-button.tsx";
 import { Kbd } from "../components/ariakit/components/kbd.ariakit.react.tsx";
+import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
+import { Shell } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import {
   Tab,
   TabList,
@@ -23,7 +24,13 @@ import type {
   ReviewZoom,
   UndoCommand,
 } from "./model.ts";
-import { needsReview, nextPending, reviewTargets, verdictLabel } from "./navigation.ts";
+import {
+  needsReview,
+  nextPending,
+  partitionItems,
+  reviewTargets,
+  verdictLabel,
+} from "./navigation.ts";
 import { useEvidence } from "./use-evidence.ts";
 import "../review.css";
 
@@ -55,8 +62,13 @@ function excludesShortcuts(event: KeyboardEvent<HTMLElement>) {
 }
 
 function initialSelection(model: ReviewModel): ReviewSelection {
-  const item = model.items.find((entry) => entry.variants.length);
-  return { itemKey: item?.key ?? "", variantKey: item?.variants[0]?.key ?? "" };
+  for (const index of partitionItems(model.items).order) {
+    const item = model.items[index];
+    if (item?.variants[0]) {
+      return { itemKey: item.key, variantKey: item.variants[0].key };
+    }
+  }
+  return { itemKey: "", variantKey: "" };
 }
 
 function runStatusLabel(status: string) {
@@ -91,7 +103,7 @@ function ShortcutHelp() {
         Keyboard help
       </ak.DialogDisclosure>
       <ak.Dialog
-        className="review-help-dialog"
+        className="review-help-dialog ak-layer ak-layer-canvas"
         backdrop={<div className="review-dialog-backdrop" />}
       >
         <ak.DialogHeading>Review with the keyboard</ak.DialogHeading>
@@ -476,9 +488,11 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
     }
     if (!item || !variant) return;
     const itemIndex = model.items.indexOf(item);
+    const order = partitionItems(model.items).order;
+    const itemPosition = order.indexOf(itemIndex);
     const variantIndex = item.variants.indexOf(variant);
-    if (key === "arrowup") selectItem(itemIndex - 1);
-    else if (key === "arrowdown") selectItem(itemIndex + 1);
+    if (key === "arrowup") selectItem(order[itemPosition - 1] ?? -1);
+    else if (key === "arrowdown") selectItem(order[itemPosition + 1] ?? -1);
     else if (key === "arrowleft") selectVariant(variantIndex - 1);
     else if (key === "arrowright") selectVariant(variantIndex + 1);
     else if (/^[1-6]$/.test(key)) selectVariant(Number(key) - 1);
@@ -492,89 +506,99 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
   };
 
   return (
-    <Frame
+    <Shell
       className="review-workspace"
       ref={workspace}
       tabIndex={0}
       aria-label="Review workspace"
       onKeyDown={onKeyDown}
     >
-      <header className="review-run-header">
-        <div>
-          <p className="review-eyebrow">Visonaut · {model.run.repository ?? "Repository"}</p>
-          <h1>
-            {model.run.title ??
-              `${model.run.kind === "main" ? "Main" : model.run.kind === "merge_group" ? "Merge queue" : "Pull request"} visual review`}
-          </h1>
-          <p className="review-run-identity">
-            <code title={model.run.testedSha}>{model.run.testedSha.slice(0, 12)}</code>
-            <span>Run {model.run.id}</span>
-            <span>Attempt {model.run.attempt}</span>
-            <span>Comparison {model.comparisonRevision}</span>
+      <div className="col-[shell] row-[header]">
+        <header className="review-run-header">
+          <div>
+            <p className="review-eyebrow">Visonaut · {model.run.repository ?? "Repository"}</p>
+            <h1>
+              {model.run.title ??
+                `${model.run.kind === "main" ? "Main" : model.run.kind === "merge_group" ? "Merge queue" : "Pull request"} visual review`}
+            </h1>
+            <p className="review-run-identity">
+              <code title={model.run.testedSha}>{model.run.testedSha.slice(0, 12)}</code>
+              <span>Run {model.run.id}</span>
+              <span>Attempt {model.run.attempt}</span>
+              <span>Comparison {model.comparisonRevision}</span>
+            </p>
+          </div>
+          <div className="review-run-state">
+            <strong>
+              {pending} of {total} need review
+            </strong>
+            <span>{runStatusLabel(model.run.status)}</span>
+          </div>
+        </header>
+        {!!model.historicalComparisons?.length && (
+          <nav className="review-banner" aria-label="Comparison history">
+            <a
+              href={`/runs/${encodeURIComponent(model.run.id)}`}
+              aria-current={
+                model.historicalComparisons.some(
+                  (comparison) => comparison.id === model.comparisonId,
+                )
+                  ? undefined
+                  : "page"
+              }
+            >
+              Original comparison
+            </a>
+            {model.historicalComparisons.map((comparison) => (
+              <span key={comparison.id}>
+                {" · "}
+                <a
+                  href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
+                  aria-current={comparison.id === model.comparisonId ? "page" : undefined}
+                  title={new Date(comparison.createdAt).toLocaleString()}
+                >
+                  Historical comparison {comparison.ordinal} ·{" "}
+                  {comparison.state === "ready"
+                    ? "Complete"
+                    : comparison.state === "invalidated"
+                      ? "Failed"
+                      : "Comparing"}
+                </a>
+              </span>
+            ))}
+          </nav>
+        )}
+        {model.run.error && (
+          <p role="alert" className="review-banner">
+            {model.run.error}
           </p>
-        </div>
-        <div className="review-run-state">
-          <strong>
-            {pending} of {total} need review
-          </strong>
-          <span>{runStatusLabel(model.run.status)}</span>
-        </div>
-      </header>
-      {!!model.historicalComparisons?.length && (
-        <nav className="review-banner" aria-label="Comparison history">
-          <a
-            href={`/runs/${encodeURIComponent(model.run.id)}`}
-            aria-current={
-              model.historicalComparisons.some((comparison) => comparison.id === model.comparisonId)
-                ? undefined
-                : "page"
-            }
-          >
-            Original comparison
-          </a>
-          {model.historicalComparisons.map((comparison) => (
-            <span key={comparison.id}>
-              {" · "}
-              <a
-                href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
-                aria-current={comparison.id === model.comparisonId ? "page" : undefined}
-                title={new Date(comparison.createdAt).toLocaleString()}
-              >
-                Historical comparison {comparison.ordinal} ·{" "}
-                {comparison.state === "ready"
-                  ? "Complete"
-                  : comparison.state === "invalidated"
-                    ? "Failed"
-                    : "Comparing"}
-              </a>
-            </span>
-          ))}
-        </nav>
-      )}
-      {model.run.error && (
-        <p role="alert" className="review-banner">
-          {model.run.error}
-        </p>
-      )}
-      {model.archived && (
-        <p className="review-banner" role="status">
-          {model.readOnlyReason ??
-            "This closed run is read-only. Its review history remains available."}
-        </p>
-      )}
-      {!model.archived && !model.reviewReady && (
-        <p className="review-banner" role="status">
-          Review is unavailable until the run is sealed and all comparisons are complete.
-        </p>
-      )}
-      {pendingComparison && (
-        <p className="review-banner" role="status">
-          A new comparison is being prepared from stored captures. The previous comparison remains
-          visible until the new evidence is ready.
-        </p>
-      )}
-      <div className="review-shell">
-        <aside className="review-sidebar" aria-label="Review items">
+        )}
+        {model.archived && (
+          <p className="review-banner" role="status">
+            {model.readOnlyReason ??
+              "This closed run is read-only. Its review history remains available."}
+          </p>
+        )}
+        {!model.archived && !model.reviewReady && (
+          <p className="review-banner" role="status">
+            Review is unavailable until the run is sealed and all comparisons are complete.
+          </p>
+        )}
+        {pendingComparison && (
+          <p className="review-banner" role="status">
+            A new comparison is being prepared from stored captures. The previous comparison remains
+            visible until the new evidence is ready.
+          </p>
+        )}
+      </div>
+      <div className="review-shell col-[shell] row-[body]">
+        <Layer
+          $layer
+          $lighten
+          render={<aside />}
+          className="review-sidebar"
+          aria-label="Review items"
+        >
           <div className="review-sidebar-heading">
             <strong>Items</strong>
             <span>{model.items.length}</span>
@@ -584,7 +608,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
             selectedIndex={item ? model.items.indexOf(item) : -1}
             selectItem={selectItem}
           />
-        </aside>
+        </Layer>
         <main className="review-main">
           {item && variant ? (
             <>
@@ -713,7 +737,9 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                     />
                     {evidence.status === "loading" && (
                       <div className="review-evidence-message" role="status">
-                        Loading this comparison’s images…
+                        {variant.kind === "pending"
+                          ? "Comparison is still running…"
+                          : "Loading this comparison’s images…"}
                       </div>
                     )}
                     {evidence.status === "error" && (
@@ -810,7 +836,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
           )}
         </main>
       </div>
-      <footer className="review-footer">
+      <footer className="review-footer col-[shell] row-[footer]">
         <div
           className="review-save-state"
           role={
@@ -881,10 +907,10 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
           <p>{recompareDisabledReason}</p>
         )}
         {exportState.message && <p role="status">{exportState.message}</p>}
+        <p className="review-announcement" role="status" aria-live="polite" aria-atomic="true">
+          {announcement}
+        </p>
       </footer>
-      <p className="review-announcement" role="status" aria-live="polite" aria-atomic="true">
-        {announcement}
-      </p>
-    </Frame>
+    </Shell>
   );
 }

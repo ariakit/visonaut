@@ -91,3 +91,23 @@ test("historical sign-in preserves the selected comparison in its return path", 
   expect((await request).postDataJSON()).toMatchObject({ provider: "github", callbackURL: entry });
   expect(errors).toEqual([]);
 });
+
+test("the sign-in page follows the system dark color scheme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.route("**/api/runs/**", (route) =>
+    route.fulfill({
+      status: 401,
+      json: { error: { code: "sign_in_required", message: "Sign in with GitHub." } },
+    }),
+  );
+  await page.goto(fixtureUrl);
+  await expect(page.getByRole("heading", { name: "Sign in to review this run" })).toBeVisible();
+  const background = await page.locator(".dashboard-run-page").evaluate((element) => {
+    const context = document.createElement("canvas").getContext("2d");
+    if (!context) throw new Error("Canvas unavailable");
+    context.fillStyle = getComputedStyle(element).backgroundColor;
+    context.fillRect(0, 0, 1, 1);
+    return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+  });
+  expect(background.every((channel) => channel < 120)).toBe(true);
+});

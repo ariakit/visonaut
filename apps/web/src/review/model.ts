@@ -19,7 +19,7 @@ export interface ReviewVariant {
   id: string;
   key: string;
   label: string;
-  kind: "added" | "changed" | "removed" | "unchanged" | "error";
+  kind: "added" | "changed" | "removed" | "unchanged" | "pending" | "error";
   revision: number;
   verdict: ReviewVerdict | null;
   source: "human" | "automatic" | null;

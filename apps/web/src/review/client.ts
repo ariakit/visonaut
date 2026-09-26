@@ -80,7 +80,7 @@ function variant(value: unknown): ReviewVariant {
     id: string(data.id),
     key: string(data.key),
     label: string(data.label),
-    kind: oneOf(data.kind, ["added", "changed", "removed", "unchanged", "error"]),
+    kind: oneOf(data.kind, ["added", "changed", "removed", "unchanged", "pending", "error"]),
     revision: number(data.revision),
     verdict: data.verdict === null ? null : oneOf(data.verdict, ["approved", "rejected"]),
     source: data.source === null ? null : oneOf(data.source, ["human", "automatic"]),

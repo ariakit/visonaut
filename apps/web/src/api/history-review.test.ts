@@ -135,6 +135,35 @@ function commandRequest() {
 }
 
 describe("private archived run review", () => {
+  it("keeps a selected historical comparison pending while it runs", async () => {
+    const test = fixture();
+    const historicalId = "55555555-5555-4555-8555-555555555555";
+    const row = test.history.sections.comparisonRows?.[0];
+    if (!row) throw new Error("Missing comparison row.");
+    row.comparison_id = historicalId;
+    row.outcome = "pending";
+    row.result_json = null;
+    test.history.sections.comparisons = [
+      { id: historicalId, policy_digest: "policy", state: "comparing" },
+    ];
+    test.service.comparison.mockResolvedValue({
+      id: historicalId,
+      run_id: runId,
+      purpose: "historical",
+      ordinal: 2,
+      state: "comparing",
+    });
+    test.context.history = {
+      read: test.read,
+      readCommand: test.readCommand,
+      readComparison: vi.fn(async () => test.history),
+    };
+    const model = await reviewModel(test.context, runId, historicalId);
+    expect(model.run.status).toBe("comparing");
+    expect(model.items[0]?.variants[0]).toMatchObject({ kind: "pending" });
+    expect(model.items[0]?.variants[0]).not.toHaveProperty("error");
+  });
+
   it("hydrates historical metadata without reading live detail or restoring bytes", async () => {
     const test = fixture();
     const model = await reviewModel(test.context, runId);
@@ -201,6 +230,11 @@ describe("private archived run review", () => {
   it("gives a fixed recovery message for an invalidated historical result", async () => {
     const test = fixture();
     const historicalId = "55555555-5555-4555-8555-555555555555";
+    const row = test.history.sections.comparisonRows?.[0];
+    if (!row) throw new Error("Missing comparison row.");
+    row.comparison_id = historicalId;
+    row.outcome = "pending";
+    row.result_json = null;
     test.service.comparison.mockResolvedValue({
       id: historicalId,
       run_id: runId,
@@ -232,6 +266,10 @@ describe("private archived run review", () => {
         error:
           "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.",
       },
+    });
+    expect(model.items[0]?.variants[0]).toMatchObject({
+      kind: "error",
+      error: "Comparison stopped before evidence was available.",
     });
     expect(JSON.stringify(model)).not.toContain("private-worker-diagnostic");
   });

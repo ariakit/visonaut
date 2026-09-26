@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { SyntheticEvent } from "react";
 import type { ReviewImage, ReviewMode, ReviewVariant, ReviewZoom } from "../review/model.ts";
 import type { EvidenceRole, ImageEvidence } from "../review/use-evidence.ts";
-import { Button } from "./ariakit/components/button.ariakit.react.tsx";
+import { ControlButton as Button } from "./control-button.tsx";
 
 interface ImagePaneProps {
   image: ReviewImage | null;

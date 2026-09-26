@@ -58,6 +58,9 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
     },
     [generation],
   );
+  if (variant?.kind === "pending") {
+    return { status: "loading" as const, error: undefined, identity: generation, report };
+  }
   const required: EvidenceRole[] = [];
   let error = variant?.error;
   if (variant) {

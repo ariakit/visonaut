@@ -24,6 +24,119 @@ test.beforeEach(async ({ page }) => {
   await focusWorkspace(page);
 });
 
+test("review surfaces remain dark when the system uses dark mode", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.getByRole("button", { name: "Keyboard help" }).click();
+  const surfaces = await page.evaluate(() => {
+    const sample = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      const context = document.createElement("canvas").getContext("2d");
+      if (!context) throw new Error("Canvas unavailable");
+      context.fillStyle = getComputedStyle(element).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+    };
+    return {
+      workspace: sample(".review-workspace"),
+      sidebar: sample(".review-sidebar"),
+      dialog: sample(".review-help-dialog"),
+    };
+  });
+  for (const channels of Object.values(surfaces)) {
+    expect(channels.every((channel) => channel < 120)).toBe(true);
+  }
+});
+
+test("comparison errors stay visible ahead of accepted items", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[2]?.variants[0];
+    if (!variant) throw new Error("Missing comparison fixture");
+    variant.kind = "error";
+    variant.verdict = null;
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator(".review-item")).toHaveCount(3);
+  await expect(page.locator("#review-item-2")).toContainText("1 comparison error");
+  await expect(page.getByRole("button", { name: "Accepted (1)" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
+
+test("an accepted first item does not hide the initial attention selection", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.run.id = "run-43";
+    const first = model.items[0];
+    if (!first) throw new Error("Missing first fixture item");
+    for (const variant of first.variants) variant.verdict = "approved";
+    window.reviewFixture.update(model);
+  });
+  const accepted = page.getByRole("button", { name: "Accepted (3)" });
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator("#review-item-1")).toHaveAttribute("aria-current", "true");
+  await expect(page.locator("#review-item-0")).toHaveCount(0);
+  await focusWorkspace(page);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#review-item-0")).toHaveAttribute("aria-current", "true");
+  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+});
+
+test("a pending comparison stays visible without an evidence error", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const first = model.items[0];
+    if (!first) throw new Error("Missing first fixture item");
+    for (const variant of first.variants) variant.verdict = "approved";
+    const comparing = first.variants[0];
+    if (!comparing) throw new Error("Missing comparison fixture");
+    comparing.kind = "pending";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator("#review-item-0")).toContainText("1 comparison running");
+  await expect(page.getByRole("button", { name: "Accepted (2)" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(page.getByText("Comparison is still running…")).toBeVisible();
+  await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
+  await expect(page.locator(".review-actions button").first()).toBeDisabled();
+});
+
+test("keyboard item navigation follows attention items before accepted items", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    for (const index of [1, 3]) {
+      const item = model.items[index];
+      if (!item) throw new Error("Missing accepted fixture item");
+      for (const variant of item.variants) variant.verdict = "approved";
+    }
+    const error = model.items[2]?.variants[0];
+    if (!error) throw new Error("Missing error fixture variant");
+    error.kind = "error";
+    error.verdict = null;
+    window.reviewFixture.update(model);
+  });
+  const accepted = page.getByRole("button", { name: "Accepted (2)" });
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await page.locator("#review-item-0").focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#review-item-2")).toBeFocused();
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await page.keyboard.press("Home");
+  await expect(page.locator("#review-item-0")).toBeFocused();
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator("#review-item-2")).toHaveAttribute("aria-current", "true");
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await page.locator("#review-item-2").focus();
+  await page.keyboard.press("End");
+  await expect(page.locator("#review-item-3")).toBeFocused();
+  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+});
+
 test("item and variant navigation stops at ends and remembers each item", async ({ page }) => {
   await page.keyboard.press("ArrowUp");
   await expect(selected(page)).toContainText("React");

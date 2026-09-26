@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useEffect, useState } from "react";
-import { Button } from "../components/ariakit/components/button.ariakit.react.tsx";
+import { ControlButton as Button } from "../components/control-button.tsx";
+import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { loadReview } from "../review/client.ts";
 import { ReviewCommandError } from "../review/model.ts";
 import { ReviewWorkspace } from "../review/review-workspace.tsx";
@@ -88,8 +90,8 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
   };
 
   return (
-    <div className="dashboard-run-page">
-      <header className="dashboard-header">
+    <Frame $layer="canvas" className="dashboard-run-page">
+      <Layer $layer $lighten render={<header />} className="dashboard-header">
         <Link to="/" className="dashboard-brand">
           Visonaut
         </Link>
@@ -103,7 +105,7 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
             {action === "sign-out" ? "Signing out…" : "Sign out"}
           </Button>
         )}
-      </header>
+      </Layer>
       {actionError && (
         <p className="dashboard-error" role="alert">
           {actionError}
@@ -115,7 +117,7 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
         </main>
       )}
       {state.status === "guest" && (
-        <main className="dashboard-sign-in">
+        <Frame $layer="canvas" render={<main />} className="dashboard-sign-in">
           <h1>Sign in to review this run</h1>
           <p>This review is available to Ariakit maintainers.</p>
           <Button
@@ -125,11 +127,18 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
           >
             {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
           </Button>
-        </main>
+        </Frame>
       )}
       {state.status === "error" && (
         <main className="dashboard-main">
-          <section className="dashboard-empty">
+          <Frame
+            $layer
+            $lighten
+            $rounded="lg"
+            $border
+            render={<section />}
+            className="dashboard-empty"
+          >
             <h1>This run could not be opened</h1>
             <p role="alert">{state.message}</p>
             <Button
@@ -141,10 +150,10 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
             >
               Retry
             </Button>
-          </section>
+          </Frame>
         </main>
       )}
       {state.status === "ready" && <ReviewWorkspace {...state.review} />}
-    </div>
+    </Frame>
   );
 }

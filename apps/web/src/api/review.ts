@@ -23,7 +23,7 @@ interface VariantView {
   id: string;
   key: string;
   label: string;
-  kind: "added" | "removed" | "changed" | "unchanged" | "error";
+  kind: "added" | "removed" | "changed" | "unchanged" | "pending" | "error";
   revision: number;
   verdict: "approved" | "rejected" | null;
   source: "human" | "automatic" | null;
@@ -322,8 +322,12 @@ export async function reviewModel(
       height: image.height,
     };
   };
+  const comparisonStopped =
+    comparison?.state === "invalidated" ||
+    (!historical && (status.status === "failed" || status.status === "superseded"));
   const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
   for (const row of rows) {
+    const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
     const candidate = row.candidate_capture_id ? captureById.get(row.candidate_capture_id) : null;
     const reference = row.reference_capture_id ? captureById.get(row.reference_capture_id) : null;
     const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
@@ -360,16 +364,15 @@ export async function reviewModel(
       id: row.id,
       key: row.variant_key,
       label,
-      kind:
-        row.outcome === "error" || row.outcome === "pending"
-          ? "error"
-          : row.outcome === "unchanged"
-            ? "unchanged"
-            : !row.reference_capture_id
-              ? "added"
-              : !row.candidate_capture_id
-                ? "removed"
-                : "changed",
+      kind: stoppedBeforeEvidence
+        ? "error"
+        : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
+          ? row.outcome
+          : !row.reference_capture_id
+            ? "added"
+            : !row.candidate_capture_id
+              ? "removed"
+              : "changed",
       revision: row.decision_revision,
       verdict: effective?.verdict ?? null,
       source: effective?.kind ?? null,
@@ -399,8 +402,8 @@ export async function reviewModel(
       ...(typeof tuple.candidateProfileDigest === "string"
         ? { candidateProfile: tuple.candidateProfileDigest }
         : {}),
-      ...(row.outcome === "pending"
-        ? { error: "Comparison is still running." }
+      ...(stoppedBeforeEvidence
+        ? { error: "Comparison stopped before evidence was available." }
         : row.outcome === "error"
           ? { error: "Comparison evidence is unavailable." }
           : {}),

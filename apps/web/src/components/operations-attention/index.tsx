@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CapacitySnapshot } from "../../capacity.ts";
-import { Button } from "../ariakit/components/button.ariakit.react.tsx";
+import { ControlButton as Button } from "../control-button.tsx";
+import { Frame } from "../ariakit/components/frame.ariakit.react.tsx";
 
 interface OperationEvent {
   kind: string;
@@ -240,7 +241,15 @@ export function OperationsAttention({
   }, [reload, onAccessDenied]);
 
   return (
-    <section className="dashboard-attention" aria-labelledby="operations-heading">
+    <Frame
+      $layer
+      $lighten
+      $rounded="lg"
+      $border
+      render={<section />}
+      className="dashboard-attention"
+      aria-labelledby="operations-heading"
+    >
       <div className="dashboard-attention-heading">
         <div>
           <h2 id="operations-heading">Service attention</h2>
@@ -311,6 +320,6 @@ export function OperationsAttention({
       <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md">
         Open the operations and recovery guide
       </a>
-    </section>
+    </Frame>
   );
 }

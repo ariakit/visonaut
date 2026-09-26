@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useEffect, useState } from "react";
-import { Button } from "../components/ariakit/components/button.ariakit.react.tsx";
+import { ControlButton as Button } from "../components/control-button.tsx";
+import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
+import { Shell } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
 import "../review.css";
 import "./dashboard.css";
@@ -166,7 +169,7 @@ function Index() {
 
   if (state.status === "guest") {
     return (
-      <main className="dashboard-sign-in">
+      <Frame $layer="canvas" render={<main />} className="dashboard-sign-in">
         <div className="dashboard-brand">Visonaut</div>
         <h1>Every detail, reviewed.</h1>
         <p>Visual regression review for Ariakit maintainers.</p>
@@ -177,13 +180,18 @@ function Index() {
         <p className="dashboard-access-note">
           Access requires write permission to the configured repository.
         </p>
-      </main>
+      </Frame>
     );
   }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
+    <Shell className="dashboard">
+      <Layer
+        $layer
+        $lighten
+        render={<header />}
+        className="dashboard-header col-[shell] row-[header]"
+      >
         <Link to="/" className="dashboard-brand">
           Visonaut
         </Link>
@@ -197,8 +205,8 @@ function Index() {
             {action === "sign-out" ? "Signing out…" : "Sign out"}
           </Button>
         )}
-      </header>
-      <main className="dashboard-main">
+      </Layer>
+      <main className="dashboard-main col-[shell] row-[body]">
         {actionError && (
           <p className="dashboard-error" role="alert">
             {actionError}
@@ -206,7 +214,14 @@ function Index() {
         )}
         {state.status === "loading" && <p role="status">Checking access and loading runs…</p>}
         {(state.status === "error" || state.status === "forbidden") && (
-          <section className="dashboard-empty">
+          <Frame
+            $layer
+            $lighten
+            $rounded="lg"
+            $border
+            render={<section />}
+            className="dashboard-empty"
+          >
             <h1>
               {state.status === "forbidden"
                 ? "Repository access required"
@@ -222,7 +237,7 @@ function Index() {
             >
               Retry
             </Button>
-          </section>
+          </Frame>
         )}
         {state.status === "ready" && (
           <>
@@ -250,12 +265,19 @@ function Index() {
               </div>
             </div>
             {state.runs.length === 0 ? (
-              <section className="dashboard-empty">
+              <Frame
+                $layer
+                $lighten
+                $rounded="lg"
+                $border
+                render={<section />}
+                className="dashboard-empty"
+              >
                 <h2>No runs yet</h2>
                 <p>The first complete capture run will appear here.</p>
-              </section>
+              </Frame>
             ) : (
-              <div className="dashboard-table-scroll">
+              <Frame $layer $rounded="lg" $border className="dashboard-table-scroll">
                 <table className="dashboard-runs">
                   <thead>
                     <tr>
@@ -287,11 +309,11 @@ function Index() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Frame>
             )}
           </>
         )}
       </main>
-    </div>
+    </Shell>
   );
 }

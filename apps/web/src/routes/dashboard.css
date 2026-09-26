@@ -1,7 +1,9 @@
 .dashboard,
 .dashboard-run-page,
 .dashboard-sign-in {
-  color: #23272e;
+  --dashboard-border: color-mix(in oklch, currentColor 20%, transparent);
+  --dashboard-muted: color-mix(in oklch, currentColor 66%, transparent);
+  --dashboard-surface: color-mix(in oklch, currentColor 5%, transparent);
   font:
     14px/1.5 ui-sans-serif,
     system-ui,
@@ -10,7 +12,6 @@
 .dashboard,
 .dashboard-run-page {
   min-height: 100dvh;
-  background: #fff;
 }
 .dashboard-header {
   display: flex;
@@ -18,22 +19,21 @@
   gap: 22px;
   min-height: 62px;
   padding: 14px 28px;
-  border-bottom: 1px solid #dcdfe4;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--dashboard-border);
 }
 .dashboard-header > .review-control {
   margin-left: auto;
 }
 .dashboard-header > span,
 .dashboard-header > a:not(.dashboard-brand) {
-  color: #626a75;
+  color: var(--dashboard-muted);
   font-size: 12px;
 }
 .dashboard-brand {
   font-size: 17px;
   font-weight: 650;
   letter-spacing: -0.03em;
-  color: #23272e;
+  color: inherit;
   text-decoration: none;
 }
 .dashboard-main {
@@ -58,7 +58,7 @@
 .dashboard-eyebrow {
   margin: 0 0 6px;
   font-size: 12px;
-  color: #626a75;
+  color: var(--dashboard-muted);
 }
 .dashboard-heading-actions {
   display: flex;
@@ -66,13 +66,11 @@
   align-items: center;
 }
 .dashboard-heading-actions > span {
-  color: #626a75;
+  color: var(--dashboard-muted);
   font-size: 12px;
 }
 .dashboard-table-scroll {
   overflow: auto;
-  border: 1px solid #dcdfe4;
-  border-radius: 6px;
 }
 .dashboard-runs {
   width: 100%;
@@ -82,14 +80,14 @@
 }
 .dashboard-runs th {
   font-size: 11px;
-  color: #626a75;
+  color: var(--dashboard-muted);
   font-weight: 600;
-  background: #f6f7f9;
+  background: var(--dashboard-surface);
 }
 .dashboard-runs th,
 .dashboard-runs td {
   padding: 14px 18px;
-  border-bottom: 1px solid #e7e9ed;
+  border-bottom: 1px solid var(--dashboard-border);
   white-space: nowrap;
 }
 .dashboard-runs tr:last-child td {
@@ -99,7 +97,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #273448;
+  color: inherit;
   text-decoration: none;
 }
 .dashboard-runs a:hover strong {
@@ -107,11 +105,11 @@
 }
 .dashboard-runs a small {
   font-size: 10px;
-  color: #626a75;
+  color: var(--dashboard-muted);
 }
 .dashboard-runs a:focus-visible,
 .dashboard-header a:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-brand);
   outline-offset: 4px;
   border-radius: 2px;
 }
@@ -120,10 +118,7 @@
   font-size: 12px;
 }
 .dashboard-empty {
-  border: 1px solid #dcdfe4;
-  border-radius: 6px;
   padding: 36px;
-  background: #fafbfc;
 }
 .dashboard-empty h1,
 .dashboard-empty h2 {
@@ -132,7 +127,7 @@
   margin: 0;
 }
 .dashboard-empty p {
-  color: #626a75;
+  color: var(--dashboard-muted);
   margin: 10px 0 18px;
 }
 .dashboard-sign-in {
@@ -147,27 +142,24 @@
   letter-spacing: -0.04em;
 }
 .dashboard-sign-in p {
-  color: #626a75;
+  color: var(--dashboard-muted);
   margin-block: 16px 22px;
 }
 .dashboard-access-note {
   font-size: 12px;
-  border-top: 1px solid #dcdfe4;
+  border-top: 1px solid var(--dashboard-border);
   padding-top: 22px;
   margin-top: 32px !important;
 }
 .dashboard-error {
   margin: 0;
   padding: 14px 28px;
-  color: #8b321f;
-  background: #fff3ef;
+  color: var(--color-danger);
+  background: color-mix(in oklch, var(--color-danger) 12%, transparent);
 }
 .dashboard-attention {
   margin-bottom: 32px;
   padding: 20px;
-  border: 1px solid #dcdfe4;
-  border-radius: 6px;
-  background: #fafbfc;
 }
 .dashboard-attention-heading {
   display: flex;
@@ -190,29 +182,29 @@
 .dashboard-attention-heading p,
 .dashboard-attention-meta,
 .dashboard-attention-summary {
-  color: #626a75;
+  color: var(--dashboard-muted);
   font-size: 12px;
 }
 .dashboard-attention-list {
   list-style: none;
   margin: 16px 0;
   padding: 0;
-  border-top: 1px solid #dcdfe4;
+  border-top: 1px solid var(--dashboard-border);
 }
 .dashboard-attention-list li {
   padding-block: 16px 4px;
-  border-bottom: 1px solid #dcdfe4;
+  border-bottom: 1px solid var(--dashboard-border);
   overflow-wrap: anywhere;
 }
 .dashboard-attention-error {
-  color: #8b321f;
+  color: var(--color-danger);
 }
 .dashboard-attention a {
-  color: #273448;
+  color: inherit;
   text-underline-offset: 3px;
 }
 .dashboard-attention a:focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--color-brand);
   outline-offset: 4px;
 }
 @media (max-width: 700px) {
