@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   assertInfrastructure,
   assertStableDurableObjectNamespaces,
+  assertWebhookRetirementPreflight,
   runNonproductionMigrations,
   versionConfiguration,
 } from "./deploy-version.mjs";
@@ -87,6 +88,64 @@ test("preflight refuses changed resource targets and cron expressions", () => {
   assert.throws(
     () => assertInfrastructure(configuration, settings, { schedules: [] }),
     /Cron schedules differ/,
+  );
+});
+
+test("webhook preflight permits only the exact retired diagnostics binding", () => {
+  const webhookConfiguration = {
+    name: "visonaut-webhook",
+    services: [
+      { binding: "PRODUCTION", service: "visonaut" },
+      { binding: "PREVIEW", service: "visonaut-preview" },
+    ],
+  };
+  const current = {
+    bindings: [
+      { type: "service", name: "PRODUCTION", service: "visonaut" },
+      { type: "service", name: "PREVIEW", service: "visonaut-preview" },
+    ],
+  };
+  const previous = {
+    bindings: [
+      ...current.bindings,
+      { type: "service", name: "DIAGNOSTICS", service: "visonaut-diagnostics" },
+    ],
+  };
+  const noSchedules = { schedules: [] };
+  assert.deepEqual(
+    assertWebhookRetirementPreflight(webhookConfiguration, previous, noSchedules),
+    [],
+  );
+  assert.deepEqual(
+    assertWebhookRetirementPreflight(webhookConfiguration, current, noSchedules),
+    [],
+  );
+  assert.throws(
+    () => assertInfrastructure(webhookConfiguration, previous, noSchedules),
+    /Resource bindings differ/,
+  );
+  const wrongTarget = structuredClone(previous);
+  const diagnostics = wrongTarget.bindings.find((binding) => binding.name === "DIAGNOSTICS");
+  assert(diagnostics);
+  diagnostics.service = "other-worker";
+  assert.throws(
+    () => assertWebhookRetirementPreflight(webhookConfiguration, wrongTarget, noSchedules),
+    /Unexpected diagnostics binding/,
+  );
+  const extraBinding = structuredClone(previous);
+  extraBinding.bindings.push({ type: "service", name: "EXTRA", service: "other-worker" });
+  assert.throws(
+    () => assertWebhookRetirementPreflight(webhookConfiguration, extraBinding, noSchedules),
+    /Resource bindings differ/,
+  );
+  assert.throws(
+    () =>
+      assertWebhookRetirementPreflight(
+        { ...webhookConfiguration, name: "visonaut" },
+        previous,
+        noSchedules,
+      ),
+    /Resource bindings differ/,
   );
 });
 

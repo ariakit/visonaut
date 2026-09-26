@@ -21,7 +21,7 @@ function signedRequest(event: string, payload: Record<string, unknown>) {
   });
 }
 
-function destinations(status = 202) {
+function destinations(failedDestination?: string) {
   const received: string[] = [];
   function destination(name: string) {
     return {
@@ -30,7 +30,7 @@ function destinations(status = 202) {
         expect(request.headers.get("x-hub-signature-256")).toMatch(/^sha256=[a-f0-9]{64}$/);
         expect(new URL(request.url).origin).toBe(`https://${name}.visonaut.com`);
         received.push(`${name}:${await request.text()}`);
-        return new Response(null, { status });
+        return new Response(null, { status: name === failedDestination ? 503 : 202 });
       },
     };
   }
@@ -43,7 +43,6 @@ function destinations(status = 202) {
       serviceRepositoryId,
       production: destination("production"),
       preview: destination("preview"),
-      diagnostics: destination("diagnostics"),
     },
   };
 }
@@ -63,15 +62,14 @@ describe("signed App webhook routing", () => {
     ]);
   });
 
-  it("forwards a diagnostic repository event only to diagnostics", async () => {
+  it("acknowledges a diagnostic repository event without forwarding it", async () => {
     const { received, bindings } = destinations();
     const response = await routeWebhook(
       signedRequest("workflow_run", { repository: { id: 1380792062 } }),
       bindings,
     );
     expect(response.status).toBe(202);
-    expect(received).toHaveLength(1);
-    expect(received[0]?.startsWith("diagnostics:")).toBe(true);
+    expect(received).toEqual([]);
   });
 
   it("acknowledges source repository events without sending them to a review environment", async () => {
@@ -98,17 +96,23 @@ describe("signed App webhook routing", () => {
     expect(received).toEqual([]);
   });
 
-  it("delivers App-wide revocation to all three deployments", async () => {
-    const { received, bindings } = destinations();
-    const response = await routeWebhook(
-      signedRequest("github_app_authorization", { action: "revoked", sender: { id: 42 } }),
-      bindings,
-    );
-    expect(response.status).toBe(202);
-    expect(received).toHaveLength(3);
-  });
+  it.each(["github_app_authorization", "installation", "ping"])(
+    "delivers App-wide %s events to production and preview",
+    async (event) => {
+      const { received, bindings } = destinations();
+      const response = await routeWebhook(
+        signedRequest(event, { action: "revoked", sender: { id: 42 } }),
+        bindings,
+      );
+      expect(response.status).toBe(202);
+      expect(received.map((entry) => entry.split(":", 1)[0]).sort()).toEqual([
+        "preview",
+        "production",
+      ]);
+    },
+  );
 
-  it("keeps an Ariakit-only installation change out of diagnostics", async () => {
+  it("forwards an Ariakit-only installation change to production and preview", async () => {
     const { received, bindings } = destinations();
     const response = await routeWebhook(
       signedRequest("installation_repositories", {
@@ -125,7 +129,7 @@ describe("signed App webhook routing", () => {
     ]);
   });
 
-  it("keeps a diagnostic-only installation change out of production and preview", async () => {
+  it("acknowledges a diagnostic-only installation change without forwarding it", async () => {
     const { received, bindings } = destinations();
     const response = await routeWebhook(
       signedRequest("installation_repositories", {
@@ -136,8 +140,24 @@ describe("signed App webhook routing", () => {
       bindings,
     );
     expect(response.status).toBe(202);
-    expect(received).toHaveLength(1);
-    expect(received[0]?.startsWith("diagnostics:")).toBe(true);
+    expect(received).toEqual([]);
+  });
+
+  it("forwards an installation change for Ariakit and diagnostics only to production and preview", async () => {
+    const { received, bindings } = destinations();
+    const response = await routeWebhook(
+      signedRequest("installation_repositories", {
+        action: "added",
+        repositories_added: [{ id: 104133653 }, { id: 1380792062 }],
+        repositories_removed: [],
+      }),
+      bindings,
+    );
+    expect(response.status).toBe(202);
+    expect(received.map((entry) => entry.split(":", 1)[0]).sort()).toEqual([
+      "preview",
+      "production",
+    ]);
   });
 
   it("rejects an unknown signed repository before forwarding", async () => {
@@ -162,7 +182,7 @@ describe("signed App webhook routing", () => {
   });
 
   it("makes GitHub retry when a downstream deployment cannot persist the delivery", async () => {
-    const { received, bindings } = destinations(503);
+    const { received, bindings } = destinations("preview");
     const response = await routeWebhook(
       signedRequest("check_run", { repository: { id: 104133653 } }),
       bindings,

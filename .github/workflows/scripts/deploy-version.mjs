@@ -114,6 +114,32 @@ export function assertInfrastructure(configuration, settings, schedules) {
   return selfDurableObjectNamespaces(configuration, settings);
 }
 
+export function assertWebhookRetirementPreflight(configuration, settings, schedules) {
+  if (configuration.name !== "visonaut-webhook") {
+    return assertInfrastructure(configuration, settings, schedules);
+  }
+  assert(Array.isArray(settings.bindings), "Worker bindings are unavailable");
+  const diagnosticsBindings = settings.bindings.filter((binding) => binding.name === "DIAGNOSTICS");
+  if (diagnosticsBindings.length === 0) {
+    return assertInfrastructure(configuration, settings, schedules);
+  }
+  // The first version without diagnostics may remove only its known service binding.
+  assert.equal(diagnosticsBindings.length, 1, "Unexpected diagnostics binding count");
+  assert.deepEqual(
+    remoteInventory({ bindings: diagnosticsBindings }),
+    [{ name: "DIAGNOSTICS", type: "service", target: "visonaut-diagnostics" }],
+    "Unexpected diagnostics binding",
+  );
+  return assertInfrastructure(
+    configuration,
+    {
+      ...settings,
+      bindings: settings.bindings.filter((binding) => binding.name !== "DIAGNOSTICS"),
+    },
+    schedules,
+  );
+}
+
 export function assertStableDurableObjectNamespaces(before, after) {
   assert.deepEqual(after, before, "Durable Object namespace IDs changed during version deployment");
 }
@@ -265,7 +291,11 @@ export async function deployVersion(configPath, expectedName, environment) {
   }
   const beforeSettings = await inspect("/settings");
   const beforeSchedules = await inspect("/schedules");
-  const beforeNamespaces = assertInfrastructure(configuration, beforeSettings, beforeSchedules);
+  const beforeNamespaces = assertWebhookRetirementPreflight(
+    configuration,
+    beforeSettings,
+    beforeSchedules,
+  );
   const wranglerDirectory = dirname(require.resolve("wrangler/package.json"));
   if (nonproductionWebEnvironments.has(expectedName)) {
     const sourceConfiguration = unstable_readConfig({
