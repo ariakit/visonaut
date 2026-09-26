@@ -133,10 +133,13 @@ export async function transferPrivateKey({
   ) {
     throw new SecurityError("transfer_key_unavailable", 503, "The transfer key is unavailable.");
   }
-  // Claim the signed job, not its token, so minting another token cannot repeat retrieval.
-  const redemption = await context.database
+  // Record the signed job once. A lost response may retry from that same verified job.
+  await context.database
     .prepare(
-      "INSERT INTO transfer_key_redemptions (repository_id, workflow_run_id, workflow_attempt, check_run_id, redeemed_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING RETURNING check_run_id",
+      `INSERT INTO transfer_key_redemptions
+        (repository_id, workflow_run_id, workflow_attempt, check_run_id, redeemed_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT DO NOTHING`,
     )
     .bind(
       verified.repositoryId,
@@ -145,14 +148,7 @@ export async function transferPrivateKey({
       verified.checkRunId,
       Date.now(),
     )
-    .first<{ check_run_id: string }>();
-  if (!redemption) {
-    throw new SecurityError(
-      "transfer_key_redeemed",
-      409,
-      "The transfer key was already retrieved.",
-    );
-  }
+    .run();
   return new Response(bytes, {
     headers: {
       "Cache-Control": "private, no-store",
