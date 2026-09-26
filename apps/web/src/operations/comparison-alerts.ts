@@ -69,7 +69,8 @@ export async function reportComparisonRecovery(
     JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
     JOIN visonaut_runs run ON run.id=comparison.run_id
     WHERE event.kind='comparison-publication' AND event.resolved_at IS NULL
-      AND ((comparison.purpose='review' AND (run.active=0 OR run.comparison_id!=comparison.id))
+      AND ((comparison.purpose='review' AND (run.active=0 OR run.comparison_id!=comparison.id
+        OR comparison.state='invalidated'))
         OR (comparison.purpose='historical' AND ${historicalRecovered}))
     ORDER BY event.last_seen_at,event.id LIMIT ?)`)
     .bind(now, context.budget.tasksPerStep)
@@ -80,7 +81,8 @@ export async function reportComparisonRecovery(
     JOIN visonaut_runs run ON run.id=comparison.run_id
     WHERE event.kind IN ('comparison-finalization','comparison-task') AND event.resolved_at IS NULL
       AND (comparison.state='ready'
-        OR (comparison.purpose='review' AND (run.active=0 OR run.comparison_id!=comparison.id))
+        OR (comparison.purpose='review' AND (run.active=0 OR run.comparison_id!=comparison.id
+          OR comparison.state='invalidated'))
         OR (comparison.purpose='historical' AND ${historicalRecovered}))
     ORDER BY event.last_seen_at,event.id LIMIT ?)`)
     .bind(now, context.budget.tasksPerStep)
@@ -91,7 +93,8 @@ export async function reportComparisonRecovery(
     JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
     JOIN visonaut_runs run ON run.id=comparison.run_id
     WHERE task.kind='compare' AND task.state='dead'
-      AND ((comparison.purpose='review' AND run.active=1 AND run.comparison_id=comparison.id)
+      AND ((comparison.purpose='review' AND run.active=1 AND run.comparison_id=comparison.id
+        AND comparison.state!='invalidated')
         OR (comparison.purpose='historical' AND NOT ${historicalRecovered}))
       AND comparison.state!='ready' AND NOT EXISTS(SELECT 1 FROM operations_events event
         WHERE event.kind='comparison-task' AND event.subject_id=comparison.id AND event.code='attempts-exhausted')

@@ -1054,8 +1054,8 @@ export class Service {
       if (archived) return { state: "superseded" as const };
       throw new IncompleteError("The comparison task has not been scheduled.");
     }
-    if (state.purpose === "historical" && state.comparison_state === "invalidated") {
-      return { state: "dead" as const };
+    if (state.comparison_state === "invalidated") {
+      return { state: state.purpose === "historical" ? "dead" : "superseded" } as const;
     }
     if (
       state.purpose !== "historical" &&
@@ -1077,8 +1077,22 @@ export class Service {
     leaseMilliseconds: number;
   }) {
     const state = await this.getComparisonTaskState(input.taskId);
-    if (state.state === "superseded" || state.state === "dead" || state.state === "complete")
+    if (state.state === "superseded" || state.state === "dead") {
+      // Acknowledged invalidated reviews must release their Queue admission receipts.
+      await this.sql(
+        `UPDATE work_tasks SET state = 'complete', result = 'superseded',
+          lease_token = NULL, lease_until = NULL, last_error = NULL, updated_at = ?
+        WHERE id = ? AND state IN ('queued', 'leased') AND EXISTS (
+          SELECT 1 FROM visonaut_comparison_rows row
+          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+          WHERE row.id = work_tasks.id AND comparison.purpose = 'review'
+            AND comparison.state = 'invalidated'
+        )`,
+        [input.now, input.taskId],
+      ).run();
       return null;
+    }
+    if (state.state === "complete") return null;
     const claimed = await claimWork(this.database, {
       id: input.taskId,
       token: input.owner,

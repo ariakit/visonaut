@@ -13,7 +13,7 @@ import {
   releaseExpiredComparisonReferences,
   retireSnapshot,
 } from "./retention.ts";
-import { claimExpiredRun, closedRunRetentionMs } from "./work.ts";
+import { claimExpiredRun, closedRunRetentionMs, reconcileWork } from "./work.ts";
 import {
   archiveEligibilitySql,
   compactRunHistory,
@@ -1383,6 +1383,67 @@ describe("restoration and workflow attempt inheritance", () => {
       service.finalizeComparison({ comparisonId: "comparison-pr", now: 20 }),
     ).rejects.toBeInstanceOf(ConflictError);
     expect((await service.comparison("comparison-pr")).state).toBe("invalidated");
+  });
+
+  it("does not claim queued work after a review comparison is invalidated", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
+    const row = (await service.comparisonRows("comparison-pr"))[0];
+    if (!row) throw new Error("Missing comparison row");
+    // Reproduce a queued message left behind when a newer baseline invalidates its comparison.
+    database.connection
+      .prepare("UPDATE visonaut_comparison_rows SET outcome='pending', result_json=NULL WHERE id=?")
+      .run(row.id);
+    database.connection
+      .prepare("UPDATE work_tasks SET state='queued', attempts=0, result=NULL WHERE id=?")
+      .run(row.id);
+    database.connection
+      .prepare("UPDATE work_tasks SET published_at=10, publication_due_at=100000 WHERE id=?")
+      .run(row.id);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='comparison-pr'")
+      .run();
+
+    await fixture(service, { id: "next", kind: "pull_request", color: "red" });
+    const nextRow = (await service.comparisonRows("comparison-next"))[0];
+    if (!nextRow) throw new Error("Missing replacement comparison row");
+    database.connection
+      .prepare("UPDATE visonaut_comparison_rows SET outcome='pending', result_json=NULL WHERE id=?")
+      .run(nextRow.id);
+    database.connection
+      .prepare(
+        "UPDATE work_tasks SET state='queued', attempts=0, result=NULL, publication_due_at=0, available_at=0 WHERE id=?",
+      )
+      .run(nextRow.id);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='comparing' WHERE id='comparison-next'")
+      .run();
+    const publish = async () => {};
+    const input = {
+      now: 20,
+      limit: 1,
+      kind: "compare" as const,
+      scope: "current-comparison" as const,
+      maxOutstanding: 1,
+      publish,
+    };
+    expect((await reconcileWork(database, input)).published).toEqual([]);
+
+    expect((await service.getComparisonTaskState(row.id)).state).toBe("superseded");
+    expect(
+      await service.claimComparisonTask({
+        taskId: row.id,
+        owner: "stale-worker",
+        now: 20,
+        leaseMilliseconds: 100,
+      }),
+    ).toBeNull();
+    expect(
+      database.connection.prepare("SELECT state, attempts FROM work_tasks WHERE id=?").get(row.id),
+    ).toMatchObject({ state: "complete", attempts: 0 });
+    expect((await reconcileWork(database, input)).published).toEqual([nextRow.id]);
   });
 });
 

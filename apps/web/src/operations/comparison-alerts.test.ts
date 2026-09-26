@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { claimWork, completeWork, enqueueWork, reconcileWork } from "@visonaut/service";
+import { claimWork, completeWork, enqueueWork, reconcileWork, Service } from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
 import { reportComparisonRecovery } from "./comparison-alerts.ts";
 const noPublication = { published: [], failed: [] };
@@ -224,6 +224,96 @@ describe("comparison recovery alerts", () => {
         .prepare("SELECT state,attempts FROM work_tasks WHERE id='dead:row'")
         .get(),
     ).toEqual({ state: "dead", attempts: 3 });
+  });
+  it("does not report an invalidated review delivery as exhausted", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    comparison(database, "invalidated");
+    await enqueueWork(database, {
+      id: "invalidated:row",
+      kind: "compare",
+      payload: "{}",
+      maxAttempts: 3,
+      now: fixture.state.time,
+    });
+    const publication = await reconcileWork(database, {
+      now: fixture.state.time,
+      limit: 1,
+      kind: "compare",
+      scope: "current-comparison",
+      publish: async () => {
+        throw new Error("Queue send result is unknown");
+      },
+    });
+    await reportComparisonRecovery(fixture.context, publication, noFinalization);
+    expect(unresolved(database)).toEqual([
+      { kind: "comparison-publication", subject: "invalidated:row" },
+    ]);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='invalidated'")
+      .run();
+    const service = new Service(database);
+    expect(
+      await service.claimComparisonTask({
+        taskId: "invalidated:row",
+        owner: "stale-consumer",
+        now: fixture.state.time,
+        leaseMilliseconds: 100,
+      }),
+    ).toBeNull();
+    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    expect(unresolved(database)).toEqual([]);
+  });
+  it("does not report a final lease that expires after review invalidation", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    comparison(database, "expired-review");
+    await enqueueWork(database, {
+      id: "expired-review:row",
+      kind: "compare",
+      payload: "{}",
+      maxAttempts: 3,
+      now: fixture.state.time,
+    });
+    database.connection
+      .prepare(
+        "UPDATE work_tasks SET state='leased', attempts=3, lease_token='worker', lease_until=? WHERE id='expired-review:row'",
+      )
+      .run(fixture.state.time);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='expired-review'")
+      .run();
+    await reconcileWork(database, {
+      now: fixture.state.time,
+      limit: 1,
+      kind: "compare",
+      scope: "current-comparison",
+      publish: async () => {},
+    });
+    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    expect(unresolved(database)).toEqual([]);
+  });
+  it("resolves an exhausted review alert after invalidation", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    comparison(database, "failed-review");
+    await enqueueWork(database, {
+      id: "failed-review:row",
+      kind: "compare",
+      payload: "{}",
+      maxAttempts: 3,
+      now: fixture.state.time,
+    });
+    database.connection
+      .prepare("UPDATE work_tasks SET state='dead', attempts=3 WHERE id='failed-review:row'")
+      .run();
+    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    expect(unresolved(database)).toEqual([{ kind: "comparison-task", subject: "failed-review" }]);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='failed-review'")
+      .run();
+    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    expect(unresolved(database)).toEqual([]);
   });
   it("resolves a failed publication after its review comparison is superseded", async () => {
     using database = new TestDatabase();
