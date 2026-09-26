@@ -29,6 +29,14 @@ export interface UploadTicketClaims {
   maximumBytes: number;
 }
 
+export interface ReuseChallengeClaims {
+  runId: string;
+  jobId: string;
+  shardKey: string;
+  manifestDigest: string;
+  nonce: string;
+}
+
 function signingKey(configuration: CapabilityConfiguration): Uint8Array<ArrayBuffer> {
   if (configuration.secret.length < 32) {
     throw new Error("A capability secret must contain at least 32 characters.");
@@ -61,7 +69,7 @@ function parseCapability(value: unknown): IngestCapability {
 
 async function issueToken(
   configuration: CapabilityConfiguration,
-  kind: "ingest" | "upload",
+  kind: "ingest" | "upload" | "reuse",
   claims: object,
   expiresIn: number,
 ): Promise<string> {
@@ -80,7 +88,7 @@ async function issueToken(
 
 async function verifyToken(
   configuration: CapabilityConfiguration,
-  kind: "ingest" | "upload",
+  kind: "ingest" | "upload" | "reuse",
   token: string,
 ) {
   try {
@@ -166,6 +174,55 @@ export async function verifyUploadTicket(
     );
   }
   return ticket;
+}
+
+function parseReuseChallenge(value: unknown): ReuseChallengeClaims {
+  const data = record(value);
+  const nonce = textField(data.nonce);
+  const manifestDigest = textField(data.manifestDigest);
+  if (!/^[a-f0-9]{64}$/.test(nonce) || !/^[a-f0-9]{64}$/.test(manifestDigest)) {
+    throw new SecurityError("invalid_challenge", 401, "The reuse challenge is invalid.");
+  }
+  return {
+    runId: textField(data.runId),
+    jobId: numericId(data.jobId),
+    shardKey: textField(data.shardKey),
+    manifestDigest,
+    nonce,
+  };
+}
+
+export function issueReuseChallenge(
+  configuration: CapabilityConfiguration,
+  claims: Omit<ReuseChallengeClaims, "nonce">,
+): Promise<{ nonce: string; token: string; expiresAt: string }> {
+  const nonce = Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  const challenge = parseReuseChallenge({ ...claims, nonce });
+  return issueToken(configuration, "reuse", challenge, 600).then((token) => ({
+    nonce,
+    token,
+    expiresAt: new Date(Date.now() + 9 * 60_000).toISOString(),
+  }));
+}
+
+export async function verifyReuseChallenge(
+  configuration: CapabilityConfiguration,
+  token: string,
+  capability: IngestCapability,
+  manifestDigest: string,
+): Promise<ReuseChallengeClaims> {
+  const challenge = parseReuseChallenge(await verifyToken(configuration, "reuse", token));
+  if (
+    challenge.runId !== capability.runId ||
+    challenge.jobId !== capability.jobId ||
+    challenge.shardKey !== capability.shardKey ||
+    challenge.manifestDigest !== manifestDigest
+  ) {
+    throw new SecurityError("invalid_challenge", 403, "The challenge belongs to another shard.");
+  }
+  return challenge;
 }
 
 export function bearerToken(request: Request): string {

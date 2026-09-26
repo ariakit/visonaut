@@ -15,11 +15,13 @@ import {
   bearerToken,
   createGitHubClient,
   issueIngestCapability,
+  issueReuseChallenge,
   issueUploadTicket,
   readBoundedBody,
   SecurityError,
   verifyGitHubOidc,
   verifyIngestCapability,
+  verifyReuseChallenge,
   verifyUploadTicket,
   type GitHubClient,
   type IngestCapability,
@@ -78,6 +80,13 @@ interface StagedImage {
   object_key: string;
   quarantine_key: string;
   complete: number;
+}
+
+const maximumReusePage = 32;
+const maximumReusePageBytes = 8 * 1024 * 1024;
+
+function hexBytes(value: string): Uint8Array<ArrayBuffer> {
+  return Uint8Array.from(value.match(/.{2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
 }
 
 export function workflowConfiguration(context: ApiContext) {
@@ -582,6 +591,12 @@ export async function declareStaged(
   return Response.json({
     schemaVersion: SCHEMA_VERSION,
     manifestDigest,
+    reuse: await issueReuseChallenge(context.configuration.capability, {
+      runId: run.id,
+      jobId: job.job_id,
+      shardKey,
+      manifestDigest,
+    }),
     uploads: await Promise.all(
       stagedImages.results
         .filter((image) => !image.complete)
@@ -599,6 +614,175 @@ export async function declareStaged(
         })),
     ),
   });
+}
+
+interface ReuseSource {
+  digest: string;
+  source_object_key: string;
+  source_bytes: number;
+  source_width: number;
+  source_height: number;
+  source_media_type: string;
+}
+
+/** Copy only bytes that this signed job proves it holds. A digest alone is not possession. */
+export async function reuseStagedImages(request: Request, context: ApiContext, runId: string) {
+  const { capability, run, job } = await stagedCapability(request, context, runId);
+  if (run.submitted_at !== null) {
+    throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
+  }
+  const body = await jsonBody(request, 16_384);
+  validateVersion(body.schemaVersion);
+  validateDigest(body.manifestDigest);
+  const shardKey = string(body.shardKey);
+  if (shardKey !== capability.shardKey) {
+    throw new SecurityError("wrong_shard", 403, "The reuse page belongs to another shard.");
+  }
+  const stored = await context.database
+    .prepare("SELECT manifest_digest FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
+    .bind(run.id, job.job_id)
+    .first<StagedManifest>();
+  if (!stored || stored.manifest_digest !== body.manifestDigest) {
+    throw new SecurityError("manifest_conflict", 409, "The staged manifest changed.");
+  }
+  const challenge = await verifyReuseChallenge(
+    context.configuration.capability,
+    string(body.challenge, 4096),
+    capability,
+    stored.manifest_digest,
+  );
+  if (
+    !Array.isArray(body.proofs) ||
+    body.proofs.length < 1 ||
+    body.proofs.length > maximumReusePage
+  ) {
+    throw new SecurityError("invalid_body", 400, "The reuse page is invalid.");
+  }
+  const proofs = new Map<string, string>();
+  for (const entry of body.proofs) {
+    const item = object(entry);
+    const digest = string(item.imageDigest, 64);
+    const proof = string(item.proof, 64);
+    if (!/^[a-f0-9]{64}$/.test(digest) || !/^[a-f0-9]{64}$/.test(proof) || proofs.has(digest)) {
+      throw new SecurityError("invalid_body", 400, "The reuse proof is invalid.");
+    }
+    proofs.set(digest, proof);
+  }
+  const digests = [...proofs.keys()];
+  const targets = await context.database
+    .prepare(
+      `SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?
+        AND digest IN (SELECT value FROM json_each(?))`,
+    )
+    .bind(run.id, job.job_id, JSON.stringify(digests))
+    .all<StagedImage>();
+  if (targets.results.length !== digests.length) {
+    throw new SecurityError("unknown_image", 403, "The reuse page names an undeclared image.");
+  }
+  const declaredBytes = targets.results.reduce((sum, image) => sum + image.bytes, 0);
+  if (targets.results.length > 1 && declaredBytes > maximumReusePageBytes) {
+    throw new SecurityError("upload_limit", 413, "The reuse page exceeds its byte limit.");
+  }
+  const pending = targets.results.filter((image) => !image.complete);
+  const reused = targets.results.filter((image) => image.complete).map((image) => image.digest);
+  if (!pending.length) return Response.json({ schemaVersion: SCHEMA_VERSION, reused });
+  const sources = await context.database
+    .prepare(
+      `WITH candidates AS (
+        SELECT source.digest, source.object_key AS source_object_key,
+          source.bytes AS source_bytes, source.width AS source_width,
+          source.height AS source_height, source.media_type AS source_media_type,
+          ROW_NUMBER() OVER (
+            PARTITION BY source.digest ORDER BY previous.created_at DESC, source.run_id DESC
+          ) AS position
+        FROM ingest_staged_images source
+        JOIN ingest_staged_images target ON target.digest = source.digest
+          AND target.run_id = ? AND target.job_id = ? AND target.complete = 0
+          AND target.bytes = source.bytes AND target.width = source.width
+          AND target.height = source.height AND target.media_type = source.media_type
+        JOIN ingest_staged_runs previous ON previous.id = source.run_id
+        WHERE source.digest IN (SELECT value FROM json_each(?))
+          AND source.complete = 1 AND previous.retention_state = 'live'
+          AND previous.submitted_at IS NOT NULL AND previous.repository_id = ?
+          AND previous.id != ?
+      ) SELECT * FROM candidates WHERE position <= 3 ORDER BY digest, position`,
+    )
+    .bind(
+      run.id,
+      job.job_id,
+      JSON.stringify(pending.map((image) => image.digest)),
+      run.repository_id,
+      run.id,
+    )
+    .all<ReuseSource>();
+  const candidates = new Map<string, ReuseSource[]>();
+  for (const source of sources.results) {
+    const list = candidates.get(source.digest) ?? [];
+    list.push(source);
+    candidates.set(source.digest, list);
+  }
+  const key = await crypto.subtle.importKey(
+    "raw",
+    hexBytes(challenge.nonce),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+  // The declared page is byte-bounded, so verification can finish before any
+  // target write. A later bad proof cannot leave an uncommitted copied object.
+  const verified: { target: StagedImage; bytes: Uint8Array<ArrayBuffer> }[] = [];
+  for (const target of pending) {
+    for (const source of candidates.get(target.digest) ?? []) {
+      if (
+        source.source_bytes !== target.bytes ||
+        source.source_width !== target.width ||
+        source.source_height !== target.height ||
+        source.source_media_type !== target.media_type
+      )
+        continue;
+      let bytes: Uint8Array<ArrayBuffer>;
+      try {
+        const storedSource = await context.images.get(source.source_object_key);
+        if (!storedSource || storedSource.size !== target.bytes) continue;
+        bytes = new Uint8Array(await storedSource.arrayBuffer());
+      } catch {
+        continue;
+      }
+      if (bytes.byteLength !== target.bytes || (await sha256(bytes)) !== target.digest) continue;
+      if (!(await crypto.subtle.verify("HMAC", key, hexBytes(proofs.get(target.digest)!), bytes))) {
+        throw new SecurityError(
+          "invalid_proof",
+          422,
+          "The image reuse proof does not match its bytes.",
+        );
+      }
+      verified.push({ target, bytes });
+      break;
+    }
+  }
+  for (const { target, bytes } of verified) {
+    try {
+      await context.images.put(target.object_key, bytes, {
+        httpMetadata: { contentType: target.media_type },
+      });
+    } catch {
+      continue;
+    }
+    reused.push(target.digest);
+  }
+  if (reused.length) {
+    await context.database
+      .prepare(
+        `UPDATE ingest_staged_images SET complete = 1
+          WHERE run_id = ? AND job_id = ?
+            AND digest IN (SELECT value FROM json_each(?))
+            AND EXISTS (SELECT 1 FROM ingest_staged_runs
+              WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live')`,
+      )
+      .bind(run.id, job.job_id, JSON.stringify(reused), run.id)
+      .run();
+  }
+  return Response.json({ schemaVersion: SCHEMA_VERSION, reused });
 }
 
 export async function uploadStagedImage(

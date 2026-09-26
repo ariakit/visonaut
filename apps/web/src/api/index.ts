@@ -18,6 +18,7 @@ import { receiveWebhook } from "./webhooks.js";
 import {
   declareStaged,
   finalizeStaged,
+  reuseStagedImages,
   reserveStaged,
   submitStaged,
   uploadStagedImage,
@@ -144,6 +145,10 @@ export async function handleApi(
           uploadMatch[1],
         ),
       );
+    }
+    const reuseMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reuse$/.exec(path);
+    if (reuseMatch?.[1] && request.method === "POST" && context.configuration.workflowOwned) {
+      return privateResponse(await reuseStagedImages(request, context, uuid(reuseMatch[1])));
     }
     const finalizeMatch = /^\/v1\/runs\/([a-f0-9-]+)\/finalize$/.exec(path);
     if (finalizeMatch?.[1] && request.method === "POST") {
