@@ -95,6 +95,7 @@
   },
   "env": {
     "production": {
+      "workers_dev": true,
       "routes": [{ "pattern": "visonaut.com", "custom_domain": true }],
       "vars": {
         "VISONAUT_ENVIRONMENT": "production",
@@ -187,7 +188,9 @@
       },
     },
     "diagnostics": {
-      "routes": [{ "pattern": "diagnostics.visonaut.com", "custom_domain": true }],
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [],
       "vars": {
         "VISONAUT_ENVIRONMENT": "preview",
         "VISONAUT_REPOSITORY": "ariakit/visonaut-diagnostics",
