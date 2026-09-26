@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
-import { rm, writeFile } from "node:fs/promises";
+import { createHash, createHmac } from "node:crypto";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { deflateSync } from "node:zlib";
 import { digestJson } from "@visonaut/protocol";
 import { afterEach, expect, it, vi } from "vitest";
-import { issueUploadTicket } from "../../security/src/capabilities.js";
+import { issueReuseChallenge, issueUploadTicket } from "../../security/src/capabilities.js";
 import { runCli } from "../src/index.js";
 import { fixture } from "./fixture.js";
 
@@ -83,7 +83,7 @@ async function imagesFixture(count: number) {
   return local;
 }
 
-async function declaration(local: Awaited<ReturnType<typeof fixture>>) {
+async function declaration(local: Awaited<ReturnType<typeof fixture>>, withReuse = false) {
   const uploads = [];
   for (const capture of local.manifest.captures) {
     const imageDigest = capture.image.digest;
@@ -100,7 +100,22 @@ async function declaration(local: Awaited<ReturnType<typeof fixture>>) {
       }),
     });
   }
-  return { schemaVersion: "1.0", manifestDigest: await digestJson(local.manifest), uploads };
+  const manifestDigest = await digestJson(local.manifest);
+  return {
+    schemaVersion: "1.0",
+    manifestDigest,
+    uploads,
+    ...(withReuse
+      ? {
+          reuse: await issueReuseChallenge(configuration, {
+            runId,
+            jobId: local.manifest.shard.jobId,
+            shardKey: local.manifest.shard.key,
+            manifestDigest,
+          }),
+        }
+      : {}),
+  };
 }
 
 async function execute(local: Awaited<ReturnType<typeof fixture>>) {
@@ -124,9 +139,10 @@ interface MockServiceParams {
   response: () => Response;
   upload?: (ticket: string, options?: RequestInit) => Response;
   reserve?: () => object;
+  reuse?: (options?: RequestInit) => Response | Promise<Response>;
 }
 
-function mockService({ local, response, upload, reserve }: MockServiceParams) {
+function mockService({ local, response, upload, reserve, reuse }: MockServiceParams) {
   const paths: string[] = [];
   vi.stubGlobal("fetch", async (input: string | URL | Request, options?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : input);
@@ -143,6 +159,10 @@ function mockService({ local, response, upload, reserve }: MockServiceParams) {
           expiresAt: new Date(Date.now() + 600_000).toISOString(),
         },
       );
+    }
+    if (url.pathname.endsWith("/reuse")) {
+      if (!reuse) throw new Error("Unexpected reuse request");
+      return reuse(options);
     }
     if (url.pathname.includes("/shards/")) {
       expect(JSON.parse(String(options?.body))).toEqual(local.manifest);
@@ -167,6 +187,133 @@ function mockService({ local, response, upload, reserve }: MockServiceParams) {
   });
   return paths;
 }
+
+it("reuses proved originals in bounded pages and uploads only misses", async () => {
+  const local = await imagesFixture(67);
+  const declared = await declaration(local, true);
+  const challenge = declared.reuse!;
+  const accepted = new Set(
+    local.manifest.captures.slice(0, 66).map((capture) => capture.image.digest),
+  );
+  let proofPages = 0;
+  let uploads = 0;
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    reuse: async (options) => {
+      proofPages++;
+      const body = JSON.parse(String(options?.body)) as {
+        challenge: string;
+        proofs: { imageDigest: string; proof: string }[];
+      };
+      expect(body.challenge).toBe(challenge.token);
+      expect(body.proofs.length).toBeLessThanOrEqual(32);
+      for (const offered of body.proofs) {
+        const capture = local.manifest.captures.find(
+          (entry) => entry.image.digest === offered.imageDigest,
+        );
+        if (!capture) throw new Error("Unknown offered image");
+        const bytes = await readFile(join(local.directory, capture.image.path));
+        expect(offered.proof).toBe(
+          createHmac("sha256", Buffer.from(challenge.nonce, "hex")).update(bytes).digest("hex"),
+        );
+      }
+      return Response.json({
+        schemaVersion: "1.0",
+        reused: body.proofs
+          .map(({ imageDigest }) => imageDigest)
+          .filter((digest) => accepted.has(digest)),
+      });
+    },
+    upload: (_ticket, options) => {
+      uploads++;
+      expect(
+        createHash("sha256")
+          .update(options?.body as Uint8Array)
+          .digest("hex"),
+      ).toBe(local.manifest.captures[66]?.image.digest);
+      return new Response(null, { status: 204 });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 1, reusedImages: 66 });
+  expect(proofPages).toBe(3);
+  expect(uploads).toBe(1);
+  expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(1);
+  expect(paths).toHaveLength(8);
+
+  const baseline = await imagesFixture(67);
+  const baselineDeclaration = await declaration(baseline);
+  const baselinePaths = mockService({
+    local: baseline,
+    response: () => Response.json(baselineDeclaration),
+  });
+  expect((await execute(baseline)).code).toBe(0);
+  expect(baselinePaths).toHaveLength(71);
+});
+
+it("renews after proof-page reads when the upload capability expires", async () => {
+  const local = await imagesFixture(33);
+  const first = await declaration(local, true);
+  const renewed = await declaration(local, true);
+  const now = Date.now();
+  first.reuse!.expiresAt = new Date(now + 60_000).toISOString();
+  renewed.reuse!.expiresAt = new Date(now + 600_000).toISOString();
+  const lastDigest = local.manifest.captures[32]!.image.digest;
+  let reservations = 0;
+  let firstPageAccepted = false;
+  let clockReadsAfterFirstPage = 0;
+  const offered: string[][] = [];
+  mockService({
+    local,
+    reserve: () => ({
+      schemaVersion: "1.0",
+      runId,
+      capability: "capability-secret",
+      expiresAt: new Date(now + (reservations++ ? 600_000 : 60_000)).toISOString(),
+    }),
+    response: () => {
+      if (reservations === 1) {
+        vi.spyOn(Date, "now").mockImplementation(() => {
+          if (!firstPageAccepted) return now;
+          return ++clockReadsAfterFirstPage <= 2 ? now : now + 20_000;
+        });
+        return Response.json(first);
+      }
+      return Response.json({
+        ...renewed,
+        uploads: renewed.uploads.filter((upload) => upload.imageDigest === lastDigest),
+      });
+    },
+    reuse: (options) => {
+      const body = JSON.parse(String(options?.body)) as {
+        proofs: { imageDigest: string }[];
+      };
+      offered.push(body.proofs.map((proof) => proof.imageDigest));
+      if (!firstPageAccepted) {
+        firstPageAccepted = true;
+        return Response.json({
+          schemaVersion: "1.0",
+          reused: body.proofs.map((proof) => proof.imageDigest),
+        });
+      }
+      if (reservations === 1 && Date.now() >= now + 20_000) {
+        return new Response(null, { status: 401 });
+      }
+      return Response.json({ schemaVersion: "1.0", reused: [lastDigest] });
+    },
+  });
+  const result = await execute(local);
+  expect(result.stderr).toBe("");
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 0, reusedImages: 33 });
+  expect(reservations).toBe(2);
+  expect(offered).toHaveLength(2);
+  expect(offered[0]).toHaveLength(32);
+  expect(offered[1]).toEqual([lastDigest]);
+});
 
 it.each([3000, 12300])(
   "uploads %i distinct images from a real signed-ticket declaration",

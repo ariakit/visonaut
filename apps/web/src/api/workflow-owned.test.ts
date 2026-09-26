@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHmac } from "node:crypto";
 import { validateImage } from "@visonaut/compare";
 import {
   discoveryArtifactPrefix,
@@ -21,6 +22,7 @@ import {
   declareStaged,
   finalizeStaged,
   reserveVerifiedStagedRun,
+  reuseStagedImages,
   uploadStagedImage,
   workflowConfiguration,
 } from "./workflow-owned.js";
@@ -84,6 +86,7 @@ beforeAll(async () => {
     new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
     new URL("../../migrations/0019_staged_workflows.sql", import.meta.url),
     new URL("../../migrations/0020_pre_run_checks.sql", import.meta.url),
+    new URL("../../migrations/0021_staged_image_reuse.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
@@ -412,6 +415,252 @@ async function stage(test: Awaited<ReturnType<typeof fixture>>) {
   );
   return { final, manifestDigest: body.manifestDigest };
 }
+
+async function retainedSource(
+  test: Awaited<ReturnType<typeof fixture>>,
+  options: {
+    repositoryId?: string;
+    retentionState?: "live" | "deleting" | "deleted";
+    complete?: boolean;
+    storeBytes?: boolean;
+    corruptBytes?: boolean;
+    sourceImage?: typeof image;
+    sourceBytes?: Uint8Array<ArrayBuffer>;
+  } = {},
+) {
+  identity += 1;
+  const sourceRunId = crypto.randomUUID();
+  const sourceJobId = String(identity + 50_000);
+  const sourceWorkflowRunId = String(identity + 100_000);
+  const sourceObjectKey = `runs/${sourceRunId}/images/${crypto.randomUUID()}`;
+  const sourceImage = options.sourceImage ?? image;
+  const sourceBytes = options.sourceBytes ?? png;
+  await database
+    .prepare(`INSERT INTO ingest_staged_runs (
+      id, repository_id, workflow_run_id, workflow_attempt, tested_sha,
+      workflow_source_digest, caller_workflow_path, reusable_workflow_ref,
+      capture_job_prefix, submit_job_name, verified_json, submitted_at,
+      retention_state, created_at
+    ) SELECT ?, ?, ?, workflow_attempt, tested_sha, workflow_source_digest,
+      caller_workflow_path, reusable_workflow_ref, capture_job_prefix,
+      submit_job_name, verified_json, ?, ?, ? FROM ingest_staged_runs WHERE id = ?`)
+    .bind(
+      sourceRunId,
+      options.repositoryId ?? test.manifest.run.repositoryId,
+      sourceWorkflowRunId,
+      Date.now(),
+      options.retentionState ?? "live",
+      Date.now() - 1000,
+      test.runId,
+    )
+    .run();
+  await database
+    .prepare(`INSERT INTO ingest_staged_bundles (
+      run_id, job_id, check_run_id, shard_key, job_name, verified_json, created_at
+    ) SELECT ?, ?, ?, shard_key, job_name, verified_json, ?
+      FROM ingest_staged_bundles WHERE run_id = ? AND job_id = ?`)
+    .bind(sourceRunId, sourceJobId, sourceJobId, Date.now() - 1000, test.runId, test.jobId)
+    .run();
+  await database
+    .prepare(`INSERT INTO ingest_staged_images (
+      run_id, job_id, digest, media_type, bytes, width, height, image_id,
+      object_key, quarantine_key, complete
+    ) VALUES (?, ?, ?, 'image/png', ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(
+      sourceRunId,
+      sourceJobId,
+      sourceImage.digest,
+      sourceBytes.byteLength,
+      sourceImage.width,
+      sourceImage.height,
+      crypto.randomUUID(),
+      sourceObjectKey,
+      `quarantine/staged/${sourceRunId}/${sourceJobId}/${sourceImage.digest}`,
+      options.complete === false ? 0 : 1,
+    )
+    .run();
+  if (options.storeBytes !== false) {
+    const bytes = options.corruptBytes ? new Uint8Array(sourceBytes) : sourceBytes;
+    if (options.corruptBytes) bytes[0] = bytes[0]! ^ 1;
+    await images.put(sourceObjectKey, bytes);
+  }
+  return { sourceRunId, sourceObjectKey };
+}
+
+async function reuseProof(test: Awaited<ReturnType<typeof fixture>>, bytes = png) {
+  const declaration = await declareStaged(
+    test.post(test.manifest),
+    test.context,
+    test.runId,
+    test.shardKey,
+  );
+  const body = (await declaration.json()) as {
+    manifestDigest: string;
+    reuse: { nonce: string; token: string };
+  };
+  const proof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
+    .update(bytes)
+    .digest("hex");
+  const request = test.post({
+    schemaVersion: "1.0",
+    manifestDigest: body.manifestDigest,
+    shardKey: test.shardKey,
+    challenge: body.reuse.token,
+    proofs: [{ imageDigest: image.digest, proof }],
+  });
+  return { body, request };
+}
+
+it("reuses only a proved, retained original and copies it to the new run", async () => {
+  const test = await fixture();
+  await retainedSource(test);
+  const { body, request } = await reuseProof(test);
+  const response = await reuseStagedImages(request, test.context, test.runId);
+  expect(await response.json()).toMatchObject({ reused: [image.digest] });
+  const target = await database
+    .prepare(
+      "SELECT complete, object_key FROM ingest_staged_images WHERE run_id = ? AND digest = ?",
+    )
+    .bind(test.runId, image.digest)
+    .first<{ complete: number; object_key: string }>();
+  expect(target?.complete).toBe(1);
+  expect(target?.object_key).toMatch(new RegExp(`^runs/${test.runId}/images/`));
+  expect(new Uint8Array(await (await images.get(target!.object_key))!.arrayBuffer())).toEqual(png);
+  const final = await finalizeStaged(
+    test.post({
+      schemaVersion: "1.0",
+      shardKey: test.shardKey,
+      manifestDigest: body.manifestDigest,
+    }),
+    test.context,
+    test.runId,
+  );
+  expect(final.status).toBe(202);
+});
+
+it("does not accept a proof derived only from the public image digest", async () => {
+  const test = await fixture();
+  await retainedSource(test);
+  const { body } = await reuseProof(test);
+  const forged = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
+    .update(Buffer.from(image.digest, "hex"))
+    .digest("hex");
+  await expect(
+    reuseStagedImages(
+      test.post({
+        schemaVersion: "1.0",
+        manifestDigest: body.manifestDigest,
+        shardKey: test.shardKey,
+        challenge: body.reuse.token,
+        proofs: [{ imageDigest: image.digest, proof: forged }],
+      }),
+      test.context,
+      test.runId,
+    ),
+  ).rejects.toMatchObject({ code: "invalid_proof", status: 422 });
+  expect(
+    await database
+      .prepare("SELECT complete FROM ingest_staged_images WHERE run_id = ? AND digest = ?")
+      .bind(test.runId, image.digest)
+      .first<{ complete: number }>(),
+  ).toEqual({ complete: 0 });
+});
+
+it("verifies every proof before it writes any target original", async () => {
+  const test = await fixture();
+  const otherBytes = new Uint8Array(
+    await readFile(
+      new URL("../test/fixtures/rgba-profiled.png", import.meta.resolve("@visonaut/compare")),
+    ),
+  );
+  const otherImage = await validateImage(otherBytes);
+  const original = test.manifest.captures[0]!;
+  test.manifest.captures.push({
+    ...original,
+    itemKey: "dialog/other",
+    ordinal: 1,
+    image: {
+      ...original.image,
+      digest: otherImage.digest,
+      bytes: otherBytes.byteLength,
+      width: otherImage.width,
+      height: otherImage.height,
+      path: "images/other.png",
+    },
+  });
+  await retainedSource(test);
+  await retainedSource(test, { sourceImage: otherImage, sourceBytes: otherBytes });
+  const { body } = await reuseProof(test);
+  const valid = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
+    .update(otherBytes)
+    .digest("hex");
+  await expect(
+    reuseStagedImages(
+      test.post({
+        schemaVersion: "1.0",
+        manifestDigest: body.manifestDigest,
+        shardKey: test.shardKey,
+        challenge: body.reuse.token,
+        proofs: [
+          { imageDigest: otherImage.digest, proof: valid },
+          { imageDigest: image.digest, proof: "0".repeat(64) },
+        ],
+      }),
+      test.context,
+      test.runId,
+    ),
+  ).rejects.toMatchObject({ code: "invalid_proof", status: 422 });
+  const targets = await database
+    .prepare("SELECT complete, object_key FROM ingest_staged_images WHERE run_id = ?")
+    .bind(test.runId)
+    .all<{ complete: number; object_key: string }>();
+  expect(targets.results).toHaveLength(2);
+  for (const target of targets.results) {
+    expect(target.complete).toBe(0);
+    expect(await images.get(target.object_key)).toBeNull();
+  }
+});
+
+it.each([
+  { name: "other repository", repositoryId: "999999" },
+  { name: "deleting source", retentionState: "deleting" as const },
+  { name: "expired source", retentionState: "deleted" as const },
+  { name: "incomplete source", complete: false },
+  { name: "missing source bytes", storeBytes: false },
+  { name: "corrupt source bytes", corruptBytes: true },
+])("falls back to upload for $name", async (options) => {
+  const test = await fixture();
+  await retainedSource(test, options);
+  const { request } = await reuseProof(test);
+  const response = await reuseStagedImages(request, test.context, test.runId);
+  expect(await response.json()).toMatchObject({ reused: [] });
+  expect(
+    await database
+      .prepare("SELECT complete FROM ingest_staged_images WHERE run_id = ? AND digest = ?")
+      .bind(test.runId, image.digest)
+      .first<{ complete: number }>(),
+  ).toEqual({ complete: 0 });
+});
+
+it("binds the reuse challenge to its staged run and manifest", async () => {
+  const first = await fixture();
+  const second = await fixture();
+  const { body: foreign } = await reuseProof(first);
+  const { body: current } = await reuseProof(second);
+  await expect(
+    reuseStagedImages(
+      second.post({
+        schemaVersion: "1.0",
+        manifestDigest: current.manifestDigest,
+        shardKey: second.shardKey,
+        challenge: foreign.reuse.token,
+        proofs: [{ imageDigest: image.digest, proof: "0".repeat(64) }],
+      }),
+      second.context,
+      second.runId,
+    ),
+  ).rejects.toMatchObject({ code: "invalid_challenge", status: 403 });
+});
 
 async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifestDigest: string) {
   const base = `/repos/ariakit/ariakit/actions/runs/${test.manifest.run.workflowRunId}`;

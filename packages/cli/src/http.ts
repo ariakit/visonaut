@@ -164,7 +164,9 @@ export async function request({
       const delay = retryDelay(response.headers.get("Retry-After"));
       if (
         retryUnavailable &&
-        (method === "GET" || method === "PUT") &&
+        (method === "GET" ||
+          method === "PUT" ||
+          (method === "POST" && /^\/v1\/runs\/[a-f0-9-]+\/reuse$/.test(url.pathname))) &&
         response.status === 503 &&
         attempt < MAX_REQUEST_ATTEMPTS &&
         delay !== undefined &&

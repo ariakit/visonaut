@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { digestJson, SCHEMA_VERSION, TRANSPORT } from "@visonaut/protocol";
 import type {
   DeclareShardResponse,
@@ -134,6 +135,28 @@ function shardDeclaration(
   ) {
     throw new CliError("The service returned an invalid shard declaration.");
   }
+  let reuse: DeclareShardResponse["reuse"];
+  if (value.reuse !== undefined) {
+    if (
+      !record(value.reuse) ||
+      !text(value.reuse.nonce) ||
+      !/^[a-f0-9]{64}$/.test(value.reuse.nonce) ||
+      !text(value.reuse.token) ||
+      value.reuse.token.length > 4096 ||
+      !/^[A-Za-z0-9._~-]+$/.test(value.reuse.token) ||
+      !text(value.reuse.expiresAt) ||
+      !Number.isFinite(Date.parse(value.reuse.expiresAt))
+    ) {
+      throw new CliError("The service returned an invalid reuse challenge.");
+    }
+    if (Date.parse(value.reuse.expiresAt) - Date.now() > UPLOAD_CREDENTIAL_HEADROOM_MS) {
+      reuse = {
+        nonce: value.reuse.nonce,
+        token: value.reuse.token,
+        expiresAt: value.reuse.expiresAt,
+      };
+    }
+  }
   const images = new Set<string>();
   const tickets = new Set<string>();
   const uploads: DeclareShardResponse["uploads"] = [];
@@ -166,7 +189,22 @@ function shardDeclaration(
       maxBytes: upload.maxBytes,
     });
   }
-  return { schemaVersion: value.schemaVersion, manifestDigest: digest, uploads };
+  return { schemaVersion: value.schemaVersion, manifestDigest: digest, uploads, reuse };
+}
+
+function reusedImages(value: unknown, offered: Set<string>): string[] {
+  protocolVersion(value);
+  if (!record(value) || !Array.isArray(value.reused) || value.reused.length > offered.size) {
+    throw new CliError("The service returned an invalid reuse receipt.");
+  }
+  const reused = new Set<string>();
+  for (const digest of value.reused) {
+    if (!text(digest) || !offered.has(digest) || reused.has(digest)) {
+      throw new CliError("A reused image was not offered by this job.");
+    }
+    reused.add(digest);
+  }
+  return [...reused];
 }
 
 function runStatus(value: unknown, origin: URL, runId: string): RunStatus {
@@ -358,6 +396,7 @@ interface UploadShardParams extends ReserveParams {
   local: LocalManifest;
   manifestDigest: string;
   reservation: ReserveRunResponse;
+  progress?: (value: string) => void;
 }
 
 async function uploadShard({
@@ -368,7 +407,14 @@ async function uploadShard({
   local,
   manifestDigest,
   reservation,
-}: UploadShardParams): Promise<{ uploadedImages: number; reservation: ReserveRunResponse }> {
+  progress,
+}: UploadShardParams): Promise<{
+  uploadedImages: number;
+  reusedImages: number;
+  elapsedMs: number;
+  reservation: ReserveRunResponse;
+}> {
+  const started = performance.now();
   const runId = reservation.runId;
   const captures = new Map(manifest.captures.map((capture) => [capture.image.digest, capture]));
   // Tickets contain ASCII only. Allow each bounded ticket plus its digest,
@@ -376,6 +422,9 @@ async function uploadShard({
   const maximumResponseBytes = 8192 + captures.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
   const body = JSON.stringify(manifest);
   const completed = new Set<string>();
+  let uploadedImages = 0;
+  let reusedCount = 0;
+  let lastReportedReused = 0;
   let completedSinceReservation = 0;
   while (true) {
     if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
@@ -397,7 +446,94 @@ async function uploadShard({
       throw new CliError("The service requested an image that this upload already completed.");
     }
     let renewalRequired = false;
+    if (declaration.reuse) {
+      const pages: (typeof declaration.uploads)[] = [];
+      let page: typeof declaration.uploads = [];
+      let pageBytes = 0;
+      for (const upload of declaration.uploads) {
+        const capture = captures.get(upload.imageDigest);
+        if (!capture) throw new CliError("A reuse challenge refers to an unknown image.");
+        if (
+          page.length &&
+          (page.length === 32 || pageBytes + capture.image.bytes > 8 * 1024 * 1024)
+        ) {
+          pages.push(page);
+          page = [];
+          pageBytes = 0;
+        }
+        page.push(upload);
+        pageBytes += capture.image.bytes;
+      }
+      if (page.length) pages.push(page);
+      for (const entries of pages) {
+        const credentialExpiring =
+          Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
+        const challengeExpiring =
+          Date.parse(declaration.reuse.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
+        if (credentialExpiring || challengeExpiring) {
+          renewalRequired = credentialExpiring || completedSinceReservation > 0;
+          break;
+        }
+        const proofs = [];
+        for (const upload of entries) {
+          const capture = captures.get(upload.imageDigest)!;
+          const bytes = await readImage(local.directory, capture);
+          proofs.push({
+            imageDigest: upload.imageDigest,
+            proof: createHmac("sha256", Buffer.from(declaration.reuse.nonce, "hex"))
+              .update(bytes)
+              .digest("hex"),
+          });
+        }
+        const expiredDuringRead =
+          Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
+        const challengeExpiredDuringRead =
+          Date.parse(declaration.reuse.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
+        if (expiredDuringRead || challengeExpiredDuringRead) {
+          renewalRequired = expiredDuringRead || completedSinceReservation > 0;
+          break;
+        }
+        const response = await request({
+          url: new URL(TRANSPORT.reuse(runId), origin),
+          token: reservation.capability,
+          method: "POST",
+          body: JSON.stringify({
+            schemaVersion: SCHEMA_VERSION,
+            shardKey: manifest.shard.key,
+            manifestDigest,
+            challenge: declaration.reuse.token,
+            proofs,
+          }),
+          mediaType: "application/json",
+          retryUnavailable: true,
+        });
+        for (const digest of reusedImages(
+          response,
+          new Set(proofs.map((proof) => proof.imageDigest)),
+        )) {
+          completed.add(digest);
+          reusedCount++;
+          completedSinceReservation++;
+        }
+        if (reusedCount - lastReportedReused >= 128) {
+          progress?.(`Visonaut reused ${reusedCount} unchanged originals.\n`);
+          lastReportedReused = reusedCount;
+        }
+      }
+    }
+    if (renewalRequired) {
+      if (!completedSinceReservation) {
+        throw new CliError("The upload capability expired before any image could be staged.", 4);
+      }
+      reservation = await reserve({ origin, manifest, environment, secrets });
+      if (reservation.runId !== runId) {
+        throw new CliError("The service changed the run identity during upload renewal.");
+      }
+      completedSinceReservation = 0;
+      continue;
+    }
     for (const upload of declaration.uploads) {
+      if (completed.has(upload.imageDigest)) continue;
       const capture = captures.get(upload.imageDigest);
       if (!capture) {
         throw new CliError("An upload ticket refers to an unknown image.");
@@ -417,10 +553,19 @@ async function uploadShard({
         retryUnavailable: true,
       });
       completed.add(upload.imageDigest);
+      uploadedImages++;
       completedSinceReservation++;
     }
     if (!renewalRequired) {
-      return { uploadedImages: completed.size, reservation };
+      progress?.(
+        `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
+      );
+      return {
+        uploadedImages,
+        reusedImages: reusedCount,
+        elapsedMs: Math.round(performance.now() - started),
+        reservation,
+      };
     }
     // Renew only after progress, so a short-lived response cannot create a loop.
     // Replaying the same declaration issues fresh tickets for incomplete images.
@@ -550,6 +695,7 @@ export async function runCli({
       local,
       manifestDigest,
       reservation,
+      progress: options.json ? undefined : (value) => stdout(redact(value)),
     });
     reservation = uploaded.reservation;
     if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
@@ -593,6 +739,8 @@ export async function runCli({
           shardKey: manifest.shard.key,
           manifestDigest,
           uploadedImages: uploaded.uploadedImages,
+          reusedImages: uploaded.reusedImages,
+          transferElapsedMs: uploaded.elapsedMs,
           visualApproval: false,
         });
       } else {
@@ -611,6 +759,8 @@ export async function runCli({
         shardKey: manifest.shard.key,
         manifestDigest,
         uploadedImages: uploaded.uploadedImages,
+        reusedImages: uploaded.reusedImages,
+        transferElapsedMs: uploaded.elapsedMs,
         shardStaged: true,
         visualApproval: false,
       });

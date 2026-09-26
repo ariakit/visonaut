@@ -188,6 +188,20 @@ export interface DeclareShardResponse {
   schemaVersion: string;
   manifestDigest: string;
   uploads: UploadTicket[];
+  reuse?: { nonce: string; token: string; expiresAt: string };
+}
+
+export interface ReuseImagesRequest {
+  schemaVersion: string;
+  shardKey: string;
+  manifestDigest: string;
+  challenge: string;
+  proofs: { imageDigest: string; proof: string }[];
+}
+
+export interface ReuseImagesResponse {
+  schemaVersion: string;
+  reused: string[];
 }
 
 export interface FinalizeRequest {
@@ -246,6 +260,7 @@ export const TRANSPORT = {
   shard: (runId: string, key: string) =>
     `/v1/runs/${encodeURIComponent(runId)}/shards/${encodeURIComponent(key)}`,
   upload: (ticket: string) => `/v1/uploads/${encodeURIComponent(ticket)}`,
+  reuse: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/reuse`,
   finalize: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/finalize`,
   submit: (externalWorkflowRunId: string) =>
     `/v1/runs/${encodeURIComponent(externalWorkflowRunId)}/submit`,
