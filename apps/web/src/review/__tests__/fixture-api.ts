@@ -6,6 +6,8 @@ export interface FixtureApi {
   resolve(): void;
   update(model: ReviewModel): void;
   model(): ReviewModel;
+  pollReads(): { status: number; model: number };
+  setVisibility(value: "visible" | "hidden"): void;
   completeComparison(): void;
 }
 

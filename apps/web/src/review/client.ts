@@ -5,6 +5,7 @@ import type {
   ReviewImage,
   ReviewItem,
   ReviewModel,
+  ReviewPollState,
   ReviewSelection,
   ReviewVariant,
 } from "./model.ts";
@@ -157,6 +158,17 @@ export function parseReviewModel(value: unknown): ReviewModel {
   };
 }
 
+export function parseReviewPollState(value: unknown): ReviewPollState {
+  const data = record(value);
+  const run = record(data.run);
+  return {
+    run: { status: string(run.status), error: optionalString(run.error) },
+    comparisonState: oneOf(data.comparisonState, ["comparing", "ready", "invalidated"]),
+    reviewReady: boolean(data.reviewReady),
+    archived: boolean(data.archived),
+  };
+}
+
 function selection(value: unknown): ReviewSelection {
   const data = record(value);
   return { itemKey: string(data.itemKey), variantKey: string(data.variantKey) };
@@ -206,10 +218,10 @@ export async function loadReview(
 ): Promise<{ model: ReviewModel; commands: ReviewCommands }> {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
   let selectedComparisonId = comparisonId;
-  const selectedPath = () =>
+  const selectedPath = (suffix = "") =>
     selectedComparisonId
-      ? `${runPath}?comparison=${encodeURIComponent(selectedComparisonId)}`
-      : runPath;
+      ? `${runPath}${suffix}?comparison=${encodeURIComponent(selectedComparisonId)}`
+      : `${runPath}${suffix}`;
   const run = await request(selectedPath());
   let sessionPromise: Promise<string> | undefined;
   const reviewSession = () => {
@@ -245,6 +257,9 @@ export async function loadReview(
       },
       async refresh() {
         return parseReviewModel(await request(selectedPath()));
+      },
+      async pollStatus() {
+        return parseReviewPollState(await request(selectedPath("/state")));
       },
       async recompare() {
         const model = parseReviewModel(await request(`${runPath}/recompare`, {}));

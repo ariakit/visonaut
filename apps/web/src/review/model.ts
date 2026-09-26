@@ -84,6 +84,13 @@ export interface ReviewModel {
   items: ReviewItem[];
 }
 
+export interface ReviewPollState {
+  run: { status: string; error?: string };
+  comparisonState: ComparisonState;
+  reviewReady: boolean;
+  archived: boolean;
+}
+
 export interface ReviewTarget {
   id: string;
   expectedRevision: number;
@@ -116,6 +123,7 @@ export interface ReviewCommandResult {
 export interface ReviewCommands {
   save(command: ReviewCommand): Promise<ReviewCommandResult>;
   undo(command: UndoCommand): Promise<ReviewCommandResult>;
+  pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;
   recompare?(): Promise<ReviewModel>;
   export?(): Promise<void>;

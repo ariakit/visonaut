@@ -1004,6 +1004,17 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
   });
   it("waits for successful GitHub jobs before sealing and presenting review", async () => {
     const test = await fixture();
+    const statePath = `/api/runs/${test.runId}/state`;
+    expect((await test.send(statePath)).status).toBe(401);
+    const initialState = await objectResponse(
+      await test.send(statePath, { headers: { authorization: `Bearer ${test.token}` } }),
+    );
+    expect(initialState).toEqual({
+      run: { status: "incomplete" },
+      comparisonState: "comparing",
+      reviewReady: false,
+      archived: false,
+    });
     const digest = await test.upload();
     const response = await test.send(
       `/v1/runs/${test.runId}/finalize`,
@@ -1036,6 +1047,16 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       }),
     );
     expect(model.reviewReady).toBe(true);
+    const readyState = await objectResponse(
+      await test.send(statePath, { headers: { authorization: `Bearer ${test.token}` } }),
+    );
+    expect(readyState).toEqual({
+      run: { status: model.run.status },
+      comparisonState: "ready",
+      reviewReady: true,
+      archived: false,
+    });
+    expect(readyState).not.toHaveProperty("items");
     expect(model.items[0]?.variants[0]).toMatchObject({
       kind: "added",
       verdict: "approved",
@@ -2510,9 +2531,18 @@ describe("private historical recomparison API", () => {
     expect((await test.service.comparison(comparisonId)).purpose).toBe("historical");
     expect((await test.service.comparisonRows(comparisonId))[0]?.decision_id).toBeNull();
     const selected = `/api/runs/${test.runId}?comparison=${comparisonId}`;
+    const selectedState = `/api/runs/${test.runId}/state?comparison=${comparisonId}`;
     expect((await test.send(selected)).status).toBe(401);
     expect((await test.send(selected, { headers })).status).toBe(200);
+    expect((await test.send(selectedState)).status).toBe(401);
+    expect(await objectResponse(await test.send(selectedState, { headers }))).toEqual({
+      run: { status: "compared" },
+      comparisonState: "ready",
+      reviewReady: false,
+      archived: true,
+    });
     test.setPermission("read");
     expect((await test.send(selected, { headers })).status).toBe(403);
+    expect((await test.send(selectedState, { headers })).status).toBe(403);
   });
 });
