@@ -39,16 +39,17 @@ function reviewUrl(url: string, origin: string): string {
   return parsed.href;
 }
 
-export function genericCheckOutput(conclusion: StatusDelivery["conclusion"]) {
+export function genericCheckOutput(conclusion: StatusDelivery["conclusion"], detailsUrl: string) {
+  const summary = `[Open this review in Visonaut](${detailsUrl}). Sign in with GitHub if prompted.`;
   if (conclusion === "pending") {
-    return { title: "Visual review is running", summary: "Sign in to Visonaut to view this run." };
+    return { title: "Visual review is running", summary };
   }
   if (conclusion === "success") {
-    return { title: "Visual review passed", summary: "Sign in to Visonaut to view this run." };
+    return { title: "Visual review passed", summary };
   }
   return {
     title: "Visual review has not passed",
-    summary: "Sign in to Visonaut to view this run.",
+    summary,
   };
 }
 
@@ -124,6 +125,7 @@ export async function ensureGitHubCheck({
   if (existing) {
     return existing;
   }
+  const href = reviewUrl(detailsUrl, origin);
   const created = record(
     await github.request(`/repos/${github.repository}/check-runs`, {
       method: "POST",
@@ -131,9 +133,9 @@ export async function ensureGitHubCheck({
         name: CHECK_NAME,
         head_sha: testedSha,
         external_id: externalId,
-        details_url: reviewUrl(detailsUrl, origin),
+        details_url: href,
         status: "in_progress",
-        output: genericCheckOutput("pending"),
+        output: genericCheckOutput("pending", href),
       }),
     }),
   );
@@ -172,13 +174,14 @@ export async function sendGitHubCheck({
       "The check does not belong to this application and tested commit.",
     );
   }
-  const output = genericCheckOutput(intent.conclusion);
+  const href = reviewUrl(intent.details_url, origin);
+  const output = genericCheckOutput(intent.conclusion, href);
   if (!(await isCurrent())) return "not-sent";
   await github.request(path, {
     method: "PATCH",
     body: JSON.stringify({
       name: CHECK_NAME,
-      details_url: reviewUrl(intent.details_url, origin),
+      details_url: href,
       output,
       status: intent.conclusion === "pending" ? "in_progress" : "completed",
       ...(intent.conclusion === "pending"

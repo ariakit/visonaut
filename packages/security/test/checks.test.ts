@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import {
+  ensureGitHubCheck,
   findGitHubCheck,
   sendGitHubCheck,
   type GitHubClient,
@@ -48,8 +49,39 @@ it("renames the exact App-owned legacy check on its next status PATCH", async ()
   expect(body).toMatchObject({
     name: "Visonaut",
     details_url: `${origin}/runs/run-1`,
+    output: {
+      summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
+    },
     status: "completed",
     conclusion: "failure",
+  });
+});
+
+it("puts a direct review link in a new pull request check", async () => {
+  const github: GitHubClient = {
+    appId: "123",
+    repositoryId: "10",
+    repository: "ariakit/ariakit",
+    request: vi.fn(async (_path, init) =>
+      init?.method === "POST" ? { id: 42 } : { check_runs: [] },
+    ),
+  };
+  expect(
+    await ensureGitHubCheck({
+      github,
+      testedSha,
+      externalId: "visonaut:run-1",
+      detailsUrl: `${origin}/runs/run-1`,
+      origin,
+    }),
+  ).toBe("42");
+  const post = vi.mocked(github.request).mock.calls[1]?.[1];
+  expect(post?.method).toBe("POST");
+  expect(JSON.parse(String(post?.body))).toMatchObject({
+    details_url: `${origin}/runs/run-1`,
+    output: {
+      summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
+    },
   });
 });
 

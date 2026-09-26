@@ -189,10 +189,13 @@ describe("browser boundary", () => {
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
   it.each(["pending", "success", "failure"] as const)(
-    "only exposes generic %s check output",
+    "links the %s check to the exact review without exposing its contents",
     (status) => {
-      expect(Object.keys(genericCheckOutput(status))).toEqual(["title", "summary"]);
-      expect(genericCheckOutput(status).summary).toBe("Sign in to Visonaut to view this run.");
+      const output = genericCheckOutput(status, `${configuration.issuer}/runs/run-1`);
+      expect(Object.keys(output)).toEqual(["title", "summary"]);
+      expect(output.summary).toBe(
+        `[Open this review in Visonaut](${configuration.issuer}/runs/run-1). Sign in with GitHub if prompted.`,
+      );
     },
   );
 });
