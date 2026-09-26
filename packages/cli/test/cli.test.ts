@@ -200,6 +200,8 @@ describe("public upload command", () => {
       shardKey: "chrome-1",
       manifestDigest: await digestJson(local.manifest),
       uploadedImages: 1,
+      reusedImages: 0,
+      transferElapsedMs: expect.any(Number),
       shardStaged: true,
       visualApproval: false,
     });
@@ -240,6 +242,8 @@ describe("public upload command", () => {
       manifestDigest,
       state: "staged",
       uploadedImages: 1,
+      reusedImages: 0,
+      transferElapsedMs: expect.any(Number),
       shardStaged: true,
       visualApproval: false,
     });
