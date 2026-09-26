@@ -61,7 +61,14 @@ async function token(overrides: Record<string, unknown> = {}, audience = configu
 function github(
   overrides: Record<string, unknown> = {},
   jobName = "capture / chromium",
-  heads: { pullBase?: string; main?: string; mergeBase?: string; workflowBlob?: string } = {},
+  heads: {
+    pullBase?: string;
+    main?: string;
+    mergeBase?: string;
+    workflowBlob?: string;
+    authorPermission?: string;
+    headRepositoryId?: number;
+  } = {},
 ): GitHubClient {
   const run = {
     id: 20,
@@ -105,7 +112,7 @@ function github(
         return {
           state: "open",
           merge_commit_sha: testedSha,
-          head: { ref: "feature", sha: sourceHead, repo: { id: 10 } },
+          head: { ref: "feature", sha: sourceHead, repo: { id: heads.headRepositoryId ?? 10 } },
           base: { ref: "main", sha: heads.pullBase ?? targetHead, repo: { id: 10 } },
           user: { id: 42 },
         };
@@ -115,7 +122,11 @@ function github(
         return { object: { sha: heads.main ?? targetHead } };
       if (path.startsWith("/user/")) return { id: 42, login: "maintainer" };
       if (path.endsWith("/permission"))
-        return { permission: "write", role_name: "maintain", user: { id: 42 } };
+        return {
+          permission: heads.authorPermission ?? "write",
+          role_name: "maintain",
+          user: { id: 42 },
+        };
       if (path.includes("/git/ref/heads/gh-readonly-queue/")) return { object: { sha: testedSha } };
       return run;
     }),
@@ -167,6 +178,60 @@ describe("direct Ariakit app workflow", () => {
         keySet,
       }),
     ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it("accepts a same-repository bot PR even when its author has no collaborator permission", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${direct.workflowPath}@${ref}`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@${ref}`,
+      job_workflow_sha: testedSha,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github(
+          { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },
+          undefined,
+          { authorPermission: "none" },
+        ),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ event: "pull_request", testedSha });
+  });
+
+  it("still rejects a fork PR when its author has no collaborator permission", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${direct.workflowPath}@${ref}`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@${ref}`,
+      job_workflow_sha: testedSha,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration: direct,
+        github: github(
+          { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },
+          undefined,
+          { authorPermission: "none", headRepositoryId: 11 },
+        ),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
   });
 
   it("accepts a main job called from the existing CI workflow", async () => {

@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
 import { numericId, record, SecurityError, textField } from "./errors.js";
-import { type GitHubClient, requireRepositoryWrite } from "./github.js";
+import type { GitHubClient } from "./github.js";
 
 export interface TrustedShardIdentity {
   key: string;
@@ -239,7 +239,6 @@ export async function verifyGitHubOidc({
     requireEqual(claims.head_ref, head.ref, "pull.head_ref_claim");
     requireEqual(claims.base_ref, "main", "pull.base_ref_claim");
     requireEqual(run.head_sha, head.sha, "pull.workflow_head_sha");
-    await requireRepositoryWrite(github, numericId(record(pull.user).id));
     const sourceHead = sha(head.sha);
     const mainRef = record(await github.request(`${root}/git/ref/heads/main`));
     const targetHead = sha(record(mainRef.object).sha);
