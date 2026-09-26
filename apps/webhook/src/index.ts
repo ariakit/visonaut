@@ -18,7 +18,6 @@ interface WebhookBindings {
   serviceRepositoryId: string;
   production: Destination;
   preview: Destination;
-  diagnostics: Destination;
 }
 
 const appEvents = new Set(["github_app_authorization", "installation", "ping"]);
@@ -68,6 +67,7 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
   const webhook = await verifyGitHubWebhook({
     request: forward(new URL(request.url).origin),
     secret: bindings.secret,
+    // Keep acknowledging signed events from the installed diagnostics repository.
     repositoryId: [
       bindings.ariakitRepositoryId,
       bindings.diagnosticsRepositoryId,
@@ -80,21 +80,12 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
     !appEvents.has(webhook.event) && !changed
       ? numericId(record(webhook.payload.repository).id)
       : null;
-  // The App receives its own source-repository events, but no review Worker owns them.
-  const destinations = appEvents.has(webhook.event)
-    ? [bindings.production, bindings.preview, bindings.diagnostics]
-    : changed
-      ? [
-          ...(changed.has(bindings.ariakitRepositoryId)
-            ? [bindings.production, bindings.preview]
-            : []),
-          ...(changed.has(bindings.diagnosticsRepositoryId) ? [bindings.diagnostics] : []),
-        ]
-      : repositoryId === bindings.ariakitRepositoryId
-        ? [bindings.production, bindings.preview]
-        : repositoryId === bindings.diagnosticsRepositoryId
-          ? [bindings.diagnostics]
-          : [];
+  // The App receives source and diagnostics repository events, but no review Worker owns them.
+  const forwardToAriakit =
+    appEvents.has(webhook.event) ||
+    changed?.has(bindings.ariakitRepositoryId) ||
+    repositoryId === bindings.ariakitRepositoryId;
+  const destinations = forwardToAriakit ? [bindings.production, bindings.preview] : [];
   const statuses = await Promise.all(
     destinations.map(async (destination) => {
       try {
@@ -135,10 +126,6 @@ export default {
         preview: {
           origin: env.VISONAUT_PREVIEW_ORIGIN,
           fetch: env.PREVIEW.fetch.bind(env.PREVIEW),
-        },
-        diagnostics: {
-          origin: env.VISONAUT_DIAGNOSTICS_ORIGIN,
-          fetch: env.DIAGNOSTICS.fetch.bind(env.DIAGNOSTICS),
         },
       });
     } catch (error) {

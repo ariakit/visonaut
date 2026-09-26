@@ -15,12 +15,10 @@
     "VISONAUT_SERVICE_REPOSITORY_ID": "1380751023",
     "VISONAUT_PRODUCTION_ORIGIN": "https://visonaut.com",
     "VISONAUT_PREVIEW_ORIGIN": "https://preview.visonaut.com",
-    "VISONAUT_DIAGNOSTICS_ORIGIN": "https://diagnostics.visonaut.com",
   },
   "services": [
     { "binding": "PRODUCTION", "service": "visonaut" },
     { "binding": "PREVIEW", "service": "visonaut-preview" },
-    { "binding": "DIAGNOSTICS", "service": "visonaut-diagnostics" },
   ],
   "secrets": { "required": ["GITHUB_WEBHOOK_SECRET"] },
 }

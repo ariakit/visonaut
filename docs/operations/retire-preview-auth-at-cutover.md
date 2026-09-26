@@ -1,18 +1,16 @@
 # Retire nonproduction auth if an environment is closed
 
-This is a contingency runbook. It has not been executed. Keep preview and diagnostics active through readiness work. The launch contract requires isolated sessions and verified revocation delivery, not retirement of these environments.
+This is a contingency runbook. Its auth retirement steps have not been executed. Keep each environment active through its required readiness checks. The launch contract requires isolated sessions and verified revocation delivery.
 
-The GitHub App sends signed events to `hooks.visonaut.com`, which forwards authorization revocations and installation suspension or deletion to the production, preview, and diagnostics Workers. Each Worker has a separate D1 session database and handles revocation locally. Verify this delivery and separate-session behavior before launch. Current repository permission checks use an installation token and do not by themselves detect OAuth grant revocation.
+The GitHub App sends signed events to `hooks.visonaut.com`. The gateway must forward authorization revocations and installation suspension or deletion to every Worker that still accepts sessions. Each Worker has a separate D1 session database and handles revocation locally. Verify this delivery and separate-session behavior before launch. Current repository permission checks use an installation token and do not by themselves detect OAuth grant revocation.
 
 If preview or diagnostics is deliberately closed later, keep the webhook gateway in place for the remaining environments. Do not point the App webhook directly at one Worker while another environment still accepts sessions.
 
-## Remove the retired webhook destination first
+## Prepare the webhook destination removal
 
-Before changing routes, sessions, or secrets, make a reviewed gateway change for each environment being retired. Remove that destination from every branch of `routeWebhook()` in `apps/webhook/src/index.ts`: App-wide events, `installation_repositories`, and repository-specific events. Remove its service binding and origin from `apps/webhook/wrangler.jsonc` and the corresponding runtime binding. Keep all remaining destinations in each branch. The gateway must still return 503 when any **remaining** destination fails.
+Prepare a reviewed gateway change for each environment being retired. Remove that destination from every branch of `routeWebhook()` in `apps/webhook/src/index.ts`: App-wide events, `installation_repositories`, and repository-specific events. Remove its service binding and origin from `apps/webhook/wrangler.jsonc`. Keep all remaining destinations in each branch. The gateway must still return 503 when any **remaining** destination fails.
 
-Test a signed App-wide event, a signed event for each installed repository, and an `installation_repositories` event that includes the retired repository. Assert that the retired Worker receives no requests and every remaining destination receives its applicable request. Deploy the revised gateway while all Workers are still healthy. Replay a real GitHub App delivery from the GitHub delivery log and verify HTTP 202, the retained Workers' receipt records, and no retired-Worker request. Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`.
-
-Do not remove the retired Worker's auth secrets until this deployed gateway check passes. If it fails, restore gateway forwarding and resolve the failure while the retired Worker can still accept events. Repeat the HTTP 202 and receipt check after the steps below; stop retirement if GitHub reports a failed delivery.
+Test a signed App-wide event, a signed event for each installed repository, and an `installation_repositories` event that includes the retired repository. Assert that the retired Worker receives no requests and every remaining destination receives its applicable request. Do not merge or deploy this change while the retired environment still has public access. The current gateway must keep forwarding revocations until public access is closed.
 
 ## Targets
 
@@ -38,9 +36,15 @@ Content-Type: application/json
 
 Repeat with `visonaut-diagnostics` only if that environment is also being retired. Credentials must come from the existing approved secret mechanism; do not put token values in commands, logs, or this runbook.
 
-Remove the retired Worker's `preview.visonaut.com` or `diagnostics.visonaut.com` custom-domain entry from `apps/web/wrangler.jsonc` and from the live Cloudflare Worker routes. Verify the matching subdomain GET endpoint returns both fields false, inspect the live custom-domain and zone-route lists, and confirm the retired hostname has no application response. Check for any out-of-band route or inbound service binding before considering access closed. The current source has both custom domains and outbound COMPARATOR bindings. Disabling only workers.dev leaves the custom domain reachable.
+Remove the retired Worker's `preview.visonaut.com` or `diagnostics.visonaut.com` custom-domain entry from `apps/web/wrangler.jsonc` and from the live Cloudflare Worker routes. Verify the matching subdomain GET endpoint returns both fields false, inspect the live custom-domain and zone-route lists, and confirm the retired hostname has no application response. Check for any out-of-band public route or inbound service binding. The gateway's service binding must remain available for revocation delivery until the revised gateway is deployed. The current source has both custom domains and outbound COMPARATOR bindings. Disabling only workers.dev leaves the custom domain reachable.
 
 Cloudflare warns that a later Wrangler deploy can re-enable workers.dev unless the committed config also disables it. Both the live route and config changes are required.
+
+## Deploy the revised gateway
+
+With public access closed and the retired Worker still healthy, merge and deploy the reviewed gateway change. For diagnostics retirement, the first webhook version without diagnostics may replace the exact existing `DIAGNOSTICS` service binding; the deployment must reject any other binding drift and verify the final bindings. Replay a real GitHub App delivery from the GitHub delivery log and verify HTTP 202, the retained Workers' receipt records, and no retired-Worker request. Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`.
+
+Do not remove the retired Worker's auth secrets until this deployed gateway check passes. If it fails, restore gateway forwarding and resolve the failure while the retired Worker can still accept events. Repeat the HTTP 202 and receipt check after the steps below; stop retirement if GitHub reports a failed delivery.
 
 ## Revoke local sessions and pending sign-ins
 
@@ -89,4 +93,4 @@ Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`.
 
 Keep the public synthetic fixture history and private evidence storage as required. Do not claim authenticated access to an environment after retiring it. Re-enabling it requires a new revocation-topology review and fresh isolation evidence.
 
-References: [GitHub App webhook delivery](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps), [OAuth revocation event](https://docs.github.com/en/webhooks/webhook-events-and-payloads#github_app_authorization), [disable workers.dev](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/), [Cloudflare subdomain API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/subdomain/).
+References: [GitHub App webhook delivery](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps), [OAuth revocation event](https://docs.github.com/en/webhooks/webhook-events-and-payloads#github_app_authorization), [service bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/), [disable workers.dev](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/), [Cloudflare subdomain API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/subdomain/).
