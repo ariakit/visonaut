@@ -65,6 +65,11 @@ interface DecisionRecord {
   revoked: number;
 }
 
+function batchRows<T>(result: { results?: unknown[] } | undefined): T[] {
+  if (!result) throw new Error("The review query batch is incomplete.");
+  return (result.results ?? []) as T[];
+}
+
 async function projectRun(context: PrivateContext, runId: string) {
   const run = await context.service.run(runId);
   if (run.project_id !== context.configuration.projectId) {
@@ -236,69 +241,112 @@ export async function reviewModel(
   }
   const historical = Boolean(selectedComparison);
   const comparisonId = selectedComparison?.id ?? run.comparison_id;
-  const retained = await context.database
-    .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
-    .bind(run.id)
-    .first<{ byte_state: string }>();
-  const pendingHistorical = await context.database
-    .prepare(
-      "SELECT id FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' AND state = 'comparing' LIMIT 1",
-    )
-    .bind(run.id)
-    .first();
-  const recompareAllowed = Boolean(
-    run.sealed_at && retained?.byte_state === "live" && !pendingHistorical,
-  );
-  const historicalComparisons = await context.database
-    .prepare(
-      "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
-    )
-    .bind(run.id)
-    .all();
   const readOnlyReason = archive?.viewUnavailableReason ?? archivedReadOnlyReason;
   const savedRun = archive?.sections.run?.[0];
   if (archive && (!savedRun || savedRun.id !== run.id || savedRun.project_id !== run.project_id)) {
     throw new Error("Archived run identity is inconsistent.");
   }
-  const project = await context.service.project(run.project_id);
-  const status = await context.service.status(run.id);
   const savedComparison = archive?.sections.comparisons?.find((entry) => entry.id === comparisonId);
   if (archive && comparisonId && !savedComparison) {
     throw new Error("Archived comparison metadata is missing.");
   }
-  const comparison = archive
-    ? savedComparison
-      ? {
-          id: historyString(savedComparison, "id"),
-          policy_digest: historyString(savedComparison, "policy_digest"),
-          state: historyString(savedComparison, "state"),
-        }
-      : null
-    : comparisonId
-      ? await context.service.comparison(comparisonId)
-      : null;
-  const rows = archive
-    ? (archive.sections.comparisonRows ?? [])
-        .filter((row) => row.comparison_id === comparison?.id)
-        .map(historyReviewRow)
-        .sort(
-          (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
+  const [metadata, project, status, comparison] = await Promise.all([
+    context.database.batch([
+      context.database
+        .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
+        .bind(run.id),
+      context.database
+        .prepare(
+          "SELECT id FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' AND state = 'comparing' LIMIT 1",
         )
-    : comparison
-      ? await context.service.comparisonRows(comparison.id)
-      : [];
+        .bind(run.id),
+      context.database
+        .prepare(
+          "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
+        )
+        .bind(run.id),
+    ]),
+    context.service.project(run.project_id),
+    context.service.status(run.id),
+    archive
+      ? Promise.resolve(
+          savedComparison
+            ? {
+                id: historyString(savedComparison, "id"),
+                policy_digest: historyString(savedComparison, "policy_digest"),
+                state: historyString(savedComparison, "state"),
+              }
+            : null,
+        )
+      : comparisonId
+        ? context.service.comparison(comparisonId)
+        : Promise.resolve(null),
+  ]);
+  const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
+  const pendingHistorical = batchRows<{ id: string }>(metadata[1])[0];
+  const historicalComparisons = batchRows<{
+    id: string;
+    ordinal: number;
+    state: string;
+    createdAt: number;
+  }>(metadata[2]);
+  const recompareAllowed = Boolean(
+    run.sealed_at && retained?.byte_state === "live" && !pendingHistorical,
+  );
+  const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+    archive
+      ? (archive.sections.comparisonRows ?? [])
+          .filter((row) => row.comparison_id === comparison?.id)
+          .map(historyReviewRow)
+          .sort(
+            (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
+          )
+      : comparison
+        ? context.service.comparisonRows(comparison.id)
+        : [],
+    !archive && comparison
+      ? context.database.batch([
+          context.database
+            .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
+            .bind(comparison.policy_digest),
+          context.database
+            .prepare(
+              "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+          context.database
+            .prepare(
+              "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+          context.database
+            .prepare(
+              "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+          context.database
+            .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
+            .bind(comparison.id),
+          context.database
+            .prepare(
+              "SELECT id FROM visonaut_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
+            )
+            .bind(project.promotion_id, comparison.id),
+        ])
+      : null,
+    archive
+      ? (archive.sections.acceptance ?? []).map((row) => historyString(row, "id"))
+      : comparison
+        ? context.service.eligibleApprovalRowIds(comparison.id)
+        : [],
+  ]);
   const policyRow = archive
     ? (archive.sections.policies ?? []).find(
         (policy) => policy.digest === comparison?.policy_digest,
       )
-    : comparison
-      ? await context.database
-          .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
-          .bind(comparison.policy_digest)
-          .first<{ policy_json: string }>()
+    : liveMetadata
+      ? batchRows<{ policy_json: string }>(liveMetadata[0])[0]
       : null;
-  const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
-  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; maximum ${policy.maxChangedPixels ?? "unknown"} changed pixels; ratio ${policy.maxChangedRatio ?? "unknown"}.`;
   const captures = archive
     ? {
         results: [
@@ -306,12 +354,7 @@ export async function reviewModel(
           ...(archive.sections.referenceCaptures ?? []),
         ].map(historyCapture),
       }
-    : await context.database
-        .prepare(
-          "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-        )
-        .bind(comparison?.id ?? "", comparison?.id ?? "")
-        .all<CaptureRecord>();
+    : { results: liveMetadata ? batchRows<CaptureRecord>(liveMetadata[1]) : [] };
   const images = archive
     ? {
         results: [
@@ -319,43 +362,15 @@ export async function reviewModel(
           ...(archive.sections.referenceImages ?? []),
         ].map(historyImage),
       }
-    : await context.database
-        .prepare(
-          "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
-        )
-        .bind(comparison?.id ?? "", comparison?.id ?? "")
-        .all<ImageRecord>();
-  const eligibleApprovals = new Set(
-    archive
-      ? (archive.sections.acceptance ?? []).map((row) => historyString(row, "id"))
-      : comparison
-        ? await context.service.eligibleApprovalRowIds(comparison.id)
-        : [],
-  );
+    : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
   const decisions = archive
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
-    : await context.database
-        .prepare(
-          "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-        )
-        .bind(comparison?.id ?? "", comparison?.id ?? "")
-        .all<DecisionRecord>();
-  const history =
-    !archive && comparison
-      ? await context.database
-          .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
-          .bind(comparison.id)
-          .first()
-      : null;
-  const currentPromotion =
-    !archive && comparison
-      ? await context.database
-          .prepare(
-            "SELECT id FROM visonaut_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
-          )
-          .bind(project.promotion_id, comparison.id)
-          .first()
-      : null;
+    : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
+  const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
+  const currentPromotion = liveMetadata ? batchRows<{ id: string }>(liveMetadata[5])[0] : null;
+  const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
+  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; maximum ${policy.maxChangedPixels ?? "unknown"} changed pixels; ratio ${policy.maxChangedRatio ?? "unknown"}.`;
+  const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
   const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));
   const decisionById = new Map(decisions.results.map((decision) => [decision.id, decision]));
@@ -514,7 +529,7 @@ export async function reviewModel(
         : pendingHistorical
           ? "A historical comparison is still running."
           : "The stored image bytes have expired.",
-    historicalComparisons: historicalComparisons.results,
+    historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: comparison?.state ?? "comparing",
     comparisonRevision: selectedComparison?.ordinal ?? run.revision,
