@@ -666,7 +666,7 @@ describe("full run and immutable comparison state", () => {
     const oldPolicyDigest = await digestJson(oldPolicy);
     const newPolicyDigest = await digestJson(selectedComparisonPolicy);
     expect(newPolicyDigest).toBe(
-      "9c4627104b4af7760a2891bd897dded9a5b449a68c1d7931e04d45fcca49c4bd",
+      "6a97812c0ad3a5e8e006904995e75f8f15671260fb2ee53d31a1527c7d990fd1",
     );
     await service.createPolicy({ digest: oldPolicyDigest, policy: oldPolicy });
     await service.createPolicy({ digest: newPolicyDigest, policy: selectedComparisonPolicy });

@@ -231,30 +231,55 @@ describe("validated originals and visible pixels", () => {
     expect(image.data).toEqual(new Uint8ClampedArray(expected));
   });
 
-  it("bounds the selected tolerance by both changed pixels and image area", () => {
+  it("uses only the changed-pixel ratio for the selected tolerance", () => {
     const reference = {
-      width: 498,
-      height: 360,
-      data: new Uint8ClampedArray(498 * 360 * 4),
+      width: 432,
+      height: 156,
+      data: new Uint8ClampedArray(432 * 156 * 4),
     };
     reference.data.fill(255);
     const candidate = { ...reference, data: reference.data.slice() };
     candidate.data[0] = 254;
     candidate.data[4] = 253;
+    candidate.data[8] = 254;
+    candidate.data[12] = 0;
     const tolerated = compareImages(reference, candidate, selectedComparisonPolicy);
     expect(tolerated).toMatchObject({
       outcome: "unchanged",
-      changedPixels: 2,
-      ratio: 2 / 179_280,
+      changedPixels: 4,
+      ratio: 4 / 67_392,
     });
-    expect(Array.from(tolerated.mask.data.subarray(0, 8))).toEqual([
-      255, 0, 0, 255, 255, 0, 0, 255,
+    expect(Array.from(tolerated.mask.data.subarray(0, 16))).toEqual([
+      255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255,
     ]);
+    expect(
+      compareImages(reference, candidate, {
+        ...selectedComparisonPolicy,
+        id: "visible-two-pixel-v2",
+        maxChangedPixels: 2,
+      }).outcome,
+    ).toBe("changed");
 
-    candidate.data[8] = 254;
-    expect(compareImages(reference, candidate, selectedComparisonPolicy).outcome).toBe("changed");
+    for (let pixel = 4; pixel < 33; pixel += 1) {
+      candidate.data[pixel * 4] = 0;
+    }
+    expect(compareImages(reference, candidate, selectedComparisonPolicy)).toMatchObject({
+      outcome: "unchanged",
+      changedPixels: 33,
+    });
+    candidate.data[33 * 4] = 0;
+    expect(compareImages(reference, candidate, selectedComparisonPolicy)).toMatchObject({
+      outcome: "changed",
+      changedPixels: 34,
+    });
+
+    candidate.data[0] = 254;
     candidate.data[4] = 255;
     candidate.data[8] = 255;
+    candidate.data[12] = 255;
+    for (let pixel = 4; pixel < 34; pixel += 1) {
+      candidate.data[pixel * 4] = 255;
+    }
     const small = {
       width: 40,
       height: 40,
@@ -267,10 +292,8 @@ describe("validated originals and visible pixels", () => {
         selectedComparisonPolicy,
       ).outcome,
     ).toBe("changed");
-    candidate.data[0] = 0;
-    expect(compareImages(reference, candidate, selectedComparisonPolicy).outcome).toBe("unchanged");
     expect(
-      compareImages(reference, { ...candidate, width: 360, height: 498 }, selectedComparisonPolicy)
+      compareImages(reference, { ...candidate, width: 156, height: 432 }, selectedComparisonPolicy)
         .outcome,
     ).toBe("changed");
 
@@ -282,6 +305,13 @@ describe("validated originals and visible pixels", () => {
     fullPage.data.fill(255);
     const missingStroke = { ...fullPage, data: fullPage.data.slice() };
     for (let pixel = 0; pixel < 16; pixel += 1) {
+      missingStroke.data[pixel * 4] = 0;
+    }
+    expect(compareImages(fullPage, missingStroke, selectedComparisonPolicy)).toMatchObject({
+      outcome: "unchanged",
+      changedPixels: 16,
+    });
+    for (let pixel = 16; pixel < 501; pixel += 1) {
       missingStroke.data[pixel * 4] = 0;
     }
     expect(compareImages(fullPage, missingStroke, selectedComparisonPolicy).outcome).toBe(

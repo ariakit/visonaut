@@ -373,7 +373,11 @@ export async function reviewModel(
   const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
   const currentPromotion = liveMetadata ? batchRows<{ id: string }>(liveMetadata[5])[0] : null;
   const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
-  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; maximum ${policy.maxChangedPixels ?? "unknown"} changed pixels; ratio ${policy.maxChangedRatio ?? "unknown"}.`;
+  const pixelLimit =
+    typeof policy.maxChangedPixels === "number"
+      ? `maximum ${policy.maxChangedPixels} changed pixels; `
+      : "";
+  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
   const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
   const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));

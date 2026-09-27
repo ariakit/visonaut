@@ -155,11 +155,19 @@ export async function processComparisonTaskInContainer({
   if (!preview) {
     throw new Error("Comparison has no image evidence.");
   }
+  // The pinned Container still requires this field. The sentinel exceeds every allowed image.
+  const containerPolicy = {
+    ...task.policy,
+    maxChangedPixels:
+      task.policy.maxChangedPixels === undefined
+        ? Number.MAX_SAFE_INTEGER
+        : task.policy.maxChangedPixels,
+  };
   const response = await container.fetch(
     new Request("http://localhost/compare", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reference, candidate, policy: task.policy }),
+      body: JSON.stringify({ reference, candidate, policy: containerPolicy }),
     }),
   );
   if (!response.ok || !response.body) {

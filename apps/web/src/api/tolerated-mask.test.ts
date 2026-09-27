@@ -33,7 +33,7 @@ for (const changedProfile of [false, true]) {
     const service = new Service(database);
     await service.createPolicy({
       digest: "policy",
-      policy: { id: "tolerated", channelThreshold: 0, maxChangedPixels: 1, maxChangedRatio: 1 },
+      policy: { id: "tolerated", channelThreshold: 0, maxChangedRatio: 1 },
     });
     await service.createProject({ id: "project", repositoryId: "123", policyDigest: "policy" });
     const capture = async (id: string, red: number, profileDigest: string) => {
@@ -204,6 +204,7 @@ for (const changedProfile of [false, true]) {
     const variant = model.items[0]?.variants[0];
     if (!variant) throw new Error("Missing review variant.");
     expect(variant.kind).toBe(changedProfile ? "changed" : "unchanged");
+    expect(variant.threshold).toBe("Channel threshold 0; ratio 1.");
     expect(variant.diff).toBeNull();
     expect(evidence(variant)).toBe("loading");
     expect(variant).toMatchObject({ maskExpected: false, changedPixels: 1 });
