@@ -121,6 +121,7 @@ beforeAll(async () => {
     new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
     new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
     new URL("../../migrations/0019_staged_workflows.sql", import.meta.url),
+    new URL("../../migrations/0020_pre_run_checks.sql", import.meta.url),
   ];
   for (const source of sources) {
     const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
@@ -818,6 +819,158 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     } finally {
       projectLookup.mockRestore();
     }
+  });
+  it("resolves only the authenticated check and its bound review", async () => {
+    const test = await fixture();
+    const check = `visonaut:pre:${test.manifest.run.testedSha}`;
+    const path = `/api/pulls/42?check=${encodeURIComponent(check)}`;
+    const headers = { authorization: `Bearer ${test.token}` };
+    await database
+      .prepare("UPDATE visonaut_runs SET kind='pull_request',lineage_key='pr:42' WHERE id=?")
+      .bind(test.runId)
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active',?,?)",
+      )
+      .bind(
+        test.manifest.run.testedSha,
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        check,
+        Date.now(),
+        Date.now(),
+      )
+      .run();
+    expect((await test.send(path)).status).toBe(401);
+    expect((await test.send("/api/pulls/42", { headers })).status).toBe(404);
+    expect(
+      (await test.send(`/api/pulls/43?check=${encodeURIComponent(check)}`, { headers })).status,
+    ).toBe(404);
+    expect(
+      (await test.send(`/api/pulls/42?check=visonaut%3Apre%3A${"e".repeat(40)}`, { headers }))
+        .status,
+    ).toBe(404);
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      pullNumber: 42,
+      runId: null,
+      state: "pending",
+    });
+    await database
+      .prepare(
+        "UPDATE pre_run_checks SET workflow_run_id='456',workflow_attempt=1 WHERE external_id=?",
+      )
+      .bind(check)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: null,
+      state: "pending",
+    });
+    await database
+      .prepare("UPDATE visonaut_runs SET sealed_at=created_at WHERE id=?")
+      .bind(test.runId)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: test.runId,
+      state: "ready",
+    });
+    await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id=?").bind(test.runId).run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: test.runId,
+      state: "ready",
+    });
+    await database
+      .prepare("UPDATE visonaut_runs SET sealed_at=NULL,state='failed' WHERE id=?")
+      .bind(test.runId)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: null,
+      state: "failed",
+    });
+    await database
+      .prepare(
+        "UPDATE pre_run_checks SET workflow_run_id=NULL,workflow_attempt=NULL,docs_only=1 WHERE external_id=?",
+      )
+      .bind(check)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: null,
+      state: "not-required",
+    });
+    test.setPermission("read");
+    expect((await test.send(path, { headers })).status).toBe(403);
+  });
+  it("keeps a check link on its sealed run after an older merge webhook arrives late", async () => {
+    const test = await fixture();
+    const headers = { authorization: `Bearer ${test.token}` };
+    const testedSha = crypto.randomUUID().replaceAll("-", "").padEnd(40, "0");
+    const delayedSha = crypto.randomUUID().replaceAll("-", "").padEnd(40, "0");
+    const check = `visonaut:pre:${testedSha}`;
+    await database
+      .prepare(
+        "UPDATE visonaut_runs SET kind='pull_request',lineage_key='pr:42',tested_sha=?,sealed_at=created_at WHERE id=?",
+      )
+      .bind(testedSha, test.runId)
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active','456',1,?,?)",
+      )
+      .bind(
+        testedSha,
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        check,
+        Date.now(),
+        Date.now(),
+      )
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,?,?)",
+      )
+      .bind(
+        delayedSha,
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        `visonaut:pre:${delayedSha}`,
+        Date.now() + 1,
+        Date.now() + 1,
+      )
+      .run();
+    expect(
+      await objectResponse(
+        await test.send(`/api/pulls/42?check=${encodeURIComponent(check)}`, { headers }),
+      ),
+    ).toMatchObject({ runId: test.runId, state: "ready" });
+    const rerun = `${check}:1`;
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,1,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active','999',2,?,?)",
+      )
+      .bind(
+        testedSha,
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        rerun,
+        Date.now() + 2,
+        Date.now() + 2,
+      )
+      .run();
+    expect(
+      await objectResponse(
+        await test.send(`/api/pulls/42?check=${encodeURIComponent(check)}`, { headers }),
+      ),
+    ).toMatchObject({ runId: test.runId, state: "ready" });
+    expect(
+      await objectResponse(
+        await test.send(`/api/pulls/42?check=${encodeURIComponent(rerun)}`, { headers }),
+      ),
+    ).toMatchObject({ runId: null, state: "pending" });
   });
   it("publishes only validated image IDs and denies arbitrary bucket paths", async () => {
     const test = await fixture();

@@ -493,7 +493,13 @@ async function ensureStoredCheck(
             name: CHECK_NAME,
             head_sha: row.tested_sha,
             external_id: row.external_id,
-            details_url: context.configuration.origin,
+            details_url:
+              row.kind === "pull_request" && row.pull_request_number
+                ? new URL(
+                    `/pulls/${row.pull_request_number}?check=${encodeURIComponent(row.external_id)}`,
+                    context.configuration.origin,
+                  ).href
+                : context.configuration.origin,
             status: "in_progress",
             output: {
               title: "Checking visual coverage",

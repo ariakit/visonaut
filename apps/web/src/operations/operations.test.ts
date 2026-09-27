@@ -138,6 +138,19 @@ describe("protected object operations", () => {
 });
 
 describe("serialized GitHub checks", () => {
+  it("opens the exact run from check creation and later status delivery", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await reserve(fixture.context);
+    await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
+    await deliverGitHubStatuses(fixture.context);
+    expect(fixture.state.checks.get("1")?.details_url).toBe("https://visonaut.example/runs/run");
+    expect(
+      await database
+        .prepare("SELECT details_url FROM work_status_outbox WHERE check_id='1'")
+        .first(),
+    ).toEqual({ details_url: "https://visonaut.example/runs/run" });
+  });
   it("reconciles a lost creation response without a second POST", async () => {
     using database = new TestDatabase();
     const fixture = context(database);

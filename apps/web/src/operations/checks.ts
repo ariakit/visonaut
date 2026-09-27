@@ -20,6 +20,10 @@ interface CheckCreation {
   lease_until: number | null;
 }
 
+function reviewDetailsUrl(run: { id: string }, origin: string) {
+  return new URL(`/runs/${encodeURIComponent(run.id)}`, origin).href;
+}
+
 /** A rerun can supersede an App check before its old service run is archived. */
 export async function isCurrentPreRunCheck(
   database: OperationsContext["database"],
@@ -90,7 +94,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
       continue;
     }
     const run = await service.run(creation.run_id);
-    const detailsUrl = new URL(`/runs/${encodeURIComponent(run.id)}`, context.origin).href;
+    const detailsUrl = reviewDetailsUrl(run, context.origin);
     const input = {
       github: context.github,
       testedSha: run.tested_sha,
@@ -204,7 +208,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     await service.prepareStatusIntent({
       runId: update.id,
       checkId: update.check_id,
-      detailsUrl: new URL(`/runs/${encodeURIComponent(update.id)}`, context.origin).href,
+      detailsUrl: reviewDetailsUrl(update, context.origin),
       maxAttempts: budget.maxAttempts,
       now: context.now(),
     });
