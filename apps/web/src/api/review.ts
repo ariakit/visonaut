@@ -23,6 +23,10 @@ interface VariantView {
   id: string;
   key: string;
   label: string;
+  labelParts: {
+    value: string;
+    kind: "framework" | "browser" | "colorScheme" | "contrast" | "forcedColors" | "key";
+  }[];
   kind: "added" | "removed" | "changed" | "unchanged" | "pending" | "error";
   revision: number;
   verdict: "approved" | "rejected" | null;
@@ -412,21 +416,25 @@ export async function reviewModel(
       name: typeof metadata.name === "string" ? metadata.name : row.item_key,
       variants: [],
     };
-    const label =
-      [
-        variant.framework,
-        variant.browser,
-        variant.colorScheme,
-        variant.contrast,
-        variant.forcedColors,
-        row.variant_key,
-      ]
-        .filter((value) => typeof value === "string")
-        .join(" · ") || row.variant_key;
+    const labelParts: VariantView["labelParts"] = [];
+    for (const [kind, value] of [
+      ["framework", variant.framework],
+      ["browser", variant.browser],
+      ["colorScheme", variant.colorScheme],
+      ["contrast", variant.contrast],
+      ["forcedColors", variant.forcedColors],
+      ["key", row.variant_key],
+    ] as const) {
+      if (typeof value === "string") {
+        labelParts.push({ kind, value });
+      }
+    }
+    const label = labelParts.map((part) => part.value).join(" · ");
     const view: VariantView = {
       id: row.id,
       key: row.variant_key,
       label,
+      labelParts,
       kind: stoppedBeforeEvidence
         ? "error"
         : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
