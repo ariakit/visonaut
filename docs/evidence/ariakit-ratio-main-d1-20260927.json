@@ -1,0 +1,80 @@
+{
+  "source": "Read-only production D1 via Wrangler on September 27, 2026. Selected rows only; Cloudflare response metadata omitted.",
+  "status_delivery": {
+    "query": "SELECT check_id,revision,conclusion,state,attempts,available_at,datetime(available_at/1000,'unixepoch') FROM work_status_outbox WHERE run_id='a9b2f077-915f-4877-9e0d-0ca922919417' ORDER BY check_id,revision;",
+    "results": [
+      {
+        "check_id": "108608911108",
+        "revision": 299,
+        "conclusion": "success",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": 1790511084433,
+        "delivered_utc": "2026-09-27 12:11:24"
+      },
+      {
+        "check_id": "108608911108",
+        "revision": 313,
+        "conclusion": "success",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": 1790515252118,
+        "delivered_utc": "2026-09-27 13:20:52"
+      }
+    ],
+    "result_selection": "Selected revisions 299 and 313 from the ordered response; delivered_utc labels the datetime expression."
+  },
+  "snapshots": {
+    "observed_at_utc": "2026-09-27 about 13:43 UTC",
+    "query": "SELECT s.id AS snapshot_id, s.run_id, s.state, pr.baseline_revision, (SELECT COUNT(*) FROM visonaut_snapshot_images si WHERE si.snapshot_id=s.id) AS total_images, (SELECT COUNT(*) FROM visonaut_snapshot_images si WHERE si.snapshot_id=s.id AND si.copied=1) AS copied_images, op.verified_through FROM visonaut_snapshots s LEFT JOIN visonaut_promotions pr ON pr.snapshot_id=s.id LEFT JOIN operations_promotions op ON op.snapshot_id=s.id WHERE s.id IN ('snapshot-1167c7b4636563614010f8c4b3f5921b1e129befce5002dcf9daff5d8072cccc','snapshot-7e802ead15d67be3bc6d1e77d3588620f27496f9c247f5ac9fbfb4e55774814c');",
+    "results": [
+      {
+        "snapshot_id": "snapshot-1167c7b4636563614010f8c4b3f5921b1e129befce5002dcf9daff5d8072cccc",
+        "run_id": "a9b2f077-915f-4877-9e0d-0ca922919417",
+        "state": "accepted",
+        "baseline_revision": 6,
+        "total_images": 1058,
+        "copied_images": 1058,
+        "verified_through": "a9b2f077-915f-4877-9e0d-0ca922919417:ffdf558141d6287b26a582869ac608516d694f6697288f5d8ab201cb44e4c189"
+      },
+      {
+        "snapshot_id": "snapshot-7e802ead15d67be3bc6d1e77d3588620f27496f9c247f5ac9fbfb4e55774814c",
+        "run_id": "e4cea8de-56ec-4347-932a-5e91e0c7ab3c",
+        "state": "accepted",
+        "baseline_revision": 5,
+        "total_images": 1058,
+        "copied_images": 1058,
+        "verified_through": "e4cea8de-56ec-4347-932a-5e91e0c7ab3c:ffdf558141d6287b26a582869ac608516d694f6697288f5d8ab201cb44e4c189"
+      }
+    ]
+  },
+  "backup": {
+    "observed_at_utc": "2026-09-27 about 13:43 UTC",
+    "query": "SELECT b.id,b.state,b.failures,b.page_count,b.object_count,b.active_group_id,(SELECT COUNT(*) FROM operations_backup_members m WHERE m.backup_id=b.id) AS total_groups,(SELECT COUNT(*) FROM operations_backup_members m JOIN operations_backup_groups g ON g.id=m.group_id WHERE m.backup_id=b.id AND g.state='ready') AS ready_groups FROM operations_backups b WHERE b.id='2026-09-27T12Z';",
+    "results": [
+      {
+        "id": "2026-09-27T12Z",
+        "state": "copying",
+        "failures": 1,
+        "page_count": 0,
+        "object_count": 0,
+        "active_group_id": "3c366bea23d3cd8f46ffe071cbf7f3b4",
+        "total_groups": 146,
+        "ready_groups": 90
+      }
+    ]
+  },
+  "project_pointer": {
+    "observed_at_utc": "2026-09-27 about 13:48 UTC",
+    "query": "SELECT p.id AS project_id,p.snapshot_id,p.baseline_revision,p.promotion_id,p.policy_digest FROM visonaut_projects p JOIN visonaut_snapshots s ON s.project_id=p.id WHERE s.id='snapshot-1167c7b4636563614010f8c4b3f5921b1e129befce5002dcf9daff5d8072cccc';",
+    "results": [
+      {
+        "project_id": "ariakit",
+        "snapshot_id": "snapshot-1167c7b4636563614010f8c4b3f5921b1e129befce5002dcf9daff5d8072cccc",
+        "baseline_revision": 6,
+        "promotion_id": "promotion-1167c7b4636563614010f8c4b3f5921b1e129befce5002dcf9daff5d8072cccc",
+        "policy_digest": "6a97812c0ad3a5e8e006904995e75f8f15671260fb2ee53d31a1527c7d990fd1"
+      }
+    ]
+  }
+}
