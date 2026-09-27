@@ -57,8 +57,8 @@ interface MaterializeBundleParams {
 /** Distinguish lost validated bytes from retryable GitHub or D1 failures. */
 class StagedOriginalUnavailableError extends IncompleteError {}
 
-// A batch overlaps R2 reads without buffering an entire large shard in memory.
-const maximumMaterializationReads = 4;
+// Six R2 reads match the Worker connection limit; batches stay byte-bounded.
+const maximumMaterializationReads = 6;
 const maximumMaterializationReadBytes = 8 * 1024 * 1024;
 
 export function materializationBatchEnd(images: readonly { bytes: number }[], offset: number) {
