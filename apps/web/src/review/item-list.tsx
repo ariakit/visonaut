@@ -241,7 +241,7 @@ export function ItemList({
         {accepted.length > 0 && (
           <NavDisclosure
             render={<div />}
-            className="review-accepted-group"
+            className="review-accepted-group duration-0!"
             open={showAccepted}
             setOpen={setAcceptedOpen}
             content={{ unmountOnHide: true }}
