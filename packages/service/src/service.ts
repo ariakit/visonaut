@@ -101,6 +101,8 @@ export interface ComparisonTask {
   } | null;
 }
 
+export const maximumImageRegistrationBatchSize = 50;
+
 export async function captureProfilesDigest(
   captures: ReadonlyArray<{ itemKey: string; variantKey: string; profileDigest: string }>,
 ) {
@@ -544,7 +546,21 @@ export class Service {
 
   /** Call only after the trusted decoder and R2 write have both succeeded. */
   async registerImage(image: ValidatedImage) {
-    const run = await this.run(image.runId);
+    await this.registerImages([image]);
+  }
+
+  /** Register a bounded set only after every original has passed its R2 check. */
+  async registerImages(images: readonly ValidatedImage[]) {
+    const first = images[0];
+    if (
+      !first ||
+      images.length > maximumImageRegistrationBatchSize ||
+      images.some((image) => image.runId !== first.runId)
+    ) {
+      throw new IncompleteError("Image registration requires 1–50 images from one run.");
+    }
+    const run = await this.run(first.runId);
+    const entries = JSON.stringify(images);
     await atomic(this.database, [
       this.activeGuard(run),
       this.guard(
@@ -555,30 +571,25 @@ export class Service {
         run.id,
       ]),
       this.sql(
-        "INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
-        [
-          image.id,
-          image.runId,
-          image.digest,
-          image.objectKey,
-          image.contentType,
-          image.bytes,
-          image.width,
-          image.height,
-        ],
+        `INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height)
+          SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'),
+            json_extract(value, '$.digest'), json_extract(value, '$.objectKey'),
+            json_extract(value, '$.contentType'), json_extract(value, '$.bytes'),
+            json_extract(value, '$.width'), json_extract(value, '$.height')
+          FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING`,
+        [entries],
       ),
       this.guard(
-        "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND bytes = ? AND width = ? AND height = ? AND content_type = ?)",
-        [
-          image.id,
-          image.runId,
-          image.digest,
-          image.objectKey,
-          image.bytes,
-          image.width,
-          image.height,
-          image.contentType,
-        ],
+        `NOT EXISTS (SELECT 1 FROM json_each(?) entry WHERE NOT EXISTS (
+          SELECT 1 FROM visonaut_images image
+          WHERE image.id = json_extract(entry.value, '$.id') AND image.run_id = ?
+            AND image.digest = json_extract(entry.value, '$.digest')
+            AND image.object_key = json_extract(entry.value, '$.objectKey')
+            AND image.bytes = json_extract(entry.value, '$.bytes')
+            AND image.width = json_extract(entry.value, '$.width')
+            AND image.height = json_extract(entry.value, '$.height')
+            AND image.content_type = json_extract(entry.value, '$.contentType')))`,
+        [entries, run.id],
       ),
     ]);
   }

@@ -1758,6 +1758,7 @@ describe("workflow-owned upload staging", () => {
       put: (key, bytes, options) => storage.put(key, bytes, options),
       delete: (key) => storage.delete(key),
     };
+    const registerImages = vi.spyOn(test.context.service, "registerImages");
     const operation = materializeWorkflowRun(test.context, test.runId);
     try {
       await vi.waitFor(() => expect(reads).toBe(4), { timeout: 5000 });
@@ -1775,6 +1776,8 @@ describe("workflow-owned upload staging", () => {
     expect((await operation).sealed_at).not.toBeNull();
     expect(reads).toBe(5);
     expect(maximumActiveReads).toBe(4);
+    expect(registerImages).toHaveBeenCalledTimes(1);
+    expect(registerImages.mock.calls[0]?.[0]).toHaveLength(5);
   });
 
   it("limits buffered originals by declared bytes as well as count", () => {

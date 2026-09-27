@@ -1,6 +1,12 @@
 import { digestEnvironmentProfile, digestJson, SCHEMA_VERSION, sha256 } from "@visonaut/protocol";
 import { createGitHubClient, SecurityError } from "@visonaut/security";
-import { ConflictError, IncompleteError, type RunRow } from "@visonaut/service";
+import {
+  ConflictError,
+  IncompleteError,
+  maximumImageRegistrationBatchSize,
+  type RunRow,
+  type ValidatedImage,
+} from "@visonaut/service";
 import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
@@ -20,6 +26,32 @@ interface StagedImage {
   image_id: string;
   object_key: string;
   complete: number;
+}
+
+interface MaterializationMeasurements {
+  imageCount: number;
+  imageBytes: number;
+  inheritedImageCount: number;
+  registrationBatches: number;
+  verificationMs: number;
+  copyMs: number;
+  registrationMs: number;
+  shardCommitMs: number;
+}
+
+interface MaterializeImagesParams {
+  context: ApiContext;
+  runId: string;
+  bundle: ReconciledBundle;
+  measurements: MaterializationMeasurements;
+}
+
+interface MaterializeBundleParams {
+  context: ApiContext;
+  run: RunRow;
+  bundle: ReconciledBundle;
+  proof: string;
+  measurements: MaterializationMeasurements;
 }
 
 /** Distinguish lost validated bytes from retryable GitHub or D1 failures. */
@@ -83,7 +115,12 @@ async function leaseStagedSources(context: ApiContext, stagedRunId: string) {
     .run();
 }
 
-async function materializeImages(context: ApiContext, runId: string, bundle: ReconciledBundle) {
+async function materializeImages({
+  context,
+  runId,
+  bundle,
+  measurements,
+}: MaterializeImagesParams) {
   const images = await context.database
     .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
     .bind(bundle.sourceRunId, bundle.jobId)
@@ -95,6 +132,19 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
     throw new IncompleteError("The validated staged image set changed.");
   }
   const ids = new Map<string, string>();
+  const pending: ValidatedImage[] = [];
+  const registerPending = async () => {
+    if (!pending.length) return;
+    const batch = pending.slice();
+    const started = performance.now();
+    await context.service.registerImages(batch);
+    measurements.registrationMs += performance.now() - started;
+    measurements.registrationBatches += 1;
+    for (const image of batch) {
+      ids.set(image.digest, image.id);
+    }
+    pending.length = 0;
+  };
   const verifyImage = async (image: StagedImage) => {
     const declared = expected.get(image.digest);
     if (
@@ -119,7 +169,9 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
   };
   for (let offset = 0; offset < images.results.length;) {
     const end = materializationBatchEnd(images.results, offset);
+    const verificationStarted = performance.now();
     const results = await Promise.allSettled(images.results.slice(offset, end).map(verifyImage));
+    measurements.verificationMs += performance.now() - verificationStarted;
     const verified: Array<{ image: StagedImage; bytes: Uint8Array<ArrayBuffer> }> = [];
     for (const result of results) {
       if (result.status === "rejected") throw result.reason;
@@ -132,11 +184,14 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
       const objectKey =
         bundle.sourceRunId === runId ? image.object_key : `runs/${runId}/images/${imageId}`;
       if (bundle.sourceRunId !== runId) {
+        const copyStarted = performance.now();
         await context.images.put(objectKey, bytes, {
           httpMetadata: { contentType: image.media_type },
         });
+        measurements.copyMs += performance.now() - copyStarted;
+        measurements.inheritedImageCount += 1;
       }
-      await context.service.registerImage({
+      pending.push({
         id: imageId,
         runId,
         digest: image.digest,
@@ -146,21 +201,28 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
         width: image.width,
         height: image.height,
       });
-      ids.set(image.digest, imageId);
+      measurements.imageCount += 1;
+      measurements.imageBytes += image.bytes;
+      if (pending.length === maximumImageRegistrationBatchSize) {
+        await registerPending();
+      }
     }
     offset = end;
   }
+  await registerPending();
   return ids;
 }
 
-async function materializeBundle(
-  context: ApiContext,
-  run: RunRow,
-  bundle: ReconciledBundle,
-  proof: string,
-) {
+async function materializeBundle({
+  context,
+  run,
+  bundle,
+  proof,
+  measurements,
+}: MaterializeBundleParams) {
   const manifest = bundle.manifest;
-  const imageIds = await materializeImages(context, run.id, bundle);
+  const imageIds = await materializeImages({ context, runId: run.id, bundle, measurements });
+  const shardCommitStarted = performance.now();
   const capturedProfiles = new Set(manifest.captures.map((capture) => capture.profileDigest));
   await storeCaptureProfiles(
     context.database,
@@ -272,6 +334,7 @@ async function materializeBundle(
   ) {
     throw new IncompleteError("The committed shard manifest changed.");
   }
+  measurements.shardCommitMs += performance.now() - shardCommitStarted;
 }
 
 /** Build a service run only from the final complete GitHub matrix and staged evidence. */
@@ -297,6 +360,17 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       throw new IncompleteError("The incomplete workflow run can no longer be converted.");
     }
   }
+  const started = performance.now();
+  const measurements: MaterializationMeasurements = {
+    imageCount: 0,
+    imageBytes: 0,
+    inheritedImageCount: 0,
+    registrationBatches: 0,
+    verificationMs: 0,
+    copyMs: 0,
+    registrationMs: 0,
+    shardCommitMs: 0,
+  };
   await leaseStagedSources(context, stagedRunId);
   const {
     run: staged,
@@ -304,6 +378,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     bundles,
     jobSetDigest,
   } = await reconcileWorkflowJobSet(context, stagedRunId);
+  const reconciledAt = performance.now();
   const github = await createGitHubClient(context.configuration.github);
   const lineage = await relatedRunEvidence(context, github, submit);
   const ancestors = await verifyAncestry(context, github, submit.testedSha);
@@ -430,14 +505,44 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   if (!run.active) {
     throw new IncompleteError("The workflow attempt was superseded before conversion.");
   }
+  const reservedAt = performance.now();
   for (const bundle of bundles) {
-    await materializeBundle(context, run, bundle, proof);
+    await materializeBundle({ context, run, bundle, proof, measurements });
   }
+  const materializedAt = performance.now();
   const current = await workflowAttempt(github, submit);
   if (current.path !== staged.caller_workflow_path) {
     throw new IncompleteError("The pinned workflow changed before sealing.");
   }
-  await context.service.sealRun({ runId: run.id, now: Date.now() });
+  const checkedAt = performance.now();
+  const sealTimestamp = Date.now();
+  await context.service.sealRun({ runId: run.id, now: sealTimestamp });
+  const sealedAt = performance.now();
+  console.info(
+    JSON.stringify({
+      event: "workflow_materialized",
+      runId: run.id,
+      workflowRunId: staged.workflow_run_id,
+      attempt: staged.workflow_attempt,
+      bundles: bundles.length,
+      captures: bundles.reduce((count, bundle) => count + bundle.manifest.captures.length, 0),
+      images: measurements.imageCount,
+      imageBytes: measurements.imageBytes,
+      inheritedImages: measurements.inheritedImageCount,
+      registrationBatches: measurements.registrationBatches,
+      reconcileMs: Math.round(reconciledAt - started),
+      reserveMs: Math.round(reservedAt - reconciledAt),
+      materializeMs: Math.round(materializedAt - reservedAt),
+      verifyImagesMs: Math.round(measurements.verificationMs),
+      copyImagesMs: Math.round(measurements.copyMs),
+      registerImagesMs: Math.round(measurements.registrationMs),
+      commitShardsMs: Math.round(measurements.shardCommitMs),
+      finalJobCheckMs: Math.round(checkedAt - materializedAt),
+      sealMs: Math.round(sealedAt - checkedAt),
+      totalMs: Math.round(sealedAt - started),
+      submitToSealMs: staged.submitted_at === null ? null : sealTimestamp - staged.submitted_at,
+    }),
+  );
   await scheduleComparison(context, run.id);
   await resolveEvents(
     context.database,
