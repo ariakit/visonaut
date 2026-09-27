@@ -1386,6 +1386,12 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const item = objects(model.items)[0];
     expect(item).toBeDefined();
     const variant = objects(item?.variants)[0];
+    expect(variant?.labelParts).toEqual([
+      { kind: "framework", value: "react" },
+      { kind: "browser", value: "chromium" },
+      { kind: "colorScheme", value: "light" },
+      { kind: "key", value: "react-light" },
+    ]);
     expect(model.promotionId).toBe(promotionId);
     const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
       method: "POST",

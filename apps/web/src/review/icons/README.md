@@ -1,0 +1,1 @@
+The React, Solid, Chrome, Safari, and Firefox SVGs come from [Devicon](https://github.com/devicons/devicon/tree/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons). The files are the upstream `*-original.svg` variants at commit `7330accdbc47e2dc0c19789a48533c4a3c50fe58`, renamed for local imports. See [LICENSE](./LICENSE).

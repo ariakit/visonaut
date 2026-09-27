@@ -15,10 +15,16 @@ export interface ReviewImage {
   height: number;
 }
 
+export interface ReviewVariantPart {
+  value: string;
+  kind: "framework" | "browser" | "colorScheme" | "contrast" | "forcedColors" | "key";
+}
+
 export interface ReviewVariant {
   id: string;
   key: string;
   label: string;
+  labelParts?: ReviewVariantPart[];
   kind: "added" | "changed" | "removed" | "unchanged" | "pending" | "error";
   revision: number;
   verdict: ReviewVerdict | null;

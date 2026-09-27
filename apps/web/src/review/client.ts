@@ -8,6 +8,7 @@ import type {
   ReviewPollState,
   ReviewSelection,
   ReviewVariant,
+  ReviewVariantPart,
 } from "./model.ts";
 
 function record(value: unknown): Record<string, unknown> {
@@ -75,12 +76,28 @@ function image(value: unknown): ReviewImage | null {
   };
 }
 
+function variantPart(value: unknown): ReviewVariantPart {
+  const data = record(value);
+  return {
+    value: string(data.value),
+    kind: oneOf(data.kind, [
+      "framework",
+      "browser",
+      "colorScheme",
+      "contrast",
+      "forcedColors",
+      "key",
+    ]),
+  };
+}
+
 function variant(value: unknown): ReviewVariant {
   const data = record(value);
   return {
     id: string(data.id),
     key: string(data.key),
     label: string(data.label),
+    labelParts: data.labelParts == null ? undefined : values(data.labelParts).map(variantPart),
     kind: oneOf(data.kind, ["added", "changed", "removed", "unchanged", "pending", "error"]),
     revision: number(data.revision),
     verdict: data.verdict === null ? null : oneOf(data.verdict, ["approved", "rejected"]),

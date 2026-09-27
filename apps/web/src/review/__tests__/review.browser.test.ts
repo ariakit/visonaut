@@ -61,6 +61,92 @@ test("valid prototype names stay visible in compact variant labels", async ({ pa
   );
 });
 
+test("variant icons use brand marks and explain display preferences", async ({ page }) => {
+  const variants = page.getByRole("listbox", { name: "Variants" });
+  for (const name of ["React", "Solid", "Firefox", "WebKit"]) {
+    await expect(
+      variants
+        .getByRole("option", { name: new RegExp(name) })
+        .first()
+        .locator(`.review-variant-icons > span[title="${name}"] img`),
+    ).toBeVisible();
+  }
+  await expect(
+    variants.locator('.review-variant-icons > span[title="Chromium"] img').first(),
+  ).toBeVisible();
+  const brandImages = variants.locator(".review-variant-icons img");
+  await expect
+    .poll(() =>
+      brandImages.evaluateAll((images) =>
+        images.every((image) => image instanceof HTMLImageElement && image.naturalWidth > 0),
+      ),
+    )
+    .toBe(true);
+
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("Missing variant fixture");
+    variant.label = "React · Chromium · no-preference · no-preference · none · 1280 × 720";
+    variant.labelParts = [
+      { kind: "framework", value: "React" },
+      { kind: "browser", value: "Chromium" },
+      { kind: "colorScheme", value: "no-preference" },
+      { kind: "contrast", value: "no-preference" },
+      { kind: "forcedColors", value: "none" },
+      { kind: "key", value: "1280 × 720" },
+    ];
+    window.reviewFixture.update(model);
+  });
+  const icons = variants.getByRole("option").first().locator(".review-variant-icons > span");
+  await expect(icons.nth(2)).toHaveAttribute("title", "Color scheme: no preference");
+  await expect(icons.nth(3)).toHaveAttribute("title", "Contrast: no preference");
+  await expect(icons.nth(4)).toHaveAttribute("title", "Forced colors: none");
+});
+
+test("variant keys do not claim an omitted display preference", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("Missing variant fixture");
+    variant.key = "none";
+    variant.label = "React · Chromium · none";
+    variant.labelParts = [
+      { kind: "framework", value: "React" },
+      { kind: "browser", value: "Chromium" },
+      { kind: "key", value: "none" },
+    ];
+    window.reviewFixture.update(model);
+  });
+  const summary = page.getByRole("listbox", { name: "Variants" }).getByRole("option").first();
+  await expect(summary.locator(".review-variant-title")).toHaveText("none");
+  await expect(
+    summary.locator('.review-variant-icons > span[title="Forced colors: none"]'),
+  ).toHaveCount(0);
+});
+
+test("framework names do not display browser marks", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("Missing variant fixture");
+    variant.key = "chrome-firefox";
+    variant.label = "chrome · firefox · chrome-firefox";
+    variant.labelParts = [
+      { kind: "framework", value: "chrome" },
+      { kind: "browser", value: "firefox" },
+      { kind: "key", value: "chrome-firefox" },
+    ];
+    window.reviewFixture.update(model);
+  });
+  const summary = page.getByRole("listbox", { name: "Variants" }).getByRole("option").first();
+  await expect(summary.locator(".review-variant-title")).toHaveText("chrome · chrome-firefox");
+  const icons = summary.locator(".review-variant-icons > span");
+  await expect(icons).toHaveCount(1);
+  await expect(icons.first()).toHaveAttribute("title", "firefox");
+  await expect(icons.first().locator("img")).toBeVisible();
+});
+
 test("comparison errors stay visible ahead of accepted items", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
