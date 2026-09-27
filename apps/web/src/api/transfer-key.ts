@@ -118,6 +118,7 @@ export async function transferPrivateKey({
       reusableWorkflowRef,
       reusableWorkflowSha,
       trustedWorkflowPath: workflowOwned?.trustedWorkflowPath,
+      additionalTrustedWorkflowBlobSha: workflowOwned?.additionalTrustedWorkflowBlobSha,
       planDigest,
       shards: [{ key: shardKey, jobName }],
       loadMergeGroup: (sha) => loadVerifiedMergeGroup(context, sha),

@@ -106,6 +106,12 @@ export function workflowConfiguration(context: ApiContext) {
     !configuration.submitJobName ||
     configuration.submitJobName.length > 256 ||
     !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
+    (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
+      (!/^[a-f0-9]{40}$/.test(configuration.additionalTrustedWorkflowBlobSha) ||
+        configuration.additionalTrustedWorkflowBlobSha === configuration.reusableWorkflowSha ||
+        context.configuration.github.repository !== "ariakit/ariakit" ||
+        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
+        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
     (configuration.trustedWorkflowPath !== undefined &&
       configuration.reusableWorkflowRef !==
         `${context.configuration.github.repository}/${configuration.trustedWorkflowPath}@${configuration.reusableWorkflowSha}`) ||
@@ -181,6 +187,7 @@ async function verifyWorkflowJob(
       reusableWorkflowRef: configuration.reusableWorkflowRef,
       reusableWorkflowSha: configuration.reusableWorkflowSha,
       trustedWorkflowPath: configuration.trustedWorkflowPath,
+      additionalTrustedWorkflowBlobSha: configuration.additionalTrustedWorkflowBlobSha,
       planDigest: identity.planDigest,
       shards: [{ key: identity.shardKey, jobName }],
       loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),

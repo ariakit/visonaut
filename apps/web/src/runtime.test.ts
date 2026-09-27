@@ -134,6 +134,13 @@ it("enables automatic Ariakit pre-run checks only in production", () => {
     env: "production",
   });
   expect(production.vars?.VISONAUT_WORKFLOW_OWNED).toBeTruthy();
+  const workflow = JSON.parse(String(production.vars?.VISONAUT_WORKFLOW_OWNED));
+  expect(workflow).toMatchObject({
+    reusableWorkflowRef:
+      "ariakit/ariakit/.github/workflows/app.yml@01b78334223b47515b41f63f587308050a5dcdad",
+    reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
+    additionalTrustedWorkflowBlobSha: "c86f2dc5370fe07030a27af87979072f86afa8de",
+  });
 });
 
 beforeEach(async () => {

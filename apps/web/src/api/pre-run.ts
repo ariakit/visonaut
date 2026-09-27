@@ -3,6 +3,7 @@ import {
   createGitHubClient,
   findGitHubCheck,
   GitHubUnavailableError,
+  isTrustedWorkflowBlob,
   numericId,
   SecurityError,
   type GitHubClient,
@@ -229,7 +230,7 @@ export async function hasPinnedMainWorkflow(
     if (error instanceof GitHubUnavailableError && error.upstreamStatus === 404) return false;
     throw error;
   }
-  return file.type === "file" && file.sha === configuration.reusableWorkflowSha;
+  return file.type === "file" && isTrustedWorkflowBlob(file.sha, configuration);
 }
 
 /** Retire checks created before the pinned App workflow existed on main. */

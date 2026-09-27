@@ -101,8 +101,9 @@ beforeAll(async () => {
 });
 afterAll(async () => runtime.dispose());
 
-async function fixture(shardKeyOverride?: string) {
+async function fixture(shardKeyOverride?: string, workflowPin = pin) {
   identity += 10;
+  const trustedSourceDigest = await workflowSourceDigest(workflowPin);
   const repositoryId = String(identity);
   const runId = crypto.randomUUID();
   const jobId = String(identity + 10_000);
@@ -112,8 +113,8 @@ async function fixture(shardKeyOverride?: string) {
     callerWorkflowPath: ".github/workflows/visonaut.yml",
     captureJobPrefix: "Visonaut / capture / ",
     submitJobName: "Visonaut / submit",
-    reusableWorkflowRef: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${pin}`,
-    reusableWorkflowSha: pin,
+    reusableWorkflowRef: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${workflowPin}`,
+    reusableWorkflowSha: workflowPin,
   };
   const profile: CaptureProfile = {
     browser: "chromium",
@@ -157,7 +158,7 @@ async function fixture(shardKeyOverride?: string) {
       workflowRunId: String(identity),
       workflowAttempt: 1,
       testedSha: sourceHead,
-      planDigest: sourceDigest,
+      planDigest: trustedSourceDigest,
     },
     shard: { key: shardKey, jobId, sourceAttempt: 1 },
     profiles: [{ digest: profileDigest, profile }],
@@ -241,7 +242,7 @@ async function fixture(shardKeyOverride?: string) {
       repositoryId,
       manifest.run.workflowRunId,
       sourceHead,
-      sourceDigest,
+      trustedSourceDigest,
       workflowOwned.callerWorkflowPath,
       workflowOwned.reusableWorkflowRef,
       workflowOwned.captureJobPrefix,
@@ -307,7 +308,7 @@ async function fixture(shardKeyOverride?: string) {
     trustedPlanPath: ".visonaut/plan.json",
     workflowOwned,
     reusableWorkflowRef: workflowOwned.reusableWorkflowRef,
-    reusableWorkflowSha: pin,
+    reusableWorkflowSha: workflowPin,
     trustedExecutorDigest: executorDigest,
     comparisonMaxAttempts: 3,
     limits: {
@@ -353,7 +354,7 @@ async function fixture(shardKeyOverride?: string) {
     workflowRunId: manifest.run.workflowRunId,
     workflowAttempt: 1,
     testedSha: sourceHead,
-    planDigest: sourceDigest,
+    planDigest: trustedSourceDigest,
     shardKey,
     jobId,
     maximumBytes: configuration.limits.maximumShardBytes,
@@ -782,6 +783,29 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
+  it("limits a second workflow blob to Ariakit's direct app workflow", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) {
+      throw new Error("Expected workflow configuration.");
+    }
+    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
+    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
+    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
+    configuration.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
+    expect(workflowConfiguration(test.context)).toBe(configuration);
+    configuration.additionalTrustedWorkflowBlobSha = pin;
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.additionalTrustedWorkflowBlobSha = "not-a-sha";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
+    configuration.callerWorkflowPath = ".github/workflows/visonaut.yml";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
+    test.context.configuration.github.repository = "ariakit/other";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+  });
+
   it("redeems a combined transfer key in the named Submit job", async () => {
     const test = await fixture("combined");
     const configuration = test.context.configuration.workflowOwned;
@@ -1037,8 +1061,33 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
-  it("accepts a signed submit through the API, replays it, and rejects the capture job", async () => {
-    const test = await fixture();
+  const verifySignedSubmit = async (directAppWorkflow: boolean) => {
+    const oldBlob = "01b78334223b47515b41f63f587308050a5dcdad";
+    const test = await fixture(undefined, directAppWorkflow ? oldBlob : pin);
+    const workflowOwned = test.context.configuration.workflowOwned;
+    if (!workflowOwned) {
+      throw new Error("Expected workflow configuration.");
+    }
+    if (directAppWorkflow) {
+      const newBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
+      workflowOwned.callerWorkflowPath = ".github/workflows/ci.yml";
+      workflowOwned.trustedWorkflowPath = ".github/workflows/app.yml";
+      workflowOwned.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${oldBlob}`;
+      workflowOwned.reusableWorkflowSha = oldBlob;
+      workflowOwned.additionalTrustedWorkflowBlobSha = newBlob;
+      await database
+        .prepare(
+          "UPDATE ingest_staged_runs SET caller_workflow_path=?, reusable_workflow_ref=? WHERE id=?",
+        )
+        .bind(workflowOwned.callerWorkflowPath, workflowOwned.reusableWorkflowRef, test.runId)
+        .run();
+      test.githubResponses.set(
+        `/repos/ariakit/ariakit/contents/${workflowOwned.trustedWorkflowPath}?ref=${test.manifest.run.testedSha}`,
+        { type: "file", path: workflowOwned.trustedWorkflowPath, sha: newBlob },
+      );
+      expect(test.manifest.run.planDigest).toBe(await workflowSourceDigest(oldBlob));
+      expect(test.manifest.run.planDigest).not.toBe(await workflowSourceDigest(newBlob));
+    }
     const workflowRunId = test.manifest.run.workflowRunId;
     const submitJobId = String(Number(test.jobId) + 1);
     const base = `/repos/ariakit/ariakit/actions/runs/${workflowRunId}`;
@@ -1098,8 +1147,12 @@ describe("workflow-owned upload staging", () => {
           event_name: "push",
           ref: "refs/heads/main",
           workflow_ref: `ariakit/ariakit/${test.context.configuration.workflowOwned?.callerWorkflowPath}@refs/heads/main`,
-          job_workflow_ref: test.context.configuration.reusableWorkflowRef,
-          job_workflow_sha: test.context.configuration.reusableWorkflowSha,
+          job_workflow_ref: directAppWorkflow
+            ? `ariakit/ariakit/${workflowOwned.trustedWorkflowPath}@refs/heads/main`
+            : workflowOwned.reusableWorkflowRef,
+          job_workflow_sha: directAppWorkflow
+            ? test.manifest.run.testedSha
+            : workflowOwned.reusableWorkflowSha,
         })
           .setProtectedHeader({ alg: "RS256", kid: "submit-test" })
           .setIssuer("https://token.actions.githubusercontent.com")
@@ -1154,7 +1207,13 @@ describe("workflow-owned upload staging", () => {
     } finally {
       vi.unstubAllGlobals();
     }
-  });
+  };
+
+  it("accepts a signed submit through the API, replays it, and rejects the capture job", () =>
+    verifySignedSubmit(false));
+
+  it("accepts Submit from the new app blob with the old source digest", () =>
+    verifySignedSubmit(true));
 
   it("retains inherited upload bytes through the rerun window, then retires them in bounded pages", async () => {
     const test = await fixture();
