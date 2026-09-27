@@ -15,6 +15,8 @@ import { parseHistoryManifest, parseHistoryPage, type HistoryPointer } from "./h
 import type { OperationsContext } from "./types.ts";
 
 export const backupDeletionGrace = 24 * 60 * 60 * 1000;
+// Leave time for the remaining operations steps and continuation within one lease.
+const maximumBackupGroupObjectsPerPage = 100;
 export interface BackupGroupRow {
   id: string;
   kind: "run" | "comparison" | "derived" | "snapshot" | "archive";
@@ -123,6 +125,10 @@ function stringCursor(value: unknown) {
   return value ?? "";
 }
 
+function backupGroupObjectLimit(context: OperationsContext) {
+  return Math.min(context.budget.objectsPerStep, maximumBackupGroupObjectsPerPage);
+}
+
 async function runSources(context: OperationsContext, group: BackupGroupRow): Promise<SourcePage> {
   const cursor = decodeCursor(group);
   if (
@@ -132,20 +138,18 @@ async function runSources(context: OperationsContext, group: BackupGroupRow): Pr
     throw new Error("Invalid run backup cursor.");
   const stage = cursor?.[0] ?? "images";
   const after = stringCursor(cursor?.[1] ?? null);
-  const { database, budget } = context;
+  const { database } = context;
+  const limit = backupGroupObjectLimit(context);
   if (stage === "images") {
     const rows = await database
       .prepare(`SELECT 'images' AS source,object_key AS key,digest,bytes FROM visonaut_images
       WHERE run_id=? AND role='original' AND bytes_present=1 AND object_key>? ORDER BY object_key LIMIT ?`)
-      .bind(group.source_id, after, budget.objectsPerStep)
+      .bind(group.source_id, after, limit)
       .all<SourceObject>();
     const objects = rows.results ?? [];
     return {
       objects,
-      cursor:
-        objects.length === budget.objectsPerStep
-          ? ["images", objects.at(-1)?.key]
-          : ["metadata", ""],
+      cursor: objects.length === limit ? ["images", objects.at(-1)?.key] : ["metadata", ""],
       done: false,
     };
   }
@@ -153,13 +157,13 @@ async function runSources(context: OperationsContext, group: BackupGroupRow): Pr
     .prepare(`SELECT 'quarantine' AS source,object_key AS key,NULL AS digest,NULL AS bytes FROM(
     SELECT plan_object_key AS object_key FROM ingest_run_provenance WHERE run_id=?
     UNION SELECT object_key FROM ingest_manifests WHERE run_id=?) WHERE object_key>? ORDER BY object_key LIMIT ?`)
-    .bind(group.source_id, group.source_id, after, budget.objectsPerStep)
+    .bind(group.source_id, group.source_id, after, limit)
     .all<SourceObject>();
   const objects = rows.results ?? [];
   return {
     objects,
     cursor: ["metadata", objects.at(-1)?.key ?? after],
-    done: objects.length < budget.objectsPerStep,
+    done: objects.length < limit,
   };
 }
 
@@ -178,7 +182,7 @@ async function comparisonSources(
     throw new Error("Invalid comparison backup cursor.");
   // Each immutable comparison row has at most a thumbnail and mask. Page by the row
   // index first, rather than sorting/scanning every JSON result for every object page.
-  const limit = Math.max(1, Math.floor(context.budget.objectsPerStep / 2));
+  const limit = Math.max(1, Math.floor(backupGroupObjectLimit(context) / 2));
   const rows = await context.database
     .prepare(`SELECT id,ordinal,result_json FROM visonaut_comparison_rows
     WHERE comparison_id=? AND (ordinal,id)>(?,?) ORDER BY ordinal,id LIMIT ?`)
@@ -226,6 +230,7 @@ async function derivedSources(
   )
     throw new Error("Invalid archived artifact cursor.");
   const pages = manifest.pages.filter((page) => page.section === "images");
+  const limit = backupGroupObjectLimit(context);
   const pageIndex: number = cursor?.[0] ?? 0;
   const offset: number = cursor?.[1] ?? 0;
   const reference = pages[pageIndex];
@@ -238,7 +243,7 @@ async function derivedSources(
   // Each archive generation owns a frozen list. A later historical comparison
   // can add artifacts without changing the earlier group's reuse identity.
   const selected = page.rows
-    .slice(offset, offset + context.budget.objectsPerStep)
+    .slice(offset, offset + limit)
     .filter(
       (row) =>
         row.run_id === pointer.run_id &&
@@ -270,10 +275,10 @@ async function derivedSources(
     })
   )
     throw new Error("Archived artifact is missing or differs from its inventory.");
-  const nextPage = offset + context.budget.objectsPerStep >= page.rows.length;
+  const nextPage = offset + limit >= page.rows.length;
   return {
     objects,
-    cursor: nextPage ? [pageIndex + 1, 0] : [pageIndex, offset + context.budget.objectsPerStep],
+    cursor: nextPage ? [pageIndex + 1, 0] : [pageIndex, offset + limit],
     done: nextPage && pageIndex + 1 >= pages.length,
   };
 }
@@ -283,17 +288,24 @@ async function snapshotSources(
   group: BackupGroupRow,
 ): Promise<SourcePage> {
   const after = stringCursor(decodeCursor(group));
+  const limit = backupGroupObjectLimit(context);
   const rows = await context.database
-    .prepare(`SELECT 'images' AS source,copy.object_key AS key,copy.digest,image.bytes
+    .prepare(`SELECT 'images' AS source,copy.object_key AS key,
+      MIN(copy.digest) AS digest,MIN(image.bytes) AS bytes,
+      COUNT(DISTINCT copy.image_id) AS image_count,COUNT(DISTINCT copy.digest) AS digest_count
     FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id
-    WHERE copy.snapshot_id=? AND copy.copied=1 AND copy.object_key>? ORDER BY copy.object_key LIMIT ?`)
-    .bind(group.source_id, after, context.budget.objectsPerStep)
-    .all<SourceObject>();
+    WHERE copy.snapshot_id=? AND copy.copied=1 AND copy.object_key>?
+    GROUP BY copy.object_key ORDER BY copy.object_key LIMIT ?`)
+    .bind(group.source_id, after, limit)
+    .all<SourceObject & { image_count: number; digest_count: number }>();
   const objects = rows.results ?? [];
+  if (objects.some((object) => object.image_count !== 1 || object.digest_count !== 1)) {
+    throw new Error("Protected snapshot copies disagree on shared object metadata.");
+  }
   return {
     objects,
     cursor: objects.at(-1)?.key ?? after,
-    done: objects.length < context.budget.objectsPerStep,
+    done: objects.length < limit,
   };
 }
 
@@ -333,14 +345,15 @@ async function archiveSources(
   )
     throw new Error("Invalid archive backup cursor.");
   const offset = cursor ?? 0;
+  const limit = backupGroupObjectLimit(context);
   const objects: SourceObject[] = [
     { source: "images", key: pointer.object_key, digest: pointer.digest, bytes: pointer.bytes },
     ...manifest.pages.map((page) => ({ source: "images" as const, ...page })),
   ];
   return {
-    objects: objects.slice(offset, offset + context.budget.objectsPerStep),
-    cursor: offset + context.budget.objectsPerStep,
-    done: offset + context.budget.objectsPerStep >= objects.length,
+    objects: objects.slice(offset, offset + limit),
+    cursor: offset + limit,
+    done: offset + limit >= objects.length,
   };
 }
 
