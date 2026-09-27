@@ -34,6 +34,15 @@ import type {
   ValidatedImage,
 } from "./types.ts";
 
+const obsoletePullRequestCapturePolicy = `EXISTS (
+  SELECT 1 FROM visonaut_runs run
+  JOIN visonaut_projects project ON project.id = run.project_id
+  JOIN visonaut_captures capture ON capture.run_id = run.id
+  JOIN visonaut_capture_profiles profile ON profile.digest = capture.profile_digest
+  WHERE run.id = ? AND run.active = 1 AND run.kind = 'pull_request'
+    AND json_extract(profile.profile_json, '$.comparisonPolicyDigest') IS NOT project.policy_digest
+)`;
+
 interface PreviousDecision {
   id: string;
   decisionId: string | null;
@@ -213,6 +222,13 @@ export class Service {
       "INSERT INTO visonaut_projects (id, repository_id, policy_digest) VALUES (?, ?, ?)",
       [input.id, input.repositoryId, input.policyDigest],
     ).run();
+  }
+
+  async hasObsoletePullRequestCapturePolicy(runId: string) {
+    const stale = await this.sql(`SELECT 1 WHERE ${obsoletePullRequestCapturePolicy}`, [
+      runId,
+    ]).first();
+    return Boolean(stale);
   }
 
   private projectGuard(project: ProjectRow) {
@@ -845,6 +861,7 @@ export class Service {
     expectedBaselineRevision?: number;
     purpose?: "review" | "historical";
     expectedCaptureCount?: number;
+    requireCurrentCapturePolicy?: boolean;
   }) {
     const run = await this.run(input.runId);
     const project = await this.project(run.project_id);
@@ -871,6 +888,9 @@ export class Service {
         run.id,
       ]),
     ];
+    if (input.requireCurrentCapturePolicy && !historical) {
+      guards.push(this.guard(`NOT (${obsoletePullRequestCapturePolicy})`, [run.id]));
+    }
     if (input.referenceSnapshotId) {
       guards.push(
         this.guard(

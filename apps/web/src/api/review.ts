@@ -3,6 +3,7 @@ import {
   ArchivedCommandResultError,
   cancelHistoricalPreparation,
   ConflictError,
+  IncompleteError,
   type CommandResult,
   type ReviewRow,
 } from "@visonaut/service";
@@ -86,6 +87,8 @@ const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
 const historicalComparisonError =
   "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.";
+const obsoletePullRequestCapturePolicyReason =
+  "This pull request was captured under an older comparison policy. Refresh it against main and rerun CI to capture it again.";
 
 export async function reviewPollState(
   context: PrivateContext,
@@ -254,7 +257,7 @@ export async function reviewModel(
   if (archive && comparisonId && !savedComparison) {
     throw new Error("Archived comparison metadata is missing.");
   }
-  const [metadata, project, status, comparison] = await Promise.all([
+  const [metadata, project, status, comparison, obsoleteCapturePolicy] = await Promise.all([
     context.database.batch([
       context.database
         .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
@@ -285,6 +288,9 @@ export async function reviewModel(
       : comparisonId
         ? context.service.comparison(comparisonId)
         : Promise.resolve(null),
+    run.active && run.sealed_at && run.kind === "pull_request"
+      ? context.service.hasObsoletePullRequestCapturePolicy(run.id)
+      : Promise.resolve(false),
   ]);
   const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
   const pendingHistorical = batchRows<{ id: string }>(metadata[1])[0];
@@ -295,7 +301,10 @@ export async function reviewModel(
     createdAt: number;
   }>(metadata[2]);
   const recompareAllowed = Boolean(
-    run.sealed_at && retained?.byte_state === "live" && !pendingHistorical,
+    run.sealed_at &&
+    retained?.byte_state === "live" &&
+    !pendingHistorical &&
+    !obsoleteCapturePolicy,
   );
   const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
     archive
@@ -540,7 +549,9 @@ export async function reviewModel(
         ? "This run has not sealed."
         : pendingHistorical
           ? "A historical comparison is still running."
-          : "The stored image bytes have expired.",
+          : obsoleteCapturePolicy
+            ? obsoletePullRequestCapturePolicyReason
+            : "The stored image bytes have expired.",
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: comparison?.state ?? "comparing",
@@ -843,6 +854,13 @@ export async function handleReview(
   const recompareMatch = /^\/api\/runs\/([a-f0-9-]+)\/recompare$/.exec(path);
   if (recompareMatch?.[1] && request.method === "POST") {
     const run = await projectRun(context, uuid(recompareMatch[1]));
+    if (
+      run.active &&
+      run.kind === "pull_request" &&
+      (await context.service.hasObsoletePullRequestCapturePolicy(run.id))
+    ) {
+      throw new IncompleteError(obsoletePullRequestCapturePolicyReason);
+    }
     const historical = !run.active;
     const comparisonId = crypto.randomUUID();
     try {
@@ -865,6 +883,7 @@ export async function handleReview(
       const comparison = await context.service.createComparison({
         id: comparisonId,
         ...(historical ? ({ purpose: "historical", expectedCaptureCount } as const) : {}),
+        requireCurrentCapturePolicy: !historical,
         runId: run.id,
         ...reference,
         now: Date.now(),
@@ -877,6 +896,13 @@ export async function handleReview(
       );
     } catch (error) {
       if (historical) await cancelHistoricalPreparation(context.database, comparisonId, Date.now());
+      if (
+        !historical &&
+        error instanceof ConflictError &&
+        (await context.service.hasObsoletePullRequestCapturePolicy(run.id))
+      ) {
+        throw new IncompleteError(obsoletePullRequestCapturePolicyReason);
+      }
       throw error;
     }
   }
