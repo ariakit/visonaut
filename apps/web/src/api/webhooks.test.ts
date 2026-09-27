@@ -620,6 +620,9 @@ describe("pre-run App checks", () => {
     expect(candidate).toMatchObject({ kind: "pull_request", testedSha: mergeSha, docsOnly: false });
     if (!candidate) throw new Error("Missing candidate");
     await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    expect(fixture.state.checks.get("1")?.details_url).toBe(
+      `https://preview.example/pulls/7?check=${encodeURIComponent(`visonaut:pre:${mergeSha}`)}`,
+    );
     await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
     expect(fixture.state.posts).toBe(1);
     expect(fixture.state.checks.get("1")).toMatchObject({

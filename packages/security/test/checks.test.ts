@@ -85,6 +85,29 @@ it("puts a direct review link in a new pull request check", async () => {
   });
 });
 
+it.each([
+  `${origin}/pulls/7`,
+  `${origin}/pulls/0`,
+  `${origin}/pulls/7/more`,
+  `https://other.example/pulls/7`,
+])("rejects an invalid PR review link: %s", async (detailsUrl) => {
+  const github = senderClient({
+    ...legacyCheck,
+    name: "Visonaut",
+    external_id: "visonaut:run-1",
+  });
+  await expect(
+    sendGitHubCheck({
+      github,
+      intent: { ...intent, details_url: detailsUrl },
+      testedSha,
+      origin,
+      isCurrent: async () => true,
+    }),
+  ).rejects.toMatchObject({ code: "invalid_review_link" });
+  expect(github.request).toHaveBeenCalledTimes(1);
+});
+
 it("continues to update a current-name check", async () => {
   const github = senderClient({
     ...legacyCheck,
