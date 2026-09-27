@@ -209,6 +209,22 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   if (params.scope && params.kind !== "compare") {
     throw new Error("Current comparison publication requires compare tasks.");
   }
+  // Queue delivery may never arrive after invalidation. Retire a bounded page
+  // before counting outstanding receipts so obsolete work cannot block new work.
+  const retired = params.scope
+    ? await database
+        .prepare(`UPDATE work_tasks SET state = 'complete', result = 'superseded',
+          lease_token = NULL, lease_until = NULL, publication_token = NULL,
+          last_error = NULL, updated_at = ?
+        WHERE id IN (SELECT task.id FROM work_tasks task
+          JOIN visonaut_comparison_rows row ON row.id = task.id
+          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
+            AND comparison.purpose = 'review' AND comparison.state = 'invalidated'
+          ORDER BY task.id LIMIT ?) RETURNING id`)
+        .bind(params.now, params.limit)
+        .all<{ id: string }>()
+    : null;
   // Superseded tasks can stay queued after their Queue messages are acknowledged.
   const currentComparison = (taskTable: string) =>
     params.scope
@@ -340,7 +356,9 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   return {
     published,
     failed,
-    hasMore: pending !== null && (outstanding?.count ?? 0) < maxOutstanding,
+    hasMore:
+      retired?.results?.length === params.limit ||
+      (pending !== null && (outstanding?.count ?? 0) < maxOutstanding),
   };
 }
 

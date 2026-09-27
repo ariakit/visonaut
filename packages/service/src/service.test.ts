@@ -1679,6 +1679,62 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.comparison("comparison-pr")).state).toBe("invalidated");
   });
 
+  it("moves invalidated in-flight PR comparisons out of active capture after promotion", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
+    await service.createComparison({
+      id: "pending-pr",
+      runId: "pr",
+      referenceSnapshotId: "snapshot-seed",
+      now: 20,
+      maxAttempts: 3,
+    });
+    expect((await service.run("pr")).state).toBe("comparing");
+
+    await fixture(service, { id: "main" });
+    await review(service, "comparison-main");
+    await promote(service, "main");
+
+    expect((await service.comparison("pending-pr")).state).toBe("invalidated");
+    expect((await service.run("pr")).state).toBe("reviewing");
+    expect((await service.status("pr")).status).toBe("needs-recompare");
+    expect(
+      database.connection
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_runs WHERE active=1 AND state='comparing'")
+        .get()?.count,
+    ).toBe(0);
+  });
+
+  it("moves invalidated in-flight PR comparisons out of active capture after rollback", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "main", color: "red" });
+    await review(service, "comparison-main");
+    await promote(service, "main");
+    await fixture(service, { id: "pr", kind: "pull_request", color: "green" });
+    await service.createComparison({
+      id: "pending-pr",
+      runId: "pr",
+      referenceSnapshotId: "snapshot-main",
+      now: 20,
+      maxAttempts: 3,
+    });
+    expect((await service.run("pr")).state).toBe("comparing");
+
+    await review(service, "comparison-main", {
+      verdict: "rejected",
+      expectedPromotionId: "promotion-main",
+      expectedBaselineRevision: 2,
+    });
+
+    expect((await service.comparison("pending-pr")).state).toBe("invalidated");
+    expect((await service.run("pr")).state).toBe("reviewing");
+    expect((await service.status("pr")).status).toBe("needs-recompare");
+  });
+
   it("does not claim queued work after a review comparison is invalidated", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -1723,7 +1779,14 @@ describe("restoration and workflow attempt inheritance", () => {
       maxOutstanding: 1,
       publish,
     };
-    expect((await reconcileWork(database, input)).published).toEqual([]);
+    expect(await reconcileWork(database, input)).toEqual({
+      published: [nextRow.id],
+      failed: [],
+      hasMore: true,
+    });
+    expect(
+      database.connection.prepare("SELECT state, attempts FROM work_tasks WHERE id=?").get(row.id),
+    ).toMatchObject({ state: "complete", attempts: 0 });
 
     expect((await service.getComparisonTaskState(row.id)).state).toBe("superseded");
     expect(
@@ -1737,7 +1800,11 @@ describe("restoration and workflow attempt inheritance", () => {
     expect(
       database.connection.prepare("SELECT state, attempts FROM work_tasks WHERE id=?").get(row.id),
     ).toMatchObject({ state: "complete", attempts: 0 });
-    expect((await reconcileWork(database, input)).published).toEqual([nextRow.id]);
+    expect(await reconcileWork(database, input)).toEqual({
+      published: [],
+      failed: [],
+      hasMore: false,
+    });
   });
 });
 

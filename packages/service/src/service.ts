@@ -1723,6 +1723,18 @@ export class Service {
     ];
   }
 
+  private stopInvalidatedComparisonRuns(projectId: string) {
+    // An invalidated comparison has no live work, but its run remains active for recompare.
+    return this.sql(
+      `UPDATE visonaut_runs SET state = 'reviewing'
+      WHERE project_id = ? AND active = 1 AND state = 'comparing'
+        AND EXISTS (SELECT 1 FROM visonaut_comparisons comparison
+          WHERE comparison.id = visonaut_runs.comparison_id
+            AND comparison.purpose = 'review' AND comparison.state = 'invalidated')`,
+      [projectId],
+    );
+  }
+
   private rollbackStatements(project: ProjectRow, promotion: PromotionRow, now: number) {
     return [
       this.guard(
@@ -1746,6 +1758,7 @@ export class Service {
         "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE reference_snapshot_id = ? AND id != ? AND purpose = 'review'",
         [promotion.snapshot_id, promotion.comparison_id],
       ),
+      this.stopInvalidatedComparisonRuns(project.id),
       this.sql("UPDATE visonaut_runs SET state = 'reviewing' WHERE comparison_id = ?", [
         promotion.comparison_id,
       ]),
@@ -2417,6 +2430,7 @@ export class Service {
         [comparison.id, project.id],
       ),
     );
+    statements.push(this.stopInvalidatedComparisonRuns(project.id));
     statements.push(
       this.audit(
         run,
