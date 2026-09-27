@@ -9,6 +9,7 @@ import {
 } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
+import { sameCurrentMergeTree } from "./merge.js";
 
 type LineageTarget = Pick<
   VerifiedRun,
@@ -169,7 +170,6 @@ export async function verifyLineage(
     if (
       !targetsMain(current) ||
       current.state !== "open" ||
-      current.merge_commit_sha !== target.testedSha ||
       object(current.head).sha !== target.sourceHead ||
       object(mainRef.object).sha !== target.targetHead
     ) {
@@ -178,6 +178,28 @@ export async function verifyLineage(
         409,
         "The pull request head or target changed during verification.",
       );
+    }
+    const currentSha = sha(current.merge_commit_sha);
+    if (currentSha !== target.testedSha) {
+      const ref = object(
+        await request(`/repos/${github.repository}/git/ref/pull/${target.pullRequestNumber}/merge`),
+      );
+      if (
+        object(ref.object).sha !== currentSha ||
+        !(await sameCurrentMergeTree({
+          github: { repository: github.repository, request },
+          testedSha: target.testedSha,
+          currentSha,
+          baseSha: target.targetHead,
+          sourceSha: target.sourceHead,
+        }))
+      ) {
+        throw new SecurityError(
+          "stale_pull_request",
+          409,
+          "The pull request merge contents changed during verification.",
+        );
+      }
     }
   }
   if (target.event === "merge_group" && !frozen) {

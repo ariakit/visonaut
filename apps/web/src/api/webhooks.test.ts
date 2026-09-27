@@ -174,11 +174,16 @@ function preRunFixture() {
     currentSha: mergeSha as string | null,
     refSha: mergeSha,
     mainSha: baseSha,
+    testedTree: "1".repeat(40),
+    currentTree: "1".repeat(40),
+    currentMergeBase: baseSha,
+    currentMergeHead: sourceSha,
     workflowSha: "e".repeat(40),
     workflowShas: new Map<string, string>(),
     pullBaseSha: baseSha,
     pullBaseRef: "main",
     pullHeadRef: "feature",
+    pullHeadSha: sourceSha,
     beforeCheckPatch: undefined as (() => Promise<void>) | undefined,
     files: [{ filename: "README.md", status: "modified" }] as Record<string, unknown>[],
     checks: new Map<string, Record<string, unknown>>(),
@@ -213,6 +218,13 @@ function preRunFixture() {
       head_branch: "feature",
       repository: { id: 100 },
       pull_requests: [{ number: 7 }],
+      referenced_workflows: [
+        {
+          path: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${mergeSha}`,
+          ref: "refs/pull/7/merge",
+          sha: mergeSha,
+        },
+      ],
     } as Record<string, unknown>,
   };
   const github: GitHubClient = {
@@ -225,7 +237,7 @@ function preRunFixture() {
           state: "open",
           merge_commit_sha: state.currentSha,
           base: { ref: state.pullBaseRef, sha: state.pullBaseSha, repo: { id: 100 } },
-          head: { ref: state.pullHeadRef, sha: sourceSha, repo: { id: 100 } },
+          head: { ref: state.pullHeadRef, sha: state.pullHeadSha, repo: { id: 100 } },
         };
       }
       if (path.endsWith("/git/ref/pull/7/merge")) {
@@ -241,8 +253,15 @@ function preRunFixture() {
       if (path.includes("/git/ref/heads/gh-readonly-queue/main/")) {
         return { object: { sha: state.refSha } };
       }
-      if (path.endsWith(`/git/commits/${mergeSha}`)) {
-        return { parents: [{ sha: baseSha }, { sha: sourceSha }] };
+      if (path.includes("/git/commits/")) {
+        const current = state.currentSha !== mergeSha && path.endsWith(`/${state.currentSha}`);
+        return {
+          parents: [
+            { sha: current ? state.currentMergeBase : baseSha },
+            { sha: current ? state.currentMergeHead : sourceSha },
+          ],
+          tree: { sha: current ? state.currentTree : state.testedTree },
+        };
       }
       if (path.includes("/compare/")) {
         return { status: "ahead", files: state.files };
@@ -602,10 +621,12 @@ describe("pre-run App checks", () => {
   });
   it("binds a stale PR base field to the live main merge parent", async () => {
     const fixture = preRunFixture();
-    fixture.state.pullBaseSha = "d".repeat(40);
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
     fixture.webhook.payload.pull_request = {
       head: { sha: sourceSha },
-      base: { sha: fixture.state.pullBaseSha },
+      base: { sha: "e".repeat(40) },
+      merge_commit_sha: mergeSha,
     };
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
@@ -620,6 +641,134 @@ describe("pre-run App checks", () => {
       }),
     ).toMatchObject({ checkId: "1" });
   });
+
+  it("checks the current merge after a delayed event with different contents", async () => {
+    const fixture = preRunFixture();
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.mainSha = "e".repeat(40);
+    fixture.state.currentMergeBase = fixture.state.mainSha;
+    fixture.state.currentTree = "2".repeat(40);
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: mergeSha,
+    };
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    expect(candidate).toMatchObject({
+      testedSha: fixture.state.currentSha,
+      baseSha: fixture.state.mainSha,
+    });
+    if (!candidate) throw new Error("Missing current merge candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    expect(fixture.state.posts).toBe(1);
+  });
+
+  it("checks the current merge when a delayed event has different contents on the same base", async () => {
+    const fixture = preRunFixture();
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.currentTree = "2".repeat(40);
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: mergeSha,
+    };
+    expect(await candidateForWebhook(fixture.github, fixture.webhook)).toMatchObject({
+      testedSha: fixture.state.currentSha,
+      baseSha,
+    });
+  });
+
+  it("keeps a delayed PR webhook pending until the live merge has current parents", async () => {
+    const fixture = preRunFixture();
+    fixture.state.mainSha = "e".repeat(40);
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: mergeSha,
+    };
+    await expect(candidateForWebhook(fixture.github, fixture.webhook)).rejects.toMatchObject({
+      code: "merge_not_ready",
+    });
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.currentMergeBase = fixture.state.mainSha;
+    fixture.state.currentTree = "2".repeat(40);
+    expect(await candidateForWebhook(fixture.github, fixture.webhook)).toMatchObject({
+      testedSha: fixture.state.currentSha,
+      baseSha: fixture.state.mainSha,
+    });
+  });
+
+  it.each([
+    { changed: false, active: 1 },
+    { changed: true, active: 0 },
+  ])(
+    "retires an old PR run only when the regenerated merge contents changed: $changed",
+    async ({ changed, active }) => {
+      const fixture = preRunFixture();
+      const currentSha = "d".repeat(40);
+      fixture.state.currentSha = currentSha;
+      fixture.state.refSha = currentSha;
+      fixture.state.currentTree = changed ? "2".repeat(40) : fixture.state.testedTree;
+      fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+      fixture.webhook.payload.pull_request = {
+        head: { sha: sourceSha },
+        base: { sha: baseSha },
+        merge_commit_sha: currentSha,
+      };
+      fixture.webhook.payload.repository = { id: 100 };
+      fixture.webhook.payload.installation = installation;
+      fixture.webhook.payload.sender = sender;
+      const runId = crypto.randomUUID();
+      await database
+        .prepare(
+          "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,created_at) VALUES(?,'project','older',1,'pull_request',?,'pr:7','policy','{}',?)",
+        )
+        .bind(runId, mergeSha, Date.now())
+        .run();
+      const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+      const scoped: ApiBindings = {
+        ...preRunBindings,
+        configuration: {
+          ...preRunBindings.configuration,
+          github: {
+            ...preRunBindings.configuration.github,
+            privateKey: await exportPKCS8(privateKey),
+            fetch: async (input, init) => {
+              const url = new URL(String(input));
+              if (url.pathname.endsWith("/access_tokens")) {
+                return Response.json({
+                  token: "fixture-installation-token",
+                  expires_at: new Date(Date.now() + 600_000).toISOString(),
+                });
+              }
+              const result = await fixture.github.request(url.pathname + url.search, init);
+              return Response.json(result, { status: init?.method === "POST" ? 201 : 200 });
+            },
+          },
+        },
+      };
+      let result: unknown;
+      try {
+        await processWebhook(apiContext(scoped), fixture.webhook);
+        result = await database
+          .prepare("SELECT active FROM visonaut_runs WHERE id=?")
+          .bind(runId)
+          .first();
+      } finally {
+        await database
+          .prepare("DELETE FROM visonaut_status_outbox WHERE run_id=?")
+          .bind(runId)
+          .run();
+        await database.prepare("DELETE FROM visonaut_audit WHERE run_id=?").bind(runId).run();
+        await database.prepare("DELETE FROM visonaut_runs WHERE id=?").bind(runId).run();
+      }
+      expect(result).toEqual({ active });
+    },
+  );
 
   it("grants neutral only for bounded approved documentation, including merge groups", async () => {
     const fixture = preRunFixture();
@@ -1092,6 +1241,10 @@ describe("pre-run App checks", () => {
       workflowAttempt: 2,
       testedSha: mergeSha,
       sourceHead: sourceSha,
+      targetHead: baseSha,
+      event: "pull_request",
+      ref: "refs/pull/7/merge",
+      pullRequestNumber: 7,
     });
     expect(fixture.state.posts).toBe(2);
     expect(
@@ -1102,6 +1255,215 @@ describe("pre-run App checks", () => {
       }),
     ).toMatchObject({ checkId: "2", workflowAttempt: 2 });
   });
+
+  it("recovers the event-SHA App check when a signed job finds no webhook row", async () => {
+    const fixture = preRunFixture();
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.run.run_attempt = 2;
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    const signed = {
+      workflowRunId: "77",
+      workflowAttempt: 2,
+      testedSha: mergeSha,
+      sourceHead: sourceSha,
+      targetHead: baseSha,
+      event: "pull_request" as const,
+      ref: "refs/pull/7/merge",
+      pullRequestNumber: 7,
+    };
+    await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, signed);
+    await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, signed);
+    expect(fixture.state.posts).toBe(1);
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      head_sha: mergeSha,
+      external_id: `visonaut:pre:${mergeSha}`,
+      status: "in_progress",
+    });
+    expect(
+      await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 2,
+      }),
+    ).toMatchObject({ checkId: "1", workflowAttempt: 2 });
+  });
+
+  it("does not bind another pull request's existing check to a signed job", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    fixture.state.run.pull_requests = [{ number: 7 }, { number: 8 }];
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    await expect(
+      ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
+        workflowRunId: "77",
+        workflowAttempt: 1,
+        testedSha: mergeSha,
+        sourceHead: sourceSha,
+        targetHead: baseSha,
+        event: "pull_request",
+        ref: "refs/pull/8/merge",
+        pullRequestNumber: 8,
+      }),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(
+      await database
+        .prepare("SELECT workflow_run_id FROM pre_run_checks WHERE tested_sha=?")
+        .bind(mergeSha)
+        .first(),
+    ).toEqual({ workflow_run_id: null });
+  });
+
+  it("settles an unbound terminal PR check for a pinned reusable workflow", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    const pinnedRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${preRunConfiguration.reusableWorkflowSha}`;
+    const scoped = apiContext({
+      ...preRunBindings,
+      configuration: {
+        ...preRunBindings.configuration,
+        workflowOwned: { ...preRunConfiguration, reusableWorkflowRef: pinnedRef },
+      },
+    });
+    await ensurePreRunCheck(scoped, fixture.github, candidate, fixture.webhook);
+    fixture.state.run.referenced_workflows = [
+      { path: pinnedRef, sha: preRunConfiguration.reusableWorkflowSha },
+    ];
+    const inProgress = fixture.workflowWebhook();
+    inProgress.payload.action = "in_progress";
+    await expect(settlePreRunWorkflow(scoped, fixture.github, inProgress)).rejects.toMatchObject({
+      code: "workflow_candidate",
+    });
+    await settlePreRunWorkflow(scoped, fixture.github, fixture.workflowWebhook());
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      status: "completed",
+      conclusion: "failure",
+    });
+  });
+
+  it("does not fail another PR's check from a multi-PR terminal association", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    fixture.state.run.pull_requests = [{ number: 7 }, { number: 8 }];
+    delete fixture.state.run.referenced_workflows;
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
+  it("does not fail a newer check when an older check shares the PR head", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const old = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!old) throw new Error("Missing old candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, old, fixture.webhook);
+    await database
+      .prepare("UPDATE pre_run_checks SET workflow_run_id='66', workflow_attempt=1")
+      .run();
+    const currentSha = "d".repeat(40);
+    fixture.state.currentSha = currentSha;
+    fixture.state.refSha = currentSha;
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: currentSha,
+    };
+    const current = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!current) throw new Error("Missing new candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, current, fixture.webhook);
+    delete fixture.state.run.referenced_workflows;
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("2")?.status).toBe("in_progress");
+  });
+
+  it("binds a workflow webhook to its recorded merge SHA when two PR checks exist", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const old = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!old) throw new Error("Missing original candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, old, fixture.webhook);
+    const currentSha = "d".repeat(40);
+    fixture.state.currentSha = currentSha;
+    fixture.state.refSha = currentSha;
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: currentSha,
+    };
+    const current = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!current) throw new Error("Missing regenerated candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, current, fixture.webhook);
+
+    const refs = fixture.state.run.referenced_workflows;
+    delete fixture.state.run.referenced_workflows;
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM pre_run_checks WHERE workflow_run_id='77'")
+        .first(),
+    ).toEqual({ count: 0 });
+
+    fixture.state.run.referenced_workflows = refs;
+    await settlePreRunWorkflow(
+      apiContext(preRunBindings),
+      fixture.github,
+      fixture.workflowWebhook(),
+    );
+    expect(
+      await database
+        .prepare("SELECT tested_sha FROM pre_run_checks WHERE workflow_run_id='77'")
+        .first(),
+    ).toEqual({ tested_sha: mergeSha });
+  });
+
+  it.each(["tree", "base", "head"] as const)(
+    "rejects signed fallback when the current PR %s changed",
+    async (change) => {
+      const fixture = preRunFixture();
+      fixture.state.currentSha = "d".repeat(40);
+      fixture.state.refSha = fixture.state.currentSha;
+      fixture.state.run.run_attempt = 2;
+      fixture.state.run.status = "in_progress";
+      fixture.state.run.conclusion = null;
+      if (change === "tree") {
+        fixture.state.currentTree = "2".repeat(40);
+      }
+      if (change === "base") {
+        fixture.state.mainSha = "2".repeat(40);
+      }
+      if (change === "head") {
+        fixture.state.pullHeadSha = "2".repeat(40);
+      }
+      await expect(
+        ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
+          workflowRunId: "77",
+          workflowAttempt: 2,
+          testedSha: mergeSha,
+          sourceHead: sourceSha,
+          targetHead: baseSha,
+          event: "pull_request",
+          ref: "refs/pull/7/merge",
+          pullRequestNumber: 7,
+        }),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
 
   it("fails success without a signed submission", async () => {
     const fixture = preRunFixture();

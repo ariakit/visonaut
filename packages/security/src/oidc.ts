@@ -245,7 +245,11 @@ export async function verifyGitHubOidc({
     requireEqual(target.ref, "main", "pull.base_ref");
     requireEqual(numericId(record(head.repo).id), github.repositoryId, "pull.head_repository_id");
     requireEqual(numericId(record(target.repo).id), github.repositoryId, "pull.base_repository_id");
-    requireEqual(pull.merge_commit_sha, request.testedSha, "pull.merge_sha");
+    const currentMergeSha = sha(pull.merge_commit_sha);
+    const mergeRef = record(await github.request(`${root}/git/ref/pull/${number}/merge`));
+    if (sha(record(mergeRef.object).sha) !== currentMergeSha) {
+      throw new SecurityError("merge_not_ready", 503, "The pull request merge ref is not ready.");
+    }
     requireEqual(claims.head_ref, head.ref, "pull.head_ref_claim");
     requireEqual(claims.base_ref, "main", "pull.base_ref_claim");
     requireEqual(run.head_sha, head.sha, "pull.workflow_head_sha");
@@ -259,6 +263,21 @@ export async function verifyGitHubOidc({
     requireEqual(parents.length, 2, "pull.parent_count");
     requireEqual(parents[0], targetHead, "pull.base_parent");
     requireEqual(parents[1], sourceHead, "pull.head_parent");
+    if (currentMergeSha !== request.testedSha) {
+      // GitHub can regenerate its synthetic merge commit without changing its contents.
+      const currentMerge = record(await github.request(`${root}/git/commits/${currentMergeSha}`));
+      const currentParents = Array.isArray(currentMerge.parents)
+        ? currentMerge.parents.map((parent) => sha(record(parent).sha))
+        : [];
+      requireEqual(currentParents.length, 2, "pull.current_parent_count");
+      requireEqual(currentParents[0], targetHead, "pull.current_base_parent");
+      requireEqual(currentParents[1], sourceHead, "pull.current_head_parent");
+      requireEqual(
+        sha(record(currentMerge.tree).sha),
+        sha(record(commit.tree).sha),
+        "pull.merge_tree",
+      );
+    }
     return { ...base, event, sourceHead, targetHead, pullRequestNumber: Number(number) };
   }
   if (!ref.startsWith("refs/heads/gh-readonly-queue/main/")) {

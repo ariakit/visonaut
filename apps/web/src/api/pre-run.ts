@@ -12,6 +12,7 @@ import {
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 import { completeWorkflowJobs, jobExecutedInAttempt } from "./jobs.js";
+import { sameCurrentMergeTree } from "./merge.js";
 
 interface Candidate {
   testedSha: string;
@@ -115,20 +116,19 @@ export async function candidateForWebhook(
     const pull = object(await github.request(`${root}/pulls/${number}`));
     const base = object(pull.base);
     const head = object(pull.head);
-    const baseSha = sha(base.sha);
     const sourceSha = sha(head.sha);
-    const testedSha = sha(pull.merge_commit_sha);
+    const currentMergeSha = sha(pull.merge_commit_sha);
+    const testedSha = sha(eventPull.merge_commit_sha) ?? currentMergeSha;
     if (
       pull.state !== "open" ||
       base.ref !== "main" ||
-      baseSha !== eventBase ||
       sourceSha !== eventHead ||
       numericId(object(base.repo).id) !== github.repositoryId ||
       numericId(object(head.repo).id) !== github.repositoryId
     ) {
       return null;
     }
-    if (!testedSha) {
+    if (!testedSha || !currentMergeSha) {
       throw new SecurityError(
         "merge_not_ready",
         503,
@@ -141,15 +141,17 @@ export async function candidateForWebhook(
       throw new SecurityError("merge_not_ready", 503, "The main ref is not ready.");
     }
     const ref = object(await github.request(`${root}/git/ref/pull/${number}/merge`));
-    if (object(ref.object).sha !== testedSha) {
+    if (object(ref.object).sha !== currentMergeSha) {
       throw new SecurityError("merge_not_ready", 503, "The pull request merge ref is not ready.");
     }
-    const commit = object(await github.request(`${root}/git/commits/${testedSha}`));
     if (
-      !Array.isArray(commit.parents) ||
-      commit.parents.length !== 2 ||
-      object(commit.parents[0]).sha !== currentBaseSha ||
-      object(commit.parents[1]).sha !== sourceSha
+      !(await sameCurrentMergeTree({
+        github,
+        testedSha: currentMergeSha,
+        currentSha: currentMergeSha,
+        baseSha: currentBaseSha,
+        sourceSha,
+      }))
     ) {
       throw new SecurityError(
         "merge_not_ready",
@@ -157,8 +159,17 @@ export async function candidateForWebhook(
         "The pull request merge parents are not ready.",
       );
     }
+    const eventMergeEquivalent =
+      testedSha === currentMergeSha ||
+      (await sameCurrentMergeTree({
+        github,
+        testedSha,
+        currentSha: currentMergeSha,
+        baseSha: currentBaseSha,
+        sourceSha,
+      }));
     const candidate: Candidate = {
-      testedSha,
+      testedSha: eventMergeEquivalent ? testedSha : currentMergeSha,
       sourceSha,
       baseSha: currentBaseSha,
       kind: "pull_request",
@@ -556,6 +567,30 @@ export async function ensurePreRunCheck(
   webhook: VerifiedWebhook,
   currentCandidate: () => Promise<Candidate | null> = () => candidateForWebhook(github, webhook),
 ) {
+  await storeCandidateCheck({
+    context,
+    github,
+    candidate,
+    currentCandidate,
+    validateBeforeCreation: false,
+  });
+}
+
+interface StoreCandidateCheckParams {
+  context: ApiContext;
+  github: GitHubClient;
+  candidate: Candidate;
+  currentCandidate: () => Promise<Candidate | null>;
+  validateBeforeCreation: boolean;
+}
+
+async function storeCandidateCheck({
+  context,
+  github,
+  candidate,
+  currentCandidate,
+  validateBeforeCreation,
+}: StoreCandidateCheckParams) {
   const now = Date.now();
   await mainSuccessor(context, github, candidate);
   await context.database
@@ -589,6 +624,12 @@ export async function ensurePreRunCheck(
   }
   if (!row || row.repository_id !== github.repositoryId || !sameCandidate(row, candidate)) {
     throw new SecurityError("check_conflict", 409, "The check identity has different provenance.");
+  }
+  if (validateBeforeCreation) {
+    const current = await currentCandidate();
+    if (!current || !sameCandidate(row, current)) {
+      throw new SecurityError("workflow_candidate", 503, "The signed candidate changed.");
+    }
   }
   await ensureStoredCheck(context, github, row, async () => {
     const current = await currentCandidate();
@@ -692,11 +733,40 @@ export async function findPreRunCheck(
   };
 }
 
-async function workflowCandidate(
-  context: ApiContext,
-  github: GitHubClient,
+function referencedPullMergeSha(
   run: Record<string, unknown>,
+  number: number,
+  configuredWorkflowRef: string | undefined,
 ) {
+  if (!configuredWorkflowRef || !Array.isArray(run.referenced_workflows)) return null;
+  const workflowPath = configuredWorkflowRef.split("@")[0];
+  const ref = `refs/pull/${number}/merge`;
+  const matches = new Set<string>();
+  for (const value of run.referenced_workflows) {
+    const workflow = object(value);
+    const resolvedSha = sha(workflow.sha);
+    if (resolvedSha && workflow.ref === ref && workflow.path === `${workflowPath}@${resolvedSha}`) {
+      matches.add(resolvedSha);
+    }
+  }
+  return matches.size === 1 ? [...matches][0] : null;
+}
+
+interface WorkflowCandidateParams {
+  context: ApiContext;
+  github: GitHubClient;
+  run: Record<string, unknown>;
+  testedSha?: string;
+  allowTerminalSingleCandidate?: boolean;
+}
+
+async function workflowCandidate({
+  context,
+  github,
+  run,
+  testedSha,
+  allowTerminalSingleCandidate = false,
+}: WorkflowCandidateParams) {
   const root = `/repos/${github.repository}`;
   if (
     run.event === "push" ||
@@ -779,12 +849,34 @@ async function workflowCandidate(
       const association = object(value);
       const number = association.number;
       if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1) continue;
-      const row = await context.database
-        .prepare(
-          "SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? ORDER BY generation DESC LIMIT 1",
-        )
-        .bind(number, sourceSha)
-        .first<PreRunCheck>();
+      const selectedSha =
+        testedSha ??
+        referencedPullMergeSha(
+          run,
+          number,
+          context.configuration.workflowOwned?.reusableWorkflowRef,
+        );
+      let row: PreRunCheck | null = null;
+      if (selectedSha) {
+        row = await context.database
+          .prepare(
+            "SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? AND tested_sha=? ORDER BY generation DESC LIMIT 1",
+          )
+          .bind(number, sourceSha, selectedSha)
+          .first<PreRunCheck>();
+      } else if (allowTerminalSingleCandidate && run.pull_requests.length === 1) {
+        // A completed workflow with no signed job may lack a resolved merge ref.
+        // Only one initial, unbound check may be failed; live attempts wait for OIDC.
+        const rows = await context.database
+          .prepare(
+            "SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request' AND pull_request_number=? AND source_sha=? ORDER BY generation DESC LIMIT 2",
+          )
+          .bind(github.repositoryId, number, sourceSha)
+          .all<PreRunCheck>();
+        if (rows.results.length === 1 && rows.results[0]?.workflow_run_id === null) {
+          row = rows.results[0] ?? null;
+        }
+      }
       if (row?.repository_id === github.repositoryId) candidates.push(row);
     }
   }
@@ -800,9 +892,10 @@ async function workflowCandidate(
   const base = object(pull.base);
   const head = object(pull.head);
   const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
+  const currentMergeSha = sha(pull.merge_commit_sha);
   if (
     pull.state !== "open" ||
-    pull.merge_commit_sha !== row.tested_sha ||
+    !currentMergeSha ||
     base.ref !== "main" ||
     object(mainRef.object).sha !== row.base_sha ||
     head.sha !== row.source_sha ||
@@ -813,7 +906,16 @@ async function workflowCandidate(
     throw new SecurityError("workflow_candidate", 503, "The pull-request candidate changed.");
   }
   const ref = object(await github.request(`${root}/git/ref/pull/${row.pull_request_number}/merge`));
-  if (object(ref.object).sha !== row.tested_sha) {
+  if (
+    object(ref.object).sha !== currentMergeSha ||
+    !(await sameCurrentMergeTree({
+      github,
+      testedSha: row.tested_sha,
+      currentSha: currentMergeSha,
+      baseSha: row.base_sha,
+      sourceSha: row.source_sha,
+    }))
+  ) {
     throw new SecurityError("workflow_candidate", 503, "The pull-request merge ref changed.");
   }
   return row;
@@ -952,7 +1054,7 @@ async function bindWorkflowCheck(
       throw new SecurityError("workflow_conflict", 409, "The workflow attempt changed candidate.");
     }
     await ensureStoredCheck(context, github, existing, async () => {
-      const current = await workflowCandidate(context, github, run);
+      const current = await workflowCandidate({ context, github, run });
       return current?.tested_sha === existing.tested_sha;
     });
     return (await attemptCheck(context, runId, attempt)) ?? existing;
@@ -1046,7 +1148,7 @@ async function bindWorkflowCheck(
     throw new SecurityError("workflow_conflict", 503, "The next attempt check is not ready.");
   }
   await ensureStoredCheck(context, github, next, async () => {
-    const current = await workflowCandidate(context, github, run);
+    const current = await workflowCandidate({ context, github, run });
     return current?.external_id === next.external_id;
   });
   return (await attemptCheck(context, runId, attempt)) ?? next;
@@ -1056,7 +1158,17 @@ async function bindWorkflowCheck(
 export async function ensureSignedAttemptCheck(
   context: ApiContext,
   github: GitHubClient,
-  identity: Pick<VerifiedRun, "workflowRunId" | "workflowAttempt" | "testedSha" | "sourceHead">,
+  identity: Pick<
+    VerifiedRun,
+    | "workflowRunId"
+    | "workflowAttempt"
+    | "testedSha"
+    | "sourceHead"
+    | "targetHead"
+    | "event"
+    | "ref"
+    | "pullRequestNumber"
+  >,
 ) {
   const configuration = context.configuration.workflowOwned;
   if (!configuration) {
@@ -1069,14 +1181,60 @@ export async function ensureSignedAttemptCheck(
     numericId(run.id) !== identity.workflowRunId ||
     run.run_attempt !== identity.workflowAttempt ||
     run.head_sha !== identity.sourceHead ||
+    run.event !== identity.event ||
     run.path !== configuration.callerWorkflowPath ||
     numericId(object(run.repository).id) !== github.repositoryId
   ) {
     throw new SecurityError("workflow_identity", 503, "The signed workflow attempt changed.");
   }
-  const candidate = await workflowCandidate(context, github, run);
+  if (
+    identity.event === "pull_request" &&
+    identity.pullRequestNumber &&
+    !(await storedCheck(context, identity.testedSha))
+  ) {
+    const signedCandidate: Candidate = {
+      testedSha: identity.testedSha,
+      sourceSha: identity.sourceHead,
+      baseSha: identity.targetHead,
+      kind: "pull_request",
+      ref: identity.ref,
+      pullRequestNumber: identity.pullRequestNumber,
+      docsOnly: false,
+    };
+    await storeCandidateCheck({
+      context,
+      github,
+      candidate: signedCandidate,
+      currentCandidate: async () => {
+        const current = await workflowCandidate({
+          context,
+          github,
+          run,
+          testedSha: identity.testedSha,
+        });
+        return current && sameCandidate(current, signedCandidate) ? signedCandidate : null;
+      },
+      validateBeforeCreation: true,
+    });
+  }
+  const candidate = await workflowCandidate({
+    context,
+    github,
+    run,
+    testedSha: identity.testedSha,
+  });
   if (!candidate || candidate.tested_sha !== identity.testedSha || candidate.docs_only) {
     throw new SecurityError("workflow_candidate", 503, "The signed candidate is unavailable.");
+  }
+  if (
+    identity.event === "pull_request" &&
+    (candidate.kind !== "pull_request" ||
+      candidate.pull_request_number !== identity.pullRequestNumber ||
+      candidate.ref !== identity.ref ||
+      candidate.base_sha !== identity.targetHead ||
+      candidate.source_sha !== identity.sourceHead)
+  ) {
+    throw new SecurityError("workflow_candidate", 503, "The signed pull request changed.");
   }
   await bindWorkflowCheck(context, github, run, candidate);
 }
@@ -1146,7 +1304,12 @@ export async function settlePreRunWorkflow(
   }
   let candidate: PreRunCheck | null;
   try {
-    candidate = await workflowCandidate(context, github, run);
+    candidate = await workflowCandidate({
+      context,
+      github,
+      run,
+      allowTerminalSingleCandidate: webhook.payload.action === "completed",
+    });
   } catch (error) {
     if (
       !(error instanceof SecurityError) ||
