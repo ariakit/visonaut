@@ -634,6 +634,9 @@ interface ReuseSource {
   source_media_type: string;
 }
 
+// Bound concurrent R2 operations within one byte-limited reuse page.
+const reuseConcurrency = 4;
+
 /** Copy only bytes that this signed job proves it holds. A digest alone is not possession. */
 export async function reuseStagedImages(request: Request, context: ApiContext, runId: string) {
   const { capability, run, job } = await stagedCapability(request, context, runId);
@@ -739,8 +742,7 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
   );
   // The declared page is byte-bounded, so verification can finish before any
   // target write. A later bad proof cannot leave an uncommitted copied object.
-  const verified: { target: StagedImage; bytes: Uint8Array<ArrayBuffer> }[] = [];
-  for (const target of pending) {
+  const verifyTarget = async (target: StagedImage) => {
     for (const source of candidates.get(target.digest) ?? []) {
       if (
         source.source_bytes !== target.bytes ||
@@ -765,19 +767,40 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
           "The image reuse proof does not match its bytes.",
         );
       }
-      verified.push({ target, bytes });
-      break;
+      return { target, bytes };
+    }
+    return null;
+  };
+
+  const verified: { target: StagedImage; bytes: Uint8Array<ArrayBuffer> }[] = [];
+  for (let offset = 0; offset < pending.length; offset += reuseConcurrency) {
+    const batch = await Promise.all(
+      pending.slice(offset, offset + reuseConcurrency).map(verifyTarget),
+    );
+    for (const result of batch) {
+      if (result) {
+        verified.push(result);
+      }
     }
   }
-  for (const { target, bytes } of verified) {
-    try {
-      await context.images.put(target.object_key, bytes, {
-        httpMetadata: { contentType: target.media_type },
-      });
-    } catch {
-      continue;
+  for (let offset = 0; offset < verified.length; offset += reuseConcurrency) {
+    const batch = await Promise.all(
+      verified.slice(offset, offset + reuseConcurrency).map(async ({ target, bytes }) => {
+        try {
+          await context.images.put(target.object_key, bytes, {
+            httpMetadata: { contentType: target.media_type },
+          });
+          return target.digest;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    for (const digest of batch) {
+      if (digest) {
+        reused.push(digest);
+      }
     }
-    reused.push(target.digest);
   }
   if (reused.length) {
     await context.database
