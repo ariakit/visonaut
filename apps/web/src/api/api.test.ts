@@ -1393,6 +1393,9 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       { kind: "key", value: "react-light" },
     ]);
     expect(model.promotionId).toBe(promotionId);
+    const wake = vi.fn(async () => {});
+    wake.mockRejectedValueOnce(new Error("Queue unavailable."));
+    test.bindings.operations.send = wake;
     const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
       method: "POST",
       headers,
@@ -1403,14 +1406,212 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
         targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
         selection: { itemKey: item?.key, variantKey: variant?.key },
         expectedBaselineRevision: model.baselineRevision,
+        expectedRunRevision: model.comparisonRevision,
         expectedPromotionId: model.promotionId,
       }),
     });
     expect(response.status).toBe(200);
+    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
     const result = await objectResponse(response);
-    expect(objects(objects(object(result.model).items)[0]?.variants)[0]).toMatchObject({
+    expect(result).toMatchObject({
+      revisions: [{ id: variant?.id, expectedRevision: Number(variant?.revision) + 1 }],
+      baselineRevision: model.baselineRevision,
+      promotionId,
+      runRevision: Number(model.comparisonRevision) + 2,
+    });
+    expect(result).not.toHaveProperty("model");
+    const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const savedVariant = objects(objects(refreshed.items)[0]?.variants)[0];
+    expect(savedVariant).toMatchObject({
       verdict: "rejected",
       source: "human",
+    });
+    expect(result.reviewer).toBe(savedVariant?.reviewer);
+    expect(result.runStatus).toBe(object(refreshed.run).status);
+  });
+
+  it("keeps a mixed error row pending after compactly approving the last changed row", async () => {
+    const test = await fixture({ duplicateOriginal: true });
+    const digest = await test.upload();
+    test.succeedJob();
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${test.runId}/finalize`,
+          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
+        )
+      ).status,
+    ).toBe(202);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const before = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const second = objects(objects(before.items)[0]?.variants)[1];
+    expect(second).toBeDefined();
+    await database
+      .prepare("UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE id = ?")
+      .bind(second?.id)
+      .run();
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const [first, error] = objects(item?.variants);
+    expect(error).toMatchObject({ kind: "error" });
+    expect((await test.service.status(test.runId)).status).toBe("needs-review");
+    const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        reviewSessionId: session.reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict: "approved",
+        targets: [{ id: first?.id, expectedRevision: first?.revision }],
+        selection: { itemKey: item?.key, variantKey: first?.key },
+        expectedBaselineRevision: model.baselineRevision,
+        expectedRunRevision: model.comparisonRevision,
+      }),
+    });
+    expect(response.status).toBe(200);
+    const result = await objectResponse(response);
+    expect(result).not.toHaveProperty("model");
+    expect(result.runStatus).toBe("needs-review");
+    const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    expect(object(refreshed.run).status).toBe(result.runStatus);
+    expect(objects(objects(refreshed.items)[0]?.variants)).toMatchObject([
+      { verdict: "approved", source: "human" },
+      { kind: "error" },
+    ]);
+  });
+
+  it("returns the authoritative model when another review changed a different variant", async () => {
+    const test = await fixture({ duplicateOriginal: true });
+    const digest = await test.upload();
+    test.succeedJob();
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${test.runId}/finalize`,
+          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
+        )
+      ).status,
+    ).toBe(202);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const [first, second] = objects(item?.variants);
+    expect(second).toBeDefined();
+    const otherResponse = await test.send(
+      `/api/comparisons/${string(model.comparisonId)}/commands`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          reviewSessionId: session.reviewSessionId,
+          commandId: crypto.randomUUID(),
+          verdict: "rejected",
+          targets: [{ id: second?.id, expectedRevision: second?.revision }],
+          selection: { itemKey: item?.key, variantKey: second?.key },
+          expectedBaselineRevision: model.baselineRevision,
+          expectedRunRevision: model.comparisonRevision,
+        }),
+      },
+    );
+    expect(otherResponse.status).toBe(200);
+    expect(await objectResponse(otherResponse)).not.toHaveProperty("model");
+    const staleResponse = await test.send(
+      `/api/comparisons/${string(model.comparisonId)}/commands`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          reviewSessionId: session.reviewSessionId,
+          commandId: crypto.randomUUID(),
+          verdict: "rejected",
+          targets: [{ id: first?.id, expectedRevision: first?.revision }],
+          selection: { itemKey: item?.key, variantKey: first?.key },
+          expectedBaselineRevision: model.baselineRevision,
+          expectedRunRevision: model.comparisonRevision,
+        }),
+      },
+    );
+    expect(staleResponse.status).toBe(200);
+    const staleResult = await objectResponse(staleResponse);
+    expect(staleResult).toHaveProperty("model");
+    expect(objects(objects(object(staleResult.model).items)[0]?.variants)).toMatchObject([
+      { verdict: "rejected", source: "human" },
+      { verdict: "rejected", source: "human" },
+    ]);
+  });
+
+  it("wakes status delivery after a saved review and Undo", async () => {
+    const test = await fixture();
+    const digest = await test.upload();
+    test.succeedJob();
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${test.runId}/finalize`,
+          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
+        )
+      ).status,
+    ).toBe(202);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const variant = objects(item?.variants)[0];
+    const wake = vi.fn(async () => {});
+    test.bindings.operations.send = wake;
+    const commandId = crypto.randomUUID();
+    const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        reviewSessionId: session.reviewSessionId,
+        commandId,
+        verdict: "rejected",
+        targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+        selection: { itemKey: item?.key, variantKey: variant?.key },
+        expectedBaselineRevision: model.baselineRevision,
+        expectedRunRevision: model.comparisonRevision,
+      }),
+    });
+    expect(response.status).toBe(200);
+    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+
+    const undoResponse = await test.send(`/api/commands/${commandId}/undo`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        reviewSessionId: session.reviewSessionId,
+        undoCommandId: crypto.randomUUID(),
+        expectedBaselineRevision: model.baselineRevision,
+      }),
+    });
+    expect(undoResponse.status).toBe(200);
+    expect(wake).toHaveBeenNthCalledWith(2, { kind: "continue" });
+    expect(
+      objects(objects(object((await objectResponse(undoResponse)).model).items)[0]?.variants)[0],
+    ).toMatchObject({
+      verdict: variant?.verdict,
+      source: variant?.source,
     });
   });
   it("keeps staged inline profiles unchanged when a shard retries after normalization deploys", async () => {

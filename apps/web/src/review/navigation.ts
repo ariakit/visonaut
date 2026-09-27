@@ -1,4 +1,11 @@
-import type { ReviewItem, ReviewSelection, ReviewVariant } from "./model.ts";
+import type {
+  ReviewCommand,
+  ReviewItem,
+  ReviewModel,
+  ReviewSaveResult,
+  ReviewSelection,
+  ReviewVariant,
+} from "./model.ts";
 
 export function needsReview(variant: ReviewVariant) {
   if (variant.kind === "unchanged") return false;
@@ -43,6 +50,65 @@ export function reviewTargets(item: ReviewItem) {
     (variant) =>
       variant.kind === "added" || variant.kind === "changed" || variant.kind === "removed",
   );
+}
+
+export function applySavedReview(
+  model: ReviewModel,
+  command: ReviewCommand,
+  result: ReviewSaveResult,
+): ReviewModel {
+  if (result.model) return result.model;
+  if (result.noop) return model;
+  if (
+    result.runRevision === undefined ||
+    result.reviewer === undefined ||
+    result.runStatus === undefined
+  ) {
+    throw new Error("The saved review is incomplete. Refresh before reviewing.");
+  }
+  if (command.comparisonId !== model.comparisonId || result.commandId !== command.commandId) {
+    throw new Error("The saved review does not match this comparison. Refresh before reviewing.");
+  }
+  const revisions = new Map(result.revisions.map((entry) => [entry.id, entry.expectedRevision]));
+  if (revisions.size !== command.targets.length) {
+    throw new Error(
+      "The saved review returned an incomplete target list. Refresh before reviewing.",
+    );
+  }
+  for (const target of command.targets) {
+    if (revisions.get(target.id) !== target.expectedRevision + 1) {
+      throw new Error(
+        "The saved review returned an unexpected revision. Refresh before reviewing.",
+      );
+    }
+  }
+  let updated = 0;
+  const items = model.items.map((item) => ({
+    ...item,
+    variants: item.variants.map((variant) => {
+      const revision = revisions.get(variant.id);
+      if (revision === undefined) return variant;
+      updated++;
+      return {
+        ...variant,
+        revision,
+        verdict: command.verdict,
+        source: "human" as const,
+        reviewer: result.reviewer,
+      };
+    }),
+  }));
+  if (updated !== revisions.size) {
+    throw new Error("The saved review changed unknown evidence. Refresh before reviewing.");
+  }
+  return {
+    ...model,
+    run: { ...model.run, status: result.runStatus },
+    comparisonRevision: result.runRevision,
+    baselineRevision: result.baselineRevision,
+    promotionId: result.promotionId,
+    items,
+  };
 }
 
 export function nextPending(items: ReviewItem[], selection: ReviewSelection) {

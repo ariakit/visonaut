@@ -26,9 +26,11 @@ class SqliteStatement implements Statement {
     readonly connection: DatabaseSync,
     readonly sql: string,
     readonly values: SqlValue[] = [],
+    readonly maximumBindings = Number.POSITIVE_INFINITY,
   ) {}
   bind(...values: SqlValue[]) {
-    return new SqliteStatement(this.connection, this.sql, values);
+    if (values.length > this.maximumBindings) throw new Error("Too many bound parameters.");
+    return new SqliteStatement(this.connection, this.sql, values, this.maximumBindings);
   }
   execute<T>(): Result<T> {
     const values = this.values.map((value) =>
@@ -62,6 +64,7 @@ class TestDatabase implements Database {
   beforeBatch: (() => void) | null = null;
   preparedQueries = 0;
   batchCalls = 0;
+  maximumBindings = Number.POSITIVE_INFINITY;
   constructor() {
     for (const name of [
       "0001_service.sql",
@@ -87,7 +90,7 @@ class TestDatabase implements Database {
   }
   prepare(sql: string) {
     this.preparedQueries += 1;
-    return new SqliteStatement(this.connection, sql);
+    return new SqliteStatement(this.connection, sql, [], this.maximumBindings);
   }
   async batch(statements: Statement[]) {
     this.batchCalls += 1;
@@ -953,6 +956,30 @@ describe("exact acceptance and automatic reservations", () => {
 });
 
 describe("atomic review, rollback, and session Undo", () => {
+  it("reviews 100 targets across items within D1's bound-parameter limit", async () => {
+    using database = new TestDatabase();
+    database.maximumBindings = 100;
+    const service = new Service(database);
+    await setup(service);
+    const items = Array.from({ length: 100 }, (_, index) => `item-${index}`);
+    await fixture(service, { id: "batch-review", items });
+    const previousRunRevision = (await service.run("batch-review")).revision;
+    const result = await review(service, "comparison-batch-review");
+    expect(result.revisions).toHaveLength(items.length);
+    expect(result).toMatchObject({
+      previousRunRevision,
+      runRevision: previousRunRevision + 2,
+    });
+    const revisions = new Map(
+      result.revisions.map((target) => [target.id, target.expectedRevision]),
+    );
+    expect(
+      (await service.comparisonRows("comparison-batch-review")).every(
+        (row) => row.decision_revision === revisions.get(row.id),
+      ),
+    ).toBe(true);
+  });
+
   it("aborts every write when a whole-item target changes during the SQL batch", async () => {
     using database = new TestDatabase();
     const service = new Service(database);

@@ -308,6 +308,7 @@
   background: var(--review-border);
 }
 .review-viewer[data-mode="new"],
+.review-viewer[data-mode="original"],
 .review-viewer[data-mode="diff"] {
   grid-template-columns: 1fr;
 }

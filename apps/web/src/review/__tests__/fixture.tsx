@@ -1,12 +1,18 @@
 import { createRoot } from "react-dom/client";
 import { ReviewWorkspace } from "../review-workspace.tsx";
 import { ReviewCommandError } from "../model.ts";
-import type { ReviewCommand, ReviewCommandResult, ReviewModel, UndoCommand } from "../model.ts";
+import type {
+  ReviewCommand,
+  ReviewCommandResult,
+  ReviewModel,
+  ReviewSaveResult,
+  UndoCommand,
+} from "../model.ts";
 
 import { fixtureModel } from "./fixture-model.ts";
 
 let model = fixtureModel();
-const saved = new Map<string, { model: ReviewModel; result: ReviewCommandResult }>();
+const saved = new Map<string, { model: ReviewModel; result: ReviewSaveResult }>();
 const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];
 let behavior = "normal";
@@ -14,7 +20,7 @@ let pending: (() => void) | undefined;
 let statusReads = 0;
 let modelReads = 0;
 
-async function save(command: ReviewCommand): Promise<ReviewCommandResult> {
+async function save(command: ReviewCommand): Promise<ReviewSaveResult> {
   calls.push(command);
   if (behavior === "delay") {
     await new Promise<void>((resolve) => {
@@ -32,9 +38,18 @@ async function save(command: ReviewCommand): Promise<ReviewCommandResult> {
     });
   }
   if (behavior === "noop")
-    return { model, commandId: command.commandId, selection: command.selection, noop: true };
+    return {
+      model,
+      commandId: command.commandId,
+      selection: command.selection,
+      revisions: command.targets,
+      baselineRevision: model.baselineRevision,
+      promotionId: model.promotionId,
+      noop: true,
+    };
   const previous = structuredClone(model);
   model = structuredClone(model);
+  model.comparisonRevision += 2;
   for (const item of model.items) {
     for (const entry of item.variants) {
       const target = command.targets.find((target) => target.id === entry.id);
@@ -44,10 +59,35 @@ async function save(command: ReviewCommand): Promise<ReviewCommandResult> {
       }
       entry.verdict = command.verdict;
       entry.source = "human";
+      entry.reviewer = "maintainer-1";
       entry.revision++;
     }
   }
-  const result = { model, commandId: command.commandId, selection: command.selection };
+  const variants = model.items.flatMap((item) => item.variants);
+  const incomplete = variants.some(
+    (entry) =>
+      entry.kind === "error" ||
+      entry.kind === "pending" ||
+      (entry.kind !== "unchanged" && entry.verdict !== "approved"),
+  );
+  model.run.status = !incomplete
+    ? "passed"
+    : variants.some((entry) => entry.verdict === "rejected")
+      ? "rejected"
+      : "needs-review";
+  const result = {
+    commandId: command.commandId,
+    selection: command.selection,
+    revisions: command.targets.map((target) => ({
+      id: target.id,
+      expectedRevision: target.expectedRevision + 1,
+    })),
+    baselineRevision: model.baselineRevision,
+    promotionId: model.promotionId,
+    runRevision: model.comparisonRevision,
+    reviewer: "maintainer-1",
+    runStatus: model.run.status,
+  };
   saved.set(command.commandId, { model: previous, result });
   return result;
 }

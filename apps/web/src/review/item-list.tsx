@@ -244,7 +244,7 @@ export function ItemList({
             className="review-accepted-group duration-0!"
             open={showAccepted}
             setOpen={setAcceptedOpen}
-            content={{ unmountOnHide: true }}
+            content={{ unmountOnHide: true, guide: false }}
             button={
               <NavDisclosureButton className="review-accepted-toggle">
                 Accepted ({accepted.length})

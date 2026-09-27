@@ -163,13 +163,20 @@ test("item and variant links open a direct selection without reloading the run",
   let modelLoads = 0;
   await page.route("**/api/runs/run-42*", (route) => {
     modelLoads += 1;
-    return route.fulfill({ json: fixtureModel() });
+    const model = fixtureModel();
+    const unchanged = model.items[1]?.variants[0];
+    if (unchanged) unchanged.kind = "unchanged";
+    return route.fulfill({ json: model });
   });
   await page.goto(url);
   const variants = page.getByRole("listbox", { name: "Variants" });
   await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
   const items = page.getByRole("listbox", { name: "Items needing attention" });
+  await expect(items.getByRole("option", { name: /Open menu/ })).toHaveAttribute(
+    "href",
+    /variant=Menu-dark/,
+  );
   await items.getByRole("option", { name: /Success dialog/ }).click();
   await items.getByRole("option", { name: /Open menu/ }).click();
   await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
@@ -188,6 +195,32 @@ test("item and variant links open a direct selection without reloading the run",
   await expect(items.getByRole("option", { name: /Open menu/ })).toBeFocused();
   await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
   expect(modelLoads).toBe(1);
+});
+
+test("item links return to the first variant needing review after selecting an unchanged variant", async ({
+  page,
+}) => {
+  const selectedEntry = "/runs/run-42?item=menu%2Fopen&variant=Menu-dark";
+  await page.route("**/api/runs/run-42*", (route) => {
+    const model = fixtureModel();
+    const unchanged = model.items[1]?.variants[0];
+    if (unchanged) unchanged.kind = "unchanged";
+    return route.fulfill({ json: model });
+  });
+  await page.goto(
+    `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`,
+  );
+  const variants = page.getByRole("listbox", { name: "Variants" });
+  await variants.getByRole("option", { name: /Menu · Chromium/ }).click();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(
+    /Menu · Chromium/,
+  );
+  const items = page.getByRole("listbox", { name: "Items needing attention" });
+  await items.getByRole("option", { name: /Success dialog/ }).click();
+  const menuLink = items.getByRole("option", { name: /Open menu/ });
+  await expect(menuLink).toHaveAttribute("href", /variant=Menu-dark/);
+  await menuLink.click();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
 });
 
 test("a stale variant link keeps its valid item selected", async ({ page }) => {
