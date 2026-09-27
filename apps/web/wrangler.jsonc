@@ -110,7 +110,7 @@
         "VISONAUT_PROJECT_ID": "ariakit",
         "VISONAUT_OIDC_AUDIENCE": "https://visonaut.com",
         "VISONAUT_TRUSTED_PLAN_PATH": ".github/visonaut-plan.json",
-        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@bea39018ccd6f902c2c904afa263b3d01f99c017\",\"reusableWorkflowSha\":\"bea39018ccd6f902c2c904afa263b3d01f99c017\",\"additionalTrustedWorkflowBlobSha\":\"cbbbddefda407474c7e7eac5c3c5f4029f037262\"}",
+        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@bea39018ccd6f902c2c904afa263b3d01f99c017\",\"reusableWorkflowSha\":\"bea39018ccd6f902c2c904afa263b3d01f99c017\",\"additionalTrustedWorkflowBlobSha\":\"697172dfed281348d79bfe8ce61f9ccf21537c5f\"}",
         "VISONAUT_REUSABLE_WORKFLOW_REF": "ariakit/ariakit/.github/workflows/app.yml@bea39018ccd6f902c2c904afa263b3d01f99c017",
         "VISONAUT_REUSABLE_WORKFLOW_SHA": "bea39018ccd6f902c2c904afa263b3d01f99c017",
         "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
