@@ -2,6 +2,7 @@ import { numericId, record, SecurityError } from "./errors.js";
 import type { GitHubClient } from "./github.js";
 
 export const CHECK_NAME = "Visonaut";
+export const REVIEW_LINK_CHECK_NAME = "Open Visonaut review";
 const legacyCheckName = "Ariviso";
 
 function expectedCheckName(name: unknown, externalId: string) {
@@ -66,17 +67,24 @@ export async function findGitHubCheck({
   github,
   testedSha,
   externalId,
-}: Pick<EnsureCheckParams, "github" | "testedSha" | "externalId">): Promise<string | null> {
+  checkName,
+}: Pick<EnsureCheckParams, "github" | "testedSha" | "externalId"> & {
+  checkName?: typeof REVIEW_LINK_CHECK_NAME;
+}): Promise<string | null> {
   if (!/^[a-f0-9]{40}$/.test(testedSha) || !/^[A-Za-z0-9:_-]{1,200}$/.test(externalId)) {
     throw new Error("A check needs a full tested SHA and a stable external identity.");
   }
   const matches = new Set<string>();
-  const names = externalId.startsWith("ariviso:") ? [CHECK_NAME, legacyCheckName] : [CHECK_NAME];
+  const names = checkName
+    ? [checkName]
+    : externalId.startsWith("ariviso:")
+      ? [CHECK_NAME, legacyCheckName]
+      : [CHECK_NAME];
   for (const name of names) {
     for (let page = 1; page <= 20; page += 1) {
       const result = record(
         await github.request(
-          `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=${name}&filter=all&per_page=100&page=${page}`,
+          `/repos/${github.repository}/commits/${testedSha}/check-runs?check_name=${encodeURIComponent(name)}&filter=all&per_page=100&page=${page}`,
         ),
       );
       if (!Array.isArray(result.check_runs)) {
@@ -86,7 +94,7 @@ export async function findGitHubCheck({
         const check = record(value);
         if (
           check.external_id === externalId &&
-          expectedCheckName(check.name, externalId) &&
+          (checkName ? check.name === checkName : expectedCheckName(check.name, externalId)) &&
           numericId(record(check.app).id) === github.appId &&
           check.head_sha === testedSha
         ) {

@@ -4,6 +4,7 @@ import { expireComparisonReferences, expireSnapshotImages } from "./snapshot-ret
 import { reconcileWork, Service } from "@visonaut/service";
 import { backupDaily, expireBackups, type DatabaseExporter } from "./backups.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
+import { publishReviewLinks } from "./review-links.ts";
 import { recordEvent, resolveEvents, validateBudget } from "./common.ts";
 import { archiveHistoricalComparisons } from "./history-supplement.ts";
 import { archiveClosedRuns } from "./history.ts";
@@ -52,6 +53,7 @@ export async function runOperations(context: OperationsContext, exporter: Databa
   await reportComparisonRecovery(context, publication, finalized);
   const steps: [string, () => Promise<OperationReport>][] = [
     ["checks", () => deliverGitHubStatuses(context)],
+    ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
     ["backup", () => backupDaily(context, exporter)],
     ["historical-archive", () => archiveHistoricalComparisons(context)],

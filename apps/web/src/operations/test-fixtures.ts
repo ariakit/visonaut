@@ -70,6 +70,7 @@ export class TestDatabase implements Database {
       "0014_visonaut_brand",
       "0016_comparison_publication",
       "0020_pre_run_checks",
+      "0022_review_links",
     ]) {
       this.connection.exec(
         readFileSync(new URL(`../../migrations/${migration}.sql`, import.meta.url), "utf8"),
