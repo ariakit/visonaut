@@ -86,6 +86,25 @@ async function privateMetadata(fixture: ReturnType<typeof context>, database: Te
   );
 }
 
+function addSnapshotCapture(
+  database: TestDatabase,
+  snapshotId: string,
+  captureId: string,
+  objectKey: string,
+  imageDigest = digest("original-image-bytes"),
+) {
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES(?,'run','chromium',?,'light',1,'image-run','profile','test',0,'{}')",
+    )
+    .run(captureId, captureId);
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) VALUES(?,?,'image-run',?,?,1)",
+    )
+    .run(snapshotId, captureId, objectKey, imageDigest);
+}
+
 async function saveArchive(
   fixture: ReturnType<typeof context>,
   database: TestDatabase,
@@ -137,6 +156,156 @@ async function saveArchive(
 }
 
 describe("grouped backups", () => {
+  it("bounds a production-sized run image page and restores every original", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context);
+    fixture.context.budget.objectsPerStep = 1000;
+    for (let index = 0; index < 101; index++) {
+      const key = `runs/run/extra/${String(index).padStart(3, "0")}`;
+      const data = `extra-image-${index}`;
+      await fixture.images.put(key, data, { httpMetadata: { contentType: "image/png" } });
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'run',?,?,'image/png',?,1,1)",
+        )
+        .run(`extra-${index}`, digest(data), key, data.length);
+    }
+
+    let group:
+      | { id: string; page_count: number; object_count: number; cursor: string | null }
+      | undefined;
+    for (let step = 0; step < 20; step++) {
+      await backupDaily(fixture.context, exporter());
+      group = database.connection
+        .prepare(
+          "SELECT id,page_count,object_count,cursor FROM operations_backup_groups WHERE kind='run' AND source_id='run'",
+        )
+        .get() as typeof group;
+      if (group?.page_count === 1) break;
+    }
+    expect(group).toMatchObject({
+      page_count: 1,
+      object_count: 100,
+      cursor: JSON.stringify(["images", "runs/run/extra/099"]),
+    });
+    if (!group) throw new Error("Run backup group did not start.");
+
+    const id = await complete(fixture);
+    if (!id) throw new Error("Backup did not complete.");
+    expect(
+      database.connection
+        .prepare("SELECT state,object_count FROM operations_backup_groups WHERE id=?")
+        .get(group.id),
+    ).toEqual({ state: "ready", object_count: 102 });
+    const restored = await restore(fixture, id);
+    expect(restored.calls.at(-1)).toBe("verified");
+    expect([...restored.images.objects.keys()].sort()).toEqual(
+      [...fixture.images.objects.keys()].sort(),
+    );
+  });
+
+  it("backs up at most 100 distinct snapshot keys per page and resumes after a failed page", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context, "run", "main");
+    await promoteBaselines(fixture.context);
+    fixture.context.budget.objectsPerStep = 1000;
+    const snapshot = database.connection
+      .prepare("SELECT id FROM visonaut_snapshots WHERE run_id='run'")
+      .get() as { id: string } | undefined;
+    if (!snapshot) throw new Error("Missing snapshot fixture.");
+    for (let index = 0; index < 101; index++) {
+      const key = `protected/extra/${String(index).padStart(3, "0")}`;
+      await fixture.images.put(key, "original-image-bytes", {
+        httpMetadata: { contentType: "image/png" },
+      });
+      addSnapshotCapture(database, snapshot.id, `extra-${index}`, key);
+    }
+    // One repeated key is inside the page; another can straddle a raw-row page.
+    addSnapshotCapture(database, snapshot.id, "duplicate-interior", "protected/extra/050");
+    addSnapshotCapture(database, snapshot.id, "duplicate-boundary", "protected/extra/098");
+
+    let group:
+      | { id: string; page_count: number; object_count: number; cursor: string | null }
+      | undefined;
+    for (let step = 0; step < 30; step++) {
+      await backupDaily(fixture.context, exporter());
+      group = database.connection
+        .prepare(
+          "SELECT id,page_count,object_count,cursor FROM operations_backup_groups WHERE kind='snapshot' AND source_id=?",
+        )
+        .get(snapshot.id) as typeof group;
+      if (group?.page_count === 1) break;
+    }
+    expect(group).toMatchObject({
+      page_count: 1,
+      object_count: 100,
+      cursor: JSON.stringify("protected/extra/098"),
+    });
+    if (!group) throw new Error("Snapshot backup group did not start.");
+
+    fixture.backups.failPut = digest("protected/extra/099");
+    const failed = await backupDaily(fixture.context, exporter());
+    expect(failed.attention).toEqual(["2026-09-22T00Z"]);
+    expect(
+      database.connection
+        .prepare("SELECT page_count,object_count,cursor FROM operations_backup_groups WHERE id=?")
+        .get(group.id),
+    ).toEqual({ page_count: 1, object_count: 100, cursor: group.cursor });
+
+    fixture.backups.failPut = null;
+    const id = await complete(fixture);
+    if (!id) throw new Error("Backup did not complete.");
+    expect(id).toBe("2026-09-22T00Z");
+    expect(
+      database.connection
+        .prepare("SELECT state,page_count,object_count FROM operations_backup_groups WHERE id=?")
+        .get(group.id),
+    ).toEqual({ state: "ready", page_count: 2, object_count: 102 });
+    const restored = await restore(fixture, id);
+    expect(restored.calls.at(-1)).toBe("verified");
+    expect([...restored.images.objects.keys()].sort()).toEqual(
+      [...fixture.images.objects.keys()].sort(),
+    );
+  });
+
+  it("rejects conflicting metadata for a shared protected snapshot key", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context, "run", "main");
+    await promoteBaselines(fixture.context);
+    const snapshot = database.connection
+      .prepare(
+        "SELECT id,object_key FROM visonaut_snapshots JOIN visonaut_snapshot_images ON snapshot_id=id WHERE run_id='run'",
+      )
+      .get() as { id: string; object_key: string } | undefined;
+    if (!snapshot) throw new Error("Missing snapshot fixture.");
+    addSnapshotCapture(
+      database,
+      snapshot.id,
+      "conflicting-capture",
+      snapshot.object_key,
+      digest("different-image"),
+    );
+    let failure;
+    for (let step = 0; step < 20; step++) {
+      const report = await backupDaily(fixture.context, exporter());
+      if (report.attention.length) {
+        failure = report;
+        break;
+      }
+    }
+    expect(failure?.attention).toEqual(["2026-09-22T00Z"]);
+    expect(
+      database.connection
+        .prepare(
+          "SELECT page_count,object_count,cursor FROM operations_backup_groups WHERE kind='snapshot'",
+        )
+        .get(),
+    ).toEqual({ page_count: 0, object_count: 0, cursor: null });
+  });
+
   it("restores originals, protected snapshots, result artifacts and private metadata without a D1 object registry", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
