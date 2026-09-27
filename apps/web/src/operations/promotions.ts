@@ -8,7 +8,13 @@ import {
   releasePromotionLeaseStatement,
   Service,
 } from "@visonaut/service";
-import { copyVerifiedObject, digestStream, recordEvent, resolveEvents } from "./common.ts";
+import {
+  copyVerifiedObject,
+  digestStream,
+  mapConcurrent,
+  recordEvent,
+  resolveEvents,
+} from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 interface PromotionPosition {
@@ -18,6 +24,7 @@ interface PromotionPosition {
 
 // Keep each pass within the queue consumer's wall time and the promotion lease.
 const maximumPromotionObjectsPerStep = 50;
+const maximumConcurrentPromotionObjects = 5;
 
 interface PromotionPage<Row extends PromotionPosition> {
   cursorId: string;
@@ -193,24 +200,55 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         now: context.now(),
         copyLimit: remainingObjects,
       });
+      const copyGroups = new Map<string, typeof copies>();
       for (const copy of copies) {
-        const result = await copyVerifiedObject({
-          source: context.images,
-          destination: context.images,
-          sourceKey: copy.source_object_key,
-          destinationKey: copy.object_key,
-          maximum: budget.maximumObjectBytes,
-          expectedDigest: copy.digest,
-          expectedBytes: copy.bytes,
-        });
-        await service.recordSnapshotCopy({
-          snapshotId,
-          captureId: copy.capture_id,
-          objectKey: copy.object_key,
-          digest: result.digest,
-        });
-        remainingObjects -= 1;
+        const group = copyGroups.get(copy.object_key);
+        if (!group) {
+          copyGroups.set(copy.object_key, [copy]);
+          continue;
+        }
+        const first = group[0];
+        if (
+          !first ||
+          first.image_id !== copy.image_id ||
+          first.source_object_key !== copy.source_object_key ||
+          first.digest !== copy.digest ||
+          first.bytes !== copy.bytes ||
+          first.content_type !== copy.content_type
+        ) {
+          throw new Error("Protected snapshot copies disagree on shared object metadata.");
+        }
+        group.push(copy);
       }
+      // Captures may share an image, so only one worker writes each protected key.
+      remainingObjects -= copies.length;
+      await mapConcurrent(
+        [...copyGroups.values()],
+        maximumConcurrentPromotionObjects,
+        async (group) => {
+          const copy = group[0];
+          if (!copy) {
+            throw new Error("Missing protected snapshot copy.");
+          }
+          const result = await copyVerifiedObject({
+            source: context.images,
+            destination: context.images,
+            sourceKey: copy.source_object_key,
+            destinationKey: copy.object_key,
+            maximum: budget.maximumObjectBytes,
+            expectedDigest: copy.digest,
+            expectedBytes: copy.bytes,
+          });
+          for (const capture of group) {
+            await service.recordSnapshotCopy({
+              snapshotId,
+              captureId: capture.capture_id,
+              objectKey: capture.object_key,
+              digest: result.digest,
+            });
+          }
+        },
+      );
       const pending = await service.pendingSnapshotCopies(snapshotId, 1);
       if (pending.length) {
         report.deferred.push(candidate.id);
@@ -229,17 +267,22 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
           ORDER BY copy.capture_id LIMIT ?`)
           .bind(snapshotId, remainingObjects + 1)
           .all<{ capture_id: string; object_key: string; digest: string; bytes: number }>();
-        let more = false;
-        for (const copy of verification.results ?? []) {
-          if (remainingObjects < 1) {
-            more = true;
-            break;
-          }
+        const verificationRows = verification.results ?? [];
+        const page = verificationRows.slice(0, remainingObjects);
+        remainingObjects -= page.length;
+        await mapConcurrent(page, maximumConcurrentPromotionObjects, async (copy) => {
           const object = await context.images.get(copy.object_key);
-          if (!object) throw new Error("A protected snapshot object disappeared before promotion.");
+          if (!object) {
+            throw new Error("A protected snapshot object disappeared before promotion.");
+          }
           const verified = await digestStream(object.body, budget.maximumObjectBytes);
-          if (verified.digest !== copy.digest || verified.bytes !== copy.bytes)
+          if (verified.digest !== copy.digest || verified.bytes !== copy.bytes) {
             throw new Error("Protected snapshot integrity changed.");
+          }
+        });
+        const last = page.at(-1);
+        if (last) {
+          // Only advance the cursor after every object in the page passes.
           await atomic(database, [
             assertion(
               database,
@@ -248,11 +291,10 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
             ),
             database
               .prepare("UPDATE operations_promotions SET verified_through=? WHERE snapshot_id=?")
-              .bind(copy.capture_id, snapshotId),
+              .bind(last.capture_id, snapshotId),
           ]);
-          remainingObjects -= 1;
         }
-        if (more) {
+        if (verificationRows.length > page.length) {
           report.hasMore = true;
           report.deferred.push(candidate.id);
           continue;
