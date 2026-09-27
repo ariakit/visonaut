@@ -137,10 +137,12 @@ it("enables automatic Ariakit pre-run checks only in production", () => {
   const workflow = JSON.parse(String(production.vars?.VISONAUT_WORKFLOW_OWNED));
   expect(workflow).toMatchObject({
     reusableWorkflowRef:
-      "ariakit/ariakit/.github/workflows/app.yml@01b78334223b47515b41f63f587308050a5dcdad",
-    reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
-    additionalTrustedWorkflowBlobSha: "bea39018ccd6f902c2c904afa263b3d01f99c017",
+      "ariakit/ariakit/.github/workflows/app.yml@bea39018ccd6f902c2c904afa263b3d01f99c017",
+    reusableWorkflowSha: "bea39018ccd6f902c2c904afa263b3d01f99c017",
+    additionalTrustedWorkflowBlobSha: "697172dfed281348d79bfe8ce61f9ccf21537c5f",
   });
+  expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_REF).toBe(workflow.reusableWorkflowRef);
+  expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_SHA).toBe(workflow.reusableWorkflowSha);
 });
 
 beforeEach(async () => {
