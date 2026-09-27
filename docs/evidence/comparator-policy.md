@@ -1,38 +1,38 @@
 # Selected comparator policy
 
-Selected on September 22, 2026 under the user's authorization to select and document measured limits for [issue #1](https://github.com/ariakit/ariviso/issues/1). This decision selects comparison tolerance. It does not mark the complete capture, memory, cost, or launch gates as passed.
+The original policy was selected on September 22, 2026 for [issue #1](https://github.com/ariakit/visonaut/issues/1). On September 27, the user requested a conservative tolerance after an Ariakit main capture differed at two of 179,280 pixels by one or two color levels. This record replaces the selected exact policy. It does not mark capture, memory, cost, or launch gates as passed. The production project and trusted capture configuration have not been switched by this change.
 
-Use the following immutable trusted service policy:
+Use this immutable trusted service policy for the next controlled policy transition:
 
 ```json
 {
-  "id": "visible-exact-v1",
+  "id": "visible-two-pixel-v2",
   "channelThreshold": 0,
-  "maxChangedPixels": 0,
-  "maxChangedRatio": 0
+  "maxChangedPixels": 2,
+  "maxChangedRatio": 0.0005
 }
 ```
 
-The comparator measures visible integer RGBA composites on both black and white backgrounds. Fully transparent hidden RGB does not count as a visible change. A dimension change always needs review. The service owns the effective policy and masks; a pull request cannot change its own tolerance. Preserve policy and codec identities with each immutable comparison revision.
+The canonical JSON SHA-256 policy digest is `9c4627104b4af7760a2891bd897dded9a5b449a68c1d7931e04d45fcca49c4bd`. The exported `selectedComparisonPolicy` in `packages/compare/src/compare.ts` contains the same values. A result is unchanged only when **both** the changed-pixel count is at most 2 and its ratio is at most 0.0005. The reported pair has a ratio of about 0.0000112, so it is within both limits. A one-pixel difference in an image smaller than 2,000 pixels still needs review. A three-pixel difference needs review at every image size.
 
-## Measured tradeoff
+The comparator measures visible integer RGBA composites on black and white backgrounds. Fully transparent hidden RGB does not count as a visible change. `channelThreshold: 0` keeps every visible one-level change in the changed-pixel count and red mask. A dimension change always needs review. A 16-pixel missing stroke on a large full-page image also exceeds the absolute cap. The two-pixel cap applies to full-page captures too. Ariakit's former Playwright helper used the same 0.0005 ratio for ordinary captures but zero allowance for captures larger than the viewport; this selection deliberately changes that exception.
 
-The [injected-defect study](../../packages/compare/evidence/corpus-study.json) tests four defect types across 25 historical images: a one-level change, one changed pixel, a missing stroke, and an alpha change. The [actual Ariakit matrix](./ariakit-capture-measurement/README.md) contains three full passes across the current 3,582 authored captures, with three pair comparisons per capture. It ran on one runner per browser. Exact captured originals and profiles were validated with the service comparator locally; this was not hosted comparator execution or a trusted upload test.
+## Evidence and tradeoff
 
-| Policy                        | Injected defects missed, out of 100 | Changed repeated-capture pairs, out of 10,746 | Visible changed pixels |
-| ----------------------------- | ----------------------------------: | --------------------------------------------: | ---------------------: |
-| Exact visible pixels          |                                   0 |                                            12 |                     86 |
-| One-level channel tolerance   |                                  50 |                                             8 |                     70 |
-| Prior ratio allowance, 0.0005 |                                  98 |                                             0 |                     86 |
+The [injected-defect study](../../packages/compare/evidence/corpus-study.json) tested four defect types across 25 historical images. The [repeated Ariakit matrix](./ariakit-capture-measurement/README.md) compared three complete passes of 3,582 authored captures. These older studies tested exact visible pixels, a one-level channel tolerance, and the former unbounded 0.0005 ratio. They did not evaluate this new two-pixel cap against the private originals.
 
-All repeated-capture differences occurred in Chromium. Firefox and WebKit matched exactly. The source and capture configuration were unchanged within each browser's three passes. The locations suggest capture variation around rounded input and checkbox edges, but this is an inference, not proof that every changed pixel is harmless. The ratio policy classified all repeated pairs as unchanged while still counting the 86 changed pixels.
+| Studied policy                 | Injected defects missed, out of 100 | Changed repeated-capture pairs, out of 10,746 |
+| ------------------------------ | ----------------------------------: | --------------------------------------------: |
+| Exact visible pixels           |                                   0 |                                            12 |
+| One-level channel tolerance    |                                  50 |                                             8 |
+| Former ratio allowance, 0.0005 |                                  98 |                                             0 |
 
-Select exact visible comparison because the alternatives missed known small defects and only removed a small number of observed changed pairs. The operator must review the remaining differences. These samples do not establish a production false-positive rate, a fresh-runner noise rate, or sensitivity to every possible defect. Four completed PNG attachments from failed Firefox attempts remain in the encrypted evidence; successful retries supply the selected final captures.
+All repeated-capture differences occurred in Chromium. Their locations suggest capture variation around rounded input and checkbox edges, but that is an inference. The new policy is narrower than the former ratio-only policy starting at 6,000 pixels, where the former ratio allows three changed pixels. It can still miss an intentional one- or two-pixel defect, even when the changed color is strong. The selected cap trades that small blind spot for avoiding the reported two-pixel review. It does not establish how many of the 12 historical repeated pairs would be tolerated or a production false-positive rate. The prior study and its raw evidence remain unchanged.
 
-## Scope and change control
+## Policy transition and stored history
 
-The current authored invocation is 3,582 captures. The design's approximately 10,580 captures and the separate tenfold 35,820 scenario are expanded workload cases. They are not additional distinct tests measured by this capture study.
+The service stores the policy digest in each immutable comparison and exact acceptance tuple. Earlier failed or approved comparisons keep their original policy and outcome. A new policy needs its own registered ID and digest, then a new comparison; updating the policy document or code constant alone does not change an existing result.
 
-Zero visible tolerance does not permit a sequence of tolerated visible changes to move the baseline. Human acceptance can change the accepted bytes through the normal review and promotion rules. A later policy change needs an explicit new identity and measured rationale; it must not silently turn an existing failed comparison green.
+Capture profiles also include the policy digest. On a new live comparison, the service permits an unchanged pixel result across old and new profile digests only after it verifies both stored profile records, checks that the candidate names the new comparison policy, and confirms that every rendering field is equal. A font, browser, viewport, capture-option, or engine change still needs review. Historical recomparisons of stored runs remain read-only and use their immutable captured originals and the comparison policy recorded for that new revision. This permits the 1,058 existing Ariakit variants to meet a new policy without a policy-only mass review while preserving real image and environment changes for review.
 
-Encoded-byte, decoded-pixel, CPU, peak-memory, latency, admission, and cost bounds remain separate decisions. The provisional decoder limits must not be reported as final solely because these captured images fit them. E01 stays partial until the runtime and peak-memory requirements are met.
+The live switch must register the new policy and align the trusted capture policy digest with the project policy during a controlled transition. Existing comparisons in flight must finish or be invalidated before the project policy changes. This work does not update the live project record or deploy a new capture configuration.

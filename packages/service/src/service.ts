@@ -1,3 +1,4 @@
+import { canonicalJson, digestJson, validateProfile } from "@visonaut/protocol";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
 import {
   historicalGuard,
@@ -1132,6 +1133,51 @@ export class Service {
     });
   }
 
+  private async sameRenderingProfileAcrossPolicies(row: ReviewRow, comparison: ComparisonRow) {
+    const profiles = await this.sql(
+      `SELECT reference.profile_digest AS reference_digest,
+        candidate.profile_digest AS candidate_digest,
+        COALESCE(reference_profile.profile_json, json_extract(reference.metadata_json, '$.profile')) AS reference_json,
+        COALESCE(candidate_profile.profile_json, json_extract(candidate.metadata_json, '$.profile')) AS candidate_json
+       FROM visonaut_captures reference
+       JOIN visonaut_captures candidate ON candidate.id = ?
+       LEFT JOIN visonaut_capture_profiles reference_profile ON reference_profile.digest = reference.profile_digest
+       LEFT JOIN visonaut_capture_profiles candidate_profile ON candidate_profile.digest = candidate.profile_digest
+       WHERE reference.id = ?`,
+      [row.candidate_capture_id, row.reference_capture_id],
+    ).first<{
+      reference_digest: string;
+      candidate_digest: string;
+      reference_json: string | null;
+      candidate_json: string | null;
+    }>();
+    if (!profiles?.reference_json || !profiles.candidate_json) return false;
+    try {
+      const reference: unknown = JSON.parse(profiles.reference_json);
+      const candidate: unknown = JSON.parse(profiles.candidate_json);
+      validateProfile(reference);
+      validateProfile(candidate);
+      if ((await digestJson(reference)) !== profiles.reference_digest) return false;
+      if ((await digestJson(candidate)) !== profiles.candidate_digest) return false;
+      if (
+        comparison.purpose !== "historical" &&
+        candidate.comparisonPolicyDigest !== comparison.policy_digest
+      ) {
+        return false;
+      }
+      // A policy change does not change how the browser renders a capture.
+      const renderingFields = (profile: typeof reference) =>
+        Object.fromEntries(
+          Object.entries(profile).filter(([key]) => key !== "comparisonPolicyDigest"),
+        );
+      return (
+        canonicalJson(renderingFields(reference)) === canonicalJson(renderingFields(candidate))
+      );
+    } catch {
+      return false;
+    }
+  }
+
   async commitComparisonResult(input: {
     taskId: string;
     leaseOwner: string;
@@ -1146,11 +1192,13 @@ export class Service {
       referenceProfileDigest: string | null;
       candidateProfileDigest: string | null;
     };
+    const comparison = await this.comparison(row.comparison_id);
     const result =
-      tuple.referenceProfileDigest !== tuple.candidateProfileDigest
+      input.result.outcome === "unchanged" &&
+      tuple.referenceProfileDigest !== tuple.candidateProfileDigest &&
+      !(await this.sameRenderingProfileAcrossPolicies(row, comparison))
         ? { ...input.result, outcome: "changed" as const }
         : input.result;
-    const comparison = await this.comparison(row.comparison_id);
     const run = await this.run(comparison.run_id);
     if (row.result_json) {
       if (row.result_json !== JSON.stringify(result)) {

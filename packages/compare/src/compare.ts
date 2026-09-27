@@ -11,6 +11,14 @@ export interface ComparisonPolicy {
   maxChangedRatio: number;
 }
 
+// Bound the former ratio allowance to two visible pixels per capture.
+export const selectedComparisonPolicy = {
+  id: "visible-two-pixel-v2",
+  channelThreshold: 0,
+  maxChangedPixels: 2,
+  maxChangedRatio: 0.0005,
+} satisfies ComparisonPolicy;
+
 export interface ComparisonResult {
   outcome: "unchanged" | "changed";
   changedPixels: number;
