@@ -7,15 +7,15 @@ export interface ComparisonPolicy {
   id: string;
   /** Maximum per-channel visible difference, in 8-bit channel units. */
   channelThreshold: number;
-  maxChangedPixels: number;
+  /** Omit to use only the changed-pixel ratio. */
+  maxChangedPixels?: number;
   maxChangedRatio: number;
 }
 
-// Bound the former ratio allowance to two visible pixels per capture.
+// Use Ariakit's former 0.0005 ratio allowance without a pixel-count cap.
 export const selectedComparisonPolicy = {
-  id: "visible-two-pixel-v2",
+  id: "visible-ratio-v3",
   channelThreshold: 0,
-  maxChangedPixels: 2,
   maxChangedRatio: 0.0005,
 } satisfies ComparisonPolicy;
 
@@ -38,8 +38,8 @@ export function validatePolicy(policy: ComparisonPolicy) {
     !Number.isFinite(policy.channelThreshold) ||
     policy.channelThreshold < 0 ||
     policy.channelThreshold > 255 ||
-    !Number.isSafeInteger(policy.maxChangedPixels) ||
-    policy.maxChangedPixels < 0 ||
+    (policy.maxChangedPixels !== undefined &&
+      (!Number.isSafeInteger(policy.maxChangedPixels) || policy.maxChangedPixels < 0)) ||
     !Number.isFinite(policy.maxChangedRatio) ||
     policy.maxChangedRatio < 0 ||
     policy.maxChangedRatio > 1
@@ -93,10 +93,10 @@ export function compareImages(
     changedPixels += 1;
   }
   const ratio = changedPixels / (candidate.width * candidate.height);
+  const exceedsPixelLimit =
+    policy.maxChangedPixels !== undefined && changedPixels > policy.maxChangedPixels;
   const outcome =
-    sizeChanged || changedPixels > policy.maxChangedPixels || ratio > policy.maxChangedRatio
-      ? "changed"
-      : "unchanged";
+    sizeChanged || exceedsPixelLimit || ratio > policy.maxChangedRatio ? "changed" : "unchanged";
   return {
     outcome,
     changedPixels,

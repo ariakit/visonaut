@@ -72,7 +72,7 @@ interface ImageRow {
 export interface ComparisonPolicy {
   id: string;
   channelThreshold: number;
-  maxChangedPixels: number;
+  maxChangedPixels?: number;
   maxChangedRatio: number;
 }
 
@@ -188,8 +188,8 @@ export class Service {
       !Number.isFinite(policy.channelThreshold) ||
       policy.channelThreshold < 0 ||
       policy.channelThreshold > 255 ||
-      !Number.isSafeInteger(policy.maxChangedPixels) ||
-      policy.maxChangedPixels < 0 ||
+      (policy.maxChangedPixels !== undefined &&
+        (!Number.isSafeInteger(policy.maxChangedPixels) || policy.maxChangedPixels < 0)) ||
       !Number.isFinite(policy.maxChangedRatio) ||
       policy.maxChangedRatio < 0 ||
       policy.maxChangedRatio > 1

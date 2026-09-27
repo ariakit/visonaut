@@ -5,6 +5,8 @@ import {
   compareImages,
   createThumbnail,
   decodeImage,
+  imageLimits,
+  selectedComparisonPolicy,
   validateImage,
   type ImageCodecs,
 } from "@visonaut/compare";
@@ -118,6 +120,72 @@ it("sends verified originals and commits repeat-safe Container artifacts", async
   expect(first.artifacts.map((entry) => entry.role)).toEqual(["thumbnail"]);
   expect(images.objects.size).toBe(2);
   expect(images.objects.get("runs/run/original")).toEqual(original);
+});
+
+it("adapts a ratio-only policy for the pinned Container", async () => {
+  const images = new Images();
+  const referencePixels = {
+    width: 432,
+    height: 156,
+    data: new Uint8ClampedArray(432 * 156 * 4),
+  };
+  referencePixels.data.fill(255);
+  const candidatePixels = { ...referencePixels, data: referencePixels.data.slice() };
+  for (let pixel = 0; pixel < 4; pixel += 1) {
+    candidatePixels.data[pixel * 4] = 0;
+  }
+  const register = async (key: string, pixels: typeof referencePixels) => {
+    const bytes = Uint8Array.from(new Uint8Array(await codecs.encodePng(pixels)));
+    const validated = await validateImage(bytes);
+    images.objects.set(key, bytes);
+    return {
+      imageId: key,
+      objectKey: key,
+      digest: validated.digest,
+      width: validated.width,
+      height: validated.height,
+      bytes: bytes.length,
+      contentType: "image/png" as const,
+    };
+  };
+  const ratioTask: ComparisonTask = {
+    ...task,
+    id: "ratio-task",
+    policy: selectedComparisonPolicy,
+    reference: await register("runs/run/reference", referencePixels),
+    candidate: await register("runs/run/candidate", candidatePixels),
+  };
+  const thumbnail = artifact(
+    new Uint8Array(await codecs.encodePng(createThumbnail(candidatePixels))),
+  );
+  const container: ContainerTransport = {
+    async fetch(request) {
+      const payload = await request.json();
+      if (!Number.isSafeInteger(payload.policy.maxChangedPixels)) {
+        return Response.json({ error: "Invalid trusted comparison policy." }, { status: 422 });
+      }
+      expect(payload.policy.maxChangedPixels).toBe(Number.MAX_SAFE_INTEGER);
+      expect(payload.policy.maxChangedPixels).toBeGreaterThan(imageLimits.maxPixels);
+      const comparison = compareImages(referencePixels, candidatePixels, payload.policy);
+      return Response.json({
+        outcome: comparison.outcome,
+        changedPixels: comparison.changedPixels,
+        ratio: comparison.ratio,
+        engineVersion: comparison.engineVersion,
+        codecVersion,
+        thumbnail,
+        mask: null,
+      });
+    },
+  };
+  const processed = await processComparisonTaskInContainer({ task: ratioTask, images, container });
+  expect(processed.result).toMatchObject({
+    outcome: "unchanged",
+    changedPixels: 4,
+    ratio: 4 / 67_392,
+    maskExpected: false,
+  });
+  expect(ratioTask.policy).toEqual(selectedComparisonPolicy);
 });
 
 it("writes a validated full-size mask for a changed pair", async () => {

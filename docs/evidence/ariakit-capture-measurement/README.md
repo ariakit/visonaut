@@ -30,7 +30,7 @@ The separate intentional-defect study in [corpus-study.json](../../../packages/c
 { "channelThreshold": 0, "maxChangedPixels": 0, "maxChangedRatio": 0 }
 ```
 
-The [selected comparator policy](../comparator-policy.md) was revised on September 27 after a later two-pixel Ariakit main difference. That revision does not change this frozen study or imply that its new cap was measured against these private originals.
+The [selected comparator policy](../comparator-policy.md) was revised on September 27 after later small Ariakit main differences. The final selection uses the studied 0.0005 ratio without an absolute pixel cap. This revision does not change the frozen study or establish a production false-positive rate.
 
 All three invocations for a browser used the same runner job. Variation across fresh runners and future image updates remains unmeasured. Local Node 24.18.0 CPU, RSS, and WASM measurements are not Cloudflare Worker CPU or authoritative peak memory. PNG checks do not replace the separate lossless WebP, alpha, color, corrupt-file, dimension-limit, and tolerated-drift evidence.
 
