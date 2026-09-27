@@ -255,42 +255,32 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     const changedRuns = runs.results.filter(
       (run) => pull.state !== "closed" && testedSha && run.tested_sha !== testedSha,
     );
-    let baseSha: string | null = null;
     let sourceSha: string | null = null;
     if (changedRuns.length) {
-      const mainRef = object(
-        await github.request(`/repos/${github.repository}/git/ref/heads/main`),
-      );
       const mergeRef = object(
         await github.request(`/repos/${github.repository}/git/ref/pull/${number}/merge`),
       );
-      const currentBase = object(mainRef.object).sha;
       const currentHead = object(pull.head).sha;
       if (
         !testedSha ||
         !/^[a-f0-9]{40}$/.test(testedSha) ||
-        typeof currentBase !== "string" ||
-        !/^[a-f0-9]{40}$/.test(currentBase) ||
         typeof currentHead !== "string" ||
         !/^[a-f0-9]{40}$/.test(currentHead) ||
         object(mergeRef.object).sha !== testedSha
       ) {
         throw new SecurityError("merge_not_ready", 503, "The pull request merge is not ready.");
       }
-      baseSha = currentBase;
       sourceSha = currentHead;
     }
     for (const run of runs.results) {
       const equivalent =
         testedSha &&
-        baseSha &&
         sourceSha &&
         run.tested_sha !== testedSha &&
         (await sameCurrentMergeTree({
           github,
           testedSha: run.tested_sha,
           currentSha: testedSha,
-          baseSha,
           sourceSha,
         }));
       if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha && !equivalent)) {

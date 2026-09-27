@@ -166,40 +166,36 @@ export async function verifyLineage(
 
   if (target.event === "pull_request" && !frozen) {
     const current = await pull(integer(target.pullRequestNumber, 1));
-    const mainRef = object(await request(`/repos/${github.repository}/git/ref/heads/main`));
     if (
       !targetsMain(current) ||
       current.state !== "open" ||
-      object(current.head).sha !== target.sourceHead ||
-      object(mainRef.object).sha !== target.targetHead
+      object(current.head).sha !== target.sourceHead
     ) {
       throw new SecurityError(
         "stale_pull_request",
         409,
-        "The pull request head or target changed during verification.",
+        "The pull request head or target branch changed during verification.",
       );
     }
     const currentSha = sha(current.merge_commit_sha);
-    if (currentSha !== target.testedSha) {
-      const ref = object(
-        await request(`/repos/${github.repository}/git/ref/pull/${target.pullRequestNumber}/merge`),
+    const ref = object(
+      await request(`/repos/${github.repository}/git/ref/pull/${target.pullRequestNumber}/merge`),
+    );
+    if (
+      object(ref.object).sha !== currentSha ||
+      !(await sameCurrentMergeTree({
+        github: { repository: github.repository, request },
+        testedSha: target.testedSha,
+        currentSha,
+        testedBaseSha: target.targetHead,
+        sourceSha: target.sourceHead,
+      }))
+    ) {
+      throw new SecurityError(
+        "stale_pull_request",
+        409,
+        "The pull request merge contents changed during verification.",
       );
-      if (
-        object(ref.object).sha !== currentSha ||
-        !(await sameCurrentMergeTree({
-          github: { repository: github.repository, request },
-          testedSha: target.testedSha,
-          currentSha,
-          baseSha: target.targetHead,
-          sourceSha: target.sourceHead,
-        }))
-      ) {
-        throw new SecurityError(
-          "stale_pull_request",
-          409,
-          "The pull request merge contents changed during verification.",
-        );
-      }
     }
   }
   if (target.event === "merge_group" && !frozen) {

@@ -249,6 +249,7 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
   it("retains same-PR lineage after source-head updates but refuses a changed current target", async () => {
     const test = fixture();
     test.pulls.set(1, pull(1, { merged: false, merge: oid(31) }));
+    test.setRef(oid(31));
     test.pulls.set(3, pull(3, { merged: false }));
     const sources = [
       source("old-pr", "pull_request", oid(50), 1),
@@ -265,15 +266,28 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
       { code: "stale_pull_request" },
     );
   });
-  it("uses current main when the live PR base field is stale", async () => {
+  it("keeps the tested PR base when main advances and the live PR base field is stale", async () => {
     const test = fixture();
     const current = pull(1, { merged: false, merge: oid(31) });
     current.base.sha = oid(99);
     test.pulls.set(1, current);
+    test.setRef(oid(31));
     expect((await verifyLineage(test.github, target("pull_request"), [])).proof.testedSha).toBe(
       oid(31),
     );
+    test.parents.set(oid(98), [base]);
     test.setMain(oid(98));
+    await expect(verifyLineage(test.github, target("pull_request"), [])).resolves.toMatchObject({
+      proof: { testedSha: oid(31) },
+    });
+    test.setMain(oid(97));
+    await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
+      code: "stale_pull_request",
+    });
+  });
+  it("rejects a PR whose merge ref no longer matches GitHub's merge SHA", async () => {
+    const test = fixture();
+    test.pulls.set(1, pull(1, { merged: false, merge: oid(31) }));
     await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
       code: "stale_pull_request",
     });
@@ -281,7 +295,10 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
   it("keeps a PR lineage when GitHub regenerates an equivalent merge commit", async () => {
     const test = fixture();
     const regenerated = oid(32);
-    test.parents.set(regenerated, [base, firstHead]);
+    const advancedMain = oid(98);
+    test.parents.set(advancedMain, [base]);
+    test.setMain(advancedMain);
+    test.parents.set(regenerated, [advancedMain, firstHead]);
     test.trees.set(regenerated, oid(80));
     test.pulls.set(1, pull(1, { merged: false, merge: regenerated }));
     test.setRef(regenerated);
