@@ -25,6 +25,24 @@ interface StagedImage {
 /** Distinguish lost validated bytes from retryable GitHub or D1 failures. */
 class StagedOriginalUnavailableError extends IncompleteError {}
 
+// A batch overlaps R2 reads without buffering an entire large shard in memory.
+const maximumMaterializationReads = 4;
+const maximumMaterializationReadBytes = 8 * 1024 * 1024;
+
+export function materializationBatchEnd(images: readonly { bytes: number }[], offset: number) {
+  let end = offset;
+  let batchBytes = 0;
+  while (end < images.length && end - offset < maximumMaterializationReads) {
+    const image = images[end];
+    if (!image) throw new IncompleteError("The validated staged image set changed.");
+    // A single image remains a batch when its declared size exceeds the cap.
+    if (end > offset && batchBytes + image.bytes > maximumMaterializationReadBytes) break;
+    batchBytes += image.bytes;
+    end += 1;
+  }
+  return end;
+}
+
 async function leaseStagedSources(context: ApiContext, stagedRunId: string) {
   const target = await context.database
     .prepare(
@@ -77,7 +95,7 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
     throw new IncompleteError("The validated staged image set changed.");
   }
   const ids = new Map<string, string>();
-  for (const image of images.results) {
+  const verifyImage = async (image: StagedImage) => {
     const declared = expected.get(image.digest);
     if (
       !declared ||
@@ -97,25 +115,40 @@ async function materializeImages(context: ApiContext, runId: string, bundle: Rec
     if ((await sha256(bytes)) !== image.digest) {
       throw new StagedOriginalUnavailableError("A validated original image changed after upload.");
     }
-    const imageId = bundle.sourceRunId === runId ? image.image_id : `${runId}:${image.image_id}`;
-    const objectKey =
-      bundle.sourceRunId === runId ? image.object_key : `runs/${runId}/images/${imageId}`;
-    if (bundle.sourceRunId !== runId) {
-      await context.images.put(objectKey, bytes, {
-        httpMetadata: { contentType: image.media_type },
-      });
+    return { image, bytes };
+  };
+  for (let offset = 0; offset < images.results.length;) {
+    const end = materializationBatchEnd(images.results, offset);
+    const results = await Promise.allSettled(images.results.slice(offset, end).map(verifyImage));
+    const verified: Array<{ image: StagedImage; bytes: Uint8Array<ArrayBuffer> }> = [];
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+      verified.push(result.value);
     }
-    await context.service.registerImage({
-      id: imageId,
-      runId,
-      digest: image.digest,
-      objectKey,
-      contentType: image.media_type,
-      bytes: image.bytes,
-      width: image.width,
-      height: image.height,
-    });
-    ids.set(image.digest, imageId);
+    // Keep copies and registrations in the original order after every source
+    // in this batch has passed its full digest check.
+    for (const { image, bytes } of verified) {
+      const imageId = bundle.sourceRunId === runId ? image.image_id : `${runId}:${image.image_id}`;
+      const objectKey =
+        bundle.sourceRunId === runId ? image.object_key : `runs/${runId}/images/${imageId}`;
+      if (bundle.sourceRunId !== runId) {
+        await context.images.put(objectKey, bytes, {
+          httpMetadata: { contentType: image.media_type },
+        });
+      }
+      await context.service.registerImage({
+        id: imageId,
+        runId,
+        digest: image.digest,
+        objectKey,
+        contentType: image.media_type,
+        bytes: image.bytes,
+        width: image.width,
+        height: image.height,
+      });
+      ids.set(image.digest, imageId);
+    }
+    offset = end;
   }
   return ids;
 }

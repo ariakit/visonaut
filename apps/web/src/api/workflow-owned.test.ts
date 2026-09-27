@@ -27,7 +27,11 @@ import {
   workflowConfiguration,
 } from "./workflow-owned.js";
 import { reconcileWorkflowJobSet } from "./workflow-reconcile.js";
-import { materializeWorkflowRun, reconcileStagedWorkflows } from "./workflow-materialize.js";
+import {
+  materializationBatchEnd,
+  materializeWorkflowRun,
+  reconcileStagedWorkflows,
+} from "./workflow-materialize.js";
 import {
   expireStagedAttempts,
   stagedAttemptRetentionMs,
@@ -1638,6 +1642,149 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
+  it("overlaps bounded original reads before registering their images", async () => {
+    const test = await fixture();
+    const extra = await Promise.all(
+      [
+        "../test/fixtures/rgba.webp",
+        "../test/fixtures/rgba-profiled.webp",
+        "../evidence/browser/chromium.png",
+      ].map(async (path) => {
+        const bytes = new Uint8Array(
+          await readFile(new URL(path, import.meta.resolve("@visonaut/compare"))),
+        );
+        return { bytes, validated: await validateImage(bytes) };
+      }),
+    );
+    const assets = [
+      { bytes: png, validated: image },
+      { bytes: profiledPng, validated: profiledImage },
+      ...extra,
+    ];
+    test.context.comparator = {
+      async fetch(_input, options) {
+        if (!(options?.body instanceof Uint8Array)) {
+          throw new Error("Expected an original image body.");
+        }
+        const validated = await validateImage(new Uint8Array(options.body));
+        return Response.json({
+          digest: validated.digest,
+          bytes: validated.original.byteLength,
+          width: validated.width,
+          height: validated.height,
+          contentType: validated.format === "png" ? "image/png" : "image/webp",
+        });
+      },
+    };
+    const original = test.manifest.captures[0];
+    if (!original) throw new Error("Expected the fixture capture.");
+    test.manifest.captures = assets.map(({ validated }, index) => ({
+      ...original,
+      itemKey: `dialog/materialize-${index}`,
+      ordinal: index,
+      image: {
+        digest: validated.digest,
+        mediaType: validated.format === "png" ? ("image/png" as const) : ("image/webp" as const),
+        bytes: assets[index]?.bytes.byteLength ?? 0,
+        width: validated.width,
+        height: validated.height,
+        path: `images/materialize-${index}.${validated.format}`,
+      },
+    }));
+    const byDigest = new Map(assets.map((asset) => [asset.validated.digest, asset]));
+    const declaration = await declareStaged(
+      test.post(test.manifest),
+      test.context,
+      test.runId,
+      test.shardKey,
+    );
+    const declared = (await declaration.json()) as {
+      manifestDigest: string;
+      uploads: Array<{ imageDigest: string; ticket: string }>;
+    };
+    expect(declared.uploads).toHaveLength(5);
+    for (const upload of declared.uploads) {
+      const asset = byDigest.get(upload.imageDigest);
+      if (!asset) throw new Error("Expected a declared image asset.");
+      const response = await uploadStagedImage(
+        new Request("https://preview.example", {
+          method: "PUT",
+          headers: {
+            authorization: `Bearer ${test.capability}`,
+            "content-type": asset.validated.format === "png" ? "image/png" : "image/webp",
+          },
+          body: asset.bytes,
+        }),
+        test.context,
+        upload.ticket,
+      );
+      expect(response.status).toBe(204);
+    }
+    await finalizeStaged(
+      test.post({
+        schemaVersion: "1.0",
+        shardKey: test.shardKey,
+        manifestDigest: declared.manifestDigest,
+      }),
+      test.context,
+      test.runId,
+    );
+    await terminalGitHub(test, declared.manifestDigest);
+    const staged = await database
+      .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
+      .bind(test.runId)
+      .all<{ object_key: string }>();
+    const stagedKeys = new Set(staged.results.map((row) => row.object_key));
+    const storage = test.context.images;
+    let reads = 0;
+    let activeReads = 0;
+    let maximumActiveReads = 0;
+    let releaseReads = () => {};
+    const blockedReads = new Promise<void>((resolve) => {
+      releaseReads = resolve;
+    });
+    test.context.images = {
+      async get(key) {
+        const stored = await storage.get(key);
+        if (stagedKeys.has(key)) {
+          reads += 1;
+          activeReads += 1;
+          maximumActiveReads = Math.max(maximumActiveReads, activeReads);
+          await blockedReads;
+          activeReads -= 1;
+        }
+        return stored;
+      },
+      put: (key, bytes, options) => storage.put(key, bytes, options),
+      delete: (key) => storage.delete(key),
+    };
+    const operation = materializeWorkflowRun(test.context, test.runId);
+    try {
+      await vi.waitFor(() => expect(reads).toBe(4), { timeout: 5000 });
+      expect(maximumActiveReads).toBe(4);
+      expect(
+        await database
+          .prepare("SELECT COUNT(*) AS count FROM visonaut_images WHERE run_id = ?")
+          .bind(test.runId)
+          .first<{ count: number }>(),
+      ).toEqual({ count: 0 });
+    } finally {
+      releaseReads();
+      await operation.catch(() => undefined);
+    }
+    expect((await operation).sealed_at).not.toBeNull();
+    expect(reads).toBe(5);
+    expect(maximumActiveReads).toBe(4);
+  });
+
+  it("limits buffered originals by declared bytes as well as count", () => {
+    const mebibyte = 1024 * 1024;
+    const images = [{ bytes: 3 * mebibyte }, { bytes: 3 * mebibyte }, { bytes: 3 * mebibyte }];
+    expect(materializationBatchEnd(images, 0)).toBe(2);
+    expect(materializationBatchEnd(images, 2)).toBe(3);
+    expect(materializationBatchEnd([{ bytes: 9 * mebibyte }, { bytes: 1 }], 0)).toBe(1);
+  });
+
   it("resolves retry alerts for submitted attempts whose App check failed", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);
@@ -1682,7 +1829,7 @@ describe("workflow-owned upload staging", () => {
     expect(alert?.resolved_at).not.toBeNull();
   });
 
-  it("recovers a transient missing original before the fifth retry", async () => {
+  it("recovers a transient corrupted original before the fifth retry", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);
     await terminalGitHub(test, manifestDigest);
@@ -1691,7 +1838,9 @@ describe("workflow-owned upload staging", () => {
       .bind(test.runId)
       .first<{ object_key: string }>();
     if (!stored) throw new Error("Expected the staged original.");
-    await images.delete(stored.object_key);
+    const corrupted = new Uint8Array(png);
+    corrupted[corrupted.length - 1] = corrupted[corrupted.length - 1]! ^ 1;
+    await images.put(stored.object_key, corrupted);
     const result = await reconcileStagedWorkflows(test.context, 1);
     expect(result.errors).toEqual([{ runId: test.runId, code: "incomplete" }]);
     expect(await test.context.service.run(test.runId)).toMatchObject({
