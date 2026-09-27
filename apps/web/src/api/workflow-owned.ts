@@ -115,14 +115,8 @@ export function workflowConfiguration(context: ApiContext) {
     (configuration.trustedWorkflowPath !== undefined &&
       configuration.reusableWorkflowRef !==
         `${context.configuration.github.repository}/${configuration.trustedWorkflowPath}@${configuration.reusableWorkflowSha}`) ||
-    // The older Ariakit diagnostic pin remains valid until the direct app jobs cut over.
-    !(
-      configuration.reusableWorkflowRef.startsWith(
-        `${context.configuration.github.repository}/.github/workflows/`,
-      ) ||
-      (context.configuration.github.repository === "ariakit/ariakit" &&
-        configuration.reusableWorkflowRef ===
-          `ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${configuration.reusableWorkflowSha}`)
+    !configuration.reusableWorkflowRef.startsWith(
+      `${context.configuration.github.repository}/.github/workflows/`,
     ) ||
     !configuration.reusableWorkflowRef.endsWith(`@${configuration.reusableWorkflowSha}`)
   ) {

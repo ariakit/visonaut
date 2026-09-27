@@ -832,17 +832,18 @@ function retention(now: number, objectsPerStep: number) {
 }
 
 describe("workflow-owned upload staging", () => {
-  it("accepts only Ariakit's pinned capture workflow across repositories", async () => {
+  it("accepts only a pinned workflow in the configured repository", async () => {
     const test = await fixture();
     const configuration = test.context.configuration.workflowOwned;
     if (!configuration) throw new Error("Expected pinned workflow configuration.");
 
-    const ariakitRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${pin}`;
+    const ariakitRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
     configuration.reusableWorkflowRef = ariakitRef;
     expect(workflowConfiguration(test.context)).toBe(configuration);
 
     for (const ref of [
       `ariakit/other/.github/workflows/visonaut-ariakit.yml@${pin}`,
+      `ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${pin}`,
       `other/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml@${pin}`,
       `ariakit/visonaut-diagnostics/.github/workflows/other.yml@${pin}`,
       `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${pin}`,

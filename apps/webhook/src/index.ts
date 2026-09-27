@@ -14,7 +14,6 @@ interface Destination {
 interface WebhookBindings {
   secret: string;
   ariakitRepositoryId: string;
-  diagnosticsRepositoryId: string;
   serviceRepositoryId: string;
   production: Destination;
   preview: Destination;
@@ -67,12 +66,7 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
   const webhook = await verifyGitHubWebhook({
     request: forward(new URL(request.url).origin),
     secret: bindings.secret,
-    // Keep acknowledging signed events from the installed diagnostics repository.
-    repositoryId: [
-      bindings.ariakitRepositoryId,
-      bindings.diagnosticsRepositoryId,
-      bindings.serviceRepositoryId,
-    ],
+    repositoryId: [bindings.ariakitRepositoryId, bindings.serviceRepositoryId],
   });
   const changed =
     webhook.event === "installation_repositories" ? changedRepositoryIds(webhook.payload) : null;
@@ -80,7 +74,7 @@ export async function routeWebhook(request: Request, bindings: WebhookBindings) 
     !appEvents.has(webhook.event) && !changed
       ? numericId(record(webhook.payload.repository).id)
       : null;
-  // The App receives source and diagnostics repository events, but no review Worker owns them.
+  // The App receives service repository events, but no review Worker owns them.
   const forwardToAriakit =
     appEvents.has(webhook.event) ||
     changed?.has(bindings.ariakitRepositoryId) ||
@@ -117,7 +111,6 @@ export default {
       return await routeWebhook(request, {
         secret: env.GITHUB_WEBHOOK_SECRET,
         ariakitRepositoryId: env.VISONAUT_ARIAKIT_REPOSITORY_ID,
-        diagnosticsRepositoryId: env.VISONAUT_DIAGNOSTICS_REPOSITORY_ID,
         serviceRepositoryId: env.VISONAUT_SERVICE_REPOSITORY_ID,
         production: {
           origin: env.VISONAUT_PRODUCTION_ORIGIN,

@@ -3,7 +3,6 @@ import { test } from "node:test";
 import {
   assertInfrastructure,
   assertStableDurableObjectNamespaces,
-  assertWebhookRetirementPreflight,
   runNonproductionMigrations,
   versionConfiguration,
 } from "./deploy-version.mjs";
@@ -91,64 +90,6 @@ test("preflight refuses changed resource targets and cron expressions", () => {
   );
 });
 
-test("webhook preflight permits only the exact retired diagnostics binding", () => {
-  const webhookConfiguration = {
-    name: "visonaut-webhook",
-    services: [
-      { binding: "PRODUCTION", service: "visonaut" },
-      { binding: "PREVIEW", service: "visonaut-preview" },
-    ],
-  };
-  const current = {
-    bindings: [
-      { type: "service", name: "PRODUCTION", service: "visonaut" },
-      { type: "service", name: "PREVIEW", service: "visonaut-preview" },
-    ],
-  };
-  const previous = {
-    bindings: [
-      ...current.bindings,
-      { type: "service", name: "DIAGNOSTICS", service: "visonaut-diagnostics" },
-    ],
-  };
-  const noSchedules = { schedules: [] };
-  assert.deepEqual(
-    assertWebhookRetirementPreflight(webhookConfiguration, previous, noSchedules),
-    [],
-  );
-  assert.deepEqual(
-    assertWebhookRetirementPreflight(webhookConfiguration, current, noSchedules),
-    [],
-  );
-  assert.throws(
-    () => assertInfrastructure(webhookConfiguration, previous, noSchedules),
-    /Resource bindings differ/,
-  );
-  const wrongTarget = structuredClone(previous);
-  const diagnostics = wrongTarget.bindings.find((binding) => binding.name === "DIAGNOSTICS");
-  assert(diagnostics);
-  diagnostics.service = "other-worker";
-  assert.throws(
-    () => assertWebhookRetirementPreflight(webhookConfiguration, wrongTarget, noSchedules),
-    /Unexpected diagnostics binding/,
-  );
-  const extraBinding = structuredClone(previous);
-  extraBinding.bindings.push({ type: "service", name: "EXTRA", service: "other-worker" });
-  assert.throws(
-    () => assertWebhookRetirementPreflight(webhookConfiguration, extraBinding, noSchedules),
-    /Resource bindings differ/,
-  );
-  assert.throws(
-    () =>
-      assertWebhookRetirementPreflight(
-        { ...webhookConfiguration, name: "visonaut" },
-        previous,
-        noSchedules,
-      ),
-    /Resource bindings differ/,
-  );
-});
-
 test("preflight requires the configured self Durable Object namespace", () => {
   const missingBinding = structuredClone(settings);
   missingBinding.bindings = missingBinding.bindings.filter(
@@ -199,66 +140,57 @@ test("preflight requires the configured self Durable Object namespace", () => {
   );
 });
 
-test("nonproduction web upload applies and verifies migrations with the separate D1 token", () => {
-  for (const [worker, migrationEnvironment] of [
-    ["visonaut-preview", undefined],
-    ["visonaut-diagnostics", "diagnostics"],
-  ]) {
-    const events = [];
-    const target = {
-      ...configuration,
-      name: worker,
-      d1_databases: [
-        {
-          binding: "DB",
-          database_name: worker,
-          database_id: "target-database-id",
-        },
-      ],
-    };
-    const source = {
-      name: worker,
-      d1_databases: [
-        {
-          binding: "DB",
-          database_name: worker,
-          database_id: "target-database-id",
-          migrations_dir: "migrations",
-        },
-      ],
-    };
-    runNonproductionMigrations({
-      expectedName: worker,
-      configuration: target,
-      sourceConfiguration: source,
-      sourceConfigPath: "/workspace/apps/web/wrangler.jsonc",
-      wranglerPath: "/workspace/node_modules/wrangler/bin/wrangler.js",
-      environment: {
-        CLOUDFLARE_API_TOKEN: "worker-token",
-        CLOUDFLARE_MIGRATIONS_API_TOKEN: "migration-token",
+test("preview web upload applies and verifies migrations with the separate D1 token", () => {
+  const worker = "visonaut-preview";
+  const events = [];
+  const target = {
+    ...configuration,
+    name: worker,
+    d1_databases: [
+      {
+        binding: "DB",
+        database_name: worker,
+        database_id: "target-database-id",
       },
-      run: (_executable, arguments_, options) => {
-        events.push({ arguments_, token: options.env.CLOUDFLARE_API_TOKEN });
-        if (arguments_.includes("list")) {
-          return "✅ No migrations to apply!\n";
-        }
-        return undefined;
+    ],
+  };
+  const source = {
+    name: worker,
+    d1_databases: [
+      {
+        binding: "DB",
+        database_name: worker,
+        database_id: "target-database-id",
+        migrations_dir: "migrations",
       },
-    });
-    assert.deepEqual(
-      events.map((event) => event.arguments_[3]),
-      ["apply", "list"],
-    );
-    assert(events.every((event) => event.token === "migration-token"));
-    assert(events.every((event) => event.arguments_.includes("--remote")));
-    assert(
-      events.every((event) => event.arguments_.includes("/workspace/apps/web/wrangler.jsonc")),
-    );
-    assert.equal(events[0].arguments_.includes("--env"), migrationEnvironment !== undefined);
-    if (migrationEnvironment) {
-      assert(events.every((event) => event.arguments_.at(-1) === migrationEnvironment));
-    }
-  }
+    ],
+  };
+  runNonproductionMigrations({
+    expectedName: worker,
+    configuration: target,
+    sourceConfiguration: source,
+    sourceConfigPath: "/workspace/apps/web/wrangler.jsonc",
+    wranglerPath: "/workspace/node_modules/wrangler/bin/wrangler.js",
+    environment: {
+      CLOUDFLARE_API_TOKEN: "worker-token",
+      CLOUDFLARE_MIGRATIONS_API_TOKEN: "migration-token",
+    },
+    run: (_executable, arguments_, options) => {
+      events.push({ arguments_, token: options.env.CLOUDFLARE_API_TOKEN });
+      if (arguments_.includes("list")) {
+        return "✅ No migrations to apply!\n";
+      }
+      return undefined;
+    },
+  });
+  assert.deepEqual(
+    events.map((event) => event.arguments_[3]),
+    ["apply", "list"],
+  );
+  assert(events.every((event) => event.token === "migration-token"));
+  assert(events.every((event) => event.arguments_.includes("--remote")));
+  assert(events.every((event) => event.arguments_.includes("/workspace/apps/web/wrangler.jsonc")));
+  assert.equal(events[0].arguments_.includes("--env"), false);
 });
 
 test("nonproduction migration gate fails closed before upload", () => {
