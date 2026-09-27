@@ -1,17 +1,23 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { loadReview } from "../review/client.ts";
 import { ReviewCommandError } from "../review/model.ts";
+import type { ReviewSelection } from "../review/model.ts";
 import { ReviewWorkspace } from "../review/review-workspace.tsx";
+import type { ReviewRoute } from "../review/review-workspace.tsx";
 import "./dashboard.css";
 
 export const Route = createFileRoute("/runs/$runId")({
-  validateSearch: (search: Record<string, unknown>): { comparison?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { comparison?: string; item?: string; variant?: string } => ({
     comparison: typeof search.comparison === "string" ? search.comparison : undefined,
+    item: typeof search.item === "string" ? search.item : undefined,
+    variant: typeof search.variant === "string" ? search.variant : undefined,
   }),
   component: Run,
 });
@@ -23,11 +29,48 @@ type RunState =
 
 function Run() {
   const { runId } = Route.useParams();
-  const { comparison } = Route.useSearch();
-  return <RunPage key={`${runId}:${comparison ?? ""}`} runId={runId} comparisonId={comparison} />;
+  const { comparison, item, variant } = Route.useSearch();
+  const navigate = useNavigate();
+  const onSelect = useCallback(
+    (selection: ReviewSelection) => {
+      void navigate({
+        to: "/runs/$runId",
+        params: { runId },
+        search: {
+          comparison,
+          item: selection.itemKey,
+          variant: selection.variantKey,
+        },
+        replace: true,
+      });
+    },
+    [comparison, navigate, runId],
+  );
+  const route: ReviewRoute = {
+    runId,
+    comparisonId: comparison,
+    selection: item && variant ? { itemKey: item, variantKey: variant } : undefined,
+    onSelect,
+  };
+  return (
+    <RunPage
+      key={`${runId}:${comparison ?? ""}`}
+      runId={runId}
+      comparisonId={comparison}
+      route={route}
+    />
+  );
 }
 
-function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string }) {
+function RunPage({
+  runId,
+  comparisonId,
+  route,
+}: {
+  runId: string;
+  comparisonId?: string;
+  route: ReviewRoute;
+}) {
   const [state, setState] = useState<RunState>({ status: "loading" });
   const [reload, setReload] = useState(0);
   const [action, setAction] = useState<"sign-in" | "sign-out" | null>(null);
@@ -64,9 +107,15 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
     setAction("sign-in");
     setActionError("");
     try {
+      const search = new URLSearchParams();
+      if (comparisonId) search.set("comparison", comparisonId);
+      if (route.selection) {
+        search.set("item", route.selection.itemKey);
+        search.set("variant", route.selection.variantKey);
+      }
       const result = await createAuthClient().signIn.social({
         provider: "github",
-        callbackURL: `/runs/${encodeURIComponent(runId)}${comparisonId ? `?comparison=${encodeURIComponent(comparisonId)}` : ""}`,
+        callbackURL: `/runs/${encodeURIComponent(runId)}${search.size ? `?${search}` : ""}`,
       });
       if (result.error) throw new Error("Sign-in could not start. Please try again.");
     } catch (error) {
@@ -153,7 +202,7 @@ function RunPage({ runId, comparisonId }: { runId: string; comparisonId?: string
           </Frame>
         </main>
       )}
-      {state.status === "ready" && <ReviewWorkspace {...state.review} />}
+      {state.status === "ready" && <ReviewWorkspace {...state.review} route={route} />}
     </Frame>
   );
 }

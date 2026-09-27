@@ -15,7 +15,7 @@ async function callCount(page: Page, count: number) {
 }
 
 function selected(page: Page) {
-  return page.getByRole("tab", { selected: true });
+  return page.getByRole("listbox", { name: "Variants" }).getByRole("option", { selected: true });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -46,6 +46,19 @@ test("review surfaces remain dark when the system uses dark mode", async ({ page
   for (const channels of Object.values(surfaces)) {
     expect(channels.every((channel) => channel < 120)).toBe(true);
   }
+});
+
+test("valid prototype names stay visible in compact variant labels", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("Missing variant fixture");
+    variant.label = "constructor · toString";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator(".review-variant").first().locator(".review-variant-title")).toHaveText(
+    "constructor · toString",
+  );
 });
 
 test("comparison errors stay visible ahead of accepted items", async ({ page }) => {
@@ -199,7 +212,7 @@ test("save confirmation gates verdicts and navigation, and repeat keys do nothin
   await ready(page);
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
-  await expect(page.getByRole("tab", { name: /Solid.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Solid.*Rejected/ })).toBeVisible();
 });
 
 test("whole item freezes all changed IDs in one undoable command", async ({ page }) => {
@@ -218,7 +231,7 @@ test("whole item freezes all changed IDs in one undoable command", async ({ page
   await expect(selected(page)).toContainText("Menu");
   await page.keyboard.press("Control+z");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -269,7 +282,7 @@ test("protected whole-item rejection refuses every target, while individual acti
     }
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("tab", { name: /Protected Solid/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Protected Solid/ })).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
   await expect(
@@ -575,7 +588,7 @@ test("conflict identifies reviewer and does not advance or save a partial item",
   await page.keyboard.press("Shift+A");
   await expect(page.getByRole("alert")).toContainText("Updated by octocat");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("option", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 

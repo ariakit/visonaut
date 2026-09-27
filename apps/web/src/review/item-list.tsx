@@ -1,8 +1,14 @@
 import * as ak from "@ariakit/react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../components/ariakit/components/button.ariakit.react.tsx";
+import {
+  NavDisclosure,
+  NavDisclosureButton,
+} from "../components/ariakit/components/nav.ariakit.react.tsx";
 import { ControlButton } from "../components/control-button.tsx";
 import type { ReviewItem } from "./model.ts";
+import type { ReviewRoute } from "./review-workspace.tsx";
 import { itemThumbnail, needsReview, partitionItems } from "./navigation.ts";
 import type { ItemEntry } from "./navigation.ts";
 
@@ -12,15 +18,25 @@ interface ItemListProps {
   items: ReviewItem[];
   selectedIndex: number;
   selectItem(index: number): void;
+  route?: ReviewRoute;
+  variantKeyForItem(item: ReviewItem): string | undefined;
 }
 
-export function ItemList({ items, selectedIndex, selectItem }: ItemListProps) {
+export function ItemList({
+  items,
+  selectedIndex,
+  selectItem,
+  route,
+  variantKeyForItem,
+}: ItemListProps) {
   const list = useRef<HTMLDivElement>(null);
-  const focusedItem = useRef<HTMLButtonElement | null>(null);
+  const focusedItem = useRef<HTMLElement | null>(null);
   const focusSelection = useRef(false);
   const previousSelection = useRef(selectedIndex);
-  const [acceptedOpen, setAcceptedOpen] = useState(false);
   const { attention, accepted, order } = partitionItems(items);
+  const [acceptedOpen, setAcceptedOpen] = useState(() =>
+    accepted.some((entry) => entry.index === selectedIndex),
+  );
   const attentionPosition =
     attention.find((entry) => entry.index === selectedIndex)?.position ?? -1;
   const acceptedPosition = accepted.find((entry) => entry.index === selectedIndex)?.position ?? -1;
@@ -43,32 +59,59 @@ export function ItemList({ items, selectedIndex, selectItem }: ItemListProps) {
   }, [acceptedPosition, selectedIndex]);
   useLayoutEffect(() => {
     const element = list.current;
-    const selected = element?.querySelector<HTMLButtonElement>(`#review-item-${selectedIndex}`);
+    const selected = element?.querySelector<HTMLElement>(`#review-item-${selectedIndex}`);
     if (!element) return;
-    if (focusSelection.current && !selected && acceptedPosition >= 0 && !showAccepted) return;
+    if (focusSelection.current && !selected && acceptedPosition >= 0) {
+      let frame: number;
+      const focusAccepted = () => {
+        const target = element.querySelector<HTMLElement>(`#review-item-${selectedIndex}`);
+        if (!target) {
+          frame = requestAnimationFrame(focusAccepted);
+          return;
+        }
+        target.focus({ preventScroll: true });
+        focusSelection.current = false;
+      };
+      frame = requestAnimationFrame(focusAccepted);
+      return () => cancelAnimationFrame(frame);
+    }
     const removedFocus =
       focusedItem.current &&
       !focusedItem.current.isConnected &&
       element.ownerDocument.activeElement === element.ownerDocument.body;
+    let frame: number | undefined;
     if (focusSelection.current || removedFocus) {
-      (selected ?? element).focus({ preventScroll: true });
+      const target = selected ?? element.querySelector<HTMLElement>(".review-item-list");
+      if (target && acceptedPosition >= 0) {
+        frame = requestAnimationFrame(() => {
+          target.focus({ preventScroll: true });
+          focusSelection.current = false;
+        });
+      } else {
+        target?.focus({ preventScroll: true });
+        focusSelection.current = false;
+      }
     }
-    focusSelection.current = false;
     if (!selected) return;
-    const viewport = element.getBoundingClientRect();
+    const scroll = selected.closest<HTMLElement>(".review-item-list") ?? element;
+    const viewport = scroll.getBoundingClientRect();
     const row = selected.getBoundingClientRect();
-    const top = viewport.top + element.clientTop;
-    const left = viewport.left + element.clientLeft;
-    const bottom = top + element.clientHeight;
-    const right = left + element.clientWidth;
-    if (row.top < top) element.scrollTop -= top - row.top;
-    else if (row.bottom > bottom) element.scrollTop += row.bottom - bottom;
-    if (row.left < left) element.scrollLeft -= left - row.left;
-    else if (row.right > right) element.scrollLeft += row.right - right;
+    const top = viewport.top + scroll.clientTop;
+    const left = viewport.left + scroll.clientLeft;
+    const bottom = top + scroll.clientHeight;
+    const right = left + scroll.clientWidth;
+    if (row.top < top) scroll.scrollTop -= top - row.top;
+    else if (row.bottom > bottom) scroll.scrollTop += row.bottom - bottom;
+    if (row.left < left) scroll.scrollLeft -= left - row.left;
+    else if (row.right > right) scroll.scrollLeft += row.right - right;
+    return () => {
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
   }, [acceptedPosition, items, selectedIndex, showAccepted]);
 
   const renderItem = (group: ItemEntry[], { item: entry, index, position }: ItemEntry) => {
     const thumbnail = itemThumbnail(entry);
+    const variantKey = variantKeyForItem(entry);
     const groupLength = group.length;
     const errors = entry.variants.filter((variant) => variant.kind === "error").length;
     const comparing = entry.variants.filter((variant) => variant.kind === "pending").length;
@@ -78,10 +121,23 @@ export function ItemList({ items, selectedIndex, selectItem }: ItemListProps) {
       <ak.CompositeItem
         key={entry.key}
         id={`review-item-${index}`}
-        render={<Button className="review-item" />}
+        role="option"
+        aria-selected={index === selectedIndex}
+        render={
+          route && variantKey ? (
+            <Link
+              to="/runs/$runId"
+              params={{ runId: route.runId }}
+              search={{ comparison: route.comparisonId, item: entry.key, variant: variantKey }}
+              className="review-item"
+            />
+          ) : (
+            <Button className="review-item" />
+          )
+        }
         aria-current={index === selectedIndex ? "true" : undefined}
         aria-describedby={groupLength > pageSize ? `review-item-position-${index}` : undefined}
-        onClick={() => selectItem(index)}
+        onClick={route && variantKey ? undefined : () => selectItem(index)}
       >
         {thumbnail ? (
           <img className="review-thumbnail" src={thumbnail} alt="" loading="lazy" />
@@ -111,7 +167,31 @@ export function ItemList({ items, selectedIndex, selectItem }: ItemListProps) {
   };
 
   return (
-    <>
+    <div
+      ref={list}
+      className="review-items"
+      onFocusCapture={(event) => {
+        focusedItem.current = event.target.closest<HTMLElement>(".review-item");
+      }}
+      onBlurCapture={() => {
+        focusedItem.current = null;
+      }}
+      onKeyDownCapture={(event) => {
+        const target = event.target;
+        if (!("nodeType" in target) || target.nodeType !== 1) return;
+        if (!(target as Element).closest(".review-item")) return;
+        if (event.defaultPrevented) return;
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+        let index: number;
+        if (event.key === "ArrowUp") index = order[selectedPosition - 1] ?? -1;
+        else if (event.key === "ArrowDown") index = order[selectedPosition + 1] ?? -1;
+        else if (event.key === "Home") index = order[0] ?? -1;
+        else if (event.key === "End") index = order.at(-1) ?? -1;
+        else return;
+        event.preventDefault();
+        if (!event.repeat) select(index);
+      }}
+    >
       {attention.length > pageSize && (
         <div className="review-item-pages" aria-label="Item pages">
           <span aria-live="polite">
@@ -149,80 +229,65 @@ export function ItemList({ items, selectedIndex, selectItem }: ItemListProps) {
         }}
       >
         <ak.Composite
-          ref={list}
           className="review-item-list"
-          aria-label="Items"
+          role="listbox"
+          aria-label="Items needing attention"
           tabIndex={items.length ? undefined : 0}
-          onFocusCapture={(event) => {
-            focusedItem.current = event.target.closest<HTMLButtonElement>(".review-item");
-          }}
-          onBlurCapture={() => {
-            focusedItem.current = null;
-          }}
-          onKeyDownCapture={(event) => {
-            if (event.defaultPrevented) return;
-            if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-            let index: number;
-            if (event.key === "ArrowUp") index = order[selectedPosition - 1] ?? -1;
-            else if (event.key === "ArrowDown") index = order[selectedPosition + 1] ?? -1;
-            else if (event.key === "Home") index = order[0] ?? -1;
-            else if (event.key === "End") index = order.at(-1) ?? -1;
-            else return;
-            event.preventDefault();
-            if (!event.repeat) select(index);
-          }}
         >
           {attention
             .slice(attentionStart, attentionEnd)
             .map((entry) => renderItem(attention, entry))}
-          {accepted.length > 0 && (
-            <div className="review-accepted-group flex min-w-0 flex-col border-t border-[color:var(--review-border)] pt-2 max-[800px]:w-max max-[800px]:shrink-0 max-[800px]:flex-row max-[800px]:border-t-0 max-[800px]:border-l max-[800px]:pl-2 max-[800px]:pt-0">
-              <Button
-                className="review-accepted-toggle w-full justify-start text-xs max-[800px]:w-[210px] max-[800px]:shrink-0"
-                aria-expanded={showAccepted}
-                onClick={() => {
-                  setAcceptedOpen(!showAccepted);
-                }}
-              >
-                <span aria-hidden="true">{showAccepted ? "▾" : "▸"}</span>
-                Accepted ({accepted.length})
-              </Button>
-              {showAccepted && (
-                <>
-                  {accepted.length > pageSize && (
-                    <div className="review-item-pages" aria-label="Accepted item pages">
-                      <span aria-live="polite">
-                        {acceptedStart + 1}–{acceptedEnd} of {accepted.length} accepted
-                      </span>
-                      <div>
-                        <ControlButton
-                          className="review-control"
-                          disabled={acceptedStart === 0}
-                          onClick={() =>
-                            select(accepted[Math.max(0, acceptedStart - pageSize)]?.index ?? -1)
-                          }
-                        >
-                          Previous accepted
-                        </ControlButton>
-                        <ControlButton
-                          className="review-control"
-                          disabled={acceptedEnd === accepted.length}
-                          onClick={() => select(accepted[acceptedEnd]?.index ?? -1)}
-                        >
-                          Next accepted
-                        </ControlButton>
-                      </div>
-                    </div>
-                  )}
-                  {accepted
-                    .slice(acceptedStart, acceptedEnd)
-                    .map((entry) => renderItem(accepted, entry))}
-                </>
-              )}
-            </div>
-          )}
         </ak.Composite>
+        {accepted.length > 0 && (
+          <NavDisclosure
+            render={<div />}
+            className="review-accepted-group"
+            open={showAccepted}
+            setOpen={setAcceptedOpen}
+            content={{ unmountOnHide: true }}
+            button={
+              <NavDisclosureButton className="review-accepted-toggle">
+                Accepted ({accepted.length})
+              </NavDisclosureButton>
+            }
+          >
+            {accepted.length > pageSize && (
+              <div className="review-item-pages" aria-label="Accepted item pages">
+                <span aria-live="polite">
+                  {acceptedStart + 1}–{acceptedEnd} of {accepted.length} accepted
+                </span>
+                <div>
+                  <ControlButton
+                    className="review-control"
+                    disabled={acceptedStart === 0}
+                    onClick={() =>
+                      select(accepted[Math.max(0, acceptedStart - pageSize)]?.index ?? -1)
+                    }
+                  >
+                    Previous accepted
+                  </ControlButton>
+                  <ControlButton
+                    className="review-control"
+                    disabled={acceptedEnd === accepted.length}
+                    onClick={() => select(accepted[acceptedEnd]?.index ?? -1)}
+                  >
+                    Next accepted
+                  </ControlButton>
+                </div>
+              </div>
+            )}
+            <ak.Composite
+              className="review-item-list review-accepted-list"
+              role="listbox"
+              aria-label="Accepted items"
+            >
+              {accepted
+                .slice(acceptedStart, acceptedEnd)
+                .map((entry) => renderItem(accepted, entry))}
+            </ak.Composite>
+          </NavDisclosure>
+        )}
       </ak.CompositeProvider>
-    </>
+    </div>
   );
 }

@@ -1,16 +1,15 @@
 import * as ak from "@ariakit/react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import { Kbd } from "../components/ariakit/components/kbd.ariakit.react.tsx";
-import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { Shell } from "../components/ariakit/components/shell.ariakit.react.tsx";
+import { ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
 import {
-  Tab,
-  TabList,
-  TabPanel,
-  TabProvider,
-} from "../components/ariakit/components/tabs.ariakit.react.tsx";
+  Shell,
+  ShellSidebar,
+  ShellSidebarBody,
+  ShellSidebarHeader,
+} from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import { ItemList } from "./item-list.tsx";
 import { ReviewCommandError } from "./model.ts";
@@ -33,11 +32,20 @@ import {
   verdictLabel,
 } from "./navigation.ts";
 import { useEvidence } from "./use-evidence.ts";
+import { VariantSummary } from "./variant-summary.tsx";
 import "../review.css";
 
 export interface ReviewWorkspaceProps {
   model: ReviewModel;
   commands: ReviewCommands;
+  route?: ReviewRoute;
+}
+
+export interface ReviewRoute {
+  runId: string;
+  comparisonId?: string;
+  selection?: ReviewSelection;
+  onSelect(selection: ReviewSelection): void;
 }
 
 interface SavedCommand {
@@ -155,10 +163,10 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
   return <ReviewSession key={props.model.run.id} {...props} />;
 }
 
-function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps) {
+function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspaceProps) {
   const [previousModel, setPreviousModel] = useState(suppliedModel);
   const [model, setModel] = useState(suppliedModel);
-  const [selection, setSelection] = useState(() => initialSelection(suppliedModel));
+  const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const [mode, setMode] = useState<ReviewMode>("side");
   const [zoom, setZoom] = useState<ReviewZoom>("fit");
   const [shortcuts, setShortcuts] = useState(true);
@@ -171,6 +179,17 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
   const remembered = useRef(new Map<string, string>());
   const workspace = useRef<HTMLDivElement>(null);
   const saving = useRef(false);
+  const routedSelection = route?.selection;
+  const onRouteSelect = route?.onSelect;
+  const routedItem = model.items.find((entry) => entry.key === routedSelection?.itemKey);
+  const routedVariant = routedItem?.variants.find(
+    (entry) => entry.key === routedSelection?.variantKey,
+  );
+  const selection = route
+    ? routedItem?.variants[0]
+      ? { itemKey: routedItem.key, variantKey: routedVariant?.key ?? routedItem.variants[0].key }
+      : initialSelection(model)
+    : localSelection;
   const item = model.items.find((entry) => entry.key === selection.itemKey) ?? model.items[0];
   const variant =
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
@@ -206,10 +225,20 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
     setPreviousModel(suppliedModel);
     setModel(suppliedModel);
   }
-  if (item && variant && (item.key !== selection.itemKey || variant.key !== selection.variantKey)) {
-    setSelection({ itemKey: item.key, variantKey: variant.key });
+  if (
+    !route &&
+    item &&
+    variant &&
+    (item.key !== selection.itemKey || variant.key !== selection.variantKey)
+  ) {
+    setLocalSelection({ itemKey: item.key, variantKey: variant.key });
     setAnnouncement(`The remembered variant is unavailable. Selected ${variant.label}.`);
   }
+  useEffect(() => {
+    if (!routedSelection || !onRouteSelect || !item || !variant) return;
+    if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
+    onRouteSelect({ itemKey: item.key, variantKey: variant.key });
+  }, [item, variant, routedSelection, onRouteSelect]);
   useEffect(() => {
     if (item && variant) remembered.current.set(item.key, variant.key);
   }, [item, variant]);
@@ -291,7 +320,8 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
   const select = (next: ReviewSelection) => {
     remembered.current.set(next.itemKey, next.variantKey);
-    setSelection(next);
+    if (route) route.onSelect(next);
+    else setLocalSelection(next);
   };
   const selectItem = (index: number) => {
     const next = model.items[index];
@@ -625,49 +655,79 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
           </p>
         )}
       </div>
-      <div className="review-shell col-[shell] row-[body]">
-        <Layer
-          $layer
-          $lighten
+      <Shell className="review-shell col-[shell] row-[body]">
+        <ShellSidebar
+          $show={true}
+          $width="md"
           render={<aside />}
           className="review-sidebar"
           aria-label="Review items"
         >
-          <div className="review-sidebar-heading">
+          <ShellSidebarHeader className="review-sidebar-heading">
             <strong>Items</strong>
             <span>{model.items.length}</span>
-          </div>
-          <ItemList
-            items={model.items}
-            selectedIndex={item ? model.items.indexOf(item) : -1}
-            selectItem={selectItem}
-          />
-        </Layer>
-        <main className="review-main">
+          </ShellSidebarHeader>
+          <ShellSidebarBody className="review-sidebar-body">
+            <ItemList
+              items={model.items}
+              selectedIndex={item ? model.items.indexOf(item) : -1}
+              selectItem={selectItem}
+              route={route}
+              variantKeyForItem={(entry) =>
+                entry.variants.find(
+                  (candidate) => candidate.key === remembered.current.get(entry.key),
+                )?.key ?? entry.variants[0]?.key
+              }
+            />
+          </ShellSidebarBody>
+        </ShellSidebar>
+        <main className="review-main col-[main] row-[body]">
           {item && variant ? (
             <>
               <div className="review-item-heading">
                 <h2>{item.name}</h2>
                 <code>{item.key}</code>
               </div>
-              <TabProvider
-                selectedId={variant.id}
-                setSelectedId={(id) => {
+              <ak.CompositeProvider
+                orientation="horizontal"
+                activeId={variant.id}
+                setActiveId={(id) => {
                   const index = item.variants.findIndex((entry) => entry.id === id);
-                  selectVariant(index);
+                  if (index >= 0 && id !== variant.id) selectVariant(index);
                 }}
               >
-                <TabList className="review-variants" aria-label="Variants">
+                <ak.Composite className="review-variants" role="listbox" aria-label="Variants">
                   {item.variants.map((entry, index) => (
-                    <Tab key={entry.id} id={entry.id} className="review-variant">
-                      <span>
-                        {index + 1} · {entry.label}
-                      </span>
+                    <ak.CompositeItem
+                      key={entry.id}
+                      id={entry.id}
+                      role="option"
+                      aria-selected={entry.id === variant.id}
+                      render={
+                        route ? (
+                          <Link
+                            to="/runs/$runId"
+                            params={{ runId: route.runId }}
+                            search={{
+                              comparison: route.comparisonId,
+                              item: item.key,
+                              variant: entry.key,
+                            }}
+                            className="review-variant"
+                          />
+                        ) : (
+                          <Button className="review-variant" />
+                        )
+                      }
+                      onClick={route ? undefined : () => selectVariant(index)}
+                      aria-label={`${index + 1}. ${entry.label}. ${verdictLabel(entry)}`}
+                    >
+                      <VariantSummary variant={entry} index={index} />
                       <small>{verdictLabel(entry)}</small>
-                    </Tab>
+                    </ak.CompositeItem>
                   ))}
-                </TabList>
-                <TabPanel single className="review-result" tabIndex={-1}>
+                </ak.Composite>
+                <div className="review-result" tabIndex={-1}>
                   <div className="review-result-heading">
                     <div>
                       <h3>{variant.label}</h3>
@@ -694,7 +754,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                         title={variant.approveDisabledReason}
                         onClick={() => review("approved")}
                       >
-                        Approve <Kbd>A</Kbd>
+                        Approve <ButtonSlot $kind="shortcut">A</ButtonSlot>
                       </Button>
                       <Button
                         className="review-control"
@@ -708,7 +768,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                         title={variant.rejectDisabledReason}
                         onClick={() => review("rejected")}
                       >
-                        Reject <Kbd>X</Kbd>
+                        Reject <ButtonSlot $kind="shortcut">X</ButtonSlot>
                       </Button>
                     </div>
                   </div>
@@ -724,7 +784,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                         aria-pressed={effectiveMode === "side"}
                         onClick={() => setView("side")}
                       >
-                        Side by side <Kbd>S</Kbd>
+                        Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
                       </Button>
                       <Button
                         className="review-control"
@@ -732,14 +792,14 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                         aria-disabled={!variant.reference || !variant.candidate}
                         onClick={() => setView("diff")}
                       >
-                        Pixel diff <Kbd>D</Kbd>
+                        Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
                       </Button>
                       <Button
                         className="review-control"
                         aria-pressed={effectiveMode === "new"}
                         onClick={() => setView("new")}
                       >
-                        New only <Kbd>F</Kbd>
+                        New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
                       </Button>
                     </div>
                     <div className="review-control-group" aria-label="Image zoom">
@@ -808,14 +868,16 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                       disabled={!ready || busy || saveState.status === "error" || !targets.length}
                       onClick={() => review("approved", true)}
                     >
-                      Approve whole item ({targets.length}) <Kbd>Shift A</Kbd>
+                      Approve whole item ({targets.length}){" "}
+                      <ButtonSlot $kind="shortcut">Shift A</ButtonSlot>
                     </Button>
                     <Button
                       className="review-control"
                       disabled={!ready || busy || saveState.status === "error" || !targets.length}
                       onClick={() => review("rejected", true)}
                     >
-                      Reject whole item ({targets.length}) <Kbd>Shift X</Kbd>
+                      Reject whole item ({targets.length}){" "}
+                      <ButtonSlot $kind="shortcut">Shift X</ButtonSlot>
                     </Button>
                   </div>
                   <details className="review-metadata">
@@ -855,8 +917,8 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
                       </dd>
                     </dl>
                   </details>
-                </TabPanel>
-              </TabProvider>
+                </div>
+              </ak.CompositeProvider>
             </>
           ) : (
             <div className="review-empty">
@@ -869,7 +931,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
             </div>
           )}
         </main>
-      </div>
+      </Shell>
       <footer className="review-footer col-[shell] row-[footer]">
         <div
           className="review-save-state"
@@ -905,7 +967,7 @@ function ReviewSession({ model: suppliedModel, commands }: ReviewWorkspaceProps)
             disabled={model.archived || !history.length || busy || saveState.status === "error"}
             onClick={() => void undo()}
           >
-            Undo <Kbd>⌘/Ctrl Z</Kbd>
+            Undo <ButtonSlot $kind="shortcut">⌘/Ctrl Z</ButtonSlot>
           </Button>
           <Button
             className="review-control"

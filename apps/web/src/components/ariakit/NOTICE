@@ -4,3 +4,4 @@ Copyright Diego Haz. Distributed under the MIT license in LICENSE.
 The source behavior is retained; styles/ui.css requires @ariakit/tailwind.
 Shell, Table, Badge, and Popover components and recipes use that pinned revision.
 Existing inlined base recipes are re-exported through styles/* adapters for these components.
+NavDisclosure and its Disclosure, Nav, and Prose recipes use the same pinned revision.

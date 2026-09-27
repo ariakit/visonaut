@@ -12,6 +12,7 @@ function image(id: string, fill: string): ReviewImage {
 }
 
 function variant(key: string, kind: ReviewVariant["kind"] = "changed"): ReviewVariant {
+  const thumbnail = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="20"><rect width="30" height="20" fill="#dbe6f6"/></svg>`;
   return {
     id: `row-${key}`,
     key,
@@ -23,6 +24,7 @@ function variant(key: string, kind: ReviewVariant["kind"] = "changed"): ReviewVa
     reference: kind === "added" ? null : image(`${key}-reference`, "#edf0f5"),
     candidate: kind === "removed" ? null : image(`${key}-candidate`, "#e5edf7"),
     diff: kind === "added" || kind === "removed" ? null : image(`${key}-diff`, "#f33"),
+    thumbnail: `data:image/svg+xml,${encodeURIComponent(thumbnail)}`,
     changedPixels: 120,
     ratio: 0.0005,
     engine: "rgba-v1",

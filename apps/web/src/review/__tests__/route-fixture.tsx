@@ -5,7 +5,7 @@ import { routeTree } from "../../routeTree.gen.ts";
 const element = document.getElementById("root");
 if (!element) throw new Error("Fixture root is missing.");
 const entry = new URLSearchParams(window.location.search).get("entry") ?? "/runs/run-42";
-const router = createRouter({
+export const router = createRouter({
   routeTree: routeTree.update({ component: Outlet }),
   history: createMemoryHistory({ initialEntries: [entry] }),
 });

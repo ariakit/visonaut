@@ -79,9 +79,5 @@ export function verdictLabel(variant: ReviewVariant) {
 }
 
 export function itemThumbnail(item: ReviewItem) {
-  const candidate = item.variants.find((variant) => variant.candidate);
-  if (candidate) {
-    return candidate.thumbnail ?? candidate.candidate?.url;
-  }
-  return item.variants.find((variant) => variant.reference)?.reference?.url;
+  return item.variants.find((variant) => variant.thumbnail)?.thumbnail;
 }
