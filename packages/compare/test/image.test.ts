@@ -6,6 +6,7 @@ import {
   createThumbnail,
   decodeImage,
   imageLimits,
+  selectedComparisonPolicy,
   validateImage,
   type ImageCodecs,
 } from "../src/index.ts";
@@ -228,6 +229,64 @@ describe("validated originals and visible pixels", () => {
     expect(thumbnail).toMatchObject({ width: 2, height: 1 });
     expect(Array.from(thumbnail.data)).toEqual(expected.slice(0, 8));
     expect(image.data).toEqual(new Uint8ClampedArray(expected));
+  });
+
+  it("bounds the selected tolerance by both changed pixels and image area", () => {
+    const reference = {
+      width: 498,
+      height: 360,
+      data: new Uint8ClampedArray(498 * 360 * 4),
+    };
+    reference.data.fill(255);
+    const candidate = { ...reference, data: reference.data.slice() };
+    candidate.data[0] = 254;
+    candidate.data[4] = 253;
+    const tolerated = compareImages(reference, candidate, selectedComparisonPolicy);
+    expect(tolerated).toMatchObject({
+      outcome: "unchanged",
+      changedPixels: 2,
+      ratio: 2 / 179_280,
+    });
+    expect(Array.from(tolerated.mask.data.subarray(0, 8))).toEqual([
+      255, 0, 0, 255, 255, 0, 0, 255,
+    ]);
+
+    candidate.data[8] = 254;
+    expect(compareImages(reference, candidate, selectedComparisonPolicy).outcome).toBe("changed");
+    candidate.data[4] = 255;
+    candidate.data[8] = 255;
+    const small = {
+      width: 40,
+      height: 40,
+      data: candidate.data.subarray(0, 40 * 40 * 4),
+    };
+    expect(
+      compareImages(
+        { ...small, data: reference.data.subarray(0, small.data.length) },
+        small,
+        selectedComparisonPolicy,
+      ).outcome,
+    ).toBe("changed");
+    candidate.data[0] = 0;
+    expect(compareImages(reference, candidate, selectedComparisonPolicy).outcome).toBe("unchanged");
+    expect(
+      compareImages(reference, { ...candidate, width: 360, height: 498 }, selectedComparisonPolicy)
+        .outcome,
+    ).toBe("changed");
+
+    const fullPage = {
+      width: 1000,
+      height: 1000,
+      data: new Uint8ClampedArray(1000 * 1000 * 4),
+    };
+    fullPage.data.fill(255);
+    const missingStroke = { ...fullPage, data: fullPage.data.slice() };
+    for (let pixel = 0; pixel < 16; pixel += 1) {
+      missingStroke.data[pixel * 4] = 0;
+    }
+    expect(compareImages(fullPage, missingStroke, selectedComparisonPolicy).outcome).toBe(
+      "changed",
+    );
   });
 
   it("makes repeated tolerated drift explicit and strict policy detects each step", () => {

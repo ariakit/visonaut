@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalJson, digestJson, type CaptureProfile } from "@visonaut/protocol";
 import { describe, expect, it } from "vitest";
-import { compareImages } from "../../compare/src/compare.ts";
+import { compareImages, selectedComparisonPolicy } from "../../compare/src/compare.ts";
 import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import { ConflictError, IncompleteError } from "./database.ts";
 import { captureProfilesDigest, Service, type ComparisonTask } from "./service.ts";
@@ -651,6 +652,123 @@ describe("full run and immutable comparison state", () => {
     const rows = await service.comparisonRows("comparison-new-profile");
     expect(rows.map((row) => row.outcome)).toEqual(["changed"]);
     expect((await service.status("new-profile")).status).toBe("needs-review");
+  });
+
+  it("recompares an existing baseline under a new policy without mass review", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    const oldPolicy = {
+      id: "visible-exact-v1",
+      channelThreshold: 0,
+      maxChangedPixels: 0,
+      maxChangedRatio: 0,
+    };
+    const oldPolicyDigest = await digestJson(oldPolicy);
+    const newPolicyDigest = await digestJson(selectedComparisonPolicy);
+    expect(newPolicyDigest).toBe(
+      "9c4627104b4af7760a2891bd897dded9a5b449a68c1d7931e04d45fcca49c4bd",
+    );
+    await service.createPolicy({ digest: oldPolicyDigest, policy: oldPolicy });
+    await service.createPolicy({ digest: newPolicyDigest, policy: selectedComparisonPolicy });
+    await service.createProject({
+      id: "project",
+      repositoryId: "123",
+      policyDigest: oldPolicyDigest,
+    });
+    const profile: CaptureProfile = {
+      browser: "chromium",
+      browserVersion: "1",
+      osImageDigest: "a".repeat(64),
+      fontsDigest: "b".repeat(64),
+      viewport: { width: 498, height: 360 },
+      deviceScaleFactor: 1,
+      locale: "en-US",
+      timezone: "UTC",
+      reducedMotion: "no-preference",
+      colorScheme: "light",
+      contrast: "no-preference",
+      forcedColors: "none",
+      animationPolicy: "disabled",
+      captureOptions: { type: "png", fullPage: false },
+      comparisonPolicyDigest: oldPolicyDigest,
+      comparisonEngineVersion: "rgba-visible-1",
+    };
+    const storeProfile = async (record: CaptureProfile) => {
+      const digest = await digestJson(record);
+      database.connection
+        .prepare("INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?)")
+        .run(digest, canonicalJson(record));
+      return digest;
+    };
+    const oldProfileDigest = await storeProfile(profile);
+    const newProfileDigest = await storeProfile({
+      ...profile,
+      comparisonPolicyDigest: newPolicyDigest,
+    });
+    const changedProfileDigest = await storeProfile({
+      ...profile,
+      fontsDigest: "c".repeat(64),
+      comparisonPolicyDigest: newPolicyDigest,
+    });
+    const stalePolicyProfileDigest = await storeProfile({
+      ...profile,
+      comparisonPolicyDigest: "d".repeat(64),
+    });
+    await fixture(service, {
+      id: "seed",
+      items: ["dialog", "menu"],
+      realDigest: true,
+      captureProfileDigest: oldProfileDigest,
+    });
+    await promote(service, "seed");
+
+    database.connection
+      .prepare(
+        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = 'project'",
+      )
+      .run(newPolicyDigest);
+    const unchanged = () => ({
+      outcome: "unchanged" as const,
+      changedPixels: 0,
+      ratio: 0,
+      engineVersion: "rgba-visible-1",
+      codecVersion: "codec",
+    });
+    await fixture(service, {
+      id: "policy-only",
+      kind: "pull_request",
+      items: ["dialog", "menu"],
+      realDigest: true,
+      captureProfileDigest: newProfileDigest,
+      compare: unchanged,
+    });
+    expect(
+      (await service.comparisonRows("comparison-policy-only")).map((row) => row.outcome),
+    ).toEqual(["unchanged", "unchanged"]);
+    expect((await service.status("policy-only")).status).toBe("passed");
+    expect((await service.comparison("comparison-seed")).policy_digest).toBe(oldPolicyDigest);
+    expect((await service.comparison("comparison-policy-only")).policy_digest).toBe(
+      newPolicyDigest,
+    );
+
+    for (const [id, profileDigest] of [
+      ["rendering-change", changedProfileDigest],
+      ["stale-policy", stalePolicyProfileDigest],
+    ] as const) {
+      await fixture(service, {
+        id,
+        kind: "pull_request",
+        items: ["dialog", "menu"],
+        realDigest: true,
+        captureProfileDigest: profileDigest,
+        compare: unchanged,
+      });
+      expect((await service.comparisonRows(`comparison-${id}`)).map((row) => row.outcome)).toEqual([
+        "changed",
+        "changed",
+      ]);
+      expect((await service.status(id)).status).toBe("needs-review");
+    }
   });
 
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {

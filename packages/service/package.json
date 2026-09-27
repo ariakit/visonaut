@@ -9,5 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc6 --noEmit"
+  },
+  "dependencies": {
+    "@visonaut/protocol": "workspace:*"
   }
 }

@@ -24,11 +24,13 @@ The historical local audit checked every one of the 10,750 capture markers again
 
 There were 10,746 pair comparisons: pass 1 to 2, 2 to 3, and 1 to 3 for each browser. These pairs share images. All differences were in Chromium; Firefox and WebKit were exact. The ratio policy records changed pixels while accepting the pair as unchanged. Six Chromium identities varied. Private pixel inspection found small focus-edge, checkbox-edge, and corner differences. Rendering noise is an inference from the unchanged source and pixel locations, not a general guarantee that such changes are harmless.
 
-The separate intentional-defect study in [corpus-study.json](../../../packages/compare/evidence/corpus-study.json) contains 100 small defects. Strict comparison missed none; the one-level policy missed 50; the previous ratio reference missed 98. The real captures were not altered for that study. The conservative recommendation retains the strict policy and accepts the measured review burden:
+The separate intentional-defect study in [corpus-study.json](../../../packages/compare/evidence/corpus-study.json) contains 100 small defects. Strict comparison missed none; the one-level policy missed 50; the previous ratio reference missed 98. The real captures were not altered for that study. This study originally recommended the strict policy and its measured review burden:
 
 ```json
 { "channelThreshold": 0, "maxChangedPixels": 0, "maxChangedRatio": 0 }
 ```
+
+The [selected comparator policy](../comparator-policy.md) was revised on September 27 after a later two-pixel Ariakit main difference. That revision does not change this frozen study or imply that its new cap was measured against these private originals.
 
 All three invocations for a browser used the same runner job. Variation across fresh runners and future image updates remains unmeasured. Local Node 24.18.0 CPU, RSS, and WASM measurements are not Cloudflare Worker CPU or authoritative peak memory. PNG checks do not replace the separate lossless WebP, alpha, color, corrupt-file, dimension-limit, and tolerated-drift evidence.
 
