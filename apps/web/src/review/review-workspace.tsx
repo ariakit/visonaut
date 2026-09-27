@@ -126,6 +126,19 @@ function comparisonFailed(state: ReviewPollState | ReviewModel) {
   return state.comparisonState === "invalidated" || runStopped(state.run.status);
 }
 
+function terminalEvidenceMessage(model: ReviewModel) {
+  switch (model.run.status) {
+    case "superseded":
+      return "A newer attempt replaced this comparison. Its evidence cannot be reviewed.";
+    case "needs-recompare":
+      return "The baseline changed. This comparison is out of date and cannot be reviewed.";
+    case "failed":
+      return "This capture or comparison failed. Its evidence cannot be reviewed.";
+    default:
+      return "This comparison was invalidated. Its evidence cannot be reviewed.";
+  }
+}
+
 function ShortcutHelp() {
   return (
     <ak.DialogProvider>
@@ -212,8 +225,13 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     mode: effectiveMode,
     retry,
   });
+  const terminalComparison = comparisonFailed(model);
   const ready =
-    !model.archived && !pendingComparison && model.reviewReady && evidence.status === "ready";
+    !model.archived &&
+    !pendingComparison &&
+    !terminalComparison &&
+    model.reviewReady &&
+    evidence.status === "ready";
   const busy = saveState.status === "saving";
   const targets = item ? reviewTargets(item) : [];
   const pending = model.items.reduce(
@@ -231,6 +249,13 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
   const recompareDisabledReason =
     model.recompareDisabledReason ??
     (model.archived ? "Stored images are not available for a new comparison." : undefined);
+  const retryImages =
+    !terminalComparison && (evidence.failure === "load" || evidence.failure === "decode");
+  const recompareEvidence =
+    terminalComparison ||
+    evidence.failure === "comparison" ||
+    evidence.failure === "missing" ||
+    evidence.failure === "dimensions";
 
   if (previousModel !== suppliedModel) {
     setPreviousModel(suppliedModel);
@@ -657,7 +682,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
               "This closed run is read-only. Its review history remains available."}
           </p>
         )}
-        {!model.archived && !model.reviewReady && (
+        {!model.archived && !model.reviewReady && !terminalComparison && (
           <p className="review-banner" role="status">
             Review is unavailable until the run is sealed and all comparisons are complete.
           </p>
@@ -853,44 +878,66 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                       Pixel diff requires both a reference and a new image.
                     </p>
                   )}
-                  <div className="review-evidence" data-evidence={evidence.status}>
-                    <ScreenshotViewer
-                      variant={variant}
-                      mode={effectiveMode}
-                      zoom={zoom}
-                      ready={evidence.status === "ready"}
-                      identity={evidence.identity}
-                      report={evidence.report}
-                    />
-                    {evidence.status === "loading" && (
+                  <div
+                    className="review-evidence"
+                    data-evidence={terminalComparison ? "terminal" : evidence.status}
+                  >
+                    {evidence.status === "loading" && !terminalComparison && (
                       <div className="review-evidence-message" role="status">
                         {variant.kind === "pending"
                           ? "Comparison is still running…"
                           : "Loading this comparison’s images…"}
                       </div>
                     )}
-                    {evidence.status === "error" && (
-                      <div className="review-evidence-message" role="alert">
-                        <strong>Image evidence unavailable</strong>
-                        <p>{evidence.error}</p>
-                        <Button
-                          className="review-control"
-                          disabled={busy}
-                          onClick={() => {
-                            setRetry((value) => value + 1);
-                          }}
-                        >
-                          Retry images
-                        </Button>
-                        <Button
-                          className="review-control"
-                          disabled={busy}
-                          onClick={() => void refresh()}
-                        >
-                          Refresh comparison
-                        </Button>
+                    {(terminalComparison || evidence.status === "error") && (
+                      <div
+                        className="review-evidence-message"
+                        role={terminalComparison ? "status" : "alert"}
+                      >
+                        <strong>
+                          {terminalComparison
+                            ? model.run.status === "superseded"
+                              ? "Comparison superseded"
+                              : model.run.status === "needs-recompare"
+                                ? "Comparison needs to be rerun"
+                                : "Comparison failed"
+                            : retryImages
+                              ? "Image evidence unavailable"
+                              : "Comparison evidence incomplete"}
+                        </strong>
+                        <p>
+                          {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
+                        </p>
+                        {terminalComparison && variant.error && <p>{variant.error}</p>}
+                        {retryImages && (
+                          <Button
+                            className="review-control"
+                            disabled={busy}
+                            onClick={() => setRetry((value) => value + 1)}
+                          >
+                            Retry images
+                          </Button>
+                        )}
+                        {recompareEvidence && commands.recompare && recompareAllowed && (
+                          <Button
+                            className="review-control"
+                            disabled={busy || awaitingComparison || saveState.status === "error"}
+                            onClick={() => void recompare()}
+                          >
+                            Recompare now
+                          </Button>
+                        )}
                       </div>
                     )}
+                    <ScreenshotViewer
+                      variant={variant}
+                      mode={effectiveMode}
+                      zoom={zoom}
+                      ready={evidence.status === "ready"}
+                      images={evidence.images}
+                      identity={evidence.identity}
+                      report={evidence.report}
+                    />
                   </div>
                   <div className="review-whole-item">
                     <span>
