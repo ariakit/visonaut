@@ -1730,7 +1730,15 @@ export class Service {
       throw new ConflictError("Archived history is read-only.");
     }
     const project = await this.project(run.project_id);
-    const rows = await this.comparisonRows(comparison.id);
+    const rows = input.wholeItemKey
+      ? await this.rows<ReviewRow>(
+          "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND item_key = ? AND outcome = 'changed' ORDER BY ordinal, id",
+          [comparison.id, input.wholeItemKey],
+        )
+      : await this.rows<ReviewRow>(
+          "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND id IN (SELECT value FROM json_each(?))",
+          [comparison.id, JSON.stringify(input.targets.map((target) => target.id))],
+        );
     const selected = input.targets.map((target) => {
       const row = rows.find((entry) => entry.id === target.id);
       if (!row || row.outcome !== "changed" || row.decision_revision !== target.expectedRevision) {
@@ -1788,6 +1796,8 @@ export class Service {
       selection: input.selection,
       baselineRevision: project.baseline_revision + (rollback ? 1 : 0),
       promotionId: rollback ? null : project.promotion_id,
+      previousRunRevision: run.revision,
+      runRevision: run.revision + 2,
     };
     for (const row of selected) {
       const effectiveId = row.source_decision_id ?? row.decision_id;

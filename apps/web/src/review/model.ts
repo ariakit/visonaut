@@ -1,5 +1,5 @@
 export type ReviewVerdict = "approved" | "rejected";
-export type ReviewMode = "side" | "diff" | "new";
+export type ReviewMode = "side" | "diff" | "new" | "original";
 export type ReviewZoom = "fit" | 1 | 2;
 
 export interface ReviewSelection {
@@ -110,6 +110,7 @@ export interface ReviewCommand {
   wholeItemKey?: string;
   expectedPromotionId?: string;
   expectedBaselineRevision: number;
+  expectedRunRevision: number;
   selection: ReviewSelection;
 }
 
@@ -126,8 +127,21 @@ export interface ReviewCommandResult {
   noop?: boolean;
 }
 
+export interface ReviewSaveResult {
+  commandId: string;
+  selection: ReviewSelection;
+  revisions: ReviewTarget[];
+  baselineRevision: number;
+  promotionId: string | null;
+  runRevision?: number;
+  reviewer?: string;
+  runStatus?: string;
+  noop?: boolean;
+  model?: ReviewModel;
+}
+
 export interface ReviewCommands {
-  save(command: ReviewCommand): Promise<ReviewCommandResult>;
+  save(command: ReviewCommand): Promise<ReviewSaveResult>;
   undo(command: UndoCommand): Promise<ReviewCommandResult>;
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;

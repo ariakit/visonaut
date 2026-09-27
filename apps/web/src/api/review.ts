@@ -577,6 +577,15 @@ async function commandResult(context: PrivateContext, result: CommandResult, run
   return Response.json({ ...result, model: await reviewModel(context, runId) });
 }
 
+async function wakeReviewStatus(context: PrivateContext) {
+  try {
+    await context.operations.send({ kind: "continue" });
+  } catch {
+    // The saved outbox entry remains for the scheduled operations run.
+    console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
+  }
+}
+
 async function archivedCommandResult(
   context: PrivateContext,
   error: ArchivedCommandResultError,
@@ -757,7 +766,31 @@ export async function handleReview(
         ...(body.wholeItemKey === undefined ? {} : { wholeItemKey: string(body.wholeItemKey) }),
         now: Date.now(),
       });
-      return commandResult(context, result, run.id);
+      if (!result.noop) await wakeReviewStatus(context);
+      if (
+        result.noop ||
+        result.previousRunRevision !== body.expectedRunRevision ||
+        result.runRevision === undefined ||
+        result.baselineRevision !== body.expectedBaselineRevision ||
+        result.promotionId !== (body.expectedPromotionId ?? null)
+      ) {
+        return commandResult(context, result, run.id);
+      }
+      const status = await context.service.status(run.id);
+      if (
+        status.run.revision !== result.runRevision ||
+        (await context.service.run(run.id)).revision !== result.runRevision ||
+        (status.status !== "passed" &&
+          status.status !== "rejected" &&
+          status.status !== "needs-review")
+      ) {
+        return commandResult(context, result, run.id);
+      }
+      return Response.json({
+        ...result,
+        reviewer: context.identity.githubUserId,
+        runStatus: status.status,
+      });
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {
         return archivedCommandResult(context, error, run.id);
@@ -791,6 +824,7 @@ export async function handleReview(
         expectedBaselineRevision: integer(body.expectedBaselineRevision),
         now: Date.now(),
       });
+      await wakeReviewStatus(context);
       return commandResult(context, result, run.id);
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {

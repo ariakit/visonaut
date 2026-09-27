@@ -3,7 +3,11 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import { ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
+import {
+  Button as FlatButton,
+  ButtonGroup,
+  ButtonSlot,
+} from "../components/ariakit/components/button.ariakit.react.tsx";
 import {
   Shell,
   ShellSidebar,
@@ -25,6 +29,7 @@ import type {
   UndoCommand,
 } from "./model.ts";
 import {
+  applySavedReview,
   needsReview,
   nextPending,
   partitionItems,
@@ -73,8 +78,9 @@ function excludesShortcuts(event: KeyboardEvent<HTMLElement>) {
 function initialSelection(model: ReviewModel): ReviewSelection {
   for (const index of partitionItems(model.items).order) {
     const item = model.items[index];
-    if (item?.variants[0]) {
-      return { itemKey: item.key, variantKey: item.variants[0].key };
+    const variant = item?.variants.find(needsReview) ?? item?.variants[0];
+    if (item && variant) {
+      return { itemKey: item.key, variantKey: variant.key };
     }
   }
   return { itemKey: "", variantKey: "" };
@@ -144,8 +150,8 @@ function ShortcutHelp() {
           <dd>Approve or reject, then move to the next pending variant.</dd>
           <dt>Shift+A / Shift+X</dt>
           <dd>Review all changed variants in this item as one command.</dd>
-          <dt>S / D / F</dt>
-          <dd>Side by side, red pixel diff, or full new image.</dd>
+          <dt>S / D / F / G</dt>
+          <dd>Side by side, red pixel diff, new image only, or original only.</dd>
           <dt>Cmd/Ctrl+Z</dt>
           <dd>Undo your last saved command in this session.</dd>
           <dt>Tab / Escape</dt>
@@ -176,7 +182,11 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
   const [history, setHistory] = useState<SavedCommand[]>([]);
   const [pendingComparison, setPendingComparison] = useState(false);
   const [exportState, setExportState] = useState({ pending: false, message: "" });
-  const remembered = useRef(new Map<string, string>());
+  const remembered = useRef(
+    new Map<string, string>(
+      route?.selection ? [[route.selection.itemKey, route.selection.variantKey]] : [],
+    ),
+  );
   const workspace = useRef<HTMLDivElement>(null);
   const saving = useRef(false);
   const routedSelection = route?.selection;
@@ -185,9 +195,10 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
   const routedVariant = routedItem?.variants.find(
     (entry) => entry.key === routedSelection?.variantKey,
   );
+  const routedFallback = routedItem?.variants.find(needsReview) ?? routedItem?.variants[0];
   const selection = route
-    ? routedItem?.variants[0]
-      ? { itemKey: routedItem.key, variantKey: routedVariant?.key ?? routedItem.variants[0].key }
+    ? routedFallback
+      ? { itemKey: routedItem?.key ?? "", variantKey: routedVariant?.key ?? routedFallback.key }
       : initialSelection(model)
     : localSelection;
   const item = model.items.find((entry) => entry.key === selection.itemKey) ?? model.items[0];
@@ -239,9 +250,6 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
   }, [item, variant, routedSelection, onRouteSelect]);
-  useEffect(() => {
-    if (item && variant) remembered.current.set(item.key, variant.key);
-  }, [item, variant]);
   useEffect(() => {
     if (saveState.status !== "saving" && saveState.status !== "error") return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -319,7 +327,6 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
 
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
   const select = (next: ReviewSelection) => {
-    remembered.current.set(next.itemKey, next.variantKey);
     if (route) route.onSelect(next);
     else setLocalSelection(next);
   };
@@ -327,7 +334,10 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     const next = model.items[index];
     if (!next) return;
     const previous = remembered.current.get(next.key);
-    const selected = next.variants.find((entry) => entry.key === previous) ?? next.variants[0];
+    const selected =
+      next.variants.find((entry) => entry.key === previous) ??
+      next.variants.find(needsReview) ??
+      next.variants[0];
     if (!selected) return;
     select({ itemKey: next.key, variantKey: selected.key });
     if (previous && previous !== selected.key) {
@@ -338,6 +348,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     if (!item) return;
     const next = item.variants[index];
     if (!next) return;
+    remembered.current.set(item.key, next.key);
     select({ itemKey: item.key, variantKey: next.key });
   };
   const setView = (next: ReviewMode) => {
@@ -377,7 +388,8 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     });
     try {
       const result = await commands.save(command);
-      setModel(result.model);
+      const nextModel = applySavedReview(model, command, result);
+      setModel(nextModel);
       if (!result.noop) {
         setHistory((entries) => [
           ...entries,
@@ -391,7 +403,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
           : `${command.targets.length} variant${command.targets.length === 1 ? "" : "s"} ${command.verdict}. Saved.`,
       });
       if (!result.noop) {
-        const next = nextPending(result.model.items, command.selection);
+        const next = nextPending(nextModel.items, command.selection);
         if (next) {
           select(next);
         } else {
@@ -437,6 +449,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
       wholeItemKey: wholeItem ? item.key : undefined,
       expectedPromotionId: model.promotionId ?? undefined,
       expectedBaselineRevision: model.baselineRevision,
+      expectedRunRevision: model.comparisonRevision,
       selection: { itemKey: item.key, variantKey: variant.key },
     });
   };
@@ -565,6 +578,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     else if (key === "s") setView("side");
     else if (key === "d") setView("diff");
     else if (key === "f") setView("new");
+    else if (key === "g") setView("original");
     else return;
     event.preventDefault();
   };
@@ -674,9 +688,11 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
               selectItem={selectItem}
               route={route}
               variantKeyForItem={(entry) =>
+                entry.variants.find(needsReview)?.key ??
                 entry.variants.find(
                   (candidate) => candidate.key === remembered.current.get(entry.key),
-                )?.key ?? entry.variants[0]?.key
+                )?.key ??
+                entry.variants[0]?.key
               }
             />
           </ShellSidebarBody>
@@ -778,42 +794,59 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                     </p>
                   )}
                   <div className="review-view-tools">
-                    <div className="review-control-group" aria-label="Image view">
-                      <Button
+                    <ButtonGroup
+                      $p={0}
+                      $gap="none"
+                      className="min-w-0 max-w-full overflow-x-auto"
+                      aria-label="Image view"
+                    >
+                      <FlatButton
                         className="review-control"
                         aria-pressed={effectiveMode === "side"}
+                        $lightnessOffset={effectiveMode === "side"}
                         onClick={() => setView("side")}
                       >
                         Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
-                      </Button>
-                      <Button
+                      </FlatButton>
+                      <FlatButton
                         className="review-control"
                         aria-pressed={effectiveMode === "diff"}
+                        $lightnessOffset={effectiveMode === "diff"}
                         aria-disabled={!variant.reference || !variant.candidate}
                         onClick={() => setView("diff")}
                       >
                         Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
-                      </Button>
-                      <Button
+                      </FlatButton>
+                      <FlatButton
                         className="review-control"
                         aria-pressed={effectiveMode === "new"}
+                        $lightnessOffset={effectiveMode === "new"}
                         onClick={() => setView("new")}
                       >
                         New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
-                      </Button>
-                    </div>
-                    <div className="review-control-group" aria-label="Image zoom">
+                      </FlatButton>
+                      <FlatButton
+                        className="review-control"
+                        aria-pressed={effectiveMode === "original"}
+                        $lightnessOffset={effectiveMode === "original"}
+                        onClick={() => setView("original")}
+                      >
+                        Original only <ButtonSlot $kind="shortcut">G</ButtonSlot>
+                      </FlatButton>
+                    </ButtonGroup>
+                    <ButtonGroup $p={0} $gap="none" aria-label="Image zoom">
                       {(["fit", 1, 2] as const).map((value) => (
-                        <Button
+                        <FlatButton
                           key={value}
                           className="review-control"
                           aria-pressed={zoom === value}
+                          $lightnessOffset={zoom === value}
                           onClick={() => setZoom(value)}
                         >
                           {value === "fit" ? "Fit" : `${value * 100}%`}
-                        </Button>
+                        </FlatButton>
                       ))}
-                    </div>
+                    </ButtonGroup>
                   </div>
                   {(!variant.reference || !variant.candidate) && (
                     <p className="review-view-note">

@@ -231,6 +231,8 @@ function Index() {
             {state.status !== "loading" && (
               <Button
                 className="review-control"
+                $kind="flat"
+                $rounded="lg"
                 disabled={action !== null}
                 onClick={() => void signOut()}
               >

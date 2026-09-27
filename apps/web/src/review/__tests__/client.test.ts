@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { loadReview, parseReviewModel, parseReviewPollState } from "../client.ts";
 import { ReviewCommandError } from "../model.ts";
+import { applySavedReview } from "../navigation.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
 function json(value: unknown, status = 200) {
@@ -47,9 +48,20 @@ test("the client binds every review and Undo to the server session for this page
     requests.push({ path, init });
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" }, 201);
     if (path === "/api/runs/run-42") return json(model);
+    if (path === "/api/comparisons/comparison-2/commands")
+      return json({
+        commandId: "command-1",
+        selection: { itemKey: "dialog/open", variantKey: "React" },
+        revisions: [{ id: "row-React", expectedRevision: 1 }],
+        baselineRevision: 4,
+        promotionId: null,
+        runRevision: model.comparisonRevision + 2,
+        reviewer: "maintainer-1",
+        runStatus: "needs-review",
+      });
     return json({
       model,
-      commandId: "saved-command",
+      commandId: "undo-1",
       selection: { itemKey: "dialog/open", variantKey: "React" },
     });
   });
@@ -61,10 +73,13 @@ test("the client binds every review and Undo to the server session for this page
     verdict: "approved" as const,
     targets: [{ id: "row-React", expectedRevision: 0 }],
     expectedBaselineRevision: 4,
+    expectedRunRevision: model.comparisonRevision,
     selection: { itemKey: "dialog/open", variantKey: "React" },
   };
   const result = await review.commands.save(command);
-  expect(result.commandId).toBe("saved-command");
+  expect(result.commandId).toBe("command-1");
+  expect(result.runStatus).toBe("needs-review");
+  expect(result.model).toBeUndefined();
   expect(requests.at(-1)?.path).toBe("/api/comparisons/comparison-2/commands");
   expect(JSON.parse(String(requests.at(-1)?.init?.body))).toEqual({
     ...command,
@@ -72,11 +87,11 @@ test("the client binds every review and Undo to the server session for this page
   });
   expect(requests.filter(({ path }) => path === "/api/review-sessions")).toHaveLength(1);
   await review.commands.undo({
-    commandId: "saved-command",
+    commandId: "command-1",
     undoCommandId: "undo-1",
     expectedBaselineRevision: 4,
   });
-  expect(requests.at(-1)?.path).toBe("/api/commands/saved-command/undo");
+  expect(requests.at(-1)?.path).toBe("/api/commands/command-1/undo");
   expect(JSON.parse(String(requests.at(-1)?.init?.body))).toEqual({
     undoCommandId: "undo-1",
     expectedBaselineRevision: 4,
@@ -87,6 +102,106 @@ test("the client binds every review and Undo to the server session for this page
     expect(request.init).toMatchObject({ credentials: "same-origin", cache: "no-store" });
   }
 });
+
+test("compact save results support consecutive reviews without rebuilding the run model", () => {
+  const initial = fixtureModel();
+  const first = {
+    commandId: "first",
+    comparisonId: initial.comparisonId,
+    verdict: "approved" as const,
+    targets: [{ id: "row-React", expectedRevision: 0 }],
+    expectedBaselineRevision: initial.baselineRevision,
+    expectedRunRevision: initial.comparisonRevision,
+    selection: { itemKey: "dialog/open", variantKey: "React" },
+  };
+  const afterFirst = applySavedReview(initial, first, {
+    commandId: first.commandId,
+    selection: first.selection,
+    revisions: [{ id: "row-React", expectedRevision: 1 }],
+    baselineRevision: initial.baselineRevision,
+    promotionId: null,
+    runRevision: initial.comparisonRevision + 2,
+    reviewer: "maintainer-1",
+    runStatus: "needs-review",
+  });
+  expect(afterFirst.items[0]?.variants[0]).toMatchObject({
+    revision: 1,
+    verdict: "approved",
+    source: "human",
+    reviewer: "maintainer-1",
+  });
+  expect(afterFirst.comparisonRevision).toBe(initial.comparisonRevision + 2);
+  expect(initial.items[0]?.variants[0]).toMatchObject({ revision: 0, verdict: null });
+  const second = {
+    ...first,
+    commandId: "second",
+    verdict: "rejected" as const,
+    targets: [{ id: "row-React", expectedRevision: 1 }],
+    expectedRunRevision: afterFirst.comparisonRevision,
+  };
+  const afterSecond = applySavedReview(afterFirst, second, {
+    commandId: second.commandId,
+    selection: second.selection,
+    revisions: [{ id: "row-React", expectedRevision: 2 }],
+    baselineRevision: initial.baselineRevision,
+    promotionId: null,
+    runRevision: afterFirst.comparisonRevision + 2,
+    reviewer: "maintainer-1",
+    runStatus: "rejected",
+  });
+  expect(afterSecond.items[0]?.variants[0]).toMatchObject({
+    revision: 2,
+    verdict: "rejected",
+    source: "human",
+  });
+  expect(afterSecond.run.status).toBe("rejected");
+  expect(() =>
+    applySavedReview(afterFirst, second, {
+      commandId: second.commandId,
+      selection: second.selection,
+      revisions: [{ id: "row-React", expectedRevision: 3 }],
+      baselineRevision: initial.baselineRevision,
+      promotionId: null,
+      runRevision: afterFirst.comparisonRevision + 2,
+      reviewer: "maintainer-1",
+      runStatus: "rejected",
+    }),
+  ).toThrow("unexpected revision");
+});
+
+test.each(["error", "pending"] as const)(
+  "a compact approval keeps the authoritative status when another row is %s",
+  (kind) => {
+    const initial = fixtureModel();
+    const item = initial.items[0];
+    const first = item?.variants[0];
+    const second = item?.variants[1];
+    if (!item || !first || !second) throw new Error("Missing review variants.");
+    initial.items = [{ ...item, variants: [first, { ...second, kind }] }];
+    const command = {
+      commandId: `mixed-${kind}`,
+      comparisonId: initial.comparisonId,
+      verdict: "approved" as const,
+      targets: [{ id: first.id, expectedRevision: first.revision }],
+      expectedBaselineRevision: initial.baselineRevision,
+      expectedRunRevision: initial.comparisonRevision,
+      selection: { itemKey: item.key, variantKey: first.key },
+    };
+    const next = applySavedReview(initial, command, {
+      commandId: command.commandId,
+      selection: command.selection,
+      revisions: [{ id: first.id, expectedRevision: first.revision + 1 }],
+      baselineRevision: initial.baselineRevision,
+      promotionId: initial.promotionId,
+      runRevision: initial.comparisonRevision + 2,
+      reviewer: "maintainer-1",
+      runStatus: "needs-review",
+    });
+    expect(next.run.status).toBe("needs-review");
+    expect(next.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "human" });
+    expect(next.items[0]?.variants[1]).toMatchObject({ kind, verdict: null });
+  },
+);
 
 test("conflict responses carry current evidence and reviewer without inventing success", async () => {
   const model = fixtureModel();

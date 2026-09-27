@@ -162,7 +162,7 @@ export function ScreenshotViewer({
         label="Reference"
         empty="New image, no reference"
         zoom={zoom}
-        hidden={mode !== "side"}
+        hidden={mode !== "side" && mode !== "original"}
         identity={identity}
         role="reference"
         report={report}
@@ -172,7 +172,7 @@ export function ScreenshotViewer({
         label="New image"
         empty="Removed, no new image"
         zoom={zoom}
-        hidden={mode === "diff"}
+        hidden={mode === "diff" || mode === "original"}
         identity={identity}
         role="candidate"
         report={report}

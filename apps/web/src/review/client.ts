@@ -6,6 +6,7 @@ import type {
   ReviewItem,
   ReviewModel,
   ReviewPollState,
+  ReviewSaveResult,
   ReviewSelection,
   ReviewVariant,
   ReviewVariantPart,
@@ -201,6 +202,25 @@ function commandResult(value: unknown): ReviewCommandResult {
   };
 }
 
+function saveResult(value: unknown): ReviewSaveResult {
+  const data = record(value);
+  return {
+    commandId: string(data.commandId),
+    selection: selection(data.selection),
+    revisions: values(data.revisions).map((value) => {
+      const target = record(value);
+      return { id: string(target.id), expectedRevision: number(target.expectedRevision) };
+    }),
+    baselineRevision: number(data.baselineRevision),
+    promotionId: data.promotionId === null ? null : string(data.promotionId),
+    runRevision: data.runRevision == null ? undefined : number(data.runRevision),
+    reviewer: optionalString(data.reviewer),
+    runStatus: optionalString(data.runStatus),
+    noop: data.noop == null ? undefined : boolean(data.noop),
+    model: data.model == null ? undefined : parseReviewModel(data.model),
+  };
+}
+
 async function request(path: string, body?: object): Promise<unknown> {
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
@@ -255,7 +275,7 @@ export async function loadReview(
     commands: {
       async save(command) {
         const reviewSessionId = await reviewSession();
-        return commandResult(
+        return saveResult(
           await request(`/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`, {
             ...command,
             reviewSessionId,
