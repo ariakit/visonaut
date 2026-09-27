@@ -24,16 +24,17 @@ The item list groups all variants for one item. Select an item, then select a va
 
 The thumbnail stays tied to the item's first declared candidate variant. A wholly removed item uses its first reference variant. Selecting another variant changes the viewer, not the thumbnail.
 
-| Control           | Image shown                                  |
-| ----------------- | -------------------------------------------- |
-| Side by side, `S` | Reference and candidate                      |
-| Pixel diff, `D`   | Differences in red                           |
-| New only, `F`     | Full candidate image in the viewer           |
-| Fit               | Image scaled to the available viewer width   |
-| 100% / 200%       | Original-size or enlarged inspection         |
-| Pan controls      | Move within a zoomed image with the keyboard |
+| Control            | Image shown                                  |
+| ------------------ | -------------------------------------------- |
+| Side by side, `S`  | Reference and candidate                      |
+| Pixel diff, `D`    | Differences in red                           |
+| New only, `F`      | Full candidate image in the viewer           |
+| Original only, `G` | Reference image in the viewer                |
+| Fit                | Image scaled to the available viewer width   |
+| 100% / 200%        | Original-size or enlarged inspection         |
+| Pan controls       | Move within a zoomed image with the keyboard |
 
-For an addition, there is no reference image. For a removal, the old image remains visible in Side by side, and New only says **Removed, no new image**. Pixel diff is unavailable when either image is absent. An image that fails to load shows an error and **Retry**. It is not treated as an addition, removal, or unchanged result.
+For an addition, there is no reference image; Original only says **New image, no reference**. For a removal, the old image remains visible in Side by side and Original only, and New only says **Removed, no new image**. Pixel diff is unavailable when either image is absent. An image that fails to load shows an error and **Retry**. It is not treated as an addition, removal, or unchanged result.
 
 Review actions wait for the current selection's required images to load and decode. This prevents a decision from using pixels left over from a different selection. The details panel provides the image dimensions, digests, profiles, comparison engine, policy, and threshold when available.
 
@@ -71,6 +72,7 @@ Move focus into the review workspace before using its shortcuts. **Keyboard help
 | `A` / `X`             | Approve or reject the current variant      |
 | `Shift+A` / `Shift+X` | Approve or reject the whole item           |
 | `S` / `D` / `F`       | Side by side, Pixel diff, or New only      |
+| `G`                   | Original only                              |
 | `Cmd/Ctrl+Z`          | Undo the last eligible saved command       |
 | Tab                   | Move through controls                      |
 | Escape                | Close help or a menu                       |

@@ -1,4 +1,4 @@
-# Current public client release audit
+# September 25 public client release audit
 
 On September 25, 2026, the public npm registry served [`visonaut@0.3.2`](https://www.npmjs.com/package/visonaut/v/0.3.2) and [`@visonaut/playwright@0.3.1`](https://www.npmjs.com/package/@visonaut/playwright/v/0.3.1). These are the exact versions installed by [Ariakit PR #7635](https://github.com/ariakit/ariakit/pull/7635). Fresh `npm pack` downloads matched their registry SHA-512 integrity values and passed the repository's `auditTarball` packed-file allowlist.
 
@@ -13,4 +13,4 @@ The installed CLI also reached a loopback-only status server with a synthetic be
 
 `npm audit signatures` found no missing or invalid signatures or attestations in the clean consumer. Both Visonaut packages have verified npm publish attestations and SLSA provenance. The provenance names `https://github.com/ariakit/visonaut`, `.github/workflows/release.yml`, and `refs/heads/main`; each attested SHA-512 subject equals the downloaded tarball's SHA-512. The tarballs' SHA-512 hex values are `bbacb77af98dd0716b914d7356161c26d8504e33a393b24a81801d17a250c87b476cd44f889392b179e76286fe09bc190d359ea8b0d9b122dd48bfe9e4b366b7` for the CLI and `c9b0fea7010a4fe31e7a229200b499887a52140c9a6efa824dbb10c6fceb0f63abffcf4562bb1efb33e3dd5cdaf480d2479c906fbb16034be88d1c71007fc2df` for the adapter.
 
-This audit covers the current public package bytes, installability, declarations, binary, provenance, and a real hosted capture. It does not close the service runtime, security, recovery, cost, or Ariakit required-check cutover gates. No `@visonaut/cli` alias was published or selected.
+This historical audit covers the published 0.3.2 CLI and 0.3.1 adapter bytes, installability, declarations, binary, provenance, and a hosted capture. The [CLI 0.3.4 audit](./cli-0.3.4-20260927.md) covers the later version installed by Ariakit `main`. No `@visonaut/cli` alias was published or selected.
