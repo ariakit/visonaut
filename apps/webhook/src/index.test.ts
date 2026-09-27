@@ -4,7 +4,6 @@ import { routeWebhook } from "./index.ts";
 
 const secret = "visonaut-webhook-test-secret-over-32-characters";
 const ariakitRepositoryId = "104133653";
-const diagnosticsRepositoryId = "1380792062";
 const serviceRepositoryId = "1380751023";
 
 function signedRequest(event: string, payload: Record<string, unknown>) {
@@ -39,7 +38,6 @@ function destinations(failedDestination?: string) {
     bindings: {
       secret,
       ariakitRepositoryId,
-      diagnosticsRepositoryId,
       serviceRepositoryId,
       production: destination("production"),
       preview: destination("preview"),
@@ -60,16 +58,6 @@ describe("signed App webhook routing", () => {
       "preview",
       "production",
     ]);
-  });
-
-  it("acknowledges a diagnostic repository event without forwarding it", async () => {
-    const { received, bindings } = destinations();
-    const response = await routeWebhook(
-      signedRequest("workflow_run", { repository: { id: 1380792062 } }),
-      bindings,
-    );
-    expect(response.status).toBe(202);
-    expect(received).toEqual([]);
   });
 
   it("acknowledges source repository events without sending them to a review environment", async () => {
@@ -129,26 +117,12 @@ describe("signed App webhook routing", () => {
     ]);
   });
 
-  it("acknowledges a diagnostic-only installation change without forwarding it", async () => {
+  it("forwards an installation change for Ariakit and service only to production and preview", async () => {
     const { received, bindings } = destinations();
     const response = await routeWebhook(
       signedRequest("installation_repositories", {
         action: "added",
-        repositories_added: [{ id: 1380792062 }],
-        repositories_removed: [],
-      }),
-      bindings,
-    );
-    expect(response.status).toBe(202);
-    expect(received).toEqual([]);
-  });
-
-  it("forwards an installation change for Ariakit and diagnostics only to production and preview", async () => {
-    const { received, bindings } = destinations();
-    const response = await routeWebhook(
-      signedRequest("installation_repositories", {
-        action: "added",
-        repositories_added: [{ id: 104133653 }, { id: 1380792062 }],
+        repositories_added: [{ id: 104133653 }, { id: 1380751023 }],
         repositories_removed: [],
       }),
       bindings,
@@ -160,10 +134,10 @@ describe("signed App webhook routing", () => {
     ]);
   });
 
-  it("rejects an unknown signed repository before forwarding", async () => {
+  it("rejects the retired diagnostic repository before forwarding", async () => {
     const { received, bindings } = destinations();
     await expect(
-      routeWebhook(signedRequest("check_run", { repository: { id: 999 } }), bindings),
+      routeWebhook(signedRequest("check_run", { repository: { id: 1380792062 } }), bindings),
     ).rejects.toMatchObject({ code: "wrong_repository", status: 403 });
     expect(received).toHaveLength(0);
   });
@@ -172,7 +146,7 @@ describe("signed App webhook routing", () => {
     const { received, bindings } = destinations();
     const request = signedRequest("check_run", { repository: { id: 104133653 } });
     const changed = new Request(request, {
-      body: JSON.stringify({ repository: { id: 1380792062 } }),
+      body: JSON.stringify({ repository: { id: 999 } }),
     });
     await expect(routeWebhook(changed, bindings)).rejects.toMatchObject({
       code: "invalid_webhook",

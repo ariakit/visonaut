@@ -1,31 +1,30 @@
 # Retire nonproduction auth if an environment is closed
 
-This is a contingency runbook. Its auth retirement steps have not been executed. Keep each environment active through its required readiness checks. The launch contract requires isolated sessions and verified revocation delivery.
+This is a contingency runbook for retiring preview authentication. Its preview auth retirement steps have not been executed. The synthetic diagnostics environment has already been archived and deleted. Keep preview active through its required readiness checks. The launch contract requires isolated sessions and verified revocation delivery.
 
 The GitHub App sends signed events to `hooks.visonaut.com`. The gateway must forward authorization revocations and installation suspension or deletion to every Worker that still accepts sessions. Each Worker has a separate D1 session database and handles revocation locally. Verify this delivery and separate-session behavior before launch. Current repository permission checks use an installation token and do not by themselves detect OAuth grant revocation.
 
-If preview or diagnostics is deliberately closed later, keep the webhook gateway in place for the remaining environments. Do not point the App webhook directly at one Worker while another environment still accepts sessions.
+If preview is deliberately closed later, keep the webhook gateway in place for production. Do not point the App webhook directly at one Worker while another environment still accepts sessions.
 
 ## Prepare the webhook destination removal
 
-Prepare a reviewed gateway change for each environment being retired. Remove that destination from every branch of `routeWebhook()` in `apps/webhook/src/index.ts`: App-wide events, `installation_repositories`, and repository-specific events. Remove its service binding and origin from `apps/webhook/wrangler.jsonc`. Keep all remaining destinations in each branch. The gateway must still return 503 when any **remaining** destination fails.
+Prepare a reviewed gateway change for preview retirement. Remove the preview destination from every branch of `routeWebhook()` in `apps/webhook/src/index.ts`: App-wide events, `installation_repositories`, and repository-specific events. Remove its service binding and origin from `apps/webhook/wrangler.jsonc`. Keep the production destination in each branch. The gateway must still return 503 when production fails.
 
-Test a signed App-wide event, a signed event for each installed repository, and an `installation_repositories` event that includes the retired repository. Assert that the retired Worker receives no requests and every remaining destination receives its applicable request. Do not merge or deploy this change while the retired environment still has public access. The current gateway must keep forwarding revocations until public access is closed.
+Test a signed App-wide event, a signed event for each installed repository, and an `installation_repositories` event. Assert that preview receives no requests and production receives its applicable requests. Do not merge or deploy this change while preview still has public access. The current gateway must keep forwarding revocations until public access is closed.
 
 ## Targets
 
-| Environment | Worker               | D1 database ID                       | Current origin                   |
-| ----------- | -------------------- | ------------------------------------ | -------------------------------- |
-| Preview     | visonaut-preview     | 395b539c-c423-4ce4-887c-a5792792a63b | https://preview.visonaut.com     |
-| Diagnostics | visonaut-diagnostics | 6d68da10-2754-433f-99d1-fdfc080dfe11 | https://diagnostics.visonaut.com |
+| Environment | Worker           | D1 database ID                       | Current origin               |
+| ----------- | ---------------- | ------------------------------------ | ---------------------------- |
+| Preview     | visonaut-preview | 395b539c-c423-4ce4-887c-a5792792a63b | https://preview.visonaut.com |
 
 Cloudflare account: `b04f3af3f0f10a6b9481bc23ba974eca`. Do not apply cleanup SQL or delete bindings in production.
 
 ## Close public access first
 
-When retiring an environment, set both `workers_dev: false` and `preview_urls: false` for that Worker. Persist the values in `apps/web/wrangler.jsonc`; set `workers_dev` explicitly in every remaining environment so the inherited root value cannot change it. Keep the production custom domain and routes unchanged.
+When retiring preview, set both `workers_dev: false` and `preview_urls: false` for that Worker. Persist the values in `apps/web/wrangler.jsonc`; set `workers_dev` explicitly for production so the inherited root value cannot change it. Keep the production custom domain and routes unchanged.
 
-Disable the live routes using the authenticated Cloudflare API or the reviewed deployment configuration. The direct API operation for each retired Worker is:
+Disable the live routes using the authenticated Cloudflare API or the reviewed deployment configuration. The direct API operation for preview is:
 
 ```http
 POST /accounts/b04f3af3f0f10a6b9481bc23ba974eca/workers/scripts/visonaut-preview/subdomain
@@ -34,38 +33,35 @@ Content-Type: application/json
 {"enabled":false,"previews_enabled":false}
 ```
 
-Repeat with `visonaut-diagnostics` only if that environment is also being retired. Credentials must come from the existing approved secret mechanism; do not put token values in commands, logs, or this runbook.
+Credentials must come from the existing approved secret mechanism; do not put token values in commands, logs, or this runbook.
 
-Remove the retired Worker's `preview.visonaut.com` or `diagnostics.visonaut.com` custom-domain entry from `apps/web/wrangler.jsonc` and from the live Cloudflare Worker routes. Verify the matching subdomain GET endpoint returns both fields false, inspect the live custom-domain and zone-route lists, and confirm the retired hostname has no application response. Check for any out-of-band public route or inbound service binding. The gateway's service binding must remain available for revocation delivery until the revised gateway is deployed. The current source has both custom domains and outbound COMPARATOR bindings. Disabling only workers.dev leaves the custom domain reachable.
+Remove the `preview.visonaut.com` custom-domain entry from `apps/web/wrangler.jsonc` and from the live Cloudflare Worker routes. Verify the matching subdomain GET endpoint returns both fields false, inspect the live custom-domain and zone-route lists, and confirm the hostname has no application response. Check for any out-of-band public route or inbound service binding. The gateway's preview service binding must remain available for revocation delivery until the revised gateway is deployed. Disabling only workers.dev leaves the custom domain reachable.
 
 Cloudflare warns that a later Wrangler deploy can re-enable workers.dev unless the committed config also disables it. Both the live route and config changes are required.
 
 ## Deploy the revised gateway
 
-With public access closed and the retired Worker still healthy, merge and deploy the reviewed gateway change. For diagnostics retirement, the first webhook version without diagnostics may replace the exact existing `DIAGNOSTICS` service binding; the deployment must reject any other binding drift and verify the final bindings. Replay a real GitHub App delivery from the GitHub delivery log and verify HTTP 202, the retained Workers' receipt records, and no retired-Worker request. Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`.
+With preview public access closed and its Worker still healthy, merge and deploy the reviewed gateway change. Verify the final bindings. Replay a real GitHub App delivery from the GitHub delivery log and verify HTTP 202, production's receipt record, and no preview request. Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`.
 
 Do not remove the retired Worker's auth secrets until this deployed gateway check passes. If it fails, restore gateway forwarding and resolve the failure while the retired Worker can still accept events. Repeat the HTTP 202 and receipt check after the steps below; stop retirement if GitHub reports a failed delivery.
 
 ## Revoke local sessions and pending sign-ins
 
-Apply `retire-preview-auth.sql` only to the database of each environment being retired, never to production or an environment that remains active. The SQL is idempotent and retains users and audit history. It deletes Better Auth sessions, OAuth verification/state records, and local review sessions, and removes encrypted provider tokens and their expiry data. Retain the databases and evidence buckets.
+Apply `retire-preview-auth.sql` only to the preview database, never to production or an environment that remains active. The SQL is idempotent and retains users and audit history. It deletes Better Auth sessions, OAuth verification/state records, and local review sessions, and removes encrypted provider tokens and their expiry data. Retain the preview database and evidence bucket.
 
 Example commands from the repository root, after verifying the named DB IDs above:
 
 ```sh
 pnpm exec wrangler d1 execute visonaut-preview --config apps/web/wrangler.jsonc --remote --file docs/operations/retire-preview-auth.sql
-pnpm exec wrangler d1 execute visonaut-diagnostics --config apps/web/wrangler.jsonc --env diagnostics --remote --file docs/operations/retire-preview-auth.sql
 ```
 
-Remove `BETTER_AUTH_SECRET` and `GITHUB_CLIENT_SECRET` bindings from each retired Worker, and mark its Infisical environment as retired so normal setup cannot silently restore them. Delete only that environment's bindings; do not revoke the shared App client secret at GitHub, because production still uses that App. Preserve any secret recovery material according to the approved backup policy.
+Remove `BETTER_AUTH_SECRET` and `GITHUB_CLIENT_SECRET` bindings from preview, and mark its Infisical environment as retired so normal setup cannot silently restore them. Do not revoke the shared App client secret at GitHub, because production still uses that App. Preserve any secret recovery material according to the approved backup policy.
 
 The exact binding-removal commands are:
 
 ```sh
 pnpm exec wrangler secret delete BETTER_AUTH_SECRET --name visonaut-preview --config apps/web/wrangler.jsonc
 pnpm exec wrangler secret delete GITHUB_CLIENT_SECRET --name visonaut-preview --config apps/web/wrangler.jsonc
-pnpm exec wrangler secret delete BETTER_AUTH_SECRET --name visonaut-diagnostics --config apps/web/wrangler.jsonc --env diagnostics
-pnpm exec wrangler secret delete GITHUB_CLIENT_SECRET --name visonaut-diagnostics --config apps/web/wrangler.jsonc --env diagnostics
 ```
 
 In current runtime code, absence of either binding makes `authConfiguration()` throw. `/api/auth/*`, `/api/me`, and API bindings fail closed with 503. This is a secondary barrier: removing a secret alone is not the selected disable mechanism because `/health`, static assets, and parts of the rendered login shell do not need auth configuration. The primary barrier is disabling all public routes. `VISONAUT_LAUNCH_ENABLED=false` only changes health display and is not an auth kill switch.
@@ -91,6 +87,6 @@ All four counts must be 0. Record only route flags, response status codes, datab
 
 Keep the GitHub App webhook URL at `https://hooks.visonaut.com/webhooks/github`. Verify one real OAuth revocation removes sessions in every environment that remains authenticated and prevents the next private read and mutation. Use an isolated test account/session if available. The local webhook tests prove handler behavior; this final test proves delivery to the retained auth environments. Verify production login, current-permission reads, and session renewal still work after retirement.
 
-Keep the public synthetic fixture history and private evidence storage as required. Do not claim authenticated access to an environment after retiring it. Re-enabling it requires a new revocation-topology review and fresh isolation evidence.
+Keep private evidence storage as required. Do not claim authenticated access to preview after retiring it. Re-enabling it requires a new revocation-topology review and fresh isolation evidence.
 
 References: [GitHub App webhook delivery](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps), [OAuth revocation event](https://docs.github.com/en/webhooks/webhook-events-and-payloads#github_app_authorization), [service bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/), [disable workers.dev](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/), [Cloudflare subdomain API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/subdomain/).

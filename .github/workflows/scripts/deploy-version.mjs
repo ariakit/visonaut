@@ -8,10 +8,6 @@ import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const resourceTypes = new Set(["queue", "d1", "r2_bucket", "service", "durable_object_namespace"]);
-const nonproductionWebEnvironments = new Map([
-  ["visonaut-preview", null],
-  ["visonaut-diagnostics", "diagnostics"],
-]);
 const webSourceConfigPath = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../apps/web/wrangler.jsonc",
@@ -114,32 +110,6 @@ export function assertInfrastructure(configuration, settings, schedules) {
   return selfDurableObjectNamespaces(configuration, settings);
 }
 
-export function assertWebhookRetirementPreflight(configuration, settings, schedules) {
-  if (configuration.name !== "visonaut-webhook") {
-    return assertInfrastructure(configuration, settings, schedules);
-  }
-  assert(Array.isArray(settings.bindings), "Worker bindings are unavailable");
-  const diagnosticsBindings = settings.bindings.filter((binding) => binding.name === "DIAGNOSTICS");
-  if (diagnosticsBindings.length === 0) {
-    return assertInfrastructure(configuration, settings, schedules);
-  }
-  // The first version without diagnostics may remove only its known service binding.
-  assert.equal(diagnosticsBindings.length, 1, "Unexpected diagnostics binding count");
-  assert.deepEqual(
-    remoteInventory({ bindings: diagnosticsBindings }),
-    [{ name: "DIAGNOSTICS", type: "service", target: "visonaut-diagnostics" }],
-    "Unexpected diagnostics binding",
-  );
-  return assertInfrastructure(
-    configuration,
-    {
-      ...settings,
-      bindings: settings.bindings.filter((binding) => binding.name !== "DIAGNOSTICS"),
-    },
-    schedules,
-  );
-}
-
 export function assertStableDurableObjectNamespaces(before, after) {
   assert.deepEqual(after, before, "Durable Object namespace IDs changed during version deployment");
 }
@@ -197,10 +167,9 @@ export function runNonproductionMigrations({
   environment = process.env,
   run = execFileSync,
 }) {
-  if (!nonproductionWebEnvironments.has(expectedName)) {
+  if (expectedName !== "visonaut-preview") {
     return;
   }
-  const migrationEnvironment = nonproductionWebEnvironments.get(expectedName);
   assert.equal(sourceConfiguration.name, expectedName, "Migration config targets the wrong Worker");
   assert.equal(configuration.name, expectedName, "Upload config targets the wrong Worker");
   assert.equal(sourceConfiguration.d1_databases?.length, 1, "Expected one source D1 binding");
@@ -237,7 +206,6 @@ export function runNonproductionMigrations({
     "--remote",
     "--config",
     sourceConfigPath,
-    ...(migrationEnvironment ? ["--env", migrationEnvironment] : []),
   ];
   const migrationProcessEnvironment = {
     ...environment,
@@ -267,7 +235,7 @@ export function runNonproductionMigrations({
 
 export async function deployVersion(configPath, expectedName, environment) {
   assert(
-    /^visonaut(?:-(?:preview|diagnostics))?(?:-compare)?$/.test(expectedName) ||
+    /^visonaut(?:-preview)?(?:-compare)?$/.test(expectedName) ||
       expectedName === "visonaut-webhook",
     "Unexpected Worker name",
   );
@@ -291,16 +259,11 @@ export async function deployVersion(configPath, expectedName, environment) {
   }
   const beforeSettings = await inspect("/settings");
   const beforeSchedules = await inspect("/schedules");
-  const beforeNamespaces = assertWebhookRetirementPreflight(
-    configuration,
-    beforeSettings,
-    beforeSchedules,
-  );
+  const beforeNamespaces = assertInfrastructure(configuration, beforeSettings, beforeSchedules);
   const wranglerDirectory = dirname(require.resolve("wrangler/package.json"));
-  if (nonproductionWebEnvironments.has(expectedName)) {
+  if (expectedName === "visonaut-preview") {
     const sourceConfiguration = unstable_readConfig({
       config: webSourceConfigPath,
-      env: nonproductionWebEnvironments.get(expectedName) ?? undefined,
     });
     runNonproductionMigrations({
       expectedName,

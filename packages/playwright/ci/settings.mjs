@@ -2,11 +2,7 @@ export const settings = {
   comparisonEngineVersion: "rgba-visible-1",
 };
 
-const servers = new Set([
-  "https://visonaut.com",
-  "https://preview.visonaut.com",
-  "https://diagnostics.visonaut.com",
-]);
+const servers = new Set(["https://visonaut.com", "https://preview.visonaut.com"]);
 
 export function trustedServer(environment) {
   const server = environment.VISONAUT_SERVER ?? "https://visonaut.com";

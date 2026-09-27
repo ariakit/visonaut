@@ -67,7 +67,7 @@ async function consume(message: Message<unknown>, env: Env) {
       return;
     }
     const { result, artifacts } =
-      env.VISONAUT_CODEC_BACKEND === "container"
+      String(env.VISONAUT_CODEC_BACKEND) === "container"
         ? await processComparisonTaskInContainer({
             task,
             images: env.IMAGES,

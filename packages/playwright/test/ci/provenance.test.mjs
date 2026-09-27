@@ -98,14 +98,11 @@ test("render rejects OIDC before reading any candidate workspace", async () => {
 test("signed upload only sends GitHub identity to Visonaut-owned origins", () => {
   assert.equal(trustedServer({}), "https://visonaut.com");
   assert.equal(
-    trustedServer({ VISONAUT_SERVER: "https://diagnostics.visonaut.com" }),
-    "https://diagnostics.visonaut.com",
-  );
-  assert.equal(
     trustedServer({ VISONAUT_SERVER: "https://preview.visonaut.com" }),
     "https://preview.visonaut.com",
   );
   for (const server of [
+    "https://diagnostics.visonaut.com",
     "http://diagnostics.visonaut.com",
     "https://visonaut.com.evil.example",
     "https://visonaut.com@evil.example",
@@ -116,7 +113,7 @@ test("signed upload only sends GitHub identity to Visonaut-owned origins", () =>
 });
 
 test("GitHub identity requests accept the runner endpoint but reject altered authorities", () => {
-  const audience = "https://diagnostics.visonaut.com";
+  const audience = "https://visonaut.com";
   const request = githubOidcRequestUrl(
     "https://run.actions.githubusercontent.com/id-token?api-version=2.0",
     audience,

@@ -130,23 +130,23 @@ test("transfer keeps images private and binds them to the exact run and commit",
   }
 });
 
-test("render encrypts for the selected server's key, not the preview key", async () => {
-  const diagnosticKeys = generateKeyPairSync("rsa", {
+test("render encrypts for the selected server's key, not another server's key", async () => {
+  const productionKeys = generateKeyPairSync("rsa", {
     modulusLength: 2048,
     publicKeyEncoding: { type: "spki", format: "pem" },
     privateKeyEncoding: { type: "pkcs8", format: "pem" },
   });
   const requested = [];
-  const diagnosticPublicKey = await loadTransferPublicKey(
-    { VISONAUT_SERVER: "https://diagnostics.visonaut.com" },
+  const productionPublicKey = await loadTransferPublicKey(
+    { VISONAUT_SERVER: "https://visonaut.com" },
     async (url, options) => {
       requested.push({ url: url.href, redirect: options.redirect });
-      return new Response(diagnosticKeys.publicKey);
+      return new Response(productionKeys.publicKey);
     },
   );
   assert.deepEqual(requested, [
     {
-      url: "https://diagnostics.visonaut.com/v1/transfer/public-key",
+      url: "https://visonaut.com/v1/transfer/public-key",
       redirect: "error",
     },
   ]);
@@ -156,14 +156,14 @@ test("render encrypts for the selected server's key, not the preview key", async
   process.env.GITHUB_SHA = testedSha;
   try {
     const { root, source } = await fixture();
-    const encrypted = path.join(root, "diagnostic.enc");
-    await encryptTransferWithPublicKey(source, shard, encrypted, diagnosticPublicKey);
+    const encrypted = path.join(root, "production.enc");
+    await encryptTransferWithPublicKey(source, shard, encrypted, productionPublicKey);
     await assert.rejects(decryptTransfer(encrypted, path.join(root, "preview"), shard, privateKey));
     await decryptTransfer(
       encrypted,
-      path.join(root, "diagnostic"),
+      path.join(root, "production"),
       shard,
-      diagnosticKeys.privateKey,
+      productionKeys.privateKey,
     );
   } finally {
     if (originalRun === undefined) delete process.env.GITHUB_RUN_ID;
