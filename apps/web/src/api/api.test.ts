@@ -67,6 +67,18 @@ function objects(value: unknown) {
 async function objectResponse(response: Response) {
   return object(await response.json());
 }
+async function advanceDashboardState(projectId: string, sourceRunId: string, laterRunId: string) {
+  await database.batch([
+    database
+      .prepare("UPDATE visonaut_projects SET baseline_revision = 7 WHERE id = ?")
+      .bind(projectId),
+    database
+      .prepare(
+        "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, active, state, created_at) SELECT ?, project_id, 'late-dashboard', 1, kind, tested_sha, lineage_key, plan_digest, plan_json, 0, 'failed', created_at + 1 FROM visonaut_runs WHERE id = ?",
+      )
+      .bind(laterRunId, sourceRunId),
+  ]);
+}
 async function declarationResponse(response: Response) {
   const body = await objectResponse(response);
   return {
@@ -757,6 +769,55 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     test.setPermission("read");
     expect((await test.send("/api/runs", { headers })).status).toBe(403);
     expect((await test.send("/api/operations", { headers })).status).toBe(403);
+  });
+  it("reads dashboard project state after authorization when a new run arrives", async () => {
+    const test = await fixture();
+    const laterRunId = crypto.randomUUID();
+    const originalFetch = test.bindings.configuration.github.fetch!;
+    let advanced = false;
+    test.bindings.configuration.github.fetch = async (input, init) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (!advanced && url.pathname.endsWith("/permission")) {
+        advanced = true;
+        await advanceDashboardState(test.bindings.configuration.projectId, test.runId, laterRunId);
+      }
+      return originalFetch(input, init);
+    };
+    const response = await test.send("/api/runs", {
+      headers: { authorization: `Bearer ${test.token}` },
+    });
+    expect(response.status).toBe(200);
+    const body = await objectResponse(response);
+    expect(objects(body.runs).map((run) => run.id)).toContain(laterRunId);
+    expect(object(body.project).baselineRevision).toBe(7);
+  });
+  it("does not pair an old baseline with a run added between dashboard reads", async () => {
+    const test = await fixture();
+    const laterRunId = crypto.randomUUID();
+    const originalProject = Service.prototype.project;
+    let advanced = false;
+    const projectLookup = vi.spyOn(Service.prototype, "project").mockImplementation(async function (
+      this: Service,
+      projectId,
+    ) {
+      const project = await originalProject.call(this, projectId);
+      if (!advanced) {
+        advanced = true;
+        await advanceDashboardState(projectId, test.runId, laterRunId);
+      }
+      return project;
+    });
+    try {
+      const response = await test.send("/api/runs", {
+        headers: { authorization: `Bearer ${test.token}` },
+      });
+      expect(response.status).toBe(200);
+      const body = await objectResponse(response);
+      expect(object(body.project).baselineRevision).toBe(0);
+      expect(objects(body.runs).map((run) => run.id)).not.toContain(laterRunId);
+    } finally {
+      projectLookup.mockRestore();
+    }
   });
   it("publishes only validated image IDs and denies arbitrary bucket paths", async () => {
     const test = await fixture();

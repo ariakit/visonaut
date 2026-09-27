@@ -103,7 +103,10 @@ export async function handleApi(
         headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
-    if (!path.startsWith("/api/auth/")) await assertConfiguredProject(context);
+    const dashboardRead = path === "/api/runs" && request.method === "GET";
+    if (!path.startsWith("/api/auth/") && !dashboardRead) {
+      await assertConfiguredProject(context);
+    }
     if (path === "/webhooks/github" && request.method === "POST") {
       return privateResponse(await receiveWebhook(request, context, lifetime));
     }
