@@ -197,7 +197,7 @@ export function ItemList({
           <span aria-live="polite">
             {attentionStart + 1}–{attentionEnd} of {attention.length} items
           </span>
-          <div>
+          <div className="flex flex-wrap gap-2">
             <ControlButton
               className="review-control"
               disabled={attentionStart === 0}
@@ -256,7 +256,7 @@ export function ItemList({
                 <span aria-live="polite">
                   {acceptedStart + 1}–{acceptedEnd} of {accepted.length} accepted
                 </span>
-                <div>
+                <div className="flex flex-wrap gap-2">
                   <ControlButton
                     className="review-control"
                     disabled={acceptedStart === 0}

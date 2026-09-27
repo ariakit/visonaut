@@ -99,11 +99,6 @@
   color: var(--review-muted);
   font-size: 12px;
 }
-.review-item-pages > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 .review-item-pages + .review-item-list {
   max-height: calc(100dvh - 244px);
 }
