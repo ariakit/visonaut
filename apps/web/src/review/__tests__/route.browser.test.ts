@@ -124,6 +124,83 @@ test("opening a historical link loads its selected comparison", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("item and variant links open a direct selection without reloading the run", async ({
+  page,
+}) => {
+  const selectedEntry = "/runs/run-42?item=menu%2Fopen&variant=Menu-dark";
+  const url = `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`;
+  let modelLoads = 0;
+  await page.route("**/api/runs/run-42*", (route) => {
+    modelLoads += 1;
+    return route.fulfill({ json: fixtureModel() });
+  });
+  await page.goto(url);
+  const variants = page.getByRole("listbox", { name: "Variants" });
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
+  await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
+  const items = page.getByRole("listbox", { name: "Items needing attention" });
+  await items.getByRole("option", { name: /Success dialog/ }).click();
+  await items.getByRole("option", { name: /Open menu/ }).click();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
+  await variants.getByRole("option", { name: /Menu · Chromium/ }).click();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(
+    /Menu · Chromium/,
+  );
+  await variants.getByRole("option", { name: /Menu · Chromium/ }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
+  await items.getByRole("option", { name: /Success dialog/ }).click();
+  await expect(page.getByRole("heading", { name: "Success dialog" })).toBeVisible();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/React/);
+  await items.getByRole("option", { name: /Success dialog/ }).focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(items.getByRole("option", { name: /Open menu/ })).toBeFocused();
+  await expect(variants.getByRole("option", { selected: true })).toHaveAccessibleName(/Menu-dark/);
+  expect(modelLoads).toBe(1);
+});
+
+test("a stale variant link keeps its valid item selected", async ({ page }) => {
+  const selectedEntry = "/runs/run-42?item=menu%2Fopen&variant=removed";
+  await page.route("**/api/runs/run-42*", (route) => route.fulfill({ json: fixtureModel() }));
+  await page.goto(
+    `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`,
+  );
+  await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
+  await expect(
+    page.getByRole("listbox", { name: "Variants" }).getByRole("option", { selected: true }),
+  ).toHaveAccessibleName(/Menu · Chromium/);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { router } = await import("./route-fixture.tsx");
+        return router.state.location.search;
+      }),
+    )
+    .toMatchObject({ item: "menu/open", variant: "Menu" });
+});
+
+test("sign-in keeps a direct item and variant link", async ({ page }) => {
+  const selectedEntry = "/runs/run-42?item=menu%2Fopen&variant=Menu-dark";
+  await page.route("**/api/runs/**", (route) =>
+    route.fulfill({
+      status: 401,
+      json: { error: { code: "sign_in_required", message: "Sign in with GitHub." } },
+    }),
+  );
+  await page.route("**/api/auth/sign-in/social", (route) =>
+    route.fulfill({ status: 400, json: { code: "TEST", message: "Sign-in fixture" } }),
+  );
+  await page.goto(
+    `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`,
+  );
+  const request = page.waitForRequest("**/api/auth/sign-in/social");
+  await page.getByRole("button", { name: "Sign in with GitHub" }).click();
+  expect((await request).postDataJSON()).toMatchObject({
+    provider: "github",
+    callbackURL: selectedEntry,
+  });
+});
+
 test("historical sign-in preserves the selected comparison in its return path", async ({
   page,
 }) => {
