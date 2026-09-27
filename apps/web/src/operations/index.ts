@@ -51,8 +51,8 @@ export async function runOperations(context: OperationsContext, exporter: Databa
   };
   await reportComparisonRecovery(context, publication, finalized);
   const steps: [string, () => Promise<OperationReport>][] = [
-    ["promotion", () => promoteBaselines(context)],
     ["checks", () => deliverGitHubStatuses(context)],
+    ["promotion", () => promoteBaselines(context)],
     ["backup", () => backupDaily(context, exporter)],
     ["historical-archive", () => archiveHistoricalComparisons(context)],
     ["history", () => archiveClosedRuns(context)],

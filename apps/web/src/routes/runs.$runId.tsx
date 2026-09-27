@@ -148,6 +148,8 @@ function RunPage({
         {state.status === "ready" && (
           <Button
             className="review-control"
+            $kind="flat"
+            $rounded="lg"
             disabled={action !== null}
             onClick={() => void signOut()}
           >

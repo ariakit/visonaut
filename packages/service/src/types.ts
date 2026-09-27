@@ -148,6 +148,9 @@ export interface CommandResult {
   baselineRevision: number;
   promotionId: string | null;
   noop?: boolean;
+  /** Review saves include both revisions so the API can detect other run updates. */
+  previousRunRevision?: number;
+  runRevision?: number;
 }
 
 export interface ComparisonResult {

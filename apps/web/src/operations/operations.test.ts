@@ -63,6 +63,73 @@ async function completeBackup(fixture: ReturnType<typeof context>) {
 }
 
 describe("protected object operations", () => {
+  it("delivers a passed main check before copying a baseline and resumes bounded pages", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const service = await captured(fixture.context, "seed", "main");
+    const insertImage = database.connection.prepare(
+      "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'seed',?,?,'image/png',?,1,1)",
+    );
+    const insertCapture = database.connection.prepare(
+      "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) VALUES(?,'seed','chromium',?,'light',?,?,'profile','test',0,'{}')",
+    );
+    for (let index = 1; index <= 50; index++) {
+      const body = `image-${index}`;
+      const imageId = `image-${index}`;
+      const key = `runs/seed/${imageId}`;
+      await fixture.images.put(key, body, { httpMetadata: { contentType: "image/png" } });
+      insertImage.run(imageId, digest(body), key, body.length);
+      insertCapture.run(`capture-${index}`, `dialog-${index}`, index, imageId);
+    }
+    fixture.context.budget.objectsPerStep = 1000;
+    const events: string[] = [];
+    const request = fixture.context.github.request.bind(fixture.context.github);
+    vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
+      if (init?.method === "PATCH") {
+        events.push("check");
+      }
+      return request(path, init);
+    });
+    const put = fixture.images.put.bind(fixture.images);
+    vi.spyOn(fixture.images, "put").mockImplementation(async (key, value, options) => {
+      if (key.startsWith("baselines/")) {
+        events.push("copy");
+      }
+      return put(key, value, options);
+    });
+    const exporter = {
+      async export() {
+        return databaseExport("CREATE TABLE restored(id TEXT);");
+      },
+    };
+
+    const first = await runOperations(fixture.context, exporter);
+    expect(events[0]).toBe("check");
+    expect(first.reports.promotion?.hasMore).toBe(true);
+    expect(
+      await database.prepare("SELECT SUM(copied) AS count FROM visonaut_snapshot_images").first(),
+    ).toEqual({ count: 50 });
+    expect((await service.project("project")).snapshot_id).toBeNull();
+
+    const second = await runOperations(fixture.context, exporter);
+    expect(second.reports.promotion?.hasMore).toBe(true);
+    const third = await runOperations(fixture.context, exporter);
+    expect(third.reports.promotion?.completed).toEqual(["seed"]);
+    expect(third.hasMore).toBe(true);
+    expect((await service.project("project")).snapshot_id).not.toBeNull();
+
+    await runOperations(fixture.context, exporter);
+    expect(
+      await database.prepare("SELECT desired_revision,delivered_revision FROM work_checks").first(),
+    ).toEqual(
+      await database
+        .prepare(
+          "SELECT revision AS desired_revision,revision AS delivered_revision FROM visonaut_projects",
+        )
+        .first(),
+    );
+  });
+
   it("does not commit a baseline until bounded protected copies and verification finish", async () => {
     using database = new TestDatabase();
     const fixture = context(database);

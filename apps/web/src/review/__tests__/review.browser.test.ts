@@ -261,6 +261,25 @@ test("item and variant navigation stops at ends and remembers each item", async 
   await expect(selected(page)).toContainText("Removal");
 });
 
+test("item navigation picks the first variant needing review unless one was chosen", async ({
+  page,
+}) => {
+  await page.keyboard.press("ArrowDown");
+  await expect(selected(page)).toContainText("Menu");
+  await page.keyboard.press("ArrowUp");
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const first = model.items[1]?.variants[0];
+    if (!first) throw new Error("Missing menu variant.");
+    first.verdict = "approved";
+    first.source = "automatic";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator("#review-item-1")).toContainText("1 of 2 need review");
+  await page.keyboard.press("ArrowDown");
+  await expect(selected(page)).toContainText("Menu-dark");
+});
+
 test("a missing remembered key falls back and announces the first variant", async ({ page }) => {
   await page.keyboard.press("2");
   await page.keyboard.press("ArrowDown");
@@ -299,6 +318,14 @@ test("save confirmation gates verdicts and navigation, and repeat keys do nothin
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
   await expect(page.getByRole("option", { name: /Solid.*Rejected/ })).toBeVisible();
+});
+
+test("a saved review keeps its reviewer visible when revisited", async ({ page }) => {
+  await page.keyboard.press("a");
+  await expect(selected(page)).toContainText("Solid");
+  await page.keyboard.press("ArrowLeft");
+  await expect(selected(page)).toContainText("React");
+  await expect(page.locator(".review-result-heading p")).toContainText("maintainer-1");
 });
 
 test("whole item freezes all changed IDs in one undoable command", async ({ page }) => {
@@ -623,6 +650,22 @@ test("addition and removal empty panes remain distinct and D keeps the current v
     "aria-disabled",
     "true",
   );
+});
+
+test("Original only shows the reference image and G switches from the other views", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.keyboard.press("g");
+  await expect(page.getByRole("button", { name: "Original only G" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "New image", exact: true })).not.toBeVisible();
+  await page.keyboard.press("f");
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).not.toBeVisible();
+  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
 });
 
 test("shortcut scope, native modifiers, editing exclusions, and toggle", async ({ page }) => {
@@ -1098,9 +1141,14 @@ test("a run that closes before recompare also disables the previous Undo while c
   await page.keyboard.press("a");
   await expect(selected(page)).toContainText("Solid");
   await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
+  const previousRevision = await page.evaluate(
+    () => window.reviewFixture.model().comparisonRevision,
+  );
   await page.evaluate(() => window.reviewFixture.setBehavior("closed-before-recompare"));
   await page.getByRole("button", { name: "Recompare stored run" }).click();
-  await expect(page.locator(".review-run-identity")).toContainText("Comparison 2");
+  await expect(page.locator(".review-run-identity")).toContainText(
+    `Comparison ${previousRevision}`,
+  );
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reject X", exact: true })).toBeDisabled();
