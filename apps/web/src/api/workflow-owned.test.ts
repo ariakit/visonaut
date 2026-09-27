@@ -51,6 +51,12 @@ const png = new Uint8Array(
   await readFile(new URL("../test/fixtures/rgba.png", import.meta.resolve("@visonaut/compare"))),
 );
 const image = await validateImage(png);
+const profiledPng = new Uint8Array(
+  await readFile(
+    new URL("../test/fixtures/rgba-profiled.png", import.meta.resolve("@visonaut/compare")),
+  ),
+);
+const profiledImage = await validateImage(profiledPng);
 const privateKey = await exportPKCS8(
   (await generateKeyPair("RS256", { extractable: true })).privateKey,
 );
@@ -569,12 +575,6 @@ it("does not accept a proof derived only from the public image digest", async ()
 
 it("verifies every proof before it writes any target original", async () => {
   const test = await fixture();
-  const otherBytes = new Uint8Array(
-    await readFile(
-      new URL("../test/fixtures/rgba-profiled.png", import.meta.resolve("@visonaut/compare")),
-    ),
-  );
-  const otherImage = await validateImage(otherBytes);
   const original = test.manifest.captures[0]!;
   test.manifest.captures.push({
     ...original,
@@ -582,18 +582,18 @@ it("verifies every proof before it writes any target original", async () => {
     ordinal: 1,
     image: {
       ...original.image,
-      digest: otherImage.digest,
-      bytes: otherBytes.byteLength,
-      width: otherImage.width,
-      height: otherImage.height,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+      width: profiledImage.width,
+      height: profiledImage.height,
       path: "images/other.png",
     },
   });
   await retainedSource(test);
-  await retainedSource(test, { sourceImage: otherImage, sourceBytes: otherBytes });
+  await retainedSource(test, { sourceImage: profiledImage, sourceBytes: profiledPng });
   const { body } = await reuseProof(test);
   const valid = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
-    .update(otherBytes)
+    .update(profiledPng)
     .digest("hex");
   await expect(
     reuseStagedImages(
@@ -603,7 +603,7 @@ it("verifies every proof before it writes any target original", async () => {
         shardKey: test.shardKey,
         challenge: body.reuse.token,
         proofs: [
-          { imageDigest: otherImage.digest, proof: valid },
+          { imageDigest: profiledImage.digest, proof: valid },
           { imageDigest: image.digest, proof: "0".repeat(64) },
         ],
       }),
@@ -620,6 +620,95 @@ it("verifies every proof before it writes any target original", async () => {
     expect(target.complete).toBe(0);
     expect(await images.get(target.object_key)).toBeNull();
   }
+});
+
+it("reads independent reuse sources in parallel before writing targets", async () => {
+  const test = await fixture();
+  const original = test.manifest.captures[0]!;
+  test.manifest.captures.push({
+    ...original,
+    itemKey: "dialog/other",
+    ordinal: 1,
+    image: {
+      ...original.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+      width: profiledImage.width,
+      height: profiledImage.height,
+      path: "images/other.png",
+    },
+  });
+  await retainedSource(test);
+  await retainedSource(test, { sourceImage: profiledImage, sourceBytes: profiledPng });
+  const { body } = await reuseProof(test);
+  const originalProof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
+    .update(png)
+    .digest("hex");
+  const proof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
+    .update(profiledPng)
+    .digest("hex");
+  const storage = test.context.images;
+  let releaseFirstRead = () => {};
+  const firstRead = new Promise<void>((resolve) => {
+    releaseFirstRead = resolve;
+  });
+  let releaseFirstWrite = () => {};
+  const firstWrite = new Promise<void>((resolve) => {
+    releaseFirstWrite = resolve;
+  });
+  let reads = 0;
+  let writes = 0;
+  test.context.images = {
+    async get(key) {
+      reads++;
+      if (reads === 1) {
+        await firstRead;
+      }
+      return storage.get(key);
+    },
+    async put(key, bytes, options) {
+      writes++;
+      if (writes === 1) {
+        await firstWrite;
+      }
+      return storage.put(key, bytes, options);
+    },
+    delete: (key) => storage.delete(key),
+  };
+  const operation = reuseStagedImages(
+    test.post({
+      schemaVersion: "1.0",
+      manifestDigest: body.manifestDigest,
+      shardKey: test.shardKey,
+      challenge: body.reuse.token,
+      proofs: [
+        { imageDigest: image.digest, proof: originalProof },
+        { imageDigest: profiledImage.digest, proof },
+      ],
+    }),
+    test.context,
+    test.runId,
+  );
+  const concurrentReads = await vi
+    .waitFor(() => expect(reads).toBe(2), { timeout: 1000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  const writesBeforeReadRelease = writes;
+  releaseFirstRead();
+  const concurrentWrites = await vi
+    .waitFor(() => expect(writes).toBe(2), { timeout: 1000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  releaseFirstWrite();
+  expect(object(await (await operation).json()).reused).toHaveLength(2);
+  expect(concurrentReads).toBe(true);
+  expect(concurrentWrites).toBe(true);
+  expect(writesBeforeReadRelease).toBe(0);
+  expect(writes).toBe(2);
 });
 
 it.each([
