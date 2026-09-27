@@ -1649,6 +1649,8 @@ describe("workflow-owned upload staging", () => {
         "../test/fixtures/rgba.webp",
         "../test/fixtures/rgba-profiled.webp",
         "../evidence/browser/chromium.png",
+        "../evidence/browser/firefox.png",
+        "../evidence/browser/webkit.png",
       ].map(async (path) => {
         const bytes = new Uint8Array(
           await readFile(new URL(path, import.meta.resolve("@visonaut/compare"))),
@@ -1702,7 +1704,7 @@ describe("workflow-owned upload staging", () => {
       manifestDigest: string;
       uploads: Array<{ imageDigest: string; ticket: string }>;
     };
-    expect(declared.uploads).toHaveLength(5);
+    expect(declared.uploads).toHaveLength(7);
     for (const upload of declared.uploads) {
       const asset = byDigest.get(upload.imageDigest);
       if (!asset) throw new Error("Expected a declared image asset.");
@@ -1761,8 +1763,8 @@ describe("workflow-owned upload staging", () => {
     const registerImages = vi.spyOn(test.context.service, "registerImages");
     const operation = materializeWorkflowRun(test.context, test.runId);
     try {
-      await vi.waitFor(() => expect(reads).toBe(4), { timeout: 5000 });
-      expect(maximumActiveReads).toBe(4);
+      await vi.waitFor(() => expect(reads).toBe(6), { timeout: 5000 });
+      expect(maximumActiveReads).toBe(6);
       expect(
         await database
           .prepare("SELECT COUNT(*) AS count FROM visonaut_images WHERE run_id = ?")
@@ -1774,10 +1776,10 @@ describe("workflow-owned upload staging", () => {
       await operation.catch(() => undefined);
     }
     expect((await operation).sealed_at).not.toBeNull();
-    expect(reads).toBe(5);
-    expect(maximumActiveReads).toBe(4);
+    expect(reads).toBe(7);
+    expect(maximumActiveReads).toBe(6);
     expect(registerImages).toHaveBeenCalledTimes(1);
-    expect(registerImages.mock.calls[0]?.[0]).toHaveLength(5);
+    expect(registerImages.mock.calls[0]?.[0]).toHaveLength(7);
   });
 
   it("limits buffered originals by declared bytes as well as count", () => {
