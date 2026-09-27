@@ -10,6 +10,7 @@ import {
   ensurePreRunCheck,
   ensureSignedAttemptCheck,
   findPreRunCheck,
+  hasPinnedMainWorkflow,
   retireUnpinnedMainChecks,
   settlePreRunWorkflow,
 } from "./pre-run.ts";
@@ -339,6 +340,28 @@ function preRunFixture() {
 }
 
 describe("pre-run App checks", () => {
+  it.each([
+    ["old", "01b78334223b47515b41f63f587308050a5dcdad", true],
+    ["new", "c86f2dc5370fe07030a27af87979072f86afa8de", true],
+    ["unlisted", "f".repeat(40), false],
+  ])("%s app workflow blob has the expected main check result", async (_name, blob, allowed) => {
+    const fixture = preRunFixture();
+    fixture.state.workflowSha = blob;
+    const context = apiContext({
+      ...preRunBindings,
+      configuration: {
+        ...preRunBindings.configuration,
+        workflowOwned: {
+          ...preRunConfiguration,
+          trustedWorkflowPath: ".github/workflows/app.yml",
+          reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
+          additionalTrustedWorkflowBlobSha: "c86f2dc5370fe07030a27af87979072f86afa8de",
+        },
+      },
+    });
+    await expect(hasPinnedMainWorkflow(context, fixture.github, mergeSha)).resolves.toBe(allowed);
+  });
+
   it("waits for the pinned main workflow and retires checks left by the old workflow", async () => {
     const fixture = preRunFixture();
     fixture.state.mainSha = mergeSha;

@@ -25,6 +25,8 @@ export interface OidcConfiguration {
   reusableWorkflowSha: string;
   /** Approved Git blob for direct jobs in this repository's app workflow. */
   trustedWorkflowPath?: string;
+  /** One additional approved Git blob during a direct workflow transition. */
+  additionalTrustedWorkflowBlobSha?: string;
   planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
@@ -70,6 +72,20 @@ function sha(value: unknown): string {
     throw new SecurityError("untrusted_run", 403, "A full tested commit is required.");
   }
   return result;
+}
+
+export function isTrustedWorkflowBlob(
+  blob: unknown,
+  configuration: Pick<
+    OidcConfiguration,
+    "reusableWorkflowSha" | "additionalTrustedWorkflowBlobSha"
+  >,
+): boolean {
+  return (
+    blob === configuration.reusableWorkflowSha ||
+    (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
+      blob === configuration.additionalTrustedWorkflowBlobSha)
+  );
 }
 
 function attemptNumber(value: unknown): number {
@@ -137,7 +153,7 @@ export async function verifyGitHubOidc({
     );
     requireEqual(file.type, "file", "rest.direct_workflow_type");
     requireEqual(file.path, source, "rest.direct_workflow_path");
-    requireEqual(file.sha, configuration.reusableWorkflowSha, "rest.direct_workflow_blob");
+    requireEqual(isTrustedWorkflowBlob(file.sha, configuration), true, "rest.direct_workflow_blob");
   } else {
     requireEqual(
       claims.job_workflow_ref,

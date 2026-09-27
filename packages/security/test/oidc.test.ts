@@ -174,11 +174,51 @@ beforeAll(() => {
 });
 
 describe("direct Ariakit app workflow", () => {
+  const oldBlob = "01b78334223b47515b41f63f587308050a5dcdad";
+  const newBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
   const direct: OidcConfiguration = {
     ...configuration,
     workflowPath: ".github/workflows/ci.yml",
     trustedWorkflowPath: ".github/workflows/app.yml",
   };
+
+  it.each([
+    ["old", oldBlob, true],
+    ["new", newBlob, true],
+    ["unlisted", "f".repeat(40), false],
+  ])("%s direct workflow blob has the expected trust result", async (_name, blob, allowed) => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${direct.workflowPath}@${ref}`,
+      job_workflow_ref: `${repository}/${direct.trustedWorkflowPath}@${ref}`,
+      job_workflow_sha: testedSha,
+    });
+    const verification = verifyGitHubOidc({
+      token: signed,
+      request,
+      configuration: {
+        ...direct,
+        reusableWorkflowSha: oldBlob,
+        additionalTrustedWorkflowBlobSha: newBlob,
+      },
+      github: github(
+        { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },
+        "capture / chromium",
+        { workflowBlob: blob },
+      ),
+      keySet,
+    });
+    if (allowed) {
+      await expect(verification).resolves.toMatchObject({ event: "pull_request", testedSha });
+    } else {
+      await expect(verification).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
+    }
+  });
 
   it("accepts an active signed job when GitHub still reports its workflow attempt as queued", async () => {
     const ref = "refs/pull/7/merge";
