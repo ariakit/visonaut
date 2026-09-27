@@ -550,6 +550,23 @@ test("unavailable stored captures do not offer recompare for a failed comparison
   await expect(page.getByText("The stored images have expired.", { exact: true })).toBeVisible();
 });
 
+test("stale pull request captures explain how to get a new comparison", async ({ page }) => {
+  const reason =
+    "This pull request was captured under an older comparison policy. Refresh it against main and rerun CI to capture it again.";
+  await page.evaluate((reason) => {
+    const model = window.reviewFixture.model();
+    model.run.status = "needs-recompare";
+    model.reviewReady = false;
+    model.comparisonState = "invalidated";
+    model.recompareAllowed = false;
+    model.recompareDisabledReason = reason;
+    window.reviewFixture.update(model);
+  }, reason);
+  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
+  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+});
+
 test("a dimension mismatch cannot be fixed with image retry", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();

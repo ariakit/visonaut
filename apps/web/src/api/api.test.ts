@@ -2925,7 +2925,118 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     );
   });
 });
-describe("private historical recomparison API", () => {
+describe("private recomparison API", () => {
+  it("blocks stale active PR captures before scheduling work and allows current captures", async () => {
+    const test = await fixture();
+    const digest = await test.upload();
+    test.succeedJob();
+    expect(
+      (
+        await test.send(
+          `/v1/runs/${test.runId}/finalize`,
+          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
+        )
+      ).status,
+    ).toBe(202);
+    await database
+      .prepare("UPDATE visonaut_runs SET kind = 'pull_request' WHERE id = ?")
+      .bind(test.runId)
+      .run();
+    const nextPolicy = {
+      id: "new-policy",
+      channelThreshold: 1,
+      maxChangedPixels: 0,
+      maxChangedRatio: 0,
+    };
+    const nextPolicyDigest = await digestJson(nextPolicy);
+    await test.service.createPolicy({ digest: nextPolicyDigest, policy: nextPolicy });
+    const run = await test.service.run(test.runId);
+    await database
+      .prepare(
+        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
+      )
+      .bind(nextPolicyDigest, run.project_id)
+      .run();
+    const before = await database
+      .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
+      .bind(test.runId)
+      .first<{ total: number }>();
+    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    expect(model.recompareAllowed).toBe(false);
+    expect(model.recompareDisabledReason).toMatch(/Refresh it against main and rerun CI/);
+    const rejected = await test.send(`/api/runs/${test.runId}/recompare`, {
+      method: "POST",
+      headers,
+    });
+    expect(rejected.status).toBe(409);
+    expect(await objectResponse(rejected)).toMatchObject({
+      error: { code: "incomplete", message: model.recompareDisabledReason },
+    });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual(before);
+    await database
+      .prepare(
+        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
+      )
+      .bind("c".repeat(64), run.project_id)
+      .run();
+    expect(
+      (await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers })))
+        .recompareAllowed,
+    ).toBe(true);
+    const originalCheck = Service.prototype.hasObsoletePullRequestCapturePolicy;
+    let changedDuringRequest = false;
+    const check = vi
+      .spyOn(Service.prototype, "hasObsoletePullRequestCapturePolicy")
+      .mockImplementation(async function (this: Service, runId: string) {
+        const stale = await originalCheck.call(this, runId);
+        if (!stale && !changedDuringRequest) {
+          changedDuringRequest = true;
+          await database
+            .prepare(
+              "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
+            )
+            .bind(nextPolicyDigest, run.project_id)
+            .run();
+        }
+        return stale;
+      });
+    let raced: Response;
+    try {
+      raced = await test.send(`/api/runs/${test.runId}/recompare`, {
+        method: "POST",
+        headers,
+      });
+    } finally {
+      check.mockRestore();
+    }
+    expect(changedDuringRequest).toBe(true);
+    expect(raced.status).toBe(409);
+    expect(await objectResponse(raced)).toMatchObject({
+      error: { code: "incomplete", message: model.recompareDisabledReason },
+    });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual(before);
+    await database
+      .prepare(
+        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
+      )
+      .bind("c".repeat(64), run.project_id)
+      .run();
+    expect(
+      (await test.send(`/api/runs/${test.runId}/recompare`, { method: "POST", headers })).status,
+    ).toBe(202);
+  });
+
   it("recompares a closed retained run and exposes a private immutable view without changing its live pointer", async () => {
     const test = await fixture();
     const digest = await test.upload();
@@ -2940,6 +3051,20 @@ describe("private historical recomparison API", () => {
     ).toBe(202);
     await test.service.retireRun({ runId: test.runId, now: Date.now() });
     const before = await test.service.run(test.runId);
+    const nextPolicy = {
+      id: "historical-policy",
+      channelThreshold: 1,
+      maxChangedPixels: 0,
+      maxChangedRatio: 0,
+    };
+    const nextPolicyDigest = await digestJson(nextPolicy);
+    await test.service.createPolicy({ digest: nextPolicyDigest, policy: nextPolicy });
+    await database
+      .prepare(
+        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
+      )
+      .bind(nextPolicyDigest, before.project_id)
+      .run();
     using fixtureDatabase = new TestDatabase();
     const operations = { ...operationsContext(fixtureDatabase).context, database };
     test.bindings.history = {

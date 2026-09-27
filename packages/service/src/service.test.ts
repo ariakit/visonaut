@@ -790,6 +790,20 @@ describe("full run and immutable comparison state", () => {
       expect((await service.status(id)).status).toBe("needs-review");
     }
     expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 8);
+
+    const comparisonsBeforeRecompare = count(database, "visonaut_comparisons");
+    await expect(
+      service.createComparison({
+        id: "comparison-stale-recompare",
+        runId: "stale-policy-same-profile",
+        referenceSnapshotId: (await service.project("project")).snapshot_id,
+        requireCurrentCapturePolicy: true,
+        now: 5,
+        maxAttempts: 3,
+      }),
+    ).rejects.toThrow(ConflictError);
+    expect(count(database, "visonaut_comparisons")).toBe(comparisonsBeforeRecompare);
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 8);
   });
 
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {
