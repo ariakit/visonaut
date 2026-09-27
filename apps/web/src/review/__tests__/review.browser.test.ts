@@ -414,9 +414,7 @@ test("already accepted history creates no session undo command", async ({ page }
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
-test("current evidence must load before review and stale pixels disappear immediately", async ({
-  page,
-}) => {
+test("decoded panes appear independently while review waits for all evidence", async ({ page }) => {
   let release: (() => void) | undefined;
   await page.route("**/slow.svg", async (route) => {
     await new Promise<void>((resolve) => {
@@ -435,7 +433,8 @@ test("current evidence must load before review and stale pixels disappear immedi
   });
   await page.keyboard.press("ArrowRight");
   await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-  await expect(page.locator(".review-viewer")).toHaveCSS("visibility", "hidden");
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "New image", exact: true })).not.toBeVisible();
   await page.keyboard.press("a");
   await callCount(page, 0);
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
@@ -443,6 +442,33 @@ test("current evidence must load before review and stale pixels disappear immedi
   release?.();
   await ready(page);
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+});
+
+test("the new image appears while the reference is still loading", async ({ page }) => {
+  let release: (() => void) | undefined;
+  await page.route("**/slow-reference.svg", async (route) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const reference = model.items[0]?.variants[1]?.reference;
+    if (reference) reference.url = "/slow-reference.svg";
+    window.reviewFixture.update(model);
+  });
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect.poll(() => !!release).toBe(true);
+  release?.();
+  await ready(page);
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
 });
 
 test("load errors block review and retry loads the same evidence", async ({ page }) => {
@@ -463,6 +489,7 @@ test("load errors block review and retry loads the same evidence", async ({ page
   });
   await expect(page.getByText("Image evidence unavailable")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
   failing = false;
   await page.getByRole("button", { name: "Retry images" }).click();
   await ready(page);
@@ -474,6 +501,87 @@ test("load errors block review and retry loads the same evidence", async ({ page
     )
     .toBe(600);
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+});
+
+for (const status of ["failed", "superseded", "needs-recompare"] as const) {
+  test(`${status} comparisons explain their state without offering image retry`, async ({
+    page,
+  }) => {
+    await page.evaluate((status) => {
+      const model = window.reviewFixture.model();
+      model.run.status = status;
+      model.run.error = "The comparison cannot use these stored images.";
+      model.reviewReady = false;
+      model.comparisonState = "invalidated";
+      model.recompareAllowed = true;
+      const variant = model.items[0]?.variants[0];
+      if (variant) variant.error = "Required comparison evidence is unavailable.";
+      window.reviewFixture.update(model);
+    }, status);
+    await expect(page.locator('[data-evidence="terminal"]')).toBeVisible();
+    await expect(page.getByText("Required comparison evidence is unavailable.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Refresh comparison" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await expect(page.getByText(/Review is unavailable until the run is sealed/)).toHaveCount(0);
+    if (status === "failed") {
+      await page.getByRole("button", { name: "Recompare now" }).click();
+      await expect(page.getByText(/A new comparison is being prepared/)).toBeVisible();
+    }
+  });
+}
+
+test("unavailable stored captures do not offer recompare for a failed comparison", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.run.status = "failed";
+    model.reviewReady = false;
+    model.comparisonState = "invalidated";
+    model.recompareAllowed = false;
+    model.recompareDisabledReason = "The stored images have expired.";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator('[data-evidence="terminal"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+  await expect(page.getByText("The stored images have expired.", { exact: true })).toBeVisible();
+});
+
+test("a dimension mismatch cannot be fixed with image retry", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (!candidate) throw new Error("Expected a candidate image.");
+    candidate.width += 1;
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
+  await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+});
+
+test("a decode failure offers image retry", async ({ page }) => {
+  await page.evaluate(() => {
+    const nativeDecode = HTMLImageElement.prototype.decode;
+    HTMLImageElement.prototype.decode = function () {
+      if (this.alt === "New image") return Promise.reject(new Error("decode failed"));
+      return nativeDecode.call(this);
+    };
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (!candidate) throw new Error("Expected a candidate image.");
+    candidate.id = "decode-failure";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByText("Image evidence unavailable")).toBeVisible();
+  await expect(page.getByText(/image could not be decoded/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Retry images" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
 });
 
 for (const kind of ["unchanged", "changed"] as const) {
@@ -577,9 +685,11 @@ for (const changedPixels of [120, undefined]) {
     }, changedPixels);
     await ready(page);
     await page.keyboard.press("d");
-    await expect(page.getByText("Image evidence unavailable")).toBeVisible();
+    await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
     await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
-    await expect(page.locator(".review-viewer")).toHaveCSS("visibility", "hidden");
+    await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
+    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
     await page.keyboard.press("a");
     await page.keyboard.press("x");
@@ -613,7 +723,7 @@ for (const changedPixels of [0, 1]) {
     }, changedPixels);
     await page.keyboard.press("d");
     await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-    await expect(page.locator(".review-viewer")).toHaveCSS("visibility", "hidden");
+    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
     await page.keyboard.press("a");
     await callCount(page, 0);

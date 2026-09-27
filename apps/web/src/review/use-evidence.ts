@@ -3,7 +3,11 @@ import type { ReviewMode, ReviewVariant } from "./model.ts";
 
 export type EvidenceRole = "reference" | "candidate" | "diff";
 
-export type ImageEvidence = { status: "ready" } | { status: "error"; error: string };
+export type ImageEvidence =
+  | { status: "ready" }
+  | { status: "error"; error: string; reason: "load" | "decode" | "dimensions" };
+
+type EvidenceFailure = "comparison" | "missing" | "load" | "decode" | "dimensions";
 
 interface EvidenceState {
   key: string;
@@ -58,36 +62,49 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
     },
     [generation],
   );
+  const images = state.key === identity ? state.images : {};
   if (variant?.kind === "pending") {
-    return { status: "loading" as const, error: undefined, identity: generation, report };
+    return {
+      status: "loading" as const,
+      error: undefined,
+      failure: undefined,
+      images,
+      identity: generation,
+      report,
+    };
   }
   const required: EvidenceRole[] = [];
   let error = variant?.error;
+  let failure: EvidenceFailure | undefined = error ? "comparison" : undefined;
   if (variant) {
     if (variant.reference) {
       required.push("reference");
     } else if (variant.kind !== "added") {
-      error ??= "Required reference evidence is unavailable. Refresh this comparison to retry.";
+      error ??= "Required reference evidence is unavailable in this comparison.";
+      failure ??= "missing";
     }
     if (variant.candidate) {
       required.push("candidate");
     } else if (variant.kind !== "removed") {
-      error ??= "Required candidate evidence is unavailable. Refresh this comparison to retry.";
+      error ??= "Required candidate evidence is unavailable in this comparison.";
+      failure ??= "missing";
     }
     if (mode === "diff") {
       if (variant.diff) {
         required.push("diff");
       } else if (variant.maskExpected ?? variant.changedPixels !== 0) {
-        error ??= "Required diff evidence is unavailable. Refresh this comparison to retry.";
+        error ??= "Required diff evidence is unavailable in this comparison.";
+        failure ??= "missing";
       }
     }
   }
   let status: "loading" | "ready" | "error" = "loading";
   if (state.key === identity && variant) {
-    const results = required.map((role) => state.images[role]);
+    const results = required.map((role) => images[role]);
     const failed = results.find((result) => result?.status === "error");
-    if (failed?.status === "error") {
-      error ??= failed.error;
+    if (failed?.status === "error" && !error) {
+      error = failed.error;
+      failure = failed.reason;
     }
     if (results.every((result) => result?.status === "ready")) {
       status = "ready";
@@ -96,5 +113,5 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
   if (error) {
     status = "error";
   }
-  return { status, error, identity: generation, report };
+  return { status, error, failure, images, identity: generation, report };
 }

@@ -12,12 +12,24 @@ interface ImagePaneProps {
   hidden: boolean;
   identity: string;
   role: EvidenceRole;
+  evidence?: ImageEvidence;
   report(role: EvidenceRole, result: ImageEvidence): void;
 }
 
-function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }: ImagePaneProps) {
+function ImagePane({
+  image,
+  label,
+  empty,
+  zoom,
+  hidden,
+  identity,
+  role,
+  evidence,
+  report,
+}: ImagePaneProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const position = useRef({ left: 0, top: 0 });
+  const ready = evidence?.status === "ready";
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
@@ -33,7 +45,8 @@ function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }
       if (element.naturalWidth !== image.width || element.naturalHeight !== image.height) {
         report(role, {
           status: "error",
-          error: "The image dimensions do not match this comparison. Retry loading the evidence.",
+          error: "The image dimensions do not match this comparison.",
+          reason: "dimensions",
         });
         return;
       }
@@ -42,6 +55,7 @@ function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }
       report(role, {
         status: "error",
         error: "The image could not be decoded. Retry loading the evidence.",
+        reason: "decode",
       });
     }
   };
@@ -54,7 +68,11 @@ function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }
     });
   };
   return (
-    <figure className="review-pane" style={{ display: hidden ? "none" : undefined }}>
+    <figure
+      className="review-pane"
+      style={{ display: hidden ? "none" : undefined }}
+      aria-busy={!!image && !ready && evidence?.status !== "error"}
+    >
       <figcaption>{label}</figcaption>
       {image && zoom !== "fit" && (
         <div className="review-control-group" aria-label={`Pan ${label}`}>
@@ -89,7 +107,7 @@ function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }
         </div>
       )}
       <div
-        className="review-image-viewport"
+        className="review-image-viewport relative"
         tabIndex={0}
         aria-label={`${label}. Use pan controls or scroll to inspect the image.`}
         ref={viewport}
@@ -114,17 +132,28 @@ function ImagePane({ image, label, empty, zoom, hidden, identity, role, report }
               report(role, {
                 status: "error",
                 error: "The image could not be loaded. Check your connection and retry.",
+                reason: "load",
               })
             }
             className={zoom === "fit" ? "review-image-fit" : "review-image-actual"}
+            aria-hidden={!ready}
             style={
               zoom === "fit"
-                ? undefined
-                : { width: image.width * zoom, height: image.height * zoom }
+                ? { visibility: ready ? "visible" : "hidden" }
+                : {
+                    width: image.width * zoom,
+                    height: image.height * zoom,
+                    visibility: ready ? "visible" : "hidden",
+                  }
             }
           />
         ) : (
           <p className="review-empty-image">{empty}</p>
+        )}
+        {image && !ready && (
+          <p className="review-empty-image absolute inset-0">
+            {evidence?.status === "error" ? "Image could not be verified." : "Loading image…"}
+          </p>
         )}
       </div>
     </figure>
@@ -136,6 +165,7 @@ export interface ScreenshotViewerProps {
   mode: ReviewMode;
   zoom: ReviewZoom;
   ready: boolean;
+  images: Partial<Record<EvidenceRole, ImageEvidence>>;
   identity: string;
   report(role: EvidenceRole, result: ImageEvidence): void;
 }
@@ -145,18 +175,12 @@ export function ScreenshotViewer({
   mode,
   zoom,
   ready,
+  images,
   identity,
   report,
 }: ScreenshotViewerProps) {
   return (
-    <div
-      className="review-viewer"
-      data-mode={mode}
-      data-ready={ready}
-      aria-busy={!ready}
-      aria-hidden={!ready}
-      style={{ visibility: ready ? "visible" : "hidden" }}
-    >
+    <div className="review-viewer" data-mode={mode} data-ready={ready} aria-busy={!ready}>
       <ImagePane
         image={variant.reference}
         label="Reference"
@@ -165,6 +189,7 @@ export function ScreenshotViewer({
         hidden={mode !== "side" && mode !== "original"}
         identity={identity}
         role="reference"
+        evidence={images.reference}
         report={report}
       />
       <ImagePane
@@ -175,22 +200,26 @@ export function ScreenshotViewer({
         hidden={mode === "diff" || mode === "original"}
         identity={identity}
         role="candidate"
+        evidence={images.candidate}
         report={report}
       />
       <ImagePane
         image={variant.diff}
         label="Pixel diff · red pixels changed"
         empty={
-          variant.changedPixels === 0
-            ? "No pixels changed."
-            : variant.maskExpected === false
-              ? "Pixel changes are within the comparison tolerance."
-              : "Pixel diff unavailable"
+          !ready
+            ? "Pixel diff is not available for review."
+            : variant.changedPixels === 0
+              ? "No pixels changed."
+              : variant.maskExpected === false
+                ? "Pixel changes are within the comparison tolerance."
+                : "Pixel diff unavailable"
         }
         zoom={zoom}
         hidden={mode !== "diff"}
         identity={identity}
         role="diff"
+        evidence={images.diff}
         report={report}
       />
     </div>

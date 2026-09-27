@@ -364,16 +364,15 @@
   font-size: 13px;
 }
 .review-evidence-message {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-content: center;
-  gap: 12px;
-  padding: 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
   text-align: center;
-  background: var(--color-canvas);
+  border-bottom: 1px solid var(--review-border);
+  background: var(--review-surface);
   color: var(--review-muted);
 }
 .review-evidence-message p,
