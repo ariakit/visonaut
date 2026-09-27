@@ -139,7 +139,7 @@ it("enables automatic Ariakit pre-run checks only in production", () => {
     reusableWorkflowRef:
       "ariakit/ariakit/.github/workflows/app.yml@01b78334223b47515b41f63f587308050a5dcdad",
     reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
-    additionalTrustedWorkflowBlobSha: "c86f2dc5370fe07030a27af87979072f86afa8de",
+    additionalTrustedWorkflowBlobSha: "bea39018ccd6f902c2c904afa263b3d01f99c017",
   });
 });
 
