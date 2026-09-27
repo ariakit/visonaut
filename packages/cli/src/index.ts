@@ -19,6 +19,8 @@ const MAX_UPLOAD_TICKET_LENGTH = 4096;
 const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
 // Leave a full 30-second request deadline plus clock/scheduling headroom.
 const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
+// Keep at most two byte-limited reuse pages in flight.
+const REUSE_PAGE_CONCURRENCY = 2;
 
 const HELP = `Usage:
   visonaut pack --dir <capture-directory> --output <encrypted-file>
@@ -446,7 +448,8 @@ async function uploadShard({
       throw new CliError("The service requested an image that this upload already completed.");
     }
     let renewalRequired = false;
-    if (declaration.reuse) {
+    const reuse = declaration.reuse;
+    if (reuse) {
       const pages: (typeof declaration.uploads)[] = [];
       let page: typeof declaration.uploads = [];
       let pageBytes = 0;
@@ -465,33 +468,28 @@ async function uploadShard({
         pageBytes += capture.image.bytes;
       }
       if (page.length) pages.push(page);
-      for (const entries of pages) {
-        const credentialExpiring =
-          Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
-        const challengeExpiring =
-          Date.parse(declaration.reuse.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
-        if (credentialExpiring || challengeExpiring) {
-          renewalRequired = credentialExpiring || completedSinceReservation > 0;
-          break;
+      const expiresSoon = (expiresAt: string) =>
+        Date.parse(expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
+      const reusePage = async (
+        entries: typeof declaration.uploads,
+      ): Promise<string[] | undefined> => {
+        if (expiresSoon(reservation.expiresAt) || expiresSoon(reuse.expiresAt)) {
+          return;
         }
         const proofs = [];
         for (const upload of entries) {
-          const capture = captures.get(upload.imageDigest)!;
+          const capture = captures.get(upload.imageDigest);
+          if (!capture) throw new CliError("A reuse challenge refers to an unknown image.");
           const bytes = await readImage(local.directory, capture);
           proofs.push({
             imageDigest: upload.imageDigest,
-            proof: createHmac("sha256", Buffer.from(declaration.reuse.nonce, "hex"))
+            proof: createHmac("sha256", Buffer.from(reuse.nonce, "hex"))
               .update(bytes)
               .digest("hex"),
           });
         }
-        const expiredDuringRead =
-          Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
-        const challengeExpiredDuringRead =
-          Date.parse(declaration.reuse.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
-        if (expiredDuringRead || challengeExpiredDuringRead) {
-          renewalRequired = expiredDuringRead || completedSinceReservation > 0;
-          break;
+        if (expiresSoon(reservation.expiresAt) || expiresSoon(reuse.expiresAt)) {
+          return;
         }
         const response = await request({
           url: new URL(TRANSPORT.reuse(runId), origin),
@@ -501,23 +499,39 @@ async function uploadShard({
             schemaVersion: SCHEMA_VERSION,
             shardKey: manifest.shard.key,
             manifestDigest,
-            challenge: declaration.reuse.token,
+            challenge: reuse.token,
             proofs,
           }),
           mediaType: "application/json",
           retryUnavailable: true,
         });
-        for (const digest of reusedImages(
-          response,
-          new Set(proofs.map((proof) => proof.imageDigest)),
-        )) {
-          completed.add(digest);
-          reusedCount++;
-          completedSinceReservation++;
+        return reusedImages(response, new Set(proofs.map((proof) => proof.imageDigest)));
+      };
+      for (let offset = 0; offset < pages.length; offset += REUSE_PAGE_CONCURRENCY) {
+        // A batch must settle before credentials change or missed images fall back to PUT.
+        const results = await Promise.allSettled(
+          pages.slice(offset, offset + REUSE_PAGE_CONCURRENCY).map(reusePage),
+        );
+        let expired = false;
+        for (const result of results) {
+          if (result.status === "rejected") throw result.reason;
+          if (result.value === undefined) {
+            expired = true;
+            continue;
+          }
+          for (const digest of result.value) {
+            completed.add(digest);
+            reusedCount++;
+            completedSinceReservation++;
+          }
         }
         if (reusedCount - lastReportedReused >= 128) {
           progress?.(`Visonaut reused ${reusedCount} unchanged originals.\n`);
           lastReportedReused = reusedCount;
+        }
+        if (expired) {
+          renewalRequired = expiresSoon(reservation.expiresAt) || completedSinceReservation > 0;
+          break;
         }
       }
     }

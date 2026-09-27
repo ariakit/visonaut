@@ -196,34 +196,55 @@ it("reuses proved originals in bounded pages and uploads only misses", async () 
     local.manifest.captures.slice(0, 66).map((capture) => capture.image.digest),
   );
   let proofPages = 0;
+  let activePages = 0;
+  let maximumActivePages = 0;
+  let releaseOverlap = () => {};
+  const overlappingPages = new Promise<void>((resolve) => {
+    releaseOverlap = resolve;
+  });
+  let overlapTimeout: ReturnType<typeof setTimeout> | undefined;
   let uploads = 0;
   const paths = mockService({
     local,
     response: () => Response.json(declared),
     reuse: async (options) => {
       proofPages++;
-      const body = JSON.parse(String(options?.body)) as {
-        challenge: string;
-        proofs: { imageDigest: string; proof: string }[];
-      };
-      expect(body.challenge).toBe(challenge.token);
-      expect(body.proofs.length).toBeLessThanOrEqual(32);
-      for (const offered of body.proofs) {
-        const capture = local.manifest.captures.find(
-          (entry) => entry.image.digest === offered.imageDigest,
-        );
-        if (!capture) throw new Error("Unknown offered image");
-        const bytes = await readFile(join(local.directory, capture.image.path));
-        expect(offered.proof).toBe(
-          createHmac("sha256", Buffer.from(challenge.nonce, "hex")).update(bytes).digest("hex"),
-        );
+      activePages++;
+      maximumActivePages = Math.max(maximumActivePages, activePages);
+      try {
+        if (proofPages === 1) {
+          // Let the first response wait until the second request reaches the service.
+          overlapTimeout = setTimeout(releaseOverlap, 10_000);
+          await overlappingPages;
+        } else if (proofPages === 2) {
+          if (overlapTimeout) clearTimeout(overlapTimeout);
+          releaseOverlap();
+        }
+        const body = JSON.parse(String(options?.body)) as {
+          challenge: string;
+          proofs: { imageDigest: string; proof: string }[];
+        };
+        expect(body.challenge).toBe(challenge.token);
+        expect(body.proofs.length).toBeLessThanOrEqual(32);
+        for (const offered of body.proofs) {
+          const capture = local.manifest.captures.find(
+            (entry) => entry.image.digest === offered.imageDigest,
+          );
+          if (!capture) throw new Error("Unknown offered image");
+          const bytes = await readFile(join(local.directory, capture.image.path));
+          expect(offered.proof).toBe(
+            createHmac("sha256", Buffer.from(challenge.nonce, "hex")).update(bytes).digest("hex"),
+          );
+        }
+        return Response.json({
+          schemaVersion: "1.0",
+          reused: body.proofs
+            .map(({ imageDigest }) => imageDigest)
+            .filter((digest) => accepted.has(digest)),
+        });
+      } finally {
+        activePages--;
       }
-      return Response.json({
-        schemaVersion: "1.0",
-        reused: body.proofs
-          .map(({ imageDigest }) => imageDigest)
-          .filter((digest) => accepted.has(digest)),
-      });
     },
     upload: (_ticket, options) => {
       uploads++;
@@ -235,11 +256,15 @@ it("reuses proved originals in bounded pages and uploads only misses", async () 
       return new Response(null, { status: 204 });
     },
   });
-  const result = await execute(local);
+  const result = await execute(local).finally(() => {
+    releaseOverlap();
+    if (overlapTimeout) clearTimeout(overlapTimeout);
+  });
   expect(result.code).toBe(0);
   expect(result.stderr).toBe("");
   expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 1, reusedImages: 66 });
   expect(proofPages).toBe(3);
+  expect(maximumActivePages).toBe(2);
   expect(uploads).toBe(1);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(1);
   expect(paths).toHaveLength(8);
@@ -252,19 +277,25 @@ it("reuses proved originals in bounded pages and uploads only misses", async () 
   });
   expect((await execute(baseline)).code).toBe(0);
   expect(baselinePaths).toHaveLength(71);
-});
+}, 20_000);
 
 it("renews after proof-page reads when the upload capability expires", async () => {
-  const local = await imagesFixture(33);
+  const local = await imagesFixture(65);
   const first = await declaration(local, true);
   const renewed = await declaration(local, true);
-  const now = Date.now();
-  first.reuse!.expiresAt = new Date(now + 60_000).toISOString();
-  renewed.reuse!.expiresAt = new Date(now + 600_000).toISOString();
-  const lastDigest = local.manifest.captures[32]!.image.digest;
+  let now = Date.now();
+  vi.spyOn(Date, "now").mockImplementation(() => now);
+  if (!first.reuse || !renewed.reuse) throw new Error("Missing reuse challenges");
+  first.reuse.expiresAt = new Date(now + 60_000).toISOString();
+  renewed.reuse.expiresAt = new Date(now + 600_000).toISOString();
+  const lastCapture = local.manifest.captures[64];
+  if (!lastCapture) throw new Error("Missing final capture");
+  const lastDigest = lastCapture.image.digest;
   let reservations = 0;
-  let firstPageAccepted = false;
-  let clockReadsAfterFirstPage = 0;
+  let releaseFirstPage = () => {};
+  const firstPagePending = new Promise<void>((resolve) => {
+    releaseFirstPage = resolve;
+  });
   const offered: string[][] = [];
   mockService({
     local,
@@ -276,10 +307,6 @@ it("renews after proof-page reads when the upload capability expires", async () 
     }),
     response: () => {
       if (reservations === 1) {
-        vi.spyOn(Date, "now").mockImplementation(() => {
-          if (!firstPageAccepted) return now;
-          return ++clockReadsAfterFirstPage <= 2 ? now : now + 20_000;
-        });
         return Response.json(first);
       }
       return Response.json({
@@ -287,32 +314,142 @@ it("renews after proof-page reads when the upload capability expires", async () 
         uploads: renewed.uploads.filter((upload) => upload.imageDigest === lastDigest),
       });
     },
-    reuse: (options) => {
+    reuse: async (options) => {
       const body = JSON.parse(String(options?.body)) as {
         proofs: { imageDigest: string }[];
       };
       offered.push(body.proofs.map((proof) => proof.imageDigest));
-      if (!firstPageAccepted) {
-        firstPageAccepted = true;
+      if (reservations === 1) {
+        if (offered.length === 1) {
+          await firstPagePending;
+        } else {
+          now += 20_000;
+        }
         return Response.json({
           schemaVersion: "1.0",
           reused: body.proofs.map((proof) => proof.imageDigest),
         });
       }
-      if (reservations === 1 && Date.now() >= now + 20_000) {
-        return new Response(null, { status: 401 });
-      }
       return Response.json({ schemaVersion: "1.0", reused: [lastDigest] });
     },
   });
-  const result = await execute(local);
+  const operation = execute(local);
+  try {
+    await vi.waitFor(() => expect(offered).toHaveLength(2));
+    expect(reservations).toBe(1);
+  } finally {
+    releaseFirstPage();
+  }
+  const result = await operation;
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 0, reusedImages: 33 });
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 0, reusedImages: 65 });
   expect(reservations).toBe(2);
-  expect(offered).toHaveLength(2);
+  expect(offered).toHaveLength(3);
   expect(offered[0]).toHaveLength(32);
-  expect(offered[1]).toEqual([lastDigest]);
+  expect(offered[1]).toHaveLength(32);
+  expect(offered[2]).toEqual([lastDigest]);
+});
+
+it("falls back to uploads when a reuse challenge expires without progress", async () => {
+  const local = await imagesFixture(65);
+  const declared = await declaration(local, true);
+  let now = Date.now();
+  vi.spyOn(Date, "now").mockImplementation(() => now);
+  if (!declared.reuse) throw new Error("Missing reuse challenge");
+  declared.reuse.expiresAt = new Date(now + 60_000).toISOString();
+  let pages = 0;
+  let uploads = 0;
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    reuse: (options) => {
+      pages++;
+      if (pages === 2) now += 20_000;
+      const body = JSON.parse(String(options?.body)) as { proofs: { imageDigest: string }[] };
+      expect(body.proofs.length).toBeLessThanOrEqual(32);
+      return Response.json({ schemaVersion: "1.0", reused: [] });
+    },
+    upload: () => {
+      uploads++;
+      return new Response(null, { status: 204 });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 65, reusedImages: 0 });
+  expect(pages).toBe(2);
+  expect(uploads).toBe(65);
+  expect(paths.filter((path) => path.includes("/shards/"))).toHaveLength(1);
+});
+
+it("stops renewal when the upload capability expires without staged images", async () => {
+  const local = await imagesFixture(65);
+  const declared = await declaration(local, true);
+  let now = Date.now();
+  vi.spyOn(Date, "now").mockImplementation(() => now);
+  let reservations = 0;
+  let pages = 0;
+  const paths = mockService({
+    local,
+    reserve: () => {
+      reservations++;
+      return {
+        schemaVersion: "1.0",
+        runId,
+        capability: "capability-secret",
+        expiresAt: new Date(now + 60_000).toISOString(),
+      };
+    },
+    response: () => Response.json(declared),
+    reuse: () => {
+      pages++;
+      if (pages === 2) now += 20_000;
+      return Response.json({ schemaVersion: "1.0", reused: [] });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(4);
+  expect(result.stderr).toContain("expired before any image could be staged");
+  expect(reservations).toBe(1);
+  expect(pages).toBe(2);
+  expect(paths).toHaveLength(5);
+});
+
+it("drains reuse pages before rejecting a receipt from another page", async () => {
+  const local = await imagesFixture(64);
+  const declared = await declaration(local, true);
+  const firstCapture = local.manifest.captures[0];
+  const otherPageCapture = local.manifest.captures[40];
+  if (!firstCapture || !otherPageCapture) throw new Error("Missing capture pages");
+  const firstDigest = firstCapture.image.digest;
+  const otherPageDigest = otherPageCapture.image.digest;
+  let otherPageSettled = false;
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    reuse: async (options) => {
+      const body = JSON.parse(String(options?.body)) as {
+        proofs: { imageDigest: string }[];
+      };
+      if (body.proofs.some((proof) => proof.imageDigest === firstDigest)) {
+        return Response.json({ schemaVersion: "1.0", reused: [otherPageDigest] });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      otherPageSettled = true;
+      return Response.json({
+        schemaVersion: "1.0",
+        reused: body.proofs.map((proof) => proof.imageDigest),
+      });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.stderr).toContain("not offered by this job");
+  expect(otherPageSettled).toBe(true);
+  expect(paths.filter((path) => path.endsWith("/reuse"))).toHaveLength(2);
+  expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(0);
+  expect(paths.filter((path) => path.endsWith("/finalize"))).toHaveLength(0);
 });
 
 it.each([3000, 12300])(
