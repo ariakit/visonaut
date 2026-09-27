@@ -64,6 +64,7 @@ function github(
   heads: {
     pullBase?: string;
     main?: string;
+    ancestorBases?: string[];
     mergeBase?: string;
     currentMergeSha?: string;
     mergeRefSha?: string;
@@ -147,6 +148,17 @@ function github(
       }
       if (path.endsWith("/git/ref/heads/main"))
         return { object: { sha: heads.main ?? targetHead } };
+      if (path.includes("/compare/")) {
+        const base = path.split("/compare/")[1]?.split("...")[0];
+        return {
+          status:
+            base === (heads.main ?? targetHead)
+              ? "identical"
+              : (heads.ancestorBases ?? [targetHead]).includes(base ?? "")
+                ? "ahead"
+                : "diverged",
+        };
+      }
       if (path.endsWith("/git/ref/pull/7/merge"))
         return { object: { sha: heads.mergeRefSha ?? heads.currentMergeSha ?? testedSha } };
       if (path.startsWith("/user/")) return { id: 42, login: "maintainer" };
@@ -534,7 +546,7 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       testedSha,
     });
   });
-  it("accepts a regenerated PR merge commit with the same parents and tree", async () => {
+  it("accepts an equivalent PR merge with a newer main parent", async () => {
     const ref = "refs/pull/7/merge";
     const signed = await token({
       event_name: "pull_request",
@@ -551,6 +563,8 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         configuration,
         github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
           currentMergeSha: "f".repeat(40),
+          currentMergeBase: "e".repeat(40),
+          main: "e".repeat(40),
         }),
         keySet,
       }),
@@ -650,7 +664,7 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       }),
     ).resolves.toMatchObject({ event: "pull_request", targetHead });
   });
-  it("rejects a merge whose base is no longer current main", async () => {
+  it("accepts the current PR merge after main advances and keeps its tested base", async () => {
     const ref = "refs/pull/7/merge";
     const signed = await token({
       event_name: "pull_request",
@@ -667,6 +681,29 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         configuration,
         github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
           main: "f".repeat(40),
+        }),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ event: "pull_request", testedSha, sourceHead, targetHead });
+  });
+  it("rejects a PR merge based on history unrelated to current main", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          main: "f".repeat(40),
+          ancestorBases: [],
         }),
         keySet,
       }),

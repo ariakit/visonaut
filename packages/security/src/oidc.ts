@@ -74,6 +74,14 @@ function sha(value: unknown): string {
   return result;
 }
 
+async function isMainAncestor(github: GitHubClient, baseSha: string, mainSha: string) {
+  if (baseSha === mainSha) return true;
+  const comparison = record(
+    await github.request(`/repos/${github.repository}/compare/${baseSha}...${mainSha}?per_page=1`),
+  );
+  return comparison.status === "ahead";
+}
+
 export function isTrustedWorkflowBlob(
   blob: unknown,
   configuration: Pick<
@@ -271,13 +279,15 @@ export async function verifyGitHubOidc({
     requireEqual(run.head_sha, head.sha, "pull.workflow_head_sha");
     const sourceHead = sha(head.sha);
     const mainRef = record(await github.request(`${root}/git/ref/heads/main`));
-    const targetHead = sha(record(mainRef.object).sha);
+    const mainSha = sha(record(mainRef.object).sha);
     const commit = record(await github.request(`${root}/git/commits/${request.testedSha}`));
     const parents = Array.isArray(commit.parents)
       ? commit.parents.map((parent) => sha(record(parent).sha))
       : [];
     requireEqual(parents.length, 2, "pull.parent_count");
-    requireEqual(parents[0], targetHead, "pull.base_parent");
+    // GitHub can keep the current PR merge ref while main moves ahead.
+    const targetHead = sha(parents[0]);
+    requireEqual(await isMainAncestor(github, targetHead, mainSha), true, "pull.base_ancestry");
     requireEqual(parents[1], sourceHead, "pull.head_parent");
     if (currentMergeSha !== request.testedSha) {
       // GitHub can regenerate its synthetic merge commit without changing its contents.
@@ -286,7 +296,11 @@ export async function verifyGitHubOidc({
         ? currentMerge.parents.map((parent) => sha(record(parent).sha))
         : [];
       requireEqual(currentParents.length, 2, "pull.current_parent_count");
-      requireEqual(currentParents[0], targetHead, "pull.current_base_parent");
+      requireEqual(
+        await isMainAncestor(github, sha(currentParents[0]), mainSha),
+        true,
+        "pull.current_base_ancestry",
+      );
       requireEqual(currentParents[1], sourceHead, "pull.current_head_parent");
       requireEqual(
         sha(record(currentMerge.tree).sha),

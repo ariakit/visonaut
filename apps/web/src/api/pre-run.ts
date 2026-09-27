@@ -13,7 +13,7 @@ import {
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 import { completeWorkflowJobs, jobExecutedInAttempt } from "./jobs.js";
-import { sameCurrentMergeTree } from "./merge.js";
+import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
 
 interface Candidate {
   testedSha: string;
@@ -136,43 +136,32 @@ export async function candidateForWebhook(
         "The pull request merge commit is not ready.",
       );
     }
-    const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
-    const currentBaseSha = sha(object(mainRef.object).sha);
+    const currentBaseSha = await mergeBaseForHead(github, currentMergeSha, sourceSha);
     if (!currentBaseSha) {
-      throw new SecurityError("merge_not_ready", 503, "The main ref is not ready.");
+      throw new SecurityError("merge_not_ready", 503, "The pull request merge base is not ready.");
     }
     const ref = object(await github.request(`${root}/git/ref/pull/${number}/merge`));
     if (object(ref.object).sha !== currentMergeSha) {
       throw new SecurityError("merge_not_ready", 503, "The pull request merge ref is not ready.");
     }
-    if (
-      !(await sameCurrentMergeTree({
-        github,
-        testedSha: currentMergeSha,
-        currentSha: currentMergeSha,
-        baseSha: currentBaseSha,
-        sourceSha,
-      }))
-    ) {
-      throw new SecurityError(
-        "merge_not_ready",
-        503,
-        "The pull request merge parents are not ready.",
-      );
-    }
+    const eventBaseSha =
+      testedSha === currentMergeSha
+        ? currentBaseSha
+        : await mergeBaseForHead(github, testedSha, sourceSha);
     const eventMergeEquivalent =
-      testedSha === currentMergeSha ||
-      (await sameCurrentMergeTree({
-        github,
-        testedSha,
-        currentSha: currentMergeSha,
-        baseSha: currentBaseSha,
-        sourceSha,
-      }));
+      eventBaseSha &&
+      (testedSha === currentMergeSha ||
+        (await sameCurrentMergeTree({
+          github,
+          testedSha,
+          currentSha: currentMergeSha,
+          testedBaseSha: eventBaseSha,
+          sourceSha,
+        })));
     const candidate: Candidate = {
       testedSha: eventMergeEquivalent ? testedSha : currentMergeSha,
       sourceSha,
-      baseSha: currentBaseSha,
+      baseSha: eventMergeEquivalent ? eventBaseSha : currentBaseSha,
       kind: "pull_request",
       ref: `refs/pull/${number}/merge`,
       pullRequestNumber: number,
@@ -898,13 +887,11 @@ async function workflowCandidate({
   const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
   const base = object(pull.base);
   const head = object(pull.head);
-  const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
   const currentMergeSha = sha(pull.merge_commit_sha);
   if (
     pull.state !== "open" ||
     !currentMergeSha ||
     base.ref !== "main" ||
-    object(mainRef.object).sha !== row.base_sha ||
     head.sha !== row.source_sha ||
     head.ref !== run.head_branch ||
     numericId(object(base.repo).id) !== github.repositoryId ||
@@ -919,7 +906,7 @@ async function workflowCandidate({
       github,
       testedSha: row.tested_sha,
       currentSha: currentMergeSha,
-      baseSha: row.base_sha,
+      testedBaseSha: row.base_sha,
       sourceSha: row.source_sha,
     }))
   ) {
@@ -956,23 +943,36 @@ async function retireSupersededPullRequestAttempt(
   const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
   const head = object(pull.head);
   const base = object(pull.base);
-  const mainRef = object(await github.request(`${root}/git/ref/heads/main`));
   if (
     numericId(object(head.repo).id) !== github.repositoryId ||
     numericId(object(base.repo).id) !== github.repositoryId
   ) {
     throw new SecurityError("workflow_identity", 503, "The pull-request repository changed.");
   }
-  // A delayed webhook must not keep an old check pending after the PR or its
-  // main base moves. A temporary merge-ref mismatch alone remains retryable.
+  // A temporary merge-ref mismatch stays retryable while GitHub updates it.
   if (
     pull.state === "open" &&
     base.ref === "main" &&
     head.ref === run.head_branch &&
-    head.sha === row.source_sha &&
-    object(mainRef.object).sha === row.base_sha
+    head.sha === row.source_sha
   ) {
-    return false;
+    const currentMergeSha = sha(pull.merge_commit_sha);
+    if (!currentMergeSha) return false;
+    const mergeRef = object(
+      await github.request(`${root}/git/ref/pull/${row.pull_request_number}/merge`),
+    );
+    if (object(mergeRef.object).sha !== currentMergeSha) return false;
+    if (
+      await sameCurrentMergeTree({
+        github,
+        testedSha: row.tested_sha,
+        currentSha: currentMergeSha,
+        testedBaseSha: row.base_sha,
+        sourceSha: row.source_sha,
+      })
+    ) {
+      return false;
+    }
   }
   if (!row.check_id) {
     throw new SecurityError("check_pending", 503, "The superseded check is unavailable.");
@@ -1019,7 +1019,7 @@ async function retireSupersededPullRequestAttempt(
         completed_at: new Date().toISOString(),
         output: {
           title: "Visual capture was superseded",
-          summary: "The pull request or its main base changed before capture completed.",
+          summary: "The pull request head or merge contents changed before capture completed.",
         },
       }),
     });

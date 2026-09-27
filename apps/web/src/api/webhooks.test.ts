@@ -175,6 +175,7 @@ function preRunFixture() {
     currentSha: mergeSha as string | null,
     refSha: mergeSha,
     mainSha: baseSha,
+    divergentBases: new Set<string>(),
     testedTree: "1".repeat(40),
     currentTree: "1".repeat(40),
     currentMergeBase: baseSha,
@@ -265,7 +266,11 @@ function preRunFixture() {
         };
       }
       if (path.includes("/compare/")) {
-        return { status: "ahead", files: state.files };
+        const base = path.split("/compare/")[1]?.split("...")[0];
+        return {
+          status: state.divergentBases.has(base ?? "") ? "diverged" : "ahead",
+          files: state.files,
+        };
       }
       if (path.endsWith("/actions/runs/77")) return state.run;
       if (path.includes("/actions/runs/77/jobs?filter=latest&")) {
@@ -707,17 +712,29 @@ describe("pre-run App checks", () => {
     });
   });
 
-  it("keeps a delayed PR webhook pending until the live merge has current parents", async () => {
+  it("keeps a current PR merge candidate after main advances", async () => {
     const fixture = preRunFixture();
     fixture.state.mainSha = "e".repeat(40);
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     fixture.webhook.payload.pull_request = {
       head: { sha: sourceSha },
       base: { sha: baseSha },
       merge_commit_sha: mergeSha,
     };
-    await expect(candidateForWebhook(fixture.github, fixture.webhook)).rejects.toMatchObject({
-      code: "merge_not_ready",
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    expect(candidate).toMatchObject({
+      testedSha: mergeSha,
+      baseSha,
     });
+    if (!candidate) throw new Error("Missing current PR candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    await expect(
+      findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 1,
+      }),
+    ).resolves.toMatchObject({ testedSha: mergeSha, checkId: "1" });
     fixture.state.currentSha = "d".repeat(40);
     fixture.state.refSha = fixture.state.currentSha;
     fixture.state.currentMergeBase = fixture.state.mainSha;
@@ -725,6 +742,23 @@ describe("pre-run App checks", () => {
     expect(await candidateForWebhook(fixture.github, fixture.webhook)).toMatchObject({
       testedSha: fixture.state.currentSha,
       baseSha: fixture.state.mainSha,
+    });
+  });
+
+  it("keeps the event's tested base when a new main parent has the same merge tree", async () => {
+    const fixture = preRunFixture();
+    fixture.state.mainSha = "e".repeat(40);
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.currentMergeBase = fixture.state.mainSha;
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: mergeSha,
+    };
+    expect(await candidateForWebhook(fixture.github, fixture.webhook)).toMatchObject({
+      testedSha: mergeSha,
+      baseSha,
     });
   });
 
@@ -738,6 +772,8 @@ describe("pre-run App checks", () => {
       const currentSha = "d".repeat(40);
       fixture.state.currentSha = currentSha;
       fixture.state.refSha = currentSha;
+      fixture.state.mainSha = "e".repeat(40);
+      fixture.state.currentMergeBase = fixture.state.mainSha;
       fixture.state.currentTree = changed ? "2".repeat(40) : fixture.state.testedTree;
       fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
       fixture.webhook.payload.pull_request = {
@@ -928,7 +964,7 @@ describe("pre-run App checks", () => {
     ).toEqual({ state: "failed", workflow_run_id: "77" });
   });
 
-  it("retires a completed PR workflow after its pinned base changes", async () => {
+  it("fails a cancelled PR workflow after main advances without retiring its merge", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
@@ -943,7 +979,7 @@ describe("pre-run App checks", () => {
     fixture.state.run.conclusion = "cancelled";
     const webhook = fixture.workflowWebhook();
     expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
-      "historical",
+      undefined,
     );
     expect(fixture.state.checks.get("1")).toMatchObject({
       status: "completed",
@@ -952,9 +988,6 @@ describe("pre-run App checks", () => {
     expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
       state: "failed",
     });
-    expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
-      "historical",
-    );
   });
 
   it("fences the status sender before failing a superseded check", async () => {
@@ -968,7 +1001,9 @@ describe("pre-run App checks", () => {
       workflowRunId: "77",
       workflowAttempt: 1,
     });
-    fixture.state.mainSha = "d".repeat(40);
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.currentTree = "2".repeat(40);
     fixture.state.run.conclusion = "cancelled";
     fixture.state.beforeCheckPatch = async () => {
       expect(await isCurrentPreRunCheck(database, "1")).toBe(false);
@@ -1044,6 +1079,7 @@ describe("pre-run App checks", () => {
     fixture.state.mainSha = "d".repeat(40);
     fixture.state.currentSha = newerSha;
     fixture.state.refSha = newerSha;
+    fixture.state.currentTree = "2".repeat(40);
     fixture.state.run.conclusion = "cancelled";
     await database
       .prepare(
@@ -1105,7 +1141,9 @@ describe("pre-run App checks", () => {
       status: "completed",
       conclusion: "success",
     });
-    fixture.state.mainSha = "d".repeat(40);
+    fixture.state.currentSha = "d".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    fixture.state.currentTree = "2".repeat(40);
     fixture.state.run.conclusion = "success";
     expect(
       await settlePreRunWorkflow(
@@ -1457,7 +1495,7 @@ describe("pre-run App checks", () => {
     ).toEqual({ tested_sha: mergeSha });
   });
 
-  it.each(["tree", "base", "head"] as const)(
+  it.each(["tree", "divergent base", "head"] as const)(
     "rejects signed fallback when the current PR %s changed",
     async (change) => {
       const fixture = preRunFixture();
@@ -1469,8 +1507,9 @@ describe("pre-run App checks", () => {
       if (change === "tree") {
         fixture.state.currentTree = "2".repeat(40);
       }
-      if (change === "base") {
+      if (change === "divergent base") {
         fixture.state.mainSha = "2".repeat(40);
+        fixture.state.divergentBases.add(baseSha);
       }
       if (change === "head") {
         fixture.state.pullHeadSha = "2".repeat(40);
