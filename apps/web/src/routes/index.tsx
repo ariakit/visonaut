@@ -325,10 +325,12 @@ function Index() {
                   <TableRowGroup group="head">
                     <TableRow>
                       <TableCell>Run</TableCell>
-                      <TableCell>Tested commit</TableCell>
-                      <TableCell>State</TableCell>
-                      <TableCell numeric>Attempt</TableCell>
-                      <TableCell>Created</TableCell>
+                      <TableCell className="dashboard-run-secondary">Tested commit</TableCell>
+                      <TableCell className="dashboard-run-state">State</TableCell>
+                      <TableCell className="dashboard-run-secondary" numeric>
+                        Attempt
+                      </TableCell>
+                      <TableCell className="dashboard-run-secondary">Created</TableCell>
                     </TableRow>
                   </TableRowGroup>
                   <TableRowGroup>
@@ -338,18 +340,30 @@ function Index() {
                           <Link to="/runs/$runId" params={{ runId: run.id }}>
                             <strong>{kindLabel(run.kind)}</strong>
                             <small>{run.id}</small>
+                            <span className="dashboard-run-mobile-meta">
+                              <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
+                              <span>{runDate(run.createdAt)}</span>
+                              <span>Attempt {run.attempt}</span>
+                            </span>
                           </Link>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="dashboard-run-secondary">
                           <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
                         </TableCell>
-                        <TableCell>
-                          <Badge $layer={stateColor(run.state) ?? true}>
+                        <TableCell className="dashboard-run-state">
+                          <Badge
+                            $layer={stateColor(run.state) ?? true}
+                            className="dashboard-run-state-badge"
+                          >
                             <BadgeLabel>{stateLabel(run.state)}</BadgeLabel>
                           </Badge>
                         </TableCell>
-                        <TableCell numeric>{run.attempt}</TableCell>
-                        <TableCell>{runDate(run.createdAt)}</TableCell>
+                        <TableCell className="dashboard-run-secondary" numeric>
+                          {run.attempt}
+                        </TableCell>
+                        <TableCell className="dashboard-run-secondary">
+                          {runDate(run.createdAt)}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableRowGroup>

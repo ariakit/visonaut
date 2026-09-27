@@ -42,7 +42,7 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
             id: "run-42",
             kind: "pull_request",
             testedSha: "0123456789abcdef",
-            state: "passed",
+            state: "needs-recompare",
             attempt: 2,
             createdAt: "2026-09-26T12:00:00Z",
           },
@@ -73,7 +73,7 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
   await expect(page.getByRole("table", { name: "Recent runs" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("passed");
+  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("needs recompare");
   const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
   await expect(alerts).toBeVisible();
   await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
@@ -85,9 +85,40 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
   await expect.poll(() => operationsLoads).toBe(2);
   await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("table", { name: "Recent runs" })).toBeVisible();
+  const table = page.getByRole("table", { name: "Recent runs" });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "State" })).toBeVisible();
+  await expect(table.locator(".dashboard-run-secondary").first()).toBeHidden();
+  const mobileDetails = table.locator(".dashboard-run-mobile-meta").first();
+  await expect(mobileDetails).toBeVisible();
+  await expect(mobileDetails).toContainText("0123456789ab");
+  await expect(mobileDetails).toContainText("Attempt 2");
+  await expect(mobileDetails).toContainText("Sep 26, 2026");
   await expect(page.getByText("ariakit/ariakit", { exact: true })).toBeVisible();
+  expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
+    await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 320, height: 700 });
+  await expect(mobileDetails).toBeInViewport();
+  await expect(table.locator(".dashboard-run-state-badge").first()).toBeInViewport();
+  await expect(alerts.locator(".dashboard-alert-count")).toBeInViewport();
+  expect(
+    await alerts.evaluate((button) => {
+      const count = button.querySelector(".dashboard-alert-count");
+      if (!count) return false;
+      const buttonBounds = button.getBoundingClientRect();
+      const countBounds = count.getBoundingClientRect();
+      const floatsAtEnd =
+        getComputedStyle(button).direction === "rtl"
+          ? countBounds.left < buttonBounds.left
+          : countBounds.right > buttonBounds.right;
+      return countBounds.top >= 0 && floatsAtEnd;
+    }),
+  ).toBe(true);
+  expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
+    await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
+  );
 });
 
 test("opening a historical link loads its selected comparison", async ({ page }) => {
