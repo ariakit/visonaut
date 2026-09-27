@@ -125,4 +125,5 @@ export async function assertConfiguredProject(context: ApiContext) {
       "The configured repository does not match this project.",
     );
   }
+  return project;
 }

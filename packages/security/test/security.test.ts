@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bearerToken,
   genericCheckOutput,
+  GitHubUnavailableError,
   issueIngestCapability,
   issueUploadTicket,
   requireRepositoryWrite,
@@ -46,6 +47,83 @@ function githubWithPermission(permission: string, role = permission, userId = 42
 }
 
 describe("current repository permissions", () => {
+  it("uses a verified login hint on the next request while checking permission again", async () => {
+    const firstRequest = githubWithPermission("write");
+    firstRequest.appId = "hint-test";
+    await requireRepositoryWrite(firstRequest, "42");
+    expect(firstRequest.request).toHaveBeenCalledTimes(2);
+    const secondRequest = githubWithPermission("write");
+    secondRequest.appId = "hint-test";
+    await requireRepositoryWrite(secondRequest, "42");
+    expect(secondRequest.request).toHaveBeenCalledTimes(1);
+    expect(secondRequest.request).toHaveBeenLastCalledWith(
+      "/repos/ariakit/ariakit/collaborators/renamed-user/permission",
+    );
+  });
+
+  it("resolves a renamed login after a stale hint redirects", async () => {
+    const github = githubWithPermission("write");
+    github.appId = "rename-test";
+    await requireRepositoryWrite(github, "42");
+    const requests: string[] = [];
+    github.request = vi.fn(async (path: string) => {
+      requests.push(path);
+      if (path.includes("/renamed-user/permission")) {
+        throw new GitHubUnavailableError(301);
+      }
+      if (path === "/user/42") {
+        return { id: 42, login: "current-user" };
+      }
+      return { permission: "write", role_name: "write", user: { id: 42 } };
+    });
+    expect(await requireRepositoryWrite(github, "42")).toMatchObject({ login: "current-user" });
+    expect(requests).toEqual([
+      "/repos/ariakit/ariakit/collaborators/renamed-user/permission",
+      "/user/42",
+      "/repos/ariakit/ariakit/collaborators/current-user/permission",
+    ]);
+  });
+
+  it("rejects a reused login even when the hinted account has write permission", async () => {
+    const github = githubWithPermission("write");
+    github.appId = "reuse-test";
+    await requireRepositoryWrite(github, "42");
+    const requests: string[] = [];
+    github.request = vi.fn(async (path: string) => {
+      requests.push(path);
+      if (path.includes("/renamed-user/permission")) {
+        return { permission: "write", role_name: "write", user: { id: 999 } };
+      }
+      if (path === "/user/42") {
+        return { id: 42, login: "current-user" };
+      }
+      return { permission: "read", role_name: "read", user: { id: 42 } };
+    });
+    await expect(requireRepositoryWrite(github, "42")).rejects.toMatchObject({
+      code: "not_maintainer",
+      status: 403,
+    });
+    expect(requests).toEqual([
+      "/repos/ariakit/ariakit/collaborators/renamed-user/permission",
+      "/user/42",
+      "/repos/ariakit/ariakit/collaborators/current-user/permission",
+    ]);
+  });
+
+  it("does not use a stale permission when GitHub is unavailable", async () => {
+    const github = githubWithPermission("write");
+    github.appId = "outage-test";
+    await requireRepositoryWrite(github, "42");
+    github.request = vi.fn(async () => {
+      throw new GitHubUnavailableError(500);
+    });
+    await expect(requireRepositoryWrite(github, "42")).rejects.toMatchObject({
+      code: "github_unavailable",
+      status: 503,
+    });
+    expect(github.request).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     ["write", "write"],
     ["write", "maintain"],

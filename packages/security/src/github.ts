@@ -136,30 +136,73 @@ export interface MaintainerIdentity {
   role: string;
 }
 
-/** Resolve by numeric ID first so a renamed/reused login cannot gain access. */
+const loginHints = new Map<string, string>();
+const maximumLoginHints = 128;
+
+function rememberLogin(key: string, login: string) {
+  loginHints.delete(key);
+  if (loginHints.size >= maximumLoginHints) {
+    const oldest = loginHints.keys().next().value;
+    if (oldest !== undefined) {
+      loginHints.delete(oldest);
+    }
+  }
+  loginHints.set(key, login);
+}
+
+/** A login is only a routing hint; each request checks current permission and numeric identity. */
 export async function requireRepositoryWrite(
   client: GitHubClient,
   githubUserId: string,
 ): Promise<MaintainerIdentity> {
   const id = numericId(githubUserId);
+  const key = JSON.stringify([client.appId, client.repositoryId, client.repository, id]);
+  const checkPermission = async (login: string) => {
+    const result = record(
+      await client.request(
+        `/repos/${client.repository}/collaborators/${encodeURIComponent(login)}/permission`,
+      ),
+    );
+    const verifiedUser = record(result.user);
+    if (numericId(verifiedUser.id) !== id) {
+      return null;
+    }
+    // GitHub maps maintain to write; custom role names do not define base access.
+    // https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user
+    if (result.permission !== "write" && result.permission !== "admin") {
+      throw new SecurityError("not_maintainer", 403, "Repository write permission is required.");
+    }
+    return { githubUserId: id, login, role: textField(result.role_name) };
+  };
+  const hint = loginHints.get(key);
+  if (hint) {
+    try {
+      const identity = await checkPermission(hint);
+      if (identity) {
+        rememberLogin(key, hint);
+        return identity;
+      }
+    } catch (error) {
+      const upstreamStatus = error instanceof GitHubUnavailableError ? error.upstreamStatus : null;
+      if (
+        upstreamStatus !== 404 &&
+        !(upstreamStatus && upstreamStatus >= 300 && upstreamStatus < 400)
+      ) {
+        throw error;
+      }
+    }
+    // A renamed or reused login must be resolved again by its numeric ID.
+    loginHints.delete(key);
+  }
   const user = record(await client.request(`/user/${id}`));
   const login = textField(user.login);
   if (numericId(user.id) !== id) {
     throw new GitHubUnavailableError();
   }
-  const result = record(
-    await client.request(
-      `/repos/${client.repository}/collaborators/${encodeURIComponent(login)}/permission`,
-    ),
-  );
-  const verifiedUser = record(result.user);
-  if (numericId(verifiedUser.id) !== id) {
+  const identity = await checkPermission(login);
+  if (!identity) {
     throw new GitHubUnavailableError();
   }
-  // GitHub maps maintain to write; custom role names do not define base access.
-  // https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user
-  if (result.permission !== "write" && result.permission !== "admin") {
-    throw new SecurityError("not_maintainer", 403, "Repository write permission is required.");
-  }
-  return { githubUserId: id, login, role: textField(result.role_name) };
+  rememberLogin(key, login);
+  return identity;
 }

@@ -7,7 +7,7 @@ import {
   type ReviewRow,
 } from "@visonaut/service";
 import type { HistoryRow } from "../operations/history-format.ts";
-import type { PrivateContext } from "./context.js";
+import { assertConfiguredProject, type PrivateContext } from "./context.js";
 import { comparisonReference, startComparisonPublication } from "./ingest.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
 import { operationsStatus } from "./operations.js";
@@ -638,7 +638,7 @@ export async function handleReview(
       )
       .bind(context.configuration.projectId)
       .all();
-    const project = await context.service.project(context.configuration.projectId);
+    const project = await assertConfiguredProject(context);
     return Response.json({
       runs: runs.results,
       project: {
