@@ -951,7 +951,18 @@ export class Service {
     }
     const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', ci.digest, 'referenceProfileDigest', r.profile_digest, 'candidateProfileDigest', c.profile_digest, 'comparisonPolicyDigest', ?)`;
     const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', r.profile_digest, 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?)`;
-    const identicalOriginals = `r.id IS NOT NULL AND length(ci.digest) = 64 AND ci.digest NOT GLOB '*[^0-9a-f]*' AND ri.digest = ci.digest AND ri.bytes = ci.bytes AND ri.width = ci.width AND ri.height = ci.height AND ri.content_type = ci.content_type AND ri.role = 'original' AND ci.role = 'original' AND ri.validated = 1 AND ci.validated = 1 AND ri.bytes_present = 1 AND ci.bytes_present = 1 AND r.profile_digest = c.profile_digest`;
+    // Registered profiles are digest-checked on insert. Their candidate must use
+    // the current policy; unregistered exact digests retain the existing shortcut.
+    const matchingProfiles = `(r.profile_digest = c.profile_digest AND NOT EXISTS (
+      SELECT 1 FROM visonaut_capture_profiles WHERE digest = c.profile_digest
+    )) OR EXISTS (SELECT 1 FROM visonaut_capture_profiles candidate_profile
+      LEFT JOIN visonaut_capture_profiles reference_profile ON reference_profile.digest = r.profile_digest
+      WHERE candidate_profile.digest = c.profile_digest
+        AND json_extract(candidate_profile.profile_json, '$.comparisonPolicyDigest') = ?
+        AND (r.profile_digest = c.profile_digest OR
+          json_remove(reference_profile.profile_json, '$.comparisonPolicyDigest') =
+            json_remove(candidate_profile.profile_json, '$.comparisonPolicyDigest')))`;
+    const identicalOriginals = `r.id IS NOT NULL AND length(ci.digest) = 64 AND ci.digest NOT GLOB '*[^0-9a-f]*' AND ri.digest = ci.digest AND ri.bytes = ci.bytes AND ri.width = ci.width AND ri.height = ci.height AND ri.content_type = ci.content_type AND ri.role = 'original' AND ci.role = 'original' AND ri.validated = 1 AND ci.validated = 1 AND ri.bytes_present = 1 AND (${matchingProfiles})`;
     const identicalResult = `json_object('outcome', 'unchanged', 'changedPixels', 0, 'ratio', 0, 'engineVersion', 'sha256-identical-1', 'codecVersion', 'not-decoded', 'maskExpected', json('false'))`;
     await atomic(this.database, [
       ...guards,
@@ -970,7 +981,16 @@ export class Service {
       ),
       this.sql(
         `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome, result_json) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, CASE WHEN r.id IS NULL THEN 'changed' WHEN ${identicalOriginals} THEN 'unchanged' ELSE 'pending' END, CASE WHEN ${identicalOriginals} THEN ${identicalResult} ELSE NULL END FROM visonaut_captures c JOIN visonaut_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM visonaut_snapshot_images si JOIN visonaut_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN visonaut_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
-        [input.id, input.id, project.id, project.policy_digest, input.referenceSnapshotId, run.id],
+        [
+          input.id,
+          input.id,
+          project.id,
+          project.policy_digest,
+          project.policy_digest,
+          project.policy_digest,
+          input.referenceSnapshotId,
+          run.id,
+        ],
       ),
       this.sql(
         `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome) SELECT ? || ':removed:' || r.id, ?, r.item_key, r.variant_key, (SELECT COALESCE(MAX(ordinal), 0) + 1 FROM visonaut_captures WHERE run_id = ?) + r.ordinal, r.id, NULL, ${removalTuple}, 'changed' FROM visonaut_snapshot_images si JOIN visonaut_captures r ON r.id = si.capture_id JOIN visonaut_images ri ON ri.id = r.image_id WHERE si.snapshot_id = ? AND NOT EXISTS (SELECT 1 FROM visonaut_captures c WHERE c.run_id = ? AND c.item_key = r.item_key AND c.variant_key = r.variant_key)`,
@@ -1193,12 +1213,19 @@ export class Service {
       candidateProfileDigest: string | null;
     };
     const comparison = await this.comparison(row.comparison_id);
-    const result =
-      input.result.outcome === "unchanged" &&
-      tuple.referenceProfileDigest !== tuple.candidateProfileDigest &&
-      !(await this.sameRenderingProfileAcrossPolicies(row, comparison))
-        ? { ...input.result, outcome: "changed" as const }
-        : input.result;
+    let requiresReview = false;
+    if (input.result.outcome === "unchanged") {
+      if (tuple.referenceProfileDigest !== tuple.candidateProfileDigest) {
+        requiresReview = !(await this.sameRenderingProfileAcrossPolicies(row, comparison));
+      } else if (comparison.purpose !== "historical") {
+        const staleProfile = await this.sql(
+          "SELECT 1 FROM visonaut_capture_profiles WHERE digest = ? AND json_extract(profile_json, '$.comparisonPolicyDigest') IS NOT ?",
+          [tuple.candidateProfileDigest, comparison.policy_digest],
+        ).first();
+        requiresReview = Boolean(staleProfile);
+      }
+    }
+    const result = requiresReview ? { ...input.result, outcome: "changed" as const } : input.result;
     const run = await this.run(comparison.run_id);
     if (row.result_json) {
       if (row.result_json !== JSON.stringify(result)) {
