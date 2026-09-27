@@ -12,6 +12,7 @@ import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { trySealRun } from "./ingest.js";
+import { sameCurrentMergeTree } from "./merge.js";
 import {
   candidateForWebhook,
   ensurePreRunCheck,
@@ -244,15 +245,55 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     const number = integer(webhook.payload.number, 1);
     const github = await createGitHubClient(context.configuration.github);
     const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
-    const testedSha = pull.merge_commit_sha;
+    const testedSha = typeof pull.merge_commit_sha === "string" ? pull.merge_commit_sha : null;
     const runs = await context.database
       .prepare(
         "SELECT id, tested_sha FROM visonaut_runs WHERE project_id = ? AND lineage_key = ? AND active = 1",
       )
       .bind(context.configuration.projectId, `pr:${number}`)
       .all<{ id: string; tested_sha: string }>();
+    const changedRuns = runs.results.filter(
+      (run) => pull.state !== "closed" && testedSha && run.tested_sha !== testedSha,
+    );
+    let baseSha: string | null = null;
+    let sourceSha: string | null = null;
+    if (changedRuns.length) {
+      const mainRef = object(
+        await github.request(`/repos/${github.repository}/git/ref/heads/main`),
+      );
+      const mergeRef = object(
+        await github.request(`/repos/${github.repository}/git/ref/pull/${number}/merge`),
+      );
+      const currentBase = object(mainRef.object).sha;
+      const currentHead = object(pull.head).sha;
+      if (
+        !testedSha ||
+        !/^[a-f0-9]{40}$/.test(testedSha) ||
+        typeof currentBase !== "string" ||
+        !/^[a-f0-9]{40}$/.test(currentBase) ||
+        typeof currentHead !== "string" ||
+        !/^[a-f0-9]{40}$/.test(currentHead) ||
+        object(mergeRef.object).sha !== testedSha
+      ) {
+        throw new SecurityError("merge_not_ready", 503, "The pull request merge is not ready.");
+      }
+      baseSha = currentBase;
+      sourceSha = currentHead;
+    }
     for (const run of runs.results) {
-      if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha)) {
+      const equivalent =
+        testedSha &&
+        baseSha &&
+        sourceSha &&
+        run.tested_sha !== testedSha &&
+        (await sameCurrentMergeTree({
+          github,
+          testedSha: run.tested_sha,
+          currentSha: testedSha,
+          baseSha,
+          sourceSha,
+        }));
+      if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha && !equivalent)) {
         try {
           await context.service.retireRun({ runId: run.id, now: Date.now() });
         } catch (error) {

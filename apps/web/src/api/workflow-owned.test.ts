@@ -1064,6 +1064,9 @@ describe("workflow-owned upload staging", () => {
     });
     test.githubResponses.set(base, run);
     test.githubResponses.set(`${base}/attempts/1`, run);
+    test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
+      object: { sha: test.manifest.run.testedSha },
+    });
     test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
       jobs: [
         job(
@@ -1128,6 +1131,7 @@ describe("workflow-owned upload staging", () => {
           .first<{ submitted_at: number | null }>(),
       ).toEqual({ submitted_at: null });
       const submitToken = await signedToken(submitJobId);
+      await database.prepare("DELETE FROM pre_run_checks").run();
       const first = await send(submitToken);
       const replay = await send(submitToken);
       expect(first?.status).toBe(202);

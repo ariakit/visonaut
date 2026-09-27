@@ -247,7 +247,9 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     jobName,
     context.configuration.oidcAudience,
   );
-  if (verified.workflowAttempt > 1) await ensureSignedAttemptCheck(context, github, verified);
+  if (verified.event === "pull_request" || verified.workflowAttempt > 1) {
+    await ensureSignedAttemptCheck(context, github, verified);
+  }
   const run = await reserveVerifiedStagedRun(context, verified, sourceDigest);
   await context.database
     .prepare(
@@ -961,7 +963,9 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     configuration.submitJobName,
     new URL("/submit", context.configuration.origin).href,
   );
-  if (verified.workflowAttempt > 1) await ensureSignedAttemptCheck(context, github, verified);
+  if (verified.event === "pull_request" || verified.workflowAttempt > 1) {
+    await ensureSignedAttemptCheck(context, github, verified);
+  }
   if (!run) {
     run = await reserveVerifiedStagedRun(context, verified, seed.workflow_source_digest);
   }

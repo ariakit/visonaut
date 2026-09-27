@@ -132,6 +132,7 @@ function fixture() {
     [queueTwo, [queueOne]],
     [oid(31), [base, firstHead]],
   ]);
+  const trees = new Map<string, string>([[oid(31), oid(80)]]);
   const pulls = new Map<number, ReturnType<typeof pull>>([
     [1, pull(1)],
     [2, pull(2)],
@@ -165,6 +166,13 @@ function fixture() {
         };
       if (path.endsWith("/git/ref/heads/main")) return { object: { sha: mainSha } };
       if (path.includes("/git/ref/")) return { object: { sha: refSha } };
+      const commit = /\/git\/commits\/([a-f0-9]{40})$/.exec(path);
+      if (commit?.[1]) {
+        return {
+          parents: (parents.get(commit[1]) ?? []).map((sha) => ({ sha })),
+          tree: { sha: trees.get(commit[1]) ?? commit[1] },
+        };
+      }
       const comparison = /\/compare\/([a-f0-9]{40})\.\.\.([a-f0-9]{40})/.exec(path);
       if (comparison?.[1] && comparison[2])
         return {
@@ -189,6 +197,7 @@ function fixture() {
   return {
     github,
     parents,
+    trees,
     pulls,
     calls,
     setEntries(value: typeof entries) {
@@ -265,6 +274,26 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
       oid(31),
     );
     test.setMain(oid(98));
+    await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
+      code: "stale_pull_request",
+    });
+  });
+  it("keeps a PR lineage when GitHub regenerates an equivalent merge commit", async () => {
+    const test = fixture();
+    const regenerated = oid(32);
+    test.parents.set(regenerated, [base, firstHead]);
+    test.trees.set(regenerated, oid(80));
+    test.pulls.set(1, pull(1, { merged: false, merge: regenerated }));
+    test.setRef(regenerated);
+    await expect(verifyLineage(test.github, target("pull_request"), [])).resolves.toMatchObject({
+      proof: { testedSha: oid(31) },
+    });
+    test.trees.set(regenerated, oid(81));
+    await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
+      code: "stale_pull_request",
+    });
+    test.trees.set(regenerated, oid(80));
+    test.parents.set(regenerated, [base, secondHead]);
     await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
       code: "stale_pull_request",
     });

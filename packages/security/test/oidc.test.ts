@@ -65,6 +65,12 @@ function github(
     pullBase?: string;
     main?: string;
     mergeBase?: string;
+    currentMergeSha?: string;
+    mergeRefSha?: string;
+    currentMergeBase?: string;
+    currentMergeHead?: string;
+    testedTree?: string;
+    currentTree?: string;
     workflowBlob?: string;
     authorPermission?: string;
     headRepositoryId?: number;
@@ -115,15 +121,34 @@ function github(
       if (path.endsWith("/pulls/7"))
         return {
           state: "open",
-          merge_commit_sha: testedSha,
+          merge_commit_sha: heads.currentMergeSha ?? testedSha,
           head: { ref: "feature", sha: sourceHead, repo: { id: heads.headRepositoryId ?? 10 } },
           base: { ref: "main", sha: heads.pullBase ?? targetHead, repo: { id: 10 } },
           user: { id: 42 },
         };
-      if (path.includes("/git/commits/"))
-        return { parents: [{ sha: heads.mergeBase ?? targetHead }, { sha: sourceHead }] };
+      if (path.includes("/git/commits/")) {
+        const current =
+          heads.currentMergeSha &&
+          heads.currentMergeSha !== testedSha &&
+          path.endsWith(`/git/commits/${heads.currentMergeSha}`);
+        return {
+          parents: [
+            {
+              sha: current
+                ? (heads.currentMergeBase ?? targetHead)
+                : (heads.mergeBase ?? targetHead),
+            },
+            { sha: current ? (heads.currentMergeHead ?? sourceHead) : sourceHead },
+          ],
+          tree: {
+            sha: current ? (heads.currentTree ?? testedSha) : (heads.testedTree ?? testedSha),
+          },
+        };
+      }
       if (path.endsWith("/git/ref/heads/main"))
         return { object: { sha: heads.main ?? targetHead } };
+      if (path.endsWith("/git/ref/pull/7/merge"))
+        return { object: { sha: heads.mergeRefSha ?? heads.currentMergeSha ?? testedSha } };
       if (path.startsWith("/user/")) return { id: 42, login: "maintainer" };
       if (path.endsWith("/permission"))
         return {
@@ -468,6 +493,100 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       targetHead,
       testedSha,
     });
+  });
+  it("accepts a regenerated PR merge commit with the same parents and tree", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          currentMergeSha: "f".repeat(40),
+        }),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ event: "pull_request", testedSha, sourceHead, targetHead });
+  });
+  it.each([
+    { currentMergeSha: testedSha, name: "unchanged merge" },
+    { currentMergeSha: "f".repeat(40), name: "regenerated merge" },
+  ])("rejects a stale PR merge ref for an $name", async ({ currentMergeSha }) => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          currentMergeSha,
+          mergeRefSha: "1".repeat(40),
+        }),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "merge_not_ready", status: 503 });
+  });
+  it("rejects a regenerated PR merge commit with different contents", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          currentMergeSha: "f".repeat(40),
+          currentTree: "1".repeat(40),
+        }),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
+  });
+  it("rejects a regenerated PR merge commit with a different parent", async () => {
+    const ref = "refs/pull/7/merge";
+    const signed = await token({
+      event_name: "pull_request",
+      ref,
+      head_ref: "feature",
+      base_ref: "main",
+      sub: `repo:${repository}:pull_request`,
+      workflow_ref: `${repository}/${configuration.workflowPath}@${ref}`,
+    });
+    await expect(
+      verifyGitHubOidc({
+        token: signed,
+        request,
+        configuration,
+        github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
+          currentMergeSha: "f".repeat(40),
+          currentMergeBase: "1".repeat(40),
+        }),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
   });
   it("accepts a current merge when GitHub's pull base SHA is stale", async () => {
     const ref = "refs/pull/7/merge";
