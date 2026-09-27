@@ -1,5 +1,12 @@
 # visonaut
 
+## 0.3.3
+
+### Patch Changes
+
+- 5cc5dac: Reduced image-transfer HTTP requests by 89% in a 67-image local fixture exercised through `visonaut upload --dir`, with 66 unchanged originals (71 requests to 8). `visonaut submit` uses the same transfer path to prove it has each image before reusing retained bytes, then uploads images that cannot be reused.
+- 96e3b72: Explained when the service pauses new capture runs at its capacity limit and directed CI users to Service attention before rerunning the job.
+
 ## 0.3.2
 
 ### Patch Changes
