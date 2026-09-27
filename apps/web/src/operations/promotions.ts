@@ -15,6 +15,10 @@ interface PromotionPosition {
   id: string;
   created_at: number;
 }
+
+// Keep each pass within the queue consumer's wall time and the promotion lease.
+const maximumPromotionObjectsPerStep = 50;
+
 interface PromotionPage<Row extends PromotionPosition> {
   cursorId: string;
   rows: Row[];
@@ -148,7 +152,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       WHERE run.active=1 AND run.kind='main' AND run.state!='accepted' AND comparison.state='ready'`,
   });
   let candidateAfter = candidates.after;
-  let remainingObjects = budget.objectsPerStep;
+  const copyBudget = Math.min(budget.objectsPerStep, maximumPromotionObjectsPerStep);
+  let remainingObjects = copyBudget;
   for (const candidate of candidates.rows) {
     if (remainingObjects < 1) {
       report.hasMore = true;
@@ -260,6 +265,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         });
         await resolveEvents(database, "promotion", candidate.id, context.now());
         report.completed.push(candidate.id);
+        // Publishing checks runs before copying; schedule a pass for the new revision.
+        report.hasMore = true;
       }
     } catch (error) {
       const code =
@@ -279,7 +286,6 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
   }
   const candidatesRemaining = await savePromotionCursor(context, candidates, candidateAfter);
   report.hasMore ||=
-    candidatesRemaining &&
-    (report.completed.length > 0 || remainingObjects < budget.objectsPerStep);
+    candidatesRemaining && (report.completed.length > 0 || remainingObjects < copyBudget);
   return report;
 }
