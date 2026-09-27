@@ -194,6 +194,25 @@ const defaultMaxOutstanding = 1024;
 const receiptMilliseconds = (14 * 24 + 1) * 60 * 60 * 1000;
 const rejectedSendRetryMilliseconds = 5 * 60 * 1000;
 
+// Run-history compaction can remove a review row while leaving its task ID.
+export function supersededReviewTaskSql(taskTable: string) {
+  return `(EXISTS (SELECT 1 FROM visonaut_comparison_rows row
+    JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+    JOIN visonaut_runs run ON run.id = comparison.run_id
+    WHERE row.id = ${taskTable}.id AND comparison.purpose = 'review'
+      AND (comparison.state = 'invalidated' OR run.active = 0
+        OR run.comparison_id IS NOT comparison.id))
+    OR (NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.id = ${taskTable}.id)
+      AND EXISTS (SELECT 1 FROM visonaut_comparisons comparison
+        JOIN visonaut_runs run ON run.id = comparison.run_id
+        WHERE comparison.purpose = 'review'
+          AND (run.detail_archived = 1 OR EXISTS (
+            SELECT 1 FROM operations_comparison_archives archive
+            WHERE archive.comparison_id = comparison.id AND archive.state = 'ready'))
+          AND instr(${taskTable}.id, ':') > 1
+          AND comparison.id = substr(${taskTable}.id, 1, instr(${taskTable}.id, ':') - 1))))`;
+}
+
 function definiteQueueRejection(error: unknown) {
   // Workers Queue errors append the code to message. These three codes mean
   // overload, storage limit, disabled Queue, or free-tier quota; no message was accepted.
@@ -209,7 +228,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   if (params.scope && params.kind !== "compare") {
     throw new Error("Current comparison publication requires compare tasks.");
   }
-  // Queue delivery may never arrive after invalidation. Retire a bounded page
+  // Queue delivery may never arrive after supersession. Retire a bounded page
   // before counting outstanding receipts so obsolete work cannot block new work.
   const retired = params.scope
     ? await database
@@ -217,10 +236,8 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
           lease_token = NULL, lease_until = NULL, publication_token = NULL,
           last_error = NULL, updated_at = ?
         WHERE id IN (SELECT task.id FROM work_tasks task
-          JOIN visonaut_comparison_rows row ON row.id = task.id
-          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
           WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
-            AND comparison.purpose = 'review' AND comparison.state = 'invalidated'
+            AND ${supersededReviewTaskSql("task")}
           ORDER BY task.id LIMIT ?) RETURNING id`)
         .bind(params.now, params.limit)
         .all<{ id: string }>()

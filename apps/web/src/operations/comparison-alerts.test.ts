@@ -550,58 +550,72 @@ it.each([
   ["queued", "in-flight"],
   ["leased", "accepted"],
   ["leased", "in-flight"],
-] as const)("counts a superseded %s %s receipt until it expires", async (state, receipt) => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  const now = fixture.state.time;
-  const receiptDue = now + (14 * 24 + 1) * 60 * 60 * 1000;
-  comparison(database, "active");
-  comparison(database, "superseded");
-  database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='superseded'").run();
-  for (const id of ["active:row", "superseded:row"]) {
-    await enqueueWork(database, {
-      id,
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now: fixture.state.time,
-    });
-  }
-  database.connection
-    .prepare(`UPDATE work_tasks SET state=?,attempts=?,lease_token=?,lease_until=?,
+] as const)(
+  "releases a superseded %s %s receipt before publishing current work",
+  async (state, receipt) => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const now = fixture.state.time;
+    const receiptDue = now + (14 * 24 + 1) * 60 * 60 * 1000;
+    comparison(database, "active");
+    comparison(database, "superseded");
+    database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='superseded'").run();
+    for (const id of ["active:row", "superseded:row"]) {
+      await enqueueWork(database, {
+        id,
+        kind: "compare",
+        payload: "{}",
+        maxAttempts: 3,
+        now: fixture.state.time,
+      });
+    }
+    database.connection
+      .prepare(`UPDATE work_tasks SET state=?,attempts=?,lease_token=?,lease_until=?,
       publication_due_at=?,published_at=?,publication_token=? WHERE id='superseded:row'`)
-    .run(
-      state,
-      state === "leased" ? 1 : 0,
-      state === "leased" ? "consumer" : null,
-      state === "leased" ? now + 100 : null,
-      receiptDue,
-      receipt === "accepted" ? now : null,
-      receipt === "in-flight" ? "send" : null,
+      .run(
+        state,
+        state === "leased" ? 1 : 0,
+        state === "leased" ? "consumer" : null,
+        state === "leased" ? now + 100 : null,
+        receiptDue,
+        receipt === "accepted" ? now : null,
+        receipt === "in-flight" ? "send" : null,
+      );
+    const sent: string[] = [];
+    const input = {
+      limit: 10,
+      maxOutstanding: 1,
+      kind: "compare" as const,
+      scope: "current-comparison" as const,
+      publish: async (id: string) => {
+        sent.push(id);
+      },
+    };
+    expect(await reconcileWork(database, { ...input, now })).toEqual({
+      published: ["active:row"],
+      failed: [],
+      hasMore: false,
+    });
+    expect(
+      database.connection
+        .prepare(
+          "SELECT state,result,lease_token,publication_token FROM work_tasks WHERE id='superseded:row'",
+        )
+        .get(),
+    ).toEqual({
+      state: "complete",
+      result: "superseded",
+      lease_token: null,
+      publication_token: null,
+    });
+    expect((await reconcileWork(database, { ...input, now: receiptDue - 1 })).published).toEqual(
+      [],
     );
-  const sent: string[] = [];
-  const input = {
-    limit: 10,
-    maxOutstanding: 1,
-    kind: "compare" as const,
-    scope: "current-comparison" as const,
-    publish: async (id: string) => {
-      sent.push(id);
-    },
-  };
-  expect(await reconcileWork(database, { ...input, now })).toEqual({
-    published: [],
-    failed: [],
-    hasMore: false,
-  });
-  expect(sent).toEqual([]);
-  expect((await reconcileWork(database, { ...input, now: receiptDue })).published).toEqual([
-    "active:row",
-  ]);
-  expect(sent).toEqual(["active:row"]);
-});
+    expect(sent).toEqual(["active:row"]);
+  },
+);
 
-it("does not admit a replacement run over 1,024 superseded receipts", async () => {
+it("retires superseded receipts in bounded pages while admitting current work", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   const now = fixture.state.time;
@@ -644,12 +658,16 @@ it("does not admit a replacement run over 1,024 superseded receipts", async () =
       sent.push(id);
     },
   };
-  expect((await reconcileWork(database, input)).published).toEqual([]);
-  expect(sent).toEqual([]);
-  database.connection
-    .prepare("UPDATE work_tasks SET state='complete' WHERE id='superseded:0000'")
-    .run();
-  expect((await reconcileWork(database, input)).published).toEqual(["active:row"]);
+  const first = await reconcileWork(database, input);
+  expect(first.published).toEqual(["active:row"]);
+  expect(first.hasMore).toBe(true);
+  expect(
+    database.connection
+      .prepare(
+        "SELECT COUNT(*) AS count FROM work_tasks WHERE state='complete' AND id LIKE 'superseded:%'",
+      )
+      .get()?.count,
+  ).toBe(32);
   expect(sent).toEqual(["active:row"]);
 });
 

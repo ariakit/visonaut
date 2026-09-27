@@ -1841,6 +1841,202 @@ describe("restoration and workflow attempt inheritance", () => {
       hasMore: false,
     });
   });
+
+  it("retires queued review work when a newer attempt supersedes its run", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, {
+      id: "old",
+      kind: "pull_request",
+      external: "workflow",
+      lineage: "pr",
+      color: "red",
+    });
+    const row = (await service.comparisonRows("comparison-old"))[0];
+    if (!row) throw new Error("Missing review row");
+    database.connection
+      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
+      .run(row.id);
+
+    await fixture(service, {
+      id: "new",
+      kind: "pull_request",
+      external: "workflow",
+      lineage: "pr",
+      attempt: 2,
+      color: "red",
+    });
+
+    expect((await service.run("old")).active).toBe(0);
+    expect(
+      database.connection.prepare("SELECT state, result FROM work_tasks WHERE id=?").get(row.id),
+    ).toEqual({ state: "complete", result: "superseded" });
+    expect((await service.comparisonRows("comparison-old"))[0]?.id).toBe(row.id);
+  });
+
+  it("retires a closed run's review work without retiring historical work", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "closed-review", kind: "pull_request", color: "red" });
+    const row = (await service.comparisonRows("comparison-closed-review"))[0];
+    if (!row) throw new Error("Missing review row");
+    database.connection
+      .prepare(
+        "UPDATE work_tasks SET state='leased', result=NULL, lease_token='worker', lease_until=100 WHERE id=?",
+      )
+      .run(row.id);
+
+    await service.retireRun({ runId: "closed-review", now: 20 });
+
+    expect(
+      database.connection
+        .prepare("SELECT state, result, lease_token, lease_until FROM work_tasks WHERE id=?")
+        .get(row.id),
+    ).toEqual({ state: "complete", result: "superseded", lease_token: null, lease_until: null });
+    const comparison = await service.createComparison({
+      id: "historical-closed-review",
+      runId: "closed-review",
+      referenceSnapshotId: "snapshot-seed",
+      purpose: "historical",
+      expectedCaptureCount: 1,
+      now: 21,
+      maxAttempts: 2,
+    });
+    const historicalRow = (await service.comparisonRows(comparison.id))[0];
+    if (!historicalRow) throw new Error("Missing historical row");
+    await service.retireRun({ runId: "closed-review", now: 22 });
+    expect(
+      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(historicalRow.id),
+    ).toEqual({ state: "queued" });
+  });
+
+  it("acknowledges superseded review work after its comparison row is archived", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "archived", kind: "pull_request", color: "red" });
+    const row = (await service.comparisonRows("comparison-archived"))[0];
+    if (!row) throw new Error("Missing review row");
+    database.connection
+      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
+      .run(row.id);
+    database.connection.prepare("DELETE FROM visonaut_comparison_rows WHERE id=?").run(row.id);
+    database.connection
+      .prepare("UPDATE visonaut_runs SET detail_archived=1 WHERE id='archived'")
+      .run();
+
+    expect(await service.getComparisonTaskState(row.id)).toEqual({ state: "superseded" });
+    expect(
+      await service.claimComparisonTask({
+        taskId: row.id,
+        owner: "worker",
+        now: 30,
+        leaseMilliseconds: 100,
+      }),
+    ).toBeNull();
+    expect(
+      database.connection.prepare("SELECT state, result FROM work_tasks WHERE id=?").get(row.id),
+    ).toEqual({ state: "complete", result: "superseded" });
+  });
+
+  it("acknowledges a stale review message for an inactive run", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "inactive", kind: "pull_request", color: "red" });
+    const row = (await service.comparisonRows("comparison-inactive"))[0];
+    if (!row) throw new Error("Missing review row");
+    database.connection
+      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
+      .run(row.id);
+    database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='inactive'").run();
+
+    expect(
+      await service.claimComparisonTask({
+        taskId: row.id,
+        owner: "worker",
+        now: 30,
+        leaseMilliseconds: 100,
+      }),
+    ).toBeNull();
+    expect(
+      database.connection.prepare("SELECT state, result FROM work_tasks WHERE id=?").get(row.id),
+    ).toEqual({ state: "complete", result: "superseded" });
+  });
+
+  it("drains superseded review work one page at a time and leaves historical work queued", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "inactive", kind: "pull_request", color: "red" });
+    await fixture(service, { id: "archived", kind: "pull_request", color: "red" });
+    await fixture(service, { id: "current", kind: "pull_request", color: "red" });
+    const inactiveRow = (await service.comparisonRows("comparison-inactive"))[0];
+    const archivedRow = (await service.comparisonRows("comparison-archived"))[0];
+    const currentRow = (await service.comparisonRows("comparison-current"))[0];
+    if (!inactiveRow || !archivedRow || !currentRow) throw new Error("Missing review rows");
+    database.connection
+      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id IN (?, ?)")
+      .run(inactiveRow.id, archivedRow.id);
+    database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='inactive'").run();
+    database.connection
+      .prepare("DELETE FROM visonaut_comparison_rows WHERE id=?")
+      .run(archivedRow.id);
+    database.connection
+      .prepare("UPDATE visonaut_runs SET detail_archived=1 WHERE id='archived'")
+      .run();
+    database.connection
+      .prepare(
+        "UPDATE work_tasks SET state='queued', result=NULL, publication_due_at=1000 WHERE id=?",
+      )
+      .run(currentRow.id);
+    database.connection
+      .prepare("UPDATE visonaut_comparisons SET state='comparing' WHERE id='comparison-current'")
+      .run();
+    const historical = await service.createComparison({
+      id: "historical-inactive",
+      runId: "inactive",
+      referenceSnapshotId: "snapshot-seed",
+      purpose: "historical",
+      expectedCaptureCount: 1,
+      now: 20,
+      maxAttempts: 2,
+    });
+    const historicalRow = (await service.comparisonRows(historical.id))[0];
+    if (!historicalRow) throw new Error("Missing historical row");
+    database.connection
+      .prepare("UPDATE work_tasks SET publication_due_at=1000 WHERE id=?")
+      .run(historicalRow.id);
+    const input = {
+      now: 30,
+      limit: 1,
+      kind: "compare" as const,
+      scope: "current-comparison" as const,
+      publish: async () => {},
+    };
+
+    expect((await reconcileWork(database, input)).hasMore).toBe(true);
+    expect(
+      database.connection
+        .prepare("SELECT COUNT(*) AS count FROM work_tasks WHERE id IN (?, ?) AND state='complete'")
+        .get(inactiveRow.id, archivedRow.id)?.count,
+    ).toBe(1);
+    expect((await reconcileWork(database, input)).hasMore).toBe(true);
+    expect(
+      database.connection
+        .prepare("SELECT COUNT(*) AS count FROM work_tasks WHERE id IN (?, ?) AND state='complete'")
+        .get(inactiveRow.id, archivedRow.id)?.count,
+    ).toBe(2);
+    expect((await reconcileWork(database, input)).hasMore).toBe(false);
+    expect(
+      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(historicalRow.id),
+    ).toEqual({ state: "queued" });
+    expect(
+      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(currentRow.id),
+    ).toEqual({ state: "queued" });
+  });
 });
 
 describe("expanded SQL workload", () => {
