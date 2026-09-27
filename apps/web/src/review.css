@@ -101,6 +101,7 @@
 }
 .review-item-pages > div {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .review-item-pages + .review-item-list {

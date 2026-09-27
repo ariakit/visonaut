@@ -180,7 +180,14 @@ test("accepted items stay collapsed and paginate only when opened", async ({ pag
   await expect(accepted).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".review-item")).toHaveCount(51);
   await expect(page.getByText("1–50 of 100 accepted", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Next accepted" }).click();
+  const nextAccepted = page.getByRole("button", { name: "Next accepted" });
+  const overflow = await nextAccepted.evaluate((button) => {
+    const sidebar = button.closest(".review-sidebar-body");
+    if (!sidebar) throw new Error("Missing review sidebar body");
+    return button.getBoundingClientRect().right - sidebar.getBoundingClientRect().right;
+  });
+  expect(overflow).toBeLessThanOrEqual(0);
+  await nextAccepted.click();
   await expect(page.locator("#review-item-51")).toBeFocused();
   await expect(page.getByText("51–100 of 100 accepted", { exact: true })).toBeVisible();
 });
