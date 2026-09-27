@@ -19,7 +19,7 @@ import {
   compactRunHistory,
   prepareArchivedCommandReplay,
 } from "./history.ts";
-import type { ComparisonResult, ReviewParams } from "./types.ts";
+import type { ComparisonResult, ReviewParams, ValidatedImage } from "./types.ts";
 
 class SqliteStatement implements Statement {
   constructor(
@@ -61,6 +61,7 @@ class TestDatabase implements Database {
   readonly connection = new DatabaseSync(":memory:");
   beforeBatch: (() => void) | null = null;
   preparedQueries = 0;
+  batchCalls = 0;
   constructor() {
     for (const name of [
       "0001_service.sql",
@@ -89,6 +90,7 @@ class TestDatabase implements Database {
     return new SqliteStatement(this.connection, sql);
   }
   async batch(statements: Statement[]) {
+    this.batchCalls += 1;
     const before = this.beforeBatch;
     this.beforeBatch = null;
     before?.();
@@ -483,6 +485,78 @@ describe("rejection of inherited acceptance", () => {
 });
 
 describe("full run and immutable comparison state", () => {
+  it("registers a page with bounded D1 work and rolls back conflicting originals", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await setup(service);
+    await service.reserveRun({
+      id: "batch",
+      projectId: "project",
+      externalRunId: "batch",
+      attempt: 1,
+      kind: "main",
+      testedSha: "batch-sha",
+      lineageKey: "main",
+      plan: {
+        digest: "batch-plan",
+        shards: [
+          {
+            key: "chromium",
+            profileDigest: "profile",
+            tests: ["test"],
+            captures: [{ itemKey: "dialog", variantKey: "light", testId: "test" }],
+          },
+        ],
+      },
+      verifiedRelatedRunIds: [],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified-github-proof",
+      rerunShardKeys: ["chromium"],
+      now: 1,
+    });
+    const originals: ValidatedImage[] = Array.from({ length: 50 }, (_, index) => ({
+      id: `image-${index}`,
+      runId: "batch",
+      digest: `digest-${index}`,
+      objectKey: `runs/batch/images/image-${index}`,
+      contentType: "image/png",
+      bytes: 80,
+      width: 10,
+      height: 10,
+    }));
+    const before = database.preparedQueries;
+    const batchesBefore = database.batchCalls;
+    await service.registerImages(originals);
+    expect(database.preparedQueries - before).toBeLessThanOrEqual(7);
+    expect(database.batchCalls - batchesBefore).toBe(1);
+    expect(count(database, "visonaut_images")).toBe(50);
+
+    await service.registerImages(originals);
+    expect(count(database, "visonaut_images")).toBe(50);
+    const first = originals[0];
+    if (!first) {
+      throw new Error("Expected an original image.");
+    }
+    await expect(
+      service.registerImages([
+        { ...first, id: "new", objectKey: "runs/batch/images/new" },
+        { ...first, digest: "conflicting-digest" },
+      ]),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(count(database, "visonaut_images")).toBe(50);
+    await expect(service.registerImages([...originals, first])).rejects.toBeInstanceOf(
+      IncompleteError,
+    );
+
+    database.beforeBatch = () => {
+      database.connection.prepare("UPDATE visonaut_runs SET active = 0 WHERE id = 'batch'").run();
+    };
+    await expect(
+      service.registerImages([{ ...first, id: "late", objectKey: "runs/batch/images/late" }]),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(count(database, "visonaut_images")).toBe(50);
+  });
+
   it("accepts equal validated originals without scheduling pixel comparisons", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
