@@ -14,6 +14,7 @@ import {
   failWork,
   getWork,
   statusIntentStatements,
+  supersededReviewTaskSql,
   workLeaseAssertion,
 } from "./work.ts";
 import type { StatusDelivery } from "./work.ts";
@@ -112,6 +113,8 @@ export interface ComparisonTask {
 }
 
 export const maximumImageRegistrationBatchSize = 50;
+// The scheduled reconciler drains tasks beyond the run transition's first page.
+const reviewTaskRetirementPageSize = 100;
 
 export async function captureProfilesDigest(
   captures: ReadonlyArray<{ itemKey: string; variantKey: string; profileDigest: string }>,
@@ -363,6 +366,20 @@ export class Service {
       this.sql(
         "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
         [input.now, input.projectId, input.externalRunId],
+      ),
+      this.sql(
+        `UPDATE work_tasks SET state = 'complete', result = 'superseded',
+          lease_token = NULL, lease_until = NULL, publication_token = NULL,
+          last_error = NULL, updated_at = ?
+        WHERE id IN (SELECT task.id FROM work_tasks task
+          JOIN visonaut_comparison_rows row ON row.id = task.id
+          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+          JOIN visonaut_runs run ON run.id = comparison.run_id
+          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
+            AND comparison.purpose = 'review' AND run.project_id = ?
+            AND run.external_run_id = ? AND run.active = 0
+          ORDER BY task.id LIMIT ?)`,
+        [input.now, input.projectId, input.externalRunId, reviewTaskRetirementPageSize],
       ),
       this.sql(
         "UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id IN (SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 0)",
@@ -1102,8 +1119,8 @@ export class Service {
     }>();
     if (!state) {
       const archived = await this.sql(
-        "SELECT 1 FROM visonaut_comparisons comparison JOIN visonaut_runs run ON run.id=comparison.run_id WHERE (run.detail_archived=1 OR EXISTS (SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND substr(?,1,length(comparison.id)+1)=comparison.id || ':' LIMIT 1",
-        [taskId],
+        "SELECT 1 FROM visonaut_comparisons comparison JOIN visonaut_runs run ON run.id=comparison.run_id WHERE instr(?, ':') > 1 AND comparison.id=substr(?,1,instr(?, ':')-1) AND (run.detail_archived=1 OR EXISTS (SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) LIMIT 1",
+        [taskId, taskId, taskId],
       ).first();
       if (archived) return { state: "superseded" as const };
       throw new IncompleteError("The comparison task has not been scheduled.");
@@ -1132,16 +1149,13 @@ export class Service {
   }) {
     const state = await this.getComparisonTaskState(input.taskId);
     if (state.state === "superseded" || state.state === "dead") {
-      // Acknowledged invalidated reviews must release their Queue admission receipts.
+      // An acknowledged stale message must release its Queue admission receipt.
       await this.sql(
         `UPDATE work_tasks SET state = 'complete', result = 'superseded',
-          lease_token = NULL, lease_until = NULL, last_error = NULL, updated_at = ?
-        WHERE id = ? AND state IN ('queued', 'leased') AND EXISTS (
-          SELECT 1 FROM visonaut_comparison_rows row
-          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-          WHERE row.id = work_tasks.id AND comparison.purpose = 'review'
-            AND comparison.state = 'invalidated'
-        )`,
+          lease_token = NULL, lease_until = NULL, publication_token = NULL,
+          last_error = NULL, updated_at = ?
+        WHERE id = ? AND kind = 'compare' AND state IN ('queued', 'leased')
+          AND ${supersededReviewTaskSql("work_tasks")}`,
         [input.now, input.taskId],
       ).run();
       return null;
@@ -1656,6 +1670,18 @@ export class Service {
       this.sql(
         "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
         [input.now, run.id],
+      ),
+      this.sql(
+        `UPDATE work_tasks SET state = 'complete', result = 'superseded',
+          lease_token = NULL, lease_until = NULL, publication_token = NULL,
+          last_error = NULL, updated_at = ?
+        WHERE id IN (SELECT task.id FROM work_tasks task
+          JOIN visonaut_comparison_rows row ON row.id = task.id
+          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
+            AND comparison.purpose = 'review' AND comparison.run_id = ?
+          ORDER BY task.id LIMIT ?)`,
+        [input.now, run.id, reviewTaskRetirementPageSize],
       ),
       this.sql("UPDATE work_retained_runs SET closed_at = COALESCE(closed_at, ?) WHERE id = ?", [
         input.now,
