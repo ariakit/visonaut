@@ -727,6 +727,7 @@ describe("full run and immutable comparison state", () => {
         "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = 'project'",
       )
       .run(newPolicyDigest);
+    const tasksBeforePolicyChange = Number(count(database, "work_tasks"));
     const unchanged = () => ({
       outcome: "unchanged" as const,
       changedPixels: 0,
@@ -740,20 +741,39 @@ describe("full run and immutable comparison state", () => {
       items: ["dialog", "menu"],
       realDigest: true,
       captureProfileDigest: newProfileDigest,
-      compare: unchanged,
     });
-    expect(
-      (await service.comparisonRows("comparison-policy-only")).map((row) => row.outcome),
-    ).toEqual(["unchanged", "unchanged"]);
+    const policyOnlyRows = await service.comparisonRows("comparison-policy-only");
+    expect(policyOnlyRows.map((row) => row.outcome)).toEqual(["unchanged", "unchanged"]);
+    expect(policyOnlyRows.map((row) => JSON.parse(row.result_json ?? "{}").engineVersion)).toEqual([
+      "sha256-identical-1",
+      "sha256-identical-1",
+    ]);
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange);
     expect((await service.status("policy-only")).status).toBe("passed");
     expect((await service.comparison("comparison-seed")).policy_digest).toBe(oldPolicyDigest);
     expect((await service.comparison("comparison-policy-only")).policy_digest).toBe(
       newPolicyDigest,
     );
 
+    await fixture(service, {
+      id: "policy-and-content-change",
+      kind: "pull_request",
+      items: ["dialog", "menu"],
+      realDigest: true,
+      color: "red",
+      captureProfileDigest: newProfileDigest,
+    });
+    expect(
+      (await service.comparisonRows("comparison-policy-and-content-change")).map(
+        (row) => row.outcome,
+      ),
+    ).toEqual(["changed", "changed"]);
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 2);
+
     for (const [id, profileDigest] of [
       ["rendering-change", changedProfileDigest],
       ["stale-policy", stalePolicyProfileDigest],
+      ["stale-policy-same-profile", oldProfileDigest],
     ] as const) {
       await fixture(service, {
         id,
@@ -769,6 +789,7 @@ describe("full run and immutable comparison state", () => {
       ]);
       expect((await service.status(id)).status).toBe("needs-review");
     }
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 8);
   });
 
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {
