@@ -343,7 +343,14 @@ it("renews after proof-page reads when the upload capability expires", async () 
   const result = await operation;
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 0, reusedImages: 65 });
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    uploadedImages: 0,
+    reusedImages: 65,
+    imagePutElapsedMs: 0,
+    imagePutBytes: 0,
+    imagePutRetryWaitMs: 0,
+    validationBusyRetries: 0,
+  });
   expect(reservations).toBe(2);
   expect(offered).toHaveLength(3);
   expect(offered[0]).toHaveLength(32);

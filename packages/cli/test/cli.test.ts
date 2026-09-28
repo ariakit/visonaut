@@ -202,6 +202,10 @@ describe("public upload command", () => {
       uploadedImages: 1,
       reusedImages: 0,
       transferElapsedMs: expect.any(Number),
+      imagePutElapsedMs: expect.any(Number),
+      imagePutBytes: imageBytes.length,
+      imagePutRetryWaitMs: 0,
+      validationBusyRetries: 0,
       shardStaged: true,
       visualApproval: false,
     });
@@ -244,6 +248,10 @@ describe("public upload command", () => {
       uploadedImages: 1,
       reusedImages: 0,
       transferElapsedMs: expect.any(Number),
+      imagePutElapsedMs: expect.any(Number),
+      imagePutBytes: imageBytes.length,
+      imagePutRetryWaitMs: 0,
+      validationBusyRetries: 0,
       shardStaged: true,
       visualApproval: false,
     });
@@ -454,8 +462,29 @@ describe("public submit command", () => {
       shardKey: "chrome-1",
       manifestDigest,
       uploadedImages: 1,
+      imagePutElapsedMs: expect.any(Number),
+      imagePutBytes: imageBytes.length,
+      imagePutRetryWaitMs: 0,
+      validationBusyRetries: 0,
       visualApproval: false,
     });
+  });
+
+  it("prints only aggregate image PUT measurements for a signed submit", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({ local });
+    const result = await execute(["submit", "--dir", local.directory]);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
+    expect(result.stdout).toMatch(
+      new RegExp(
+        `Image PUTs: \\d+ms, ${imageBytes.length} attempted bytes, 0ms retry wait, 0 validation_busy retries\\.`,
+      ),
+    );
+    expect(result.stdout).not.toContain(local.capture.name);
+    expect(result.stdout).not.toContain(local.capture.image.path);
+    expect(result.stdout).not.toContain("secret");
+    expect(requests).toHaveLength(7);
   });
 
   it("rejects the wrong run or attempt before requesting OIDC", async () => {
