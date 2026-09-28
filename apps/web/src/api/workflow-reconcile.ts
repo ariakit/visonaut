@@ -14,7 +14,7 @@ import {
   type VerifiedRun,
 } from "@visonaut/security";
 import { IncompleteError } from "@visonaut/service";
-import type { ApiContext } from "./context.js";
+import { isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
 import { object } from "./input.js";
 import {
   completeWorkflowJobs,
@@ -116,10 +116,6 @@ async function stagedBundle(
   name: string,
   workflowHeadSha: string,
 ): Promise<ReconciledBundle> {
-  const executorDigest = context.configuration.trustedExecutorDigest;
-  if (!executorDigest) {
-    throw new SecurityError("workflow_configuration", 503, "The trusted executor is unavailable.");
-  }
   const identity = verifiedRun(bundle.verified_json);
   const source = verifiedRun(bundle.source_verified_json);
   if (
@@ -144,7 +140,9 @@ async function stagedBundle(
   const manifest = parseManifest(
     JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await stored.arrayBuffer())),
   );
+  const executorDigest = manifest.discovery?.executorDigest;
   if (
+    !isTrustedWorkflowExecutor(context.configuration, executorDigest) ||
     (await digestJson(manifest)) !== bundle.manifest_digest ||
     manifest.run.repository !== github.repository ||
     manifest.run.repositoryId !== run.repository_id ||
@@ -155,7 +153,6 @@ async function stagedBundle(
     manifest.shard.key !== key ||
     manifest.shard.jobId !== bundle.job_id ||
     manifest.shard.sourceAttempt !== bundle.source_attempt ||
-    manifest.discovery?.executorDigest !== executorDigest ||
     manifest.discovery?.inventoryDigest !==
       (await digestJson(manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath }))))
   ) {

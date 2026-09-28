@@ -30,6 +30,7 @@ export interface ApiConfiguration {
     reusableWorkflowSha: string;
     trustedWorkflowPath?: string;
     additionalTrustedWorkflowBlobSha?: string;
+    additionalTrustedExecutorDigest?: string;
   };
   reusableWorkflowRef: string;
   reusableWorkflowSha: string;
@@ -45,6 +46,18 @@ export interface ApiConfiguration {
     maximumPlanBytes: number;
     maximumCaptures: number;
   };
+}
+
+export function isTrustedWorkflowExecutor(
+  configuration: ApiConfiguration,
+  digest: string | undefined,
+): digest is string {
+  if (!digest) return false;
+  return (
+    digest === configuration.trustedExecutorDigest ||
+    (configuration.workflowOwned !== undefined &&
+      digest === configuration.workflowOwned.additionalTrustedExecutorDigest)
+  );
 }
 
 export interface ObjectStorage {

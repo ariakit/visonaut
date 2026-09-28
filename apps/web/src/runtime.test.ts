@@ -137,10 +137,15 @@ it("enables automatic Ariakit pre-run checks only in production", () => {
     reusableWorkflowRef:
       "ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f",
     reusableWorkflowSha: "697172dfed281348d79bfe8ce61f9ccf21537c5f",
-    additionalTrustedWorkflowBlobSha: "d1145e929d5a40740447d27ce11003280adb65fc",
+    additionalTrustedWorkflowBlobSha: "6720c8f6e6038bc00046d08c86243f2ce160f4b6",
+    additionalTrustedExecutorDigest:
+      "5d29257230b1d822b846af7670741e3195a58fddbe7c8cac61dedd3a8a403179",
   });
   expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_REF).toBe(workflow.reusableWorkflowRef);
   expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_SHA).toBe(workflow.reusableWorkflowSha);
+  expect(production.vars?.VISONAUT_TRUSTED_EXECUTOR_DIGEST).toBe(
+    "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
+  );
 });
 
 beforeEach(async () => {
