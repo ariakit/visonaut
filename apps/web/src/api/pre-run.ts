@@ -10,10 +10,12 @@ import {
   type VerifiedRun,
   type VerifiedWebhook,
 } from "@visonaut/security";
+import { workflowSourceDigest } from "@visonaut/protocol";
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 import { completeWorkflowJobs, jobExecutedInAttempt } from "./jobs.js";
 import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
+import { stagedAttemptRetentionMs } from "./workflow-retention.js";
 
 interface Candidate {
   testedSha: string;
@@ -915,73 +917,50 @@ async function workflowCandidate({
   return row;
 }
 
-async function retireSupersededPullRequestAttempt(
+async function successfulSubmittedPinnedJobs(
   context: ApiContext,
   github: GitHubClient,
   run: Record<string, unknown>,
+  row: PreRunCheck,
 ) {
-  if (run.event !== "pull_request" || run.status !== "completed") return false;
-  const runId = numericId(run.id);
-  const attempt = run.run_attempt;
-  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
-    return false;
-  }
-  const row = await attemptCheck(context, runId, attempt);
-  if (
-    !row ||
-    row.repository_id !== github.repositoryId ||
-    row.kind !== "pull_request" ||
-    row.source_sha !== run.head_sha ||
-    row.pull_request_number === null ||
-    row.ref !== `refs/pull/${row.pull_request_number}/merge` ||
-    !Array.isArray(run.pull_requests) ||
-    !run.pull_requests.some((value) => object(value).number === row.pull_request_number)
-  ) {
-    return false;
-  }
-  const root = `/repos/${github.repository}`;
-  const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
-  const head = object(pull.head);
-  const base = object(pull.base);
-  if (
-    numericId(object(head.repo).id) !== github.repositoryId ||
-    numericId(object(base.repo).id) !== github.repositoryId
-  ) {
-    throw new SecurityError("workflow_identity", 503, "The pull-request repository changed.");
-  }
-  // A temporary merge-ref mismatch stays retryable while GitHub updates it.
-  if (
-    pull.state === "open" &&
-    base.ref === "main" &&
-    head.ref === run.head_branch &&
-    head.sha === row.source_sha
-  ) {
-    const currentMergeSha = sha(pull.merge_commit_sha);
-    if (!currentMergeSha) return false;
-    const mergeRef = object(
-      await github.request(`${root}/git/ref/pull/${row.pull_request_number}/merge`),
-    );
-    if (object(mergeRef.object).sha !== currentMergeSha) return false;
-    if (
-      await sameCurrentMergeTree({
-        github,
-        testedSha: row.tested_sha,
-        currentSha: currentMergeSha,
-        testedBaseSha: row.base_sha,
-        sourceSha: row.source_sha,
-      })
-    ) {
-      return false;
-    }
-  }
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration) return { submitted: false, successful: false };
+  const submitted = await context.database
+    .prepare(
+      "SELECT submit_job_id FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=? AND tested_sha=? AND submitted_at IS NOT NULL",
+    )
+    .bind(github.repositoryId, numericId(run.id), run.run_attempt, row.tested_sha)
+    .first<{ submit_job_id: string | null }>();
+  if (!submitted) return { submitted: false, successful: false };
+  const jobs = await completeWorkflowJobs(github, numericId(run.id));
+  const captureJobs = jobs.filter(
+    (job) => typeof job.name === "string" && job.name.startsWith(configuration.captureJobPrefix),
+  );
+  const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
+  const pinnedJobs = [...captureJobs, ...submitJobs];
+  return {
+    submitted: true,
+    successful:
+      submitJobs.length === 1 &&
+      String(submitJobs[0]?.id) === submitted.submit_job_id &&
+      pinnedJobs.every((job) => job.status === "completed" && job.conclusion === "success"),
+  };
+}
+
+async function retireBoundHistoricalCheck(
+  context: ApiContext,
+  github: GitHubClient,
+  row: PreRunCheck,
+  output: { title: string; summary: string },
+) {
   if (!row.check_id) {
-    throw new SecurityError("check_pending", 503, "The superseded check is unavailable.");
+    throw new SecurityError("check_pending", 503, "The historical check is unavailable.");
   }
   const check = await verifiedCheck(github, row, row.check_id);
   if (check.status === "completed") {
     if (check.conclusion === "success" || check.conclusion === "neutral") return true;
     if (check.conclusion !== "failure") {
-      throw new SecurityError("pre_run_check", 503, "The superseded check is incomplete.");
+      throw new SecurityError("pre_run_check", 503, "The historical check is incomplete.");
     }
   }
   const fenced = await context.database
@@ -1008,28 +987,209 @@ async function retireSupersededPullRequestAttempt(
   const closed = await verifiedCheck(github, row, row.check_id);
   if (closed.status === "completed") {
     if (["success", "neutral", "failure"].includes(String(closed.conclusion))) return true;
-    throw new SecurityError("pre_run_check", 503, "The superseded check is incomplete.");
+    throw new SecurityError("pre_run_check", 503, "The historical check is incomplete.");
   }
   if (closed.status === "in_progress" || closed.status === "queued") {
-    await github.request(`${root}/check-runs/${row.check_id}`, {
+    await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
       method: "PATCH",
       body: JSON.stringify({
         status: "completed",
         conclusion: "failure",
         completed_at: new Date().toISOString(),
-        output: {
-          title: "Visual capture was superseded",
-          summary: "The pull request head or merge contents changed before capture completed.",
-        },
+        output,
       }),
     });
     const completed = await verifiedCheck(github, row, row.check_id);
     if (completed.status !== "completed" || completed.conclusion !== "failure") {
-      throw new SecurityError("check_pending", 503, "The superseded check did not close.");
+      throw new SecurityError("check_pending", 503, "The historical check did not close.");
     }
     return true;
   }
-  throw new SecurityError("pre_run_check", 503, "The superseded check has an unknown status.");
+  throw new SecurityError("pre_run_check", 503, "The historical check has an unknown status.");
+}
+
+async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRunCheck) {
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration || !row.workflow_run_id || row.workflow_attempt === null) return false;
+  const digest = await workflowSourceDigest(configuration.reusableWorkflowSha);
+  // Match the durable reconciler's retention and workflow-pin admission
+  // before acknowledging a receipt that leaves its App check pending.
+  const staged = await context.database
+    .prepare(
+      `SELECT 1 AS found FROM ingest_staged_runs staged
+      LEFT JOIN visonaut_runs materialized ON materialized.id=staged.id
+      WHERE staged.repository_id=? AND staged.workflow_run_id=?
+        AND staged.workflow_attempt=? AND staged.tested_sha=?
+        AND staged.retention_state='live' AND staged.submitted_at IS NOT NULL
+        AND staged.created_at>? AND staged.submit_job_id IS NOT NULL
+        AND staged.submit_verified_json IS NOT NULL
+        AND staged.workflow_source_digest=? AND staged.caller_workflow_path=?
+        AND staged.reusable_workflow_ref=? AND staged.capture_job_prefix=?
+        AND staged.submit_job_name=?
+        AND (materialized.id IS NULL OR (materialized.active=1
+          AND materialized.sealed_at IS NULL AND materialized.state='uploading'))
+        AND NOT EXISTS (SELECT 1 FROM visonaut_runs newer
+          WHERE newer.project_id=? AND newer.external_run_id=staged.workflow_run_id
+            AND newer.attempt>staged.workflow_attempt AND newer.sealed_at IS NOT NULL)
+      LIMIT 1`,
+    )
+    .bind(
+      row.repository_id,
+      row.workflow_run_id,
+      row.workflow_attempt,
+      row.tested_sha,
+      Date.now() - stagedAttemptRetentionMs,
+      digest,
+      configuration.callerWorkflowPath,
+      configuration.reusableWorkflowRef,
+      configuration.captureJobPrefix,
+      configuration.submitJobName,
+      context.configuration.projectId,
+    )
+    .first();
+  return Boolean(staged);
+}
+
+interface HistoricalWorkflowParams {
+  context: ApiContext;
+  github: GitHubClient;
+  run: Record<string, unknown>;
+  action: string;
+}
+
+async function retireSupersededMainAttempt({
+  context,
+  github,
+  run,
+  action,
+}: HistoricalWorkflowParams) {
+  if (run.event !== "push" || run.status !== "completed" || run.head_branch !== "main") {
+    return false;
+  }
+  const runId = numericId(run.id);
+  const attempt = run.run_attempt;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  const testedSha = sha(run.head_sha);
+  const row = await attemptCheck(context, runId, attempt);
+  if (
+    !testedSha ||
+    !row ||
+    row.repository_id !== github.repositoryId ||
+    row.kind !== "main" ||
+    row.ref !== "refs/heads/main" ||
+    row.source_sha !== testedSha ||
+    row.tested_sha !== testedSha ||
+    row.pull_request_number !== null ||
+    !row.check_id
+  ) {
+    return false;
+  }
+  const ref = object(await github.request(`/repos/${github.repository}/git/ref/heads/main`));
+  const currentSha = sha(object(ref.object).sha);
+  if (!currentSha || currentSha === testedSha) return false;
+  const check = await verifiedCheck(github, row, row.check_id);
+  // A delayed progress delivery may arrive after the live run completes.
+  if (action !== "completed") return true;
+  if (check.status !== "completed" && row.state === "active") {
+    const sealed = await context.database
+      .prepare(
+        "SELECT 1 AS found FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=? AND tested_sha=? AND active=1 AND sealed_at IS NOT NULL AND state!='failed' LIMIT 1",
+      )
+      .bind(context.configuration.projectId, runId, attempt, testedSha)
+      .first();
+    if (sealed) return true;
+    const submitted = await successfulSubmittedPinnedJobs(context, github, run, row);
+    // A successful signed Submit can still materialize after the workflow ends.
+    if (submitted.successful && (await historicalMainStageCanMaterialize(context, row))) {
+      return true;
+    }
+  }
+  return retireBoundHistoricalCheck(context, github, row, {
+    title: "Visual capture was superseded",
+    summary: "Main advanced before this workflow attempt completed.",
+  });
+}
+
+async function retireSupersededPullRequestAttempt({
+  context,
+  github,
+  run,
+  action,
+}: HistoricalWorkflowParams) {
+  if (run.event !== "pull_request") return false;
+  const runId = numericId(run.id);
+  const attempt = run.run_attempt;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  const row = await attemptCheck(context, runId, attempt);
+  if (
+    !row ||
+    row.repository_id !== github.repositoryId ||
+    row.kind !== "pull_request" ||
+    row.source_sha !== run.head_sha ||
+    row.pull_request_number === null ||
+    row.ref !== `refs/pull/${row.pull_request_number}/merge` ||
+    !Array.isArray(run.pull_requests) ||
+    (run.pull_requests.length !== 0 &&
+      !run.pull_requests.some((value) => object(value).number === row.pull_request_number))
+  ) {
+    return false;
+  }
+  const root = `/repos/${github.repository}`;
+  const pull = object(await github.request(`${root}/pulls/${row.pull_request_number}`));
+  const head = object(pull.head);
+  const base = object(pull.base);
+  if (
+    numericId(object(head.repo).id) !== github.repositoryId ||
+    numericId(object(base.repo).id) !== github.repositoryId
+  ) {
+    throw new SecurityError("workflow_identity", 503, "The pull-request repository changed.");
+  }
+  // GitHub drops a closed PR from workflow_run.pull_requests, but the bound
+  // attempt and its verified App check still identify the original PR.
+  if (run.pull_requests.length === 0 && pull.state !== "closed") return false;
+  if (action !== "completed") {
+    if (run.pull_requests.length !== 0 || pull.state !== "closed" || !row.check_id) {
+      return false;
+    }
+    await verifiedCheck(github, row, row.check_id);
+    // Only a completed delivery may close the check, even when the live run
+    // has finished since this progress delivery was sent.
+    return true;
+  }
+  if (run.status !== "completed") return false;
+  // A temporary merge-ref mismatch stays retryable while GitHub updates it.
+  if (
+    pull.state === "open" &&
+    base.ref === "main" &&
+    head.ref === run.head_branch &&
+    head.sha === row.source_sha
+  ) {
+    const currentMergeSha = sha(pull.merge_commit_sha);
+    if (!currentMergeSha) return false;
+    const mergeRef = object(
+      await github.request(`${root}/git/ref/pull/${row.pull_request_number}/merge`),
+    );
+    if (object(mergeRef.object).sha !== currentMergeSha) return false;
+    if (
+      await sameCurrentMergeTree({
+        github,
+        testedSha: row.tested_sha,
+        currentSha: currentMergeSha,
+        testedBaseSha: row.base_sha,
+        sourceSha: row.source_sha,
+      })
+    ) {
+      return false;
+    }
+  }
+  return retireBoundHistoricalCheck(context, github, row, {
+    title: "Visual capture was superseded",
+    summary: "The pull request head or merge contents changed before capture completed.",
+  });
 }
 
 async function retireUnboundTerminalPullRequestAttempt(
@@ -1391,10 +1551,12 @@ export async function settlePreRunWorkflow(
       allowTerminalSingleCandidate: webhook.payload.action === "completed",
     });
   } catch (error) {
+    const historical = { context, github, run, action: String(webhook.payload.action) };
     if (
       !(error instanceof SecurityError) ||
       error.code !== "workflow_candidate" ||
-      (!(await retireSupersededPullRequestAttempt(context, github, run)) &&
+      (!(await retireSupersededMainAttempt(historical)) &&
+        !(await retireSupersededPullRequestAttempt(historical)) &&
         !(await retireUnboundTerminalPullRequestAttempt(context, github, run)))
     ) {
       throw error;
@@ -1458,35 +1620,15 @@ export async function settlePreRunWorkflow(
   if (check.status !== "in_progress" && check.status !== "queued") {
     throw new SecurityError("pre_run_check", 409, "The current attempt check is already complete.");
   }
-  const submitted = await context.database
-    .prepare(
-      "SELECT submit_job_id FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=? AND tested_sha=? AND submitted_at IS NOT NULL",
-    )
-    .bind(github.repositoryId, runId, run.run_attempt, row.tested_sha)
-    .first<{ submit_job_id: string | null }>();
   // A signed submit stays eligible while Gate waits for review, even if Gate
   // makes the enclosing workflow fail before reconciliation finishes.
-  if (submitted) {
-    const jobs = await completeWorkflowJobs(github, runId);
-    const captureJobs = jobs.filter(
-      (job) => typeof job.name === "string" && job.name.startsWith(configuration.captureJobPrefix),
-    );
-    const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
-    const pinnedJobs = [...captureJobs, ...submitJobs];
-    if (
-      submitJobs.length === 1 &&
-      String(submitJobs[0]?.id) === submitted.submit_job_id &&
-      pinnedJobs.every((job) => job.status === "completed" && job.conclusion === "success")
-    ) {
-      return;
-    }
-  }
-  const reason =
-    submitted !== null
-      ? "A pinned capture or submit job did not complete successfully."
-      : run.conclusion === "success"
-        ? "The capture workflow finished without a signed Visonaut submit job."
-        : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
+  const submitted = await successfulSubmittedPinnedJobs(context, github, run, row);
+  if (submitted.successful) return;
+  const reason = submitted.submitted
+    ? "A pinned capture or submit job did not complete successfully."
+    : run.conclusion === "success"
+      ? "The capture workflow finished without a signed Visonaut submit job."
+      : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
   await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
     method: "PATCH",
     body: JSON.stringify({

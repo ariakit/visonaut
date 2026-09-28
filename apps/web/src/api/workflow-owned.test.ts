@@ -831,6 +831,29 @@ function retention(now: number, objectsPerStep: number) {
   };
 }
 
+it("reconciles a signed main submission after main advances", async () => {
+  const test = await fixture();
+  const { manifestDigest } = await stage(test);
+  await terminalGitHub(test, manifestDigest);
+  test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
+    object: { sha: "e".repeat(40) },
+  });
+  expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+    checked: 1,
+    progressed: 1,
+    errors: [],
+  });
+  expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+  expect(
+    await database
+      .prepare(
+        "SELECT state FROM pre_run_checks WHERE workflow_run_id = ? AND workflow_attempt = 1",
+      )
+      .bind(test.manifest.run.workflowRunId)
+      .first(),
+  ).toEqual({ state: "active" });
+});
+
 describe("workflow-owned upload staging", () => {
   it("accepts only a pinned workflow in the configured repository", async () => {
     const test = await fixture();
