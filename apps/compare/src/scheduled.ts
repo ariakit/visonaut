@@ -7,7 +7,7 @@ import {
 
 export async function runScheduledComparisons(
   database: Database,
-  publish: (taskId: string) => Promise<void>,
+  publish: (taskId: string, publicationAttempt: number) => Promise<void>,
   now: () => number,
 ) {
   const publication = await reconcileWork(database, {

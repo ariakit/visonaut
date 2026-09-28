@@ -1,6 +1,12 @@
 import { ImageValidationError } from "@visonaut/compare";
 import { Container } from "@cloudflare/containers";
-import { ConflictError, IncompleteError, Service } from "@visonaut/service";
+import {
+  ConflictError,
+  IncompleteError,
+  recoverDeadLetteredComparison,
+  reportComparisonPublication,
+  Service,
+} from "@visonaut/service";
 import { codecsReady } from "./codecs.ts";
 import { processComparisonTaskInContainer } from "./container.ts";
 import { processComparisonTask } from "./process.ts";
@@ -10,6 +16,7 @@ import { validateRequest } from "./validate.ts";
 
 interface ComparisonMessage {
   taskId: string;
+  publicationAttempt?: number;
 }
 
 export class ComparisonContainer extends Container<Env> {
@@ -24,8 +31,44 @@ function validMessage(value: unknown): value is ComparisonMessage {
     "taskId" in value &&
     typeof value.taskId === "string" &&
     value.taskId.length > 0 &&
-    value.taskId.length < 512
+    value.taskId.length < 512 &&
+    (!("publicationAttempt" in value) ||
+      (typeof value.publicationAttempt === "number" &&
+        Number.isSafeInteger(value.publicationAttempt) &&
+        value.publicationAttempt > 0))
   );
+}
+
+async function recoverDeadLetter(message: Message<unknown>, env: Env) {
+  if (!validMessage(message.body) || !message.body.publicationAttempt) {
+    const taskId =
+      message.body &&
+      typeof message.body === "object" &&
+      "taskId" in message.body &&
+      typeof message.body.taskId === "string" &&
+      message.body.taskId.length > 0 &&
+      message.body.taskId.length < 512
+        ? message.body.taskId
+        : null;
+    if (taskId) {
+      await reportComparisonPublication(env.DB, { published: [], failed: [taskId] }, Date.now());
+    }
+    console.error(JSON.stringify({ event: "comparison-invalid-dead-letter", taskId }));
+    message.ack();
+    return;
+  }
+  const { taskId, publicationAttempt } = message.body;
+  const result = await recoverDeadLetteredComparison(env.DB, {
+    taskId,
+    publicationAttempt,
+    now: Date.now(),
+  });
+  console.info(JSON.stringify({ event: "comparison-dead-letter-receipt", taskId, result }));
+  if (result === "deferred") {
+    message.retry({ delaySeconds: 60 });
+    return;
+  }
+  message.ack();
 }
 
 async function finishComparison(service: Service, comparisonId: string) {
@@ -116,6 +159,12 @@ export default {
     return validateRequest(request, await codecsReady);
   },
   async queue(batch: MessageBatch<unknown>, env: Env) {
+    if (batch.queue === env.VISONAUT_COMPARISON_DEAD_LETTER_QUEUE) {
+      for (const message of batch.messages) {
+        await recoverDeadLetter(message, env);
+      }
+      return;
+    }
     for (const message of batch.messages) {
       try {
         await withCodecCapacity(() => consume(message, env));
@@ -131,8 +180,8 @@ export default {
   async scheduled(_controller: ScheduledController, env: Env) {
     await runScheduledComparisons(
       env.DB,
-      async (taskId) => {
-        await env.COMPARISONS.send({ taskId });
+      async (taskId, publicationAttempt) => {
+        await env.COMPARISONS.send({ taskId, publicationAttempt });
       },
       Date.now,
     );

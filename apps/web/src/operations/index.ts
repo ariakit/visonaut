@@ -30,7 +30,8 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     scope: "current-comparison",
     now: context.now(),
     limit: context.budget.tasksPerStep,
-    publish: (taskId) => context.comparisons.send({ taskId }),
+    publish: (taskId, publicationAttempt) =>
+      context.comparisons.send({ taskId, publicationAttempt }),
   });
   reports.comparisons = {
     completed: publication.published,

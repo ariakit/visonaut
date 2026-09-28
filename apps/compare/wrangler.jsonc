@@ -22,6 +22,7 @@
   ],
   "vars": {
     "VISONAUT_CODEC_BACKEND": "worker",
+    "VISONAUT_COMPARISON_DEAD_LETTER_QUEUE": "visonaut-preview-comparison-dead-letter",
   },
   "containers": [
     {
@@ -61,8 +62,17 @@
         "max_batch_size": 1,
         "max_batch_timeout": 1,
         "max_concurrency": 1,
-        "max_retries": 100,
-        "dead_letter_queue": "visonaut-preview-dead-letter",
+        "max_retries": 10,
+        "retry_delay": 60,
+        "dead_letter_queue": "visonaut-preview-comparison-dead-letter",
+      },
+      {
+        "queue": "visonaut-preview-comparison-dead-letter",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_concurrency": 1,
+        "max_retries": 10,
+        "retry_delay": 60,
       },
     ],
   },
@@ -74,6 +84,7 @@
     "production": {
       "vars": {
         "VISONAUT_CODEC_BACKEND": "worker",
+        "VISONAUT_COMPARISON_DEAD_LETTER_QUEUE": "visonaut-production-comparison-dead-letter",
       },
       "containers": [
         {
@@ -113,8 +124,17 @@
             "max_batch_size": 1,
             "max_batch_timeout": 1,
             "max_concurrency": 5,
-            "max_retries": 100,
-            "dead_letter_queue": "visonaut-production-dead-letter",
+            "max_retries": 10,
+            "retry_delay": 60,
+            "dead_letter_queue": "visonaut-production-comparison-dead-letter",
+          },
+          {
+            "queue": "visonaut-production-comparison-dead-letter",
+            "max_batch_size": 1,
+            "max_batch_timeout": 1,
+            "max_concurrency": 1,
+            "max_retries": 10,
+            "retry_delay": 60,
           },
         ],
       },

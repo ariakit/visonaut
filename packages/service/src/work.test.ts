@@ -458,6 +458,7 @@ describe("durable comparison work", () => {
     const retryAt = 100 + 5 * 60 * 1000;
     const task = await getWork(database, "overloaded");
     expect(task?.publication_due_at).toBe(retryAt);
+    expect(task?.publication_attempts).toBe(0);
     expect(task?.publication_token).not.toBeNull();
     expect(
       (await reconcileWork(database, { now: retryAt - 1, limit: 1, publish })).published,
@@ -494,6 +495,7 @@ describe("durable comparison work", () => {
     });
     const task = await getWork(database, "claimed");
     expect(task?.publication_token).toBeNull();
+    expect(task?.publication_attempts).toBe(1);
     expect(task?.publication_due_at).toBe(100 + receiptLifetime);
   });
 

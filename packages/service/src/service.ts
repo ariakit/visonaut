@@ -8,6 +8,7 @@ import {
 } from "./historical.ts";
 import { ArchivedCommandResultError, commandRequestDigest } from "./history.ts";
 import { materializeLineageStatements } from "./lineage.ts";
+import { touchRunStatusStatements } from "./status-touch.ts";
 import {
   claimWork,
   completeWorkStatement,
@@ -256,20 +257,7 @@ export class Service {
   }
 
   private touch(run: RunRow, now: number): Statement[] {
-    return [
-      this.sql("UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?", [
-        run.project_id,
-      ]),
-      this.sql("UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?", [run.id]),
-      this.sql(
-        "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ?)",
-        [run.project_id, run.project_id],
-      ),
-      this.sql(
-        "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?",
-        [crypto.randomUUID(), now, run.id],
-      ),
-    ];
+    return touchRunStatusStatements(this.database, { id: run.id, projectId: run.project_id }, now);
   }
 
   private audit(
