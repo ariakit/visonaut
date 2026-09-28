@@ -1032,6 +1032,79 @@ async function retireSupersededPullRequestAttempt(
   throw new SecurityError("pre_run_check", 503, "The superseded check has an unknown status.");
 }
 
+async function retireUnboundTerminalPullRequestAttempt(
+  context: ApiContext,
+  github: GitHubClient,
+  run: Record<string, unknown>,
+) {
+  if (run.event !== "pull_request" || run.status !== "completed") return false;
+  const runId = numericId(run.id);
+  const attempt = run.run_attempt;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  if (await attemptCheck(context, runId, attempt)) return false;
+  const previous = await context.database
+    .prepare(
+      "SELECT * FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt<? ORDER BY workflow_attempt DESC",
+    )
+    .bind(runId, attempt)
+    .all<PreRunCheck>();
+  const bound = previous.results.find((row) => row.check_id);
+  const checkId = bound?.check_id;
+  const number = bound?.pull_request_number;
+  if (
+    !bound ||
+    !checkId ||
+    !number ||
+    bound.repository_id !== github.repositoryId ||
+    bound.kind !== "pull_request" ||
+    bound.source_sha !== run.head_sha ||
+    bound.ref !== `refs/pull/${number}/merge` ||
+    previous.results.some(
+      (row) =>
+        row.repository_id !== bound.repository_id ||
+        row.kind !== bound.kind ||
+        row.source_sha !== bound.source_sha ||
+        row.pull_request_number !== number ||
+        row.ref !== bound.ref,
+    ) ||
+    !Array.isArray(run.pull_requests) ||
+    (run.pull_requests.length !== 0 &&
+      (run.pull_requests.length !== 1 || object(run.pull_requests[0]).number !== number))
+  ) {
+    return false;
+  }
+  await verifiedCheck(github, bound, checkId);
+  const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
+  const head = object(pull.head);
+  const base = object(pull.base);
+  if (
+    numericId(object(head.repo).id) !== github.repositoryId ||
+    numericId(object(base.repo).id) !== github.repositoryId
+  ) {
+    return false;
+  }
+  if (pull.state === "closed") return true;
+  if (pull.state !== "open") return false;
+  if (base.ref !== "main" || head.ref !== run.head_branch || head.sha !== bound.source_sha) {
+    return true;
+  }
+  const currentMergeSha = sha(pull.merge_commit_sha);
+  if (!currentMergeSha) return false;
+  const mergeRef = object(
+    await github.request(`/repos/${github.repository}/git/ref/pull/${number}/merge`),
+  );
+  if (object(mergeRef.object).sha !== currentMergeSha) return false;
+  return !(await sameCurrentMergeTree({
+    github,
+    testedSha: bound.tested_sha,
+    currentSha: currentMergeSha,
+    testedBaseSha: bound.base_sha,
+    sourceSha: bound.source_sha,
+  }));
+}
+
 async function bindWorkflowCheck(
   context: ApiContext,
   github: GitHubClient,
@@ -1321,7 +1394,8 @@ export async function settlePreRunWorkflow(
     if (
       !(error instanceof SecurityError) ||
       error.code !== "workflow_candidate" ||
-      !(await retireSupersededPullRequestAttempt(context, github, run))
+      (!(await retireSupersededPullRequestAttempt(context, github, run)) &&
+        !(await retireUnboundTerminalPullRequestAttempt(context, github, run)))
     ) {
       throw error;
     }
