@@ -4,6 +4,7 @@ import { validateImage } from "@visonaut/compare";
 import {
   discoveryArtifactPrefix,
   digestJson,
+  sha256,
   workflowSourceDigest,
   type CaptureProfile,
   type Manifest,
@@ -427,6 +428,15 @@ async function stage(test: Awaited<ReturnType<typeof fixture>>) {
   return { final, manifestDigest: body.manifestDigest };
 }
 
+async function stagedImageKey(runId: string) {
+  const staged = await database
+    .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
+    .bind(runId)
+    .first<{ object_key: string }>();
+  if (!staged) throw new Error("Expected a staged original.");
+  return staged.object_key;
+}
+
 async function retainedSource(
   test: Awaited<ReturnType<typeof fixture>>,
   options: {
@@ -547,6 +557,38 @@ it("reuses only a proved, retained original and copies it to the new run", async
     test.runId,
   );
   expect(final.status).toBe(202);
+});
+
+it("seals a reused target from its R2 checksum without reading its body again", async () => {
+  const test = await fixture();
+  await retainedSource(test);
+  const { body, request } = await reuseProof(test);
+  expect(await (await reuseStagedImages(request, test.context, test.runId)).json()).toMatchObject({
+    reused: [image.digest],
+  });
+  await finalizeStaged(
+    test.post({
+      schemaVersion: "1.0",
+      shardKey: test.shardKey,
+      manifestDigest: body.manifestDigest,
+    }),
+    test.context,
+    test.runId,
+  );
+  await terminalGitHub(test, body.manifestDigest);
+  const objectKey = await stagedImageKey(test.runId);
+  expect((await images.head(objectKey))?.checksums.toJSON().sha256).toBe(image.digest);
+
+  const storage = test.context.images;
+  const get = vi.fn((key: string) => storage.get(key));
+  test.context.images = {
+    get,
+    head: (key) => storage.head(key),
+    put: (key, bytes, options) => storage.put(key, bytes, options),
+    delete: (key) => storage.delete(key),
+  };
+  expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+  expect(get).not.toHaveBeenCalled();
 });
 
 it("does not accept a proof derived only from the public image digest", async () => {
@@ -670,6 +712,7 @@ it("reads independent reuse sources in parallel before writing targets", async (
       }
       return storage.get(key);
     },
+    head: (key) => storage.head(key),
     async put(key, bytes, options) {
       writes++;
       if (writes === 1) {
@@ -1706,7 +1749,48 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
-  it("overlaps bounded original reads before registering their images", async () => {
+  it("seals a new upload from its R2 checksum without reading its body again", async () => {
+    const test = await fixture();
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    const objectKey = await stagedImageKey(test.runId);
+    expect((await images.head(objectKey))?.checksums.toJSON().sha256).toBe(image.digest);
+
+    const storage = test.context.images;
+    const get = vi.fn((key: string) => storage.get(key));
+    const head = vi.fn((key: string) => storage.head(key));
+    test.context.images = {
+      get,
+      head,
+      put: (key, bytes, options) => storage.put(key, bytes, options),
+      delete: (key) => storage.delete(key),
+    };
+    expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+    expect(head).toHaveBeenCalledExactlyOnceWith(objectKey);
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it("reads and hashes a legacy staged object without a SHA-256 checksum", async () => {
+    const test = await fixture();
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    const objectKey = await stagedImageKey(test.runId);
+    await images.put(objectKey, png, { httpMetadata: { contentType: "image/png" } });
+    expect((await images.head(objectKey))?.checksums.sha256).toBeUndefined();
+
+    const storage = test.context.images;
+    const get = vi.fn((key: string) => storage.get(key));
+    test.context.images = {
+      get,
+      head: (key) => storage.head(key),
+      put: (key, bytes, options) => storage.put(key, bytes, options),
+      delete: (key) => storage.delete(key),
+    };
+    expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+    expect(get).toHaveBeenCalledExactlyOnceWith(objectKey);
+  });
+
+  it("overlaps bounded checksum reads before registering their images", async () => {
     const test = await fixture();
     const extra = await Promise.all(
       [
@@ -1802,22 +1886,28 @@ describe("workflow-owned upload staging", () => {
       .all<{ object_key: string }>();
     const stagedKeys = new Set(staged.results.map((row) => row.object_key));
     const storage = test.context.images;
-    let reads = 0;
-    let activeReads = 0;
-    let maximumActiveReads = 0;
-    let releaseReads = () => {};
-    const blockedReads = new Promise<void>((resolve) => {
-      releaseReads = resolve;
+    let heads = 0;
+    let activeHeads = 0;
+    let maximumActiveHeads = 0;
+    let releaseHeads = () => {};
+    const blockedHeads = new Promise<void>((resolve) => {
+      releaseHeads = resolve;
     });
     test.context.images = {
       async get(key) {
-        const stored = await storage.get(key);
         if (stagedKeys.has(key)) {
-          reads += 1;
-          activeReads += 1;
-          maximumActiveReads = Math.max(maximumActiveReads, activeReads);
-          await blockedReads;
-          activeReads -= 1;
+          throw new Error("A checksummed staged image should not need a body read.");
+        }
+        return storage.get(key);
+      },
+      async head(key) {
+        const stored = await storage.head(key);
+        if (stagedKeys.has(key)) {
+          heads += 1;
+          activeHeads += 1;
+          maximumActiveHeads = Math.max(maximumActiveHeads, activeHeads);
+          await blockedHeads;
+          activeHeads -= 1;
         }
         return stored;
       },
@@ -1827,8 +1917,8 @@ describe("workflow-owned upload staging", () => {
     const registerImages = vi.spyOn(test.context.service, "registerImages");
     const operation = materializeWorkflowRun(test.context, test.runId);
     try {
-      await vi.waitFor(() => expect(reads).toBe(6), { timeout: 5000 });
-      expect(maximumActiveReads).toBe(6);
+      await vi.waitFor(() => expect(heads).toBe(6), { timeout: 5000 });
+      expect(maximumActiveHeads).toBe(6);
       expect(
         await database
           .prepare("SELECT COUNT(*) AS count FROM visonaut_images WHERE run_id = ?")
@@ -1836,12 +1926,12 @@ describe("workflow-owned upload staging", () => {
           .first<{ count: number }>(),
       ).toEqual({ count: 0 });
     } finally {
-      releaseReads();
+      releaseHeads();
       await operation.catch(() => undefined);
     }
     expect((await operation).sealed_at).not.toBeNull();
-    expect(reads).toBe(7);
-    expect(maximumActiveReads).toBe(6);
+    expect(heads).toBe(7);
+    expect(maximumActiveHeads).toBe(6);
     expect(registerImages).toHaveBeenCalledTimes(1);
     expect(registerImages.mock.calls[0]?.[0]).toHaveLength(7);
   });
@@ -1909,9 +1999,21 @@ describe("workflow-owned upload staging", () => {
     if (!stored) throw new Error("Expected the staged original.");
     const corrupted = new Uint8Array(png);
     corrupted[corrupted.length - 1] = corrupted[corrupted.length - 1]! ^ 1;
-    await images.put(stored.object_key, corrupted);
+    await images.put(stored.object_key, corrupted, { sha256: await sha256(corrupted) });
+    expect((await images.head(stored.object_key))?.checksums.toJSON().sha256).not.toBe(
+      image.digest,
+    );
+    const storage = test.context.images;
+    const get = vi.fn((key: string) => storage.get(key));
+    test.context.images = {
+      get,
+      head: (key) => storage.head(key),
+      put: (key, bytes, options) => storage.put(key, bytes, options),
+      delete: (key) => storage.delete(key),
+    };
     const result = await reconcileStagedWorkflows(test.context, 1);
     expect(result.errors).toEqual([{ runId: test.runId, code: "incomplete" }]);
+    expect(get).toHaveBeenCalledExactlyOnceWith(stored.object_key);
     expect(await test.context.service.run(test.runId)).toMatchObject({
       active: 1,
       state: "uploading",
@@ -2361,8 +2463,23 @@ describe("workflow-owned upload staging", () => {
         jobId: test.jobId,
       });
       await test.registerPreRunCheck(2);
+      const sourceObjectKey = await stagedImageKey(test.runId);
+      const storage = test.context.images;
+      const get = vi.fn((key: string) => storage.get(key));
+      test.context.images = {
+        get,
+        head: (key) => storage.head(key),
+        put: (key, bytes, options) => storage.put(key, bytes, options),
+        delete: (key) => storage.delete(key),
+      };
       const run = await materializeWorkflowRun(test.context, nextRunId);
       expect(run.sealed_at).not.toBeNull();
+      expect(get).toHaveBeenCalledExactlyOnceWith(sourceObjectKey);
+      const copied = await images.list({ prefix: `runs/${nextRunId}/images/` });
+      expect(copied.objects).toHaveLength(1);
+      const copiedObject = copied.objects[0];
+      if (!copiedObject) throw new Error("Expected the inherited original copy.");
+      expect((await images.head(copiedObject.key))?.checksums.toJSON().sha256).toBe(image.digest);
       const shard = await database
         .prepare("SELECT source_attempt FROM visonaut_shards WHERE run_id = ?")
         .bind(nextRunId)

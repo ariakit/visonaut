@@ -34,11 +34,17 @@ const bindings: ApiBindings = {
     async get() {
       return null;
     },
+    async head() {
+      return null;
+    },
     async put() {},
     async delete() {},
   },
   quarantine: {
     async get() {
+      return null;
+    },
+    async head() {
       return null;
     },
     async put() {},
