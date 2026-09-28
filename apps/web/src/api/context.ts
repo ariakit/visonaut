@@ -62,10 +62,11 @@ export function isTrustedWorkflowExecutor(
 
 export interface ObjectStorage {
   get(key: string): Promise<{ size: number; arrayBuffer(): Promise<ArrayBuffer> } | null>;
+  head(key: string): Promise<{ size: number; checksums: { sha256?: ArrayBuffer } } | null>;
   put(
     key: string,
     value: string | Uint8Array<ArrayBuffer>,
-    options?: { httpMetadata?: { contentType: string } },
+    options?: { httpMetadata?: { contentType: string }; sha256?: string },
   ): Promise<unknown>;
   delete(key: string): Promise<void>;
 }

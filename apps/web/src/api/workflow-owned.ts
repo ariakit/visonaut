@@ -796,6 +796,7 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
         try {
           await context.images.put(target.object_key, bytes, {
             httpMetadata: { contentType: target.media_type },
+            sha256: target.digest,
           });
           return target.digest;
         } catch {
@@ -888,6 +889,7 @@ export async function uploadStagedImage(
   }
   await context.images.put(image.object_key, bytes, {
     httpMetadata: { contentType: image.media_type },
+    sha256: image.digest,
   });
   await context.database
     .prepare(

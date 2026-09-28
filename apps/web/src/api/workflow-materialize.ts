@@ -57,9 +57,13 @@ interface MaterializeBundleParams {
 /** Distinguish lost validated bytes from retryable GitHub or D1 failures. */
 class StagedOriginalUnavailableError extends IncompleteError {}
 
-// Six R2 reads match the Worker connection limit; batches stay byte-bounded.
+// Six R2 operations match the Worker connection limit; batches stay byte-bounded.
 const maximumMaterializationReads = 6;
 const maximumMaterializationReadBytes = 8 * 1024 * 1024;
+
+function hexChecksum(bytes: ArrayBuffer) {
+  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 export function materializationBatchEnd(images: readonly { bytes: number }[], offset: number) {
   let end = offset;
@@ -157,6 +161,14 @@ async function materializeImages({
     ) {
       throw new IncompleteError("A staged image differs from its validated manifest.");
     }
+    // R2 checksums come from a validated PUT; older objects still need a body check.
+    if (bundle.sourceRunId === runId) {
+      const stored = await context.images.head(image.object_key);
+      const checksum = stored?.checksums.sha256;
+      if (stored?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
+        return { image, bytes: null };
+      }
+    }
     const stored = await context.images.get(image.object_key);
     if (!stored || stored.size !== image.bytes) {
       throw new StagedOriginalUnavailableError("A validated original image is unavailable.");
@@ -172,7 +184,7 @@ async function materializeImages({
     const verificationStarted = performance.now();
     const results = await Promise.allSettled(images.results.slice(offset, end).map(verifyImage));
     measurements.verificationMs += performance.now() - verificationStarted;
-    const verified: Array<{ image: StagedImage; bytes: Uint8Array<ArrayBuffer> }> = [];
+    const verified: Array<{ image: StagedImage; bytes: Uint8Array<ArrayBuffer> | null }> = [];
     for (const result of results) {
       if (result.status === "rejected") throw result.reason;
       verified.push(result.value);
@@ -184,9 +196,11 @@ async function materializeImages({
       const objectKey =
         bundle.sourceRunId === runId ? image.object_key : `runs/${runId}/images/${imageId}`;
       if (bundle.sourceRunId !== runId) {
+        if (!bytes) throw new IncompleteError("An inherited original lost its verified bytes.");
         const copyStarted = performance.now();
         await context.images.put(objectKey, bytes, {
           httpMetadata: { contentType: image.media_type },
+          sha256: image.digest,
         });
         measurements.copyMs += performance.now() - copyStarted;
         measurements.inheritedImageCount += 1;
