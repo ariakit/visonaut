@@ -887,14 +887,19 @@ export async function startComparisonPublication(context: ApiContext, comparison
     .bind(comparisonId)
     .first();
   if (!pending) {
-    await context.service.finalizeComparison({ comparisonId, now: Date.now() });
-    return;
+    const result = await context.service.finalizeComparison({ comparisonId, now: Date.now() });
+    if (!result.reviewReadyTransitioned) return;
   }
   try {
     await context.operations.send({ kind: "continue" });
   } catch {
-    // The durable task rows remain available to the five-minute scheduler.
-    console.error(JSON.stringify({ event: "comparison-publication-wakeup-failed" }));
+    // Scheduled operations publish pending tasks or deliver the ready status outbox.
+    console.error(
+      JSON.stringify({
+        event: pending ? "comparison-publication-wakeup-failed" : "comparison-status-wakeup-failed",
+        comparisonId,
+      }),
+    );
   }
 }
 

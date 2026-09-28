@@ -1421,14 +1421,14 @@ export class Service {
       if (comparison.state === "comparing") {
         await finalizeHistoricalComparison(this.database, comparison.id);
       }
-      return this.status(run.id);
+      return { ...(await this.status(run.id)), reviewReadyTransitioned: false };
     }
     if (run.detail_archived) {
       throw new ConflictError("Archived history is read-only.");
     }
     const project = await this.project(run.project_id);
     if (comparison.state === "ready") {
-      return this.status(run.id);
+      return { ...(await this.status(run.id)), reviewReadyTransitioned: false };
     }
     const pending = await this.sql(
       "SELECT 1 AS found FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome IN ('pending', 'error') LIMIT 1",
@@ -1513,7 +1513,7 @@ export class Service {
         }),
       );
     }
-    return this.status(run.id);
+    return { ...(await this.status(run.id)), reviewReadyTransitioned: true };
   }
 
   async reconcileComparisons(input: { now: number; limit: number }) {

@@ -24,7 +24,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
-import { comparisonReference, trySealRun } from "./ingest.js";
+import { comparisonReference, startComparisonPublication, trySealRun } from "./ingest.js";
 import { inheritedShards, workflowJobs } from "./jobs.js";
 import carriedJobs from "./fixtures/failed-job-rerun.json";
 import { discoveryEvidence } from "./receipts.js";
@@ -1238,9 +1238,16 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     expect((await test.service.run(test.runId)).sealed_at).toBeNull();
     expect((await reconcileIngest(apiContext(test.bindings))).progressed).toBe(0);
     test.succeedJob();
+    const wake = vi.fn(async () => {});
+    test.bindings.operations.send = wake;
     const result = await reconcileIngest(apiContext(test.bindings));
     expect(result.errors).toEqual([]);
     expect(result.progressed).toBe(1);
+    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+    const comparisonId = (await test.service.run(test.runId)).comparison_id;
+    if (!comparisonId) throw new Error("Missing comparison");
+    await startComparisonPublication(apiContext(test.bindings), comparisonId);
+    expect(wake).toHaveBeenCalledTimes(1);
     expect((await test.service.run(test.runId)).sealed_at).not.toBeNull();
     const capture = await database
       .prepare("SELECT profile_digest,metadata_json FROM visonaut_captures WHERE run_id=?")
@@ -1276,6 +1283,36 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       verdict: "approved",
       source: "automatic",
     });
+  });
+  it("keeps a zero-pending comparison ready when its status wake fails", async () => {
+    const test = await fixture();
+    const digest = await test.upload();
+    const wake = vi.fn(async () => {
+      throw new Error("Queue unavailable");
+    });
+    test.bindings.operations.send = wake;
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      test.succeedJob();
+      expect(
+        (
+          await test.send(
+            `/v1/runs/${test.runId}/finalize`,
+            test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
+          )
+        ).status,
+      ).toBe(202);
+      expect((await reconcileIngest(apiContext(test.bindings))).errors).toEqual([]);
+      const comparisonId = (await test.service.run(test.runId)).comparison_id;
+      if (!comparisonId) throw new Error("Missing comparison");
+      expect((await test.service.comparison(comparisonId)).state).toBe("ready");
+      expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+      expect(error).toHaveBeenCalledWith(
+        JSON.stringify({ event: "comparison-status-wakeup-failed", comparisonId }),
+      );
+    } finally {
+      error.mockRestore();
+    }
   });
   it("fails an unfinished run when its trusted capture executor changes", async () => {
     const test = await fixture();
