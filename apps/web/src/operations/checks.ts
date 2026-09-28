@@ -6,7 +6,7 @@ import {
   Service,
 } from "@visonaut/service";
 import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/security";
-import { recordEvent, resolveEvents } from "./common.ts";
+import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 interface CheckCreation {
@@ -19,6 +19,9 @@ interface CheckCreation {
   lease_token: string | null;
   lease_until: number | null;
 }
+
+// Bound GitHub request fan-out while letting independent checks finish together.
+const maximumConcurrentStatusDeliveries = 3;
 
 function reviewDetailsUrl(run: { id: string }, origin: string) {
   return new URL(`/runs/${encodeURIComponent(run.id)}`, origin).href;
@@ -228,55 +231,69 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     )
     .bind(attention.length === budget.tasksPerStep ? (attention.at(-1)?.id ?? null) : null)
     .run();
-  for (const delivery of deliveries) {
-    if (delivery.ambiguous || delivery.state === "dead") {
-      await recordEvent(database, {
-        kind: "check-delivery",
-        subject: delivery.id,
-        code: delivery.ambiguous ? "ambiguous" : "exhausted",
+  const outcomes = await mapConcurrent(
+    deliveries,
+    maximumConcurrentStatusDeliveries,
+    async (delivery) => {
+      if (delivery.ambiguous || delivery.state === "dead") {
+        await recordEvent(database, {
+          kind: "check-delivery",
+          subject: delivery.id,
+          code: delivery.ambiguous ? "ambiguous" : "exhausted",
+          now: context.now(),
+        });
+        return "attention" as const;
+      }
+      const token = crypto.randomUUID();
+      const intent = await claimStatus(database, {
+        id: delivery.id,
+        token,
         now: context.now(),
+        leaseMs: budget.leaseMilliseconds,
       });
-      report.attention.push(delivery.id);
-      continue;
-    }
-    const token = crypto.randomUUID();
-    const intent = await claimStatus(database, {
-      id: delivery.id,
-      token,
-      now: context.now(),
-      leaseMs: budget.leaseMilliseconds,
-    });
-    if (!intent) continue;
-    const run = await service.run(intent.run_id);
-    const result = await deliverStatus(database, {
-      id: delivery.id,
-      token,
-      revision: intent.revision,
-      now: context.now,
-      send: (latest, isCurrent) =>
-        sendGitHubCheck({
-          github: context.github,
-          intent: latest,
-          testedSha: run.tested_sha,
-          origin: context.origin,
-          isCurrent: async () =>
-            (await isCurrent()) &&
-            (await service.isStatusIntentCurrent(latest)) &&
-            (await isCurrentPreRunCheck(database, latest.check_id)),
-        }),
-    });
-    if (result === "delivered") {
+      if (!intent) return "skipped" as const;
+      const run = await service.run(intent.run_id);
+      const result = await deliverStatus(database, {
+        id: delivery.id,
+        token,
+        revision: intent.revision,
+        now: context.now,
+        send: (latest, isCurrent) =>
+          sendGitHubCheck({
+            github: context.github,
+            intent: latest,
+            testedSha: run.tested_sha,
+            origin: context.origin,
+            isCurrent: async () =>
+              (await isCurrent()) &&
+              (await service.isStatusIntentCurrent(latest)) &&
+              (await isCurrentPreRunCheck(database, latest.check_id)),
+          }),
+      });
+      if (result === "delivered") {
+        await resolveEvents(database, "check-delivery", delivery.id, context.now());
+        return "completed" as const;
+      } else if (result === "ambiguous") {
+        await recordEvent(database, {
+          kind: "check-delivery",
+          subject: delivery.id,
+          code: "ambiguous",
+          now: context.now(),
+        });
+        return "attention" as const;
+      } else {
+        return "deferred" as const;
+      }
+    },
+  );
+  for (const [index, outcome] of outcomes.entries()) {
+    const delivery = deliveries[index];
+    if (!delivery) continue;
+    if (outcome === "completed") {
       report.completed.push(delivery.id);
-      await resolveEvents(database, "check-delivery", delivery.id, context.now());
-    } else if (result === "ambiguous") {
+    } else if (outcome === "attention") {
       report.attention.push(delivery.id);
-      await recordEvent(database, {
-        kind: "check-delivery",
-        subject: delivery.id,
-        code: "ambiguous",
-        now: context.now(),
-      });
-    } else {
+    } else if (outcome === "deferred") {
       report.deferred.push(delivery.id);
     }
   }
