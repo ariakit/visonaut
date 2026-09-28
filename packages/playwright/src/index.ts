@@ -1,3 +1,3 @@
-export { visual } from "./visual.js";
-export type { EnvironmentProfile, VisualOptions } from "./visual.js";
+export { visual, visualBatch } from "./visual.js";
+export type { EnvironmentProfile, VisualBatchOptions, VisualOptions } from "./visual.js";
 export type { Variant } from "@visonaut/protocol";

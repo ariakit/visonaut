@@ -27,6 +27,14 @@ export interface VisualOptions {
   >;
 }
 
+export interface VisualBatchOptions extends Pick<VisualOptions, "variant" | "profile" | "timeout"> {
+  /** Each clip uses integer CSS-pixel coordinates in the document. */
+  items: Array<
+    Pick<VisualOptions, "item" | "name"> & { clip: NonNullable<PageScreenshotOptions["clip"]> }
+  >;
+  screenshot?: Pick<PageScreenshotOptions, "omitBackground" | "caret" | "style">;
+}
+
 export interface CaptureAttachment {
   attemptToken: string;
   capture: Omit<Capture, "ordinal" | "image">;
@@ -172,11 +180,85 @@ function screenshotOptions(options: VisualOptions): Record<string, Json> & PageS
 export async function visual(page: Page, options: VisualOptions): Promise<void> {
   const info = test.info();
   const attemptToken = randomUUID();
-  await info.attach(`visonaut-started-${attemptToken}`, {
-    body: Buffer.from(JSON.stringify({ attemptToken })),
-    contentType: CAPTURE_STARTED_CONTENT_TYPE,
-  });
+  await markCaptureStarted(info, attemptToken);
   await capturePrepared({ page, options, info, attemptToken });
+}
+
+/** Capture several document clips from one stable full-page screenshot pair. */
+export async function visualBatch(page: Page, options: VisualBatchOptions): Promise<void> {
+  const info = test.info();
+  const attemptTokens = options.items.length
+    ? options.items.map(() => randomUUID())
+    : [randomUUID()];
+  for (const attemptToken of attemptTokens) {
+    await markCaptureStarted(info, attemptToken);
+  }
+  const first = options.items[0];
+  if (!first) {
+    throw new Error("A visual batch needs at least one item");
+  }
+  const ordinals = options.items.map((item) =>
+    reserveIdentity(info, { item: item.item, variant: options.variant }),
+  );
+  const deadline = getDeadline(options.timeout);
+  await waitForPreparedPage(page, deadline);
+  for (const item of options.items) {
+    validateClip(item.clip);
+  }
+  const sourceOptions = screenshotOptions({
+    item: first.item,
+    variant: options.variant,
+    screenshot: { ...options.screenshot, fullPage: true },
+  });
+  const baseProfile = await beforeDeadline(
+    getProfile(
+      page,
+      {
+        item: first.item,
+        variant: options.variant,
+        profile: options.profile,
+        screenshot: { ...options.screenshot, fullPage: true, clip: first.clip },
+      },
+      info,
+    ),
+    deadline,
+  );
+  const preparedItems = options.items.map((item) => {
+    const itemOptions: VisualOptions = {
+      item: item.item,
+      name: item.name,
+      variant: options.variant,
+      profile: options.profile,
+      screenshot: { ...options.screenshot, fullPage: true, clip: item.clip },
+    };
+    const captureOptions: Record<string, Json> = screenshotOptions(itemOptions);
+    captureOptions.captureMethod = "shared-full-page-crop-v1";
+    const profile: CaptureProfile = { ...baseProfile, captureOptions };
+    validateProfile(profile);
+    return { options: itemOptions, profile };
+  });
+  const source = await getStableScreenshot(page, sourceOptions, deadline);
+  for (const [index, item] of options.items.entries()) {
+    const attemptToken = attemptTokens[index];
+    const ordinal = ordinals[index];
+    const prepared = preparedItems[index];
+    if (attemptToken == null || ordinal == null || prepared == null) {
+      throw new Error("Visual batch item is missing its capture identity");
+    }
+    const image = cropScreenshot(source.pixels, item.clip);
+    if (performance.now() >= deadline) {
+      throw new Error("Visual capture timed out before pixels stabilized");
+    }
+    await attachCapture({
+      info,
+      attemptToken,
+      options: prepared.options,
+      ordinal,
+      bytes: image.bytes,
+      decoded: image.pixels,
+      profile: prepared.profile,
+    });
+  }
 }
 
 interface CapturePreparedParams {
@@ -186,12 +268,21 @@ interface CapturePreparedParams {
   attemptToken: string;
 }
 
-async function capturePrepared({
-  page,
-  options,
-  info,
-  attemptToken,
-}: CapturePreparedParams): Promise<void> {
+function getDeadline(timeout = 5000) {
+  if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 120_000) {
+    throw new Error("Visual timeout must be greater than zero and at most 120000 ms");
+  }
+  return performance.now() + timeout;
+}
+
+async function markCaptureStarted(info: TestInfo, attemptToken: string) {
+  await info.attach(`visonaut-started-${attemptToken}`, {
+    body: Buffer.from(JSON.stringify({ attemptToken })),
+    contentType: CAPTURE_STARTED_CONTENT_TYPE,
+  });
+}
+
+function reserveIdentity(info: TestInfo, options: Pick<VisualOptions, "item" | "variant">) {
   validateKey(options.item, "item");
   validateKey(options.variant.key, "variant.key");
   const identities = captureIdentities.get(info) ?? new Set<string>();
@@ -201,13 +292,16 @@ async function capturePrepared({
     throw new Error("Duplicate item/variant capture in this test attempt");
   }
   identities.add(identity);
-  const ordinal = identities.size - 1;
-  const timeout = options.timeout ?? 5000;
-  if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 120_000) {
-    throw new Error("Visual timeout must be greater than zero and at most 120000 ms");
-  }
-  const deadline = performance.now() + timeout;
-  await beforeDeadline(page.waitForLoadState("domcontentloaded", { timeout }), deadline);
+  return identities.size - 1;
+}
+
+async function waitForPreparedPage(page: Page, deadline: number) {
+  await beforeDeadline(
+    page.waitForLoadState("domcontentloaded", {
+      timeout: Math.max(1, deadline - performance.now()),
+    }),
+    deadline,
+  );
   // Firefox can leave fonts.ready pending after navigation even when no font
   // face is loading. Observe the faces instead of waiting for that promise.
   const fontWait = await beforeDeadline(
@@ -222,45 +316,137 @@ async function capturePrepared({
     deadline,
   );
   await fontWait.dispose();
-  const profile = await beforeDeadline(getProfile(page, options, info), deadline);
-  const profileDigest = await digestJson(profile);
-  let previous: ReturnType<typeof PNG.sync.read> | undefined;
-  let bytes: Buffer | undefined;
-  let decoded: ReturnType<typeof PNG.sync.read> | undefined;
+}
+
+interface DecodedScreenshot {
+  bytes: Buffer;
+  pixels: PNG;
+}
+
+function validateClip(clip: NonNullable<PageScreenshotOptions["clip"]>) {
+  const { x, y, width, height } = clip;
+  if (
+    !Number.isSafeInteger(x) ||
+    !Number.isSafeInteger(y) ||
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    x < 0 ||
+    y < 0 ||
+    width <= 0 ||
+    height <= 0
+  ) {
+    throw new Error("Visual batch clips need positive integer CSS-pixel bounds");
+  }
+}
+
+async function readScreenshot(
+  page: Page,
+  options: Record<string, Json> & PageScreenshotOptions,
+  deadline: number,
+): Promise<DecodedScreenshot> {
+  const bytes = await beforeDeadline(
+    page.screenshot({ ...options, timeout: Math.max(1, deadline - performance.now()) }),
+    deadline,
+  );
+  // Read the PNG header before allocating decoded pixel buffers.
+  if (bytes.byteLength > 20 * 1024 * 1024 || bytes.byteLength < 24) {
+    throw new Error("Capture exceeds the encoded image limit or has no PNG header");
+  }
+  const pixels = bytes.readUInt32BE(16) * bytes.readUInt32BE(20);
+  if (pixels > 32_000_000) {
+    throw new Error("Capture exceeds the 32 million decoded pixel limit");
+  }
+  return { bytes, pixels: PNG.sync.read(bytes, { checkCRC: true }) };
+}
+
+async function getStableScreenshot(
+  page: Page,
+  options: Record<string, Json> & PageScreenshotOptions,
+  deadline: number,
+): Promise<DecodedScreenshot> {
+  let previous: DecodedScreenshot | undefined;
   while (performance.now() < deadline) {
-    const currentBytes = await beforeDeadline(
-      page.screenshot({
-        ...screenshotOptions(options),
-        timeout: Math.max(1, deadline - performance.now()),
-      }),
-      deadline,
-    );
-    // Read the PNG header before allocating decoded pixel buffers.
-    if (currentBytes.byteLength > 20 * 1024 * 1024 || currentBytes.byteLength < 24) {
-      throw new Error("Capture exceeds the encoded image limit or has no PNG header");
-    }
-    const pixels = currentBytes.readUInt32BE(16) * currentBytes.readUInt32BE(20);
-    if (pixels > 32_000_000) {
-      throw new Error("Capture exceeds the 32 million decoded pixel limit");
-    }
-    const current = PNG.sync.read(currentBytes, { checkCRC: true });
-    // Equal dimensions do not prove stability. Compare consecutive RGBA pixels.
+    const current = await readScreenshot(page, options, deadline);
     if (
       previous &&
-      previous.width === current.width &&
-      previous.height === current.height &&
-      previous.data.equals(current.data)
+      previous.pixels.width === current.pixels.width &&
+      previous.pixels.height === current.pixels.height &&
+      previous.pixels.data.equals(current.pixels.data)
     ) {
-      bytes = currentBytes;
-      decoded = current;
-      break;
+      if (performance.now() >= deadline) {
+        throw new Error("Visual capture timed out before pixels stabilized");
+      }
+      return current;
     }
     previous = current;
     await beforeDeadline(new Promise<void>((resolve) => setTimeout(resolve, 100)), deadline);
   }
-  if (!bytes || !decoded || performance.now() >= deadline) {
+  throw new Error("Visual capture timed out before pixels stabilized");
+}
+
+function cropScreenshot(
+  source: PNG,
+  clip: NonNullable<PageScreenshotOptions["clip"]>,
+): DecodedScreenshot {
+  const x = clip.x;
+  const y = clip.y;
+  if (x < 0 || y < 0 || x + clip.width > source.width || y + clip.height > source.height) {
+    throw new Error("Visual batch item clip is outside the source screenshot");
+  }
+  const pixels = new PNG({ width: clip.width, height: clip.height });
+  PNG.bitblt(source, pixels, x, y, clip.width, clip.height, 0, 0);
+  const bytes = PNG.sync.write(pixels);
+  if (bytes.byteLength > 20 * 1024 * 1024) {
+    throw new Error("Capture exceeds the encoded image limit");
+  }
+  return { bytes, pixels };
+}
+
+async function capturePrepared({
+  page,
+  options,
+  info,
+  attemptToken,
+}: CapturePreparedParams): Promise<void> {
+  const ordinal = reserveIdentity(info, options);
+  const deadline = getDeadline(options.timeout);
+  await waitForPreparedPage(page, deadline);
+  const profile = await beforeDeadline(getProfile(page, options, info), deadline);
+  const screenshot = await getStableScreenshot(page, screenshotOptions(options), deadline);
+  if (performance.now() >= deadline) {
     throw new Error("Visual capture timed out before pixels stabilized");
   }
+  await attachCapture({
+    info,
+    attemptToken,
+    options,
+    ordinal,
+    bytes: screenshot.bytes,
+    decoded: screenshot.pixels,
+    profile,
+  });
+}
+
+interface AttachCaptureParams {
+  info: TestInfo;
+  attemptToken: string;
+  options: VisualOptions;
+  ordinal: number;
+  bytes: Buffer;
+  decoded: PNG;
+  profile: CaptureProfile;
+}
+
+async function attachCapture({
+  info,
+  attemptToken,
+  options,
+  ordinal,
+  bytes,
+  decoded,
+  profile,
+}: AttachCaptureParams) {
+  const profileDigest = await digestJson(profile);
   const imageAttachment = `visonaut-image-${ordinal}`;
   const attachment: CaptureAttachment = {
     attemptToken,

@@ -1,8 +1,8 @@
 # @visonaut/playwright
 
-Capture one prepared page variant and write a Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
+Capture prepared page variants and write a Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
 
-Launch support is limited to Node.js 24.18.0, pnpm 12.5.1, and Playwright 1.63.0. The adapter emits original PNG bytes. The ingest protocol also supports validated lossless WebP from other clients.
+Launch support is limited to Node.js 24.18.0, pnpm 12.5.1, and Playwright 1.63.0. Single captures emit original PNG bytes. Batched captures encode lossless PNG crops. The ingest protocol also supports validated lossless WebP from other clients.
 
 ```sh
 pnpm add -D @visonaut/playwright visonaut @playwright/test@1.63.0
@@ -31,6 +31,20 @@ await visual(page, {
 ```
 
 The adapter waits for document and font readiness. It captures PNG images with animations disabled and requires two consecutive images with equal dimensions and equal decoded RGBA pixels. Captures are at least 100 ms apart. A deadline applies to the complete operation. The default is 5000 ms; a timeout is a capture failure, including for a new item. Pass the existing effective timeout and screenshot options when you replace another capture helper. The adapter does not read private Playwright assertion configuration. Capture limits are 20 MiB encoded and 32 million decoded pixels. These are defensive client limits, separate from the measured service policy.
+
+Use `visualBatch` when several static items share one page state and the full page fits the capture limits. Each item keeps its own identity, image, and capture profile. Item clips use integer CSS-pixel coordinates in the document. The adapter takes one full-page screenshot pair and crops each item from the stable image. The profile records the shared-crop method, which can render differently from direct clipped screenshots. Use `visual` for individual items on larger pages.
+
+```ts
+import { visualBatch } from "@visonaut/playwright";
+
+await visualBatch(page, {
+  variant: { key: "react-chromium-light", browser: "chromium" },
+  items: [
+    { item: "button/default", clip: { x: 24, y: 24, width: 360, height: 180 } },
+    { item: "button/brand", clip: { x: 400, y: 24, width: 360, height: 180 } },
+  ],
+});
+```
 
 For the supported Playwright 1.63.0 Firefox path, set `PW_TEST_SCREENSHOT_NO_FONTS_READY=1` in the Playwright config before browsers launch. Playwright's own screenshot wait can remain pending after navigation even when all font faces have settled. The trusted CI config helper sets this value; the adapter then checks the font faces directly.
 
