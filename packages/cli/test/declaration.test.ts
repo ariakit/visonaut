@@ -188,37 +188,32 @@ function mockService({ local, response, upload, reserve, reuse }: MockServicePar
   return paths;
 }
 
-it("reuses proved originals in bounded pages and uploads only misses", async () => {
-  const local = await imagesFixture(67);
+it("reuses proved originals in four bounded pages at once and uploads only misses", async () => {
+  const local = await imagesFixture(129);
   const declared = await declaration(local, true);
   const challenge = declared.reuse!;
   const accepted = new Set(
-    local.manifest.captures.slice(0, 66).map((capture) => capture.image.digest),
+    local.manifest.captures.slice(0, 128).map((capture) => capture.image.digest),
   );
   let proofPages = 0;
   let activePages = 0;
   let maximumActivePages = 0;
-  let releaseOverlap = () => {};
-  const overlappingPages = new Promise<void>((resolve) => {
-    releaseOverlap = resolve;
+  let releaseFirstBatch = () => {};
+  const firstBatch = new Promise<void>((resolve) => {
+    releaseFirstBatch = resolve;
   });
-  let overlapTimeout: ReturnType<typeof setTimeout> | undefined;
   let uploads = 0;
   const paths = mockService({
     local,
     response: () => Response.json(declared),
     reuse: async (options) => {
-      proofPages++;
+      const pageNumber = ++proofPages;
       activePages++;
       maximumActivePages = Math.max(maximumActivePages, activePages);
       try {
-        if (proofPages === 1) {
-          // Let the first response wait until the second request reaches the service.
-          overlapTimeout = setTimeout(releaseOverlap, 10_000);
-          await overlappingPages;
-        } else if (proofPages === 2) {
-          if (overlapTimeout) clearTimeout(overlapTimeout);
-          releaseOverlap();
+        // Keep the first batch open to prove that a fifth request does not start.
+        if (pageNumber <= 4) {
+          await firstBatch;
         }
         const body = JSON.parse(String(options?.body)) as {
           challenge: string;
@@ -252,35 +247,39 @@ it("reuses proved originals in bounded pages and uploads only misses", async () 
         createHash("sha256")
           .update(options?.body as Uint8Array)
           .digest("hex"),
-      ).toBe(local.manifest.captures[66]?.image.digest);
+      ).toBe(local.manifest.captures[128]?.image.digest);
       return new Response(null, { status: 204 });
     },
   });
-  const result = await execute(local).finally(() => {
-    releaseOverlap();
-    if (overlapTimeout) clearTimeout(overlapTimeout);
-  });
+  const operation = execute(local);
+  try {
+    await vi.waitFor(() => expect(proofPages).toBe(4), { timeout: 5000 });
+    expect(activePages).toBe(4);
+  } finally {
+    releaseFirstBatch();
+  }
+  const result = await operation;
   expect(result.code).toBe(0);
   expect(result.stderr).toBe("");
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 1, reusedImages: 66 });
-  expect(proofPages).toBe(3);
-  expect(maximumActivePages).toBe(2);
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 1, reusedImages: 128 });
+  expect(proofPages).toBe(5);
+  expect(maximumActivePages).toBe(4);
   expect(uploads).toBe(1);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(1);
-  expect(paths).toHaveLength(8);
+  expect(paths).toHaveLength(10);
 
-  const baseline = await imagesFixture(67);
+  const baseline = await imagesFixture(129);
   const baselineDeclaration = await declaration(baseline);
   const baselinePaths = mockService({
     local: baseline,
     response: () => Response.json(baselineDeclaration),
   });
   expect((await execute(baseline)).code).toBe(0);
-  expect(baselinePaths).toHaveLength(71);
+  expect(baselinePaths).toHaveLength(133);
 }, 20_000);
 
-it("renews after proof-page reads when the upload capability expires", async () => {
-  const local = await imagesFixture(65);
+it("renews after concurrent proof pages when the upload capability expires", async () => {
+  const local = await imagesFixture(129);
   const first = await declaration(local, true);
   const renewed = await declaration(local, true);
   let now = Date.now();
@@ -288,13 +287,13 @@ it("renews after proof-page reads when the upload capability expires", async () 
   if (!first.reuse || !renewed.reuse) throw new Error("Missing reuse challenges");
   first.reuse.expiresAt = new Date(now + 60_000).toISOString();
   renewed.reuse.expiresAt = new Date(now + 600_000).toISOString();
-  const lastCapture = local.manifest.captures[64];
+  const lastCapture = local.manifest.captures[128];
   if (!lastCapture) throw new Error("Missing final capture");
   const lastDigest = lastCapture.image.digest;
   let reservations = 0;
-  let releaseFirstPage = () => {};
-  const firstPagePending = new Promise<void>((resolve) => {
-    releaseFirstPage = resolve;
+  let releaseFirstBatch = () => {};
+  const firstBatchPending = new Promise<void>((resolve) => {
+    releaseFirstBatch = resolve;
   });
   const offered: string[][] = [];
   mockService({
@@ -320,11 +319,7 @@ it("renews after proof-page reads when the upload capability expires", async () 
       };
       offered.push(body.proofs.map((proof) => proof.imageDigest));
       if (reservations === 1) {
-        if (offered.length === 1) {
-          await firstPagePending;
-        } else {
-          now += 20_000;
-        }
+        await firstBatchPending;
         return Response.json({
           schemaVersion: "1.0",
           reused: body.proofs.map((proof) => proof.imageDigest),
@@ -335,31 +330,33 @@ it("renews after proof-page reads when the upload capability expires", async () 
   });
   const operation = execute(local);
   try {
-    await vi.waitFor(() => expect(offered).toHaveLength(2));
+    await vi.waitFor(() => expect(offered).toHaveLength(4));
     expect(reservations).toBe(1);
+    now += 20_000;
   } finally {
-    releaseFirstPage();
+    releaseFirstBatch();
   }
   const result = await operation;
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({
     uploadedImages: 0,
-    reusedImages: 65,
+    reusedImages: 129,
     imagePutElapsedMs: 0,
     imagePutBytes: 0,
     imagePutRetryWaitMs: 0,
     validationBusyRetries: 0,
   });
   expect(reservations).toBe(2);
-  expect(offered).toHaveLength(3);
-  expect(offered[0]).toHaveLength(32);
-  expect(offered[1]).toHaveLength(32);
-  expect(offered[2]).toEqual([lastDigest]);
+  expect(offered).toHaveLength(5);
+  for (const page of offered.slice(0, 4)) {
+    expect(page).toHaveLength(32);
+  }
+  expect(offered[4]).toEqual([lastDigest]);
 });
 
 it("falls back to uploads when a reuse challenge expires without progress", async () => {
-  const local = await imagesFixture(65);
+  const local = await imagesFixture(129);
   const declared = await declaration(local, true);
   let now = Date.now();
   vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -372,7 +369,7 @@ it("falls back to uploads when a reuse challenge expires without progress", asyn
     response: () => Response.json(declared),
     reuse: (options) => {
       pages++;
-      if (pages === 2) now += 20_000;
+      if (pages === 4) now += 20_000;
       const body = JSON.parse(String(options?.body)) as { proofs: { imageDigest: string }[] };
       expect(body.proofs.length).toBeLessThanOrEqual(32);
       return Response.json({ schemaVersion: "1.0", reused: [] });
@@ -384,14 +381,14 @@ it("falls back to uploads when a reuse challenge expires without progress", asyn
   });
   const result = await execute(local);
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 65, reusedImages: 0 });
-  expect(pages).toBe(2);
-  expect(uploads).toBe(65);
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 129, reusedImages: 0 });
+  expect(pages).toBe(4);
+  expect(uploads).toBe(129);
   expect(paths.filter((path) => path.includes("/shards/"))).toHaveLength(1);
 });
 
 it("stops renewal when the upload capability expires without staged images", async () => {
-  const local = await imagesFixture(65);
+  const local = await imagesFixture(129);
   const declared = await declaration(local, true);
   let now = Date.now();
   vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -411,7 +408,7 @@ it("stops renewal when the upload capability expires without staged images", asy
     response: () => Response.json(declared),
     reuse: () => {
       pages++;
-      if (pages === 2) now += 20_000;
+      if (pages === 4) now += 20_000;
       return Response.json({ schemaVersion: "1.0", reused: [] });
     },
   });
@@ -419,19 +416,19 @@ it("stops renewal when the upload capability expires without staged images", asy
   expect(result.code).toBe(4);
   expect(result.stderr).toContain("expired before any image could be staged");
   expect(reservations).toBe(1);
-  expect(pages).toBe(2);
-  expect(paths).toHaveLength(5);
+  expect(pages).toBe(4);
+  expect(paths).toHaveLength(7);
 });
 
 it("drains reuse pages before rejecting a receipt from another page", async () => {
-  const local = await imagesFixture(64);
+  const local = await imagesFixture(128);
   const declared = await declaration(local, true);
   const firstCapture = local.manifest.captures[0];
-  const otherPageCapture = local.manifest.captures[40];
+  const otherPageCapture = local.manifest.captures[80];
   if (!firstCapture || !otherPageCapture) throw new Error("Missing capture pages");
   const firstDigest = firstCapture.image.digest;
   const otherPageDigest = otherPageCapture.image.digest;
-  let otherPageSettled = false;
+  let otherPagesSettled = 0;
   const paths = mockService({
     local,
     response: () => Response.json(declared),
@@ -443,7 +440,7 @@ it("drains reuse pages before rejecting a receipt from another page", async () =
         return Response.json({ schemaVersion: "1.0", reused: [otherPageDigest] });
       }
       await new Promise((resolve) => setTimeout(resolve, 100));
-      otherPageSettled = true;
+      otherPagesSettled++;
       return Response.json({
         schemaVersion: "1.0",
         reused: body.proofs.map((proof) => proof.imageDigest),
@@ -453,8 +450,8 @@ it("drains reuse pages before rejecting a receipt from another page", async () =
   const result = await execute(local);
   expect(result.code).toBe(1);
   expect(result.stderr).toContain("not offered by this job");
-  expect(otherPageSettled).toBe(true);
-  expect(paths.filter((path) => path.endsWith("/reuse"))).toHaveLength(2);
+  expect(otherPagesSettled).toBe(3);
+  expect(paths.filter((path) => path.endsWith("/reuse"))).toHaveLength(4);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(0);
   expect(paths.filter((path) => path.endsWith("/finalize"))).toHaveLength(0);
 });
