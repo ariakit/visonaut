@@ -137,7 +137,7 @@ async function execute(local: Awaited<ReturnType<typeof fixture>>) {
 interface MockServiceParams {
   local: Awaited<ReturnType<typeof fixture>>;
   response: () => Response;
-  upload?: (ticket: string, options?: RequestInit) => Response;
+  upload?: (ticket: string, options?: RequestInit) => Response | Promise<Response>;
   reserve?: () => object;
   reuse?: (options?: RequestInit) => Response | Promise<Response>;
 }
@@ -496,6 +496,92 @@ it.each([3000, 12300])(
   },
   120_000,
 );
+
+it("keeps image PUTs concurrent and bounded", async () => {
+  const local = await imagesFixture(11);
+  const declared = await declaration(local);
+  let active = 0;
+  let maximumActive = 0;
+  let started = 0;
+  let releaseFirstBatch = () => {};
+  const firstBatch = new Promise<void>((resolve) => {
+    releaseFirstBatch = resolve;
+  });
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    upload: async () => {
+      active++;
+      maximumActive = Math.max(maximumActive, active);
+      if (++started === 5) releaseFirstBatch();
+      await firstBatch;
+      active--;
+      return new Response(null, { status: 204 });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 11 });
+  expect(maximumActive).toBe(5);
+  expect(active).toBe(0);
+  expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(11);
+});
+
+it("settles in-flight image PUTs before reporting a failed batch", async () => {
+  const local = await imagesFixture(7);
+  const declared = await declaration(local);
+  let requests = 0;
+  let settled = 0;
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    upload: async () => {
+      requests++;
+      if (requests === 1) return Response.json({ error: "failed" }, { status: 500 });
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      settled++;
+      return new Response(null, { status: 204 });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(requests).toBe(5);
+  expect(settled).toBe(4);
+  expect(paths.filter((path) => path.endsWith("/finalize"))).toHaveLength(0);
+});
+
+it("retries contending image PUTs while validation has one slot", async () => {
+  const local = await imagesFixture(6);
+  const declared = await declaration(local);
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  let validating = false;
+  let busyAttempts = 0;
+  const paths = mockService({
+    local,
+    response: () => Response.json(declared),
+    upload: async () => {
+      if (validating) {
+        busyAttempts++;
+        return Response.json(
+          { error: { code: "validation_busy" } },
+          { status: 503, headers: { "Retry-After": "0" } },
+        );
+      }
+      validating = true;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      validating = false;
+      return new Response(null, { status: 204 });
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    uploadedImages: 6,
+    validationBusyRetries: busyAttempts,
+  });
+  expect(busyAttempts).toBeGreaterThan(5);
+  expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(6 + busyAttempts);
+});
 
 it.each(["advertised", "streamed"])(
   "bounds %s declaration bytes by unique images",
