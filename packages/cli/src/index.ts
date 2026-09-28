@@ -21,6 +21,7 @@ const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
 const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
 // Keep at most two byte-limited reuse pages in flight.
 const REUSE_PAGE_CONCURRENCY = 2;
+const IMAGE_PUT_CONCURRENCY = 5;
 
 const HELP = `Usage:
   visonaut pack --dir <capture-directory> --output <encrypted-file>
@@ -430,11 +431,13 @@ async function uploadShard({
   const completed = new Set<string>();
   let uploadedImages = 0;
   let reusedCount = 0;
+  // Sum per-request durations; concurrent PUTs can overlap in wall time.
   let imagePutElapsedMs = 0;
   let imagePutBytes = 0;
   let imagePutRetryWaitMs = 0;
   let validationBusyRetries = 0;
   let lastReportedReused = 0;
+  let lastReportedUploaded = 0;
   let completedSinceReservation = 0;
   while (true) {
     if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
@@ -554,47 +557,74 @@ async function uploadShard({
       completedSinceReservation = 0;
       continue;
     }
-    for (const upload of declaration.uploads) {
-      if (completed.has(upload.imageDigest)) continue;
-      const capture = captures.get(upload.imageDigest);
-      if (!capture) {
-        throw new CliError("An upload ticket refers to an unknown image.");
-      }
-      const bytes = await readImage(local.directory, capture);
+    const pendingUploads = declaration.uploads.filter(
+      (upload) => !completed.has(upload.imageDigest),
+    );
+    for (let offset = 0; offset < pendingUploads.length; offset += IMAGE_PUT_CONCURRENCY) {
       if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
         renewalRequired = true;
         break;
       }
-      const putStarted = performance.now();
-      await request({
-        url: new URL(TRANSPORT.upload(upload.ticket), origin),
-        token: reservation.capability,
-        method: "PUT",
-        body: bytes,
-        mediaType: capture.image.mediaType,
-        empty: true,
-        retryUnavailable: true,
-        onAttempt: () => {
-          imagePutBytes += bytes.byteLength;
-        },
-        onRetryWait: (code, elapsedMs) => {
-          imagePutRetryWaitMs += elapsedMs;
-          if (code === "validation_busy") {
-            validationBusyRetries++;
+      const batch = pendingUploads.slice(offset, offset + IMAGE_PUT_CONCURRENCY);
+      const results = await Promise.allSettled(
+        batch.map(async (upload) => {
+          const capture = captures.get(upload.imageDigest);
+          if (!capture) {
+            throw new CliError("An upload ticket refers to an unknown image.");
           }
-        },
-      });
-      imagePutElapsedMs += performance.now() - putStarted;
-      completed.add(upload.imageDigest);
-      uploadedImages++;
-      completedSinceReservation++;
+          const bytes = await readImage(local.directory, capture);
+          if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
+            return false;
+          }
+          const putStarted = performance.now();
+          await request({
+            url: new URL(TRANSPORT.upload(upload.ticket), origin),
+            token: reservation.capability,
+            method: "PUT",
+            body: bytes,
+            mediaType: capture.image.mediaType,
+            empty: true,
+            retryUnavailable: true,
+            onAttempt: () => {
+              imagePutBytes += bytes.byteLength;
+            },
+            onRetryWait: (code, elapsedMs) => {
+              imagePutRetryWaitMs += elapsedMs;
+              if (code === "validation_busy") {
+                validationBusyRetries++;
+              }
+            },
+          });
+          imagePutElapsedMs += performance.now() - putStarted;
+          return true;
+        }),
+      );
+      for (const [index, result] of results.entries()) {
+        if (result.status === "rejected") continue;
+        if (!result.value) {
+          renewalRequired = true;
+          continue;
+        }
+        const upload = batch[index];
+        if (!upload) throw new CliError("An upload result has no ticket.");
+        completed.add(upload.imageDigest);
+        uploadedImages++;
+        completedSinceReservation++;
+      }
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+      if (uploadedImages - lastReportedUploaded >= 128) {
+        progress?.(`Visonaut uploaded ${uploadedImages} originals.\n`);
+        lastReportedUploaded = uploadedImages;
+      }
+      if (renewalRequired) break;
     }
     if (!renewalRequired) {
       progress?.(
         `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
       );
       progress?.(
-        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait, ${validationBusyRetries} validation_busy retries.\n`,
+        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms aggregate request time, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait, ${validationBusyRetries} validation_busy retries.\n`,
       );
       return {
         uploadedImages,

@@ -3,6 +3,8 @@ import { CliError, record } from "./errors.js";
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_REQUEST_ATTEMPTS = 5;
+// A comparator isolate admits one image at a time; bound its busy retries by count and time.
+const MAX_VALIDATION_BUSY_PUT_ATTEMPTS = 25;
 
 function validCredential(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -121,8 +123,10 @@ export async function request({
     headers.set("Content-Type", mediaType);
   }
   const deadline = performance.now() + REQUEST_TIMEOUT_MS;
+  const maximumAttempts =
+    method === "PUT" ? MAX_VALIDATION_BUSY_PUT_ATTEMPTS : MAX_REQUEST_ATTEMPTS;
   try {
-    for (let attempt = 1; attempt <= MAX_REQUEST_ATTEMPTS; attempt++) {
+    for (let attempt = 1; attempt <= maximumAttempts; attempt++) {
       const remaining = Math.ceil(deadline - performance.now());
       if (remaining <= 0) {
         throw new CliError("The request timed out. Check the service and retry.");
@@ -167,13 +171,18 @@ export async function request({
         );
       }
       const delay = retryDelay(response.headers.get("Retry-After"));
+      const canRetry =
+        attempt < MAX_REQUEST_ATTEMPTS ||
+        (method === "PUT" &&
+          error?.code === "validation_busy" &&
+          attempt < MAX_VALIDATION_BUSY_PUT_ATTEMPTS);
       if (
         retryUnavailable &&
         (method === "GET" ||
           method === "PUT" ||
           (method === "POST" && /^\/v1\/runs\/[a-f0-9-]+\/reuse$/.test(url.pathname))) &&
         response.status === 503 &&
-        attempt < MAX_REQUEST_ATTEMPTS &&
+        canRetry &&
         delay !== undefined &&
         performance.now() + delay < deadline
       ) {

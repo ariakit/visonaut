@@ -478,7 +478,7 @@ describe("public submit command", () => {
     expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
     expect(result.stdout).toMatch(
       new RegExp(
-        `Image PUTs: \\d+ms, ${imageBytes.length} attempted bytes, 0ms retry wait, 0 validation_busy retries\\.`,
+        `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait, 0 validation_busy retries\\.`,
       ),
     );
     expect(result.stdout).not.toContain(local.capture.name);
