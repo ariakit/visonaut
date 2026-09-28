@@ -24,6 +24,9 @@ export * from "./history-supplement.ts";
 /** Invoke after ingest reconciliation. Queue a continuation when hasMore is true. */
 export async function runOperations(context: OperationsContext, exporter: DatabaseExporter) {
   validateBudget(context.budget);
+  const started = performance.now();
+  let promotionMs = 0;
+  let backupMs = 0;
   const reports: Record<string, OperationReport> = {};
   const publication = await reconcileWork(context.database, {
     kind: "compare",
@@ -69,6 +72,7 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     ["backup-retention", () => expireBackups(context)],
   ];
   for (const [name, operation] of steps) {
+    const stepStarted = performance.now();
     try {
       reports[name] = await operation();
       await resolveEvents(context.database, name, "scheduler", context.now());
@@ -80,9 +84,29 @@ export async function runOperations(context: OperationsContext, exporter: Databa
         now: context.now(),
       });
       reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
+    } finally {
+      if (name === "promotion") {
+        promotionMs = Math.round(performance.now() - stepStarted);
+      }
+      if (name === "backup") {
+        backupMs = Math.round(performance.now() - stepStarted);
+      }
     }
   }
-  await expireExports(context);
-  await resolveEvents(context.database, "backup", "freshness", context.now());
-  return { reports, hasMore: Object.values(reports).some((report) => report.hasMore) };
+  const hasMore = Object.values(reports).some((report) => report.hasMore);
+  try {
+    await expireExports(context);
+    await resolveEvents(context.database, "backup", "freshness", context.now());
+  } finally {
+    console.info(
+      JSON.stringify({
+        event: "operations_pass",
+        elapsedMs: Math.round(performance.now() - started),
+        promotionMs,
+        backupMs,
+        backupHasMore: reports.backup?.hasMore ?? false,
+      }),
+    );
+  }
+  return { reports, hasMore };
 }

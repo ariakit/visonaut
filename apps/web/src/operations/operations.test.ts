@@ -684,6 +684,42 @@ describe("daily backup and isolated recovery", () => {
 });
 
 describe("private streaming exports", () => {
+  it("logs the operations pass when export cleanup fails", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await reserve(fixture.context);
+    await database
+      .prepare(
+        "INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,created_at) VALUES(?,?,?,'ready',?,?)",
+      )
+      .bind("expired", "run", "maintainer", fixture.context.now() - 1, fixture.context.now() - 2)
+      .run();
+    vi.spyOn(fixture.backups, "list").mockRejectedValue(new Error("R2 list unavailable"));
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      await expect(
+        runOperations(fixture.context, {
+          async export() {
+            return databaseExport("snapshot sql");
+          },
+        }),
+      ).rejects.toThrow("R2 list unavailable");
+      expect(
+        info.mock.calls
+          .map(([message]) => JSON.parse(String(message)) as { event?: string })
+          .filter((entry) => entry.event === "operations_pass"),
+      ).toEqual([
+        expect.objectContaining({
+          elapsedMs: expect.any(Number),
+          promotionMs: expect.any(Number),
+          backupMs: expect.any(Number),
+        }),
+      ]);
+    } finally {
+      info.mockRestore();
+    }
+  });
+
   it("expires a legacy export with no page objects when R2 rejects empty delete batches", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
