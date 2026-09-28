@@ -15,6 +15,7 @@ import {
 import type { JWTVerifyGetKey } from "jose";
 import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, string } from "./input.js";
+import { ensureSignedAttemptCheck } from "./pre-run.js";
 import { workflowConfiguration, workflowStagingJobName } from "./workflow-owned.js";
 
 const browsers = new Set(["chromium", "firefox", "webkit"]);
@@ -133,6 +134,11 @@ export async function transferPrivateKey({
     !privateKey.trimEnd().endsWith("-----END PRIVATE KEY-----")
   ) {
     throw new SecurityError("transfer_key_unavailable", 503, "The transfer key is unavailable.");
+  }
+  // The combined transfer request is Submit's first signed server call.
+  // Start its check before bundle decryption and image uploads can take minutes.
+  if (workflowOwned && shardKey === "combined") {
+    await ensureSignedAttemptCheck(context, github, verified);
   }
   // Record the signed job once. A lost response may retry from that same verified job.
   await context.database

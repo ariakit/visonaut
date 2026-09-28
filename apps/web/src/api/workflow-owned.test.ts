@@ -9,7 +9,7 @@ import {
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
-import { issueIngestCapability } from "@visonaut/security";
+import { createGitHubClient, issueIngestCapability } from "@visonaut/security";
 import { archiveEligibilitySql, claimExpiredRun, closedRunRetentionMs } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -17,6 +17,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { apiContext, type ApiBindings } from "./context.js";
 import { handleApi } from "./index.js";
 import { integer, object } from "./input.js";
+import { settlePreRunWorkflow } from "./pre-run.js";
 import { recordEvent } from "../operations/common.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
@@ -987,6 +988,7 @@ describe("workflow-owned upload staging", () => {
     const testedSha = test.manifest.run.testedSha;
     const runId = test.manifest.run.workflowRunId;
     const base = `/repos/ariakit/ariakit/actions/runs/${runId}`;
+    const captureJobId = String(Number(test.jobId) + 1);
     const run = {
       id: Number(runId),
       run_attempt: 1,
@@ -994,27 +996,74 @@ describe("workflow-owned upload staging", () => {
       event: "push",
       path: configuration.callerWorkflowPath,
       status: "in_progress",
+      conclusion: null as string | null,
       head_sha: testedSha,
       head_branch: "main",
     };
+    const jobs = [
+      {
+        id: Number(captureJobId),
+        run_id: Number(runId),
+        run_attempt: 1,
+        name: `${configuration.captureJobPrefix}linux`,
+        check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${captureJobId}`,
+        status: "in_progress",
+        conclusion: null as string | null,
+      },
+      {
+        id: Number(test.jobId),
+        run_id: Number(runId),
+        run_attempt: 1,
+        name: configuration.submitJobName,
+        check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
+        status: "in_progress",
+        conclusion: null as string | null,
+      },
+    ];
     test.githubResponses.set(base, run);
     test.githubResponses.set(`${base}/attempts/1`, run);
-    test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
-      jobs: [
-        {
-          id: Number(test.jobId),
-          run_id: Number(runId),
-          run_attempt: 1,
-          name: configuration.submitJobName,
-          check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
-          status: "in_progress",
-        },
-      ],
+    test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, { jobs });
+    test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
+      object: { sha: testedSha },
     });
     test.githubResponses.set(
       `/repos/ariakit/ariakit/contents/${configuration.trustedWorkflowPath}?ref=${testedSha}`,
       { type: "file", path: configuration.trustedWorkflowPath, sha: pin },
     );
+    await test.context.database
+      .prepare(
+        "UPDATE pre_run_checks SET state='pending',check_id=NULL,workflow_run_id=NULL,workflow_attempt=NULL WHERE tested_sha=?",
+      )
+      .bind(testedSha)
+      .run();
+    const checkPath = "/repos/ariakit/ariakit/check-runs";
+    const checkId = String(Number(test.jobId) + 20_000);
+    const checkListPath = `/repos/ariakit/ariakit/commits/${testedSha}/check-runs?check_name=Visonaut&filter=all&per_page=100&page=1`;
+    test.githubResponses.set(checkListPath, { check_runs: [] });
+    const githubFetch = test.context.configuration.github.fetch;
+    let checkCreations = 0;
+    let createdCheck: Record<string, unknown> | undefined;
+    test.context.configuration.github.fetch = async (input, init) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (url.pathname === checkPath && init?.method === "POST") {
+        checkCreations += 1;
+        createdCheck = {
+          ...JSON.parse(String(init.body)),
+          id: Number(checkId),
+          app: { id: 123 },
+        };
+        test.githubResponses.set(`${checkPath}/${checkId}`, createdCheck);
+        test.githubResponses.set(checkListPath, { check_runs: [createdCheck] });
+        return Response.json(createdCheck, { status: 201 });
+      }
+      if (url.pathname === `${checkPath}/${checkId}` && init?.method === "PATCH") {
+        if (!createdCheck) throw new Error("The check was not created.");
+        Object.assign(createdCheck, JSON.parse(String(init.body)));
+        return Response.json(createdCheck);
+      }
+      if (!githubFetch) throw new Error("The GitHub fixture is unavailable.");
+      return githubFetch(input, init);
+    };
     const keys = await generateKeyPair("RS256");
     const jwk = { ...(await exportJWK(keys.publicKey)), kid: "direct-key", alg: "RS256" };
     vi.stubGlobal("fetch", async (input: string | URL | Request) => {
@@ -1026,29 +1075,48 @@ describe("workflow-owned upload staging", () => {
     });
     try {
       test.context.transferPrivateKey = privateKey;
-      const token = await new SignJWT({
-        repository: "ariakit/ariakit",
-        repository_id: test.manifest.run.repositoryId,
-        repository_owner_id: "5",
-        run_id: runId,
-        run_attempt: "1",
-        sha: testedSha,
-        check_run_id: test.jobId,
-        event_name: "push",
-        ref: "refs/heads/main",
-        workflow_ref: `ariakit/ariakit/${configuration.callerWorkflowPath}@refs/heads/main`,
-        job_workflow_ref: `ariakit/ariakit/${configuration.trustedWorkflowPath}@refs/heads/main`,
-        job_workflow_sha: testedSha,
-      })
-        .setProtectedHeader({ alg: "RS256", kid: "direct-key" })
-        .setIssuer("https://token.actions.githubusercontent.com")
-        .setAudience("https://preview.example/transfer-key")
-        .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
-        .setIssuedAt()
-        .setNotBefore("0s")
-        .setExpirationTime("5m")
-        .setJti(crypto.randomUUID())
-        .sign(keys.privateKey);
+      const signed = async (jobId: string) =>
+        new SignJWT({
+          repository: "ariakit/ariakit",
+          repository_id: test.manifest.run.repositoryId,
+          repository_owner_id: "5",
+          run_id: runId,
+          run_attempt: "1",
+          sha: testedSha,
+          check_run_id: jobId,
+          event_name: "push",
+          ref: "refs/heads/main",
+          workflow_ref: `ariakit/ariakit/${configuration.callerWorkflowPath}@refs/heads/main`,
+          job_workflow_ref: `ariakit/ariakit/${configuration.trustedWorkflowPath}@refs/heads/main`,
+          job_workflow_sha: testedSha,
+        })
+          .setProtectedHeader({ alg: "RS256", kid: "direct-key" })
+          .setIssuer("https://token.actions.githubusercontent.com")
+          .setAudience("https://preview.example/transfer-key")
+          .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+          .setIssuedAt()
+          .setNotBefore("0s")
+          .setExpirationTime("5m")
+          .setJti(crypto.randomUUID())
+          .sign(keys.privateKey);
+      const captureToken = await signed(captureJobId);
+      const capture = await handleApi(
+        new Request("https://preview.example/v1/transfer/private-key", {
+          method: "POST",
+          headers: { authorization: `Bearer ${captureToken}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            shardKey: "linux",
+            workflowRunId: runId,
+            workflowAttempt: 1,
+            testedSha,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(capture?.status).toBe(200);
+      expect(checkCreations).toBe(0);
+      const token = await signed(test.jobId);
       const response = await handleApi(
         new Request("https://preview.example/v1/transfer/private-key", {
           method: "POST",
@@ -1065,6 +1133,18 @@ describe("workflow-owned upload staging", () => {
       );
       expect(response?.status).toBe(200);
       expect(await response?.text()).toBe(privateKey);
+      expect(checkCreations).toBe(1);
+      expect(createdCheck).toMatchObject({
+        name: "Visonaut",
+        head_sha: testedSha,
+        status: "in_progress",
+      });
+      expect(
+        await test.context.database
+          .prepare("SELECT state,check_id,workflow_run_id FROM pre_run_checks WHERE tested_sha=?")
+          .bind(testedSha)
+          .first(),
+      ).toEqual({ state: "active", check_id: checkId, workflow_run_id: runId });
       const retry = await handleApi(
         new Request("https://preview.example/v1/transfer/private-key", {
           method: "POST",
@@ -1081,6 +1161,27 @@ describe("workflow-owned upload staging", () => {
       );
       expect(retry?.status).toBe(200);
       expect(await retry?.text()).toBe(privateKey);
+      expect(checkCreations).toBe(1);
+      run.status = "completed";
+      run.conclusion = "failure";
+      const submitJob = jobs.find((job) => job.id === Number(test.jobId));
+      if (!submitJob) {
+        throw new Error("The Submit job is unavailable.");
+      }
+      submitJob.status = "completed";
+      submitJob.conclusion = "failure";
+      await settlePreRunWorkflow(
+        test.context,
+        await createGitHubClient(test.context.configuration.github),
+        {
+          deliveryId: crypto.randomUUID(),
+          event: "workflow_run",
+          payloadDigest: "digest",
+          payload: { action: "completed", workflow_run: run },
+          receivedAt: Date.now(),
+        },
+      );
+      expect(createdCheck).toMatchObject({ status: "completed", conclusion: "failure" });
     } finally {
       vi.unstubAllGlobals();
     }
