@@ -642,7 +642,7 @@ interface ReuseSource {
 }
 
 // Bound concurrent R2 operations within one byte-limited reuse page.
-const reuseConcurrency = 4;
+const reuseConcurrency = 6;
 
 /** Copy only bytes that this signed job proves it holds. A digest alone is not possession. */
 export async function reuseStagedImages(request: Request, context: ApiContext, runId: string) {
