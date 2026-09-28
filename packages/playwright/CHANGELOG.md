@@ -1,5 +1,12 @@
 # @visonaut/playwright
 
+## 0.3.2
+
+### Patch Changes
+
+- 897d071: Added `visualBatch` to capture several document clips from one stable full-page screenshot pair while keeping a separate identity and profile for each item.
+- 6b12c11: Rejected signed uploads to the retired diagnostics origin.
+
 ## 0.3.1
 
 ### Patch Changes
