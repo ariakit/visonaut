@@ -204,7 +204,7 @@ describe("protected object operations", () => {
   });
 });
 
-describe("serialized GitHub checks", () => {
+describe("GitHub checks", () => {
   it("opens the exact run from check creation and later status delivery", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
@@ -238,6 +238,86 @@ describe("serialized GitHub checks", () => {
     await reserve(fixture.context, "another");
     await deliverGitHubStatuses(fixture.context);
     expect(fixture.state.patches).toBe(2); // One per distinct check, never a second write to the blocked first check.
+    expect(
+      await database.prepare("SELECT ambiguous FROM work_checks WHERE id='1'").first(),
+    ).toEqual({ ambiguous: 1 });
+  });
+  it("delivers separate checks with at most three concurrent PATCH requests", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    for (const id of ["first", "second", "third", "fourth"]) {
+      await reserve(fixture.context, id);
+    }
+    const originalRequest = fixture.context.github.request.bind(fixture.context.github);
+    let releasePatches = () => {};
+    const patchesReleased = new Promise<void>((resolve) => {
+      releasePatches = () => resolve();
+    });
+    const patchIds: string[] = [];
+    let inFlight = 0;
+    let maximumInFlight = 0;
+    vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
+      if (init?.method === "PATCH") {
+        patchIds.push(path.split("/").at(-1) ?? "");
+        inFlight += 1;
+        maximumInFlight = Math.max(maximumInFlight, inFlight);
+        await patchesReleased;
+        inFlight -= 1;
+      }
+      return originalRequest(path, init);
+    });
+
+    const delivery = deliverGitHubStatuses(fixture.context);
+    try {
+      await vi.waitFor(() => expect(patchIds).toHaveLength(3));
+      expect(inFlight).toBe(3);
+      expect(patchIds).toEqual(["1", "2", "3"]);
+    } finally {
+      releasePatches();
+      await delivery;
+    }
+    const report = await delivery;
+    expect(maximumInFlight).toBe(3);
+    expect(patchIds).toEqual(["1", "2", "3", "4"]);
+    expect(report.completed).toEqual(["1", "2", "3", "4"]);
+  });
+  it("keeps an in-flight check locked and fences an ambiguous PATCH after a new revision", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await reserve(fixture.context);
+    const originalRequest = fixture.context.github.request.bind(fixture.context.github);
+    let markPatchStarted = () => {};
+    const patchStarted = new Promise<void>((resolve) => {
+      markPatchStarted = () => resolve();
+    });
+    let releasePatch = () => {};
+    const patchReleased = new Promise<void>((resolve) => {
+      releasePatch = () => resolve();
+    });
+    let firstCheckPatches = 0;
+    vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
+      if (init?.method === "PATCH" && path.endsWith("/1")) {
+        firstCheckPatches += 1;
+        markPatchStarted();
+        await patchReleased;
+        throw new Error("Lost PATCH response.");
+      }
+      return originalRequest(path, init);
+    });
+
+    const delivery = deliverGitHubStatuses(fixture.context);
+    await patchStarted;
+    try {
+      await deliverGitHubStatuses(fixture.context);
+      expect(firstCheckPatches).toBe(1);
+    } finally {
+      releasePatch();
+      await delivery;
+    }
+    expect((await delivery).attention).toEqual(["1"]);
+    await reserve(fixture.context, "another");
+    await deliverGitHubStatuses(fixture.context);
+    expect(firstCheckPatches).toBe(1);
     expect(
       await database.prepare("SELECT ambiguous FROM work_checks WHERE id='1'").first(),
     ).toEqual({ ambiguous: 1 });
