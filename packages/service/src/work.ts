@@ -1,4 +1,5 @@
-import { assertion, type Database, type Statement } from "./database.ts";
+import { assertion, atomic, ConflictError, type Database, type Statement } from "./database.ts";
+import { touchRunStatusStatements } from "./status-touch.ts";
 
 export interface WorkInput {
   id: string;
@@ -183,7 +184,7 @@ export interface ReconcileWorkParams {
   kind?: string;
   scope?: "current-comparison";
   maxOutstanding?: number;
-  publish: (taskId: string) => Promise<void>;
+  publish: (taskId: string, publicationAttempt: number) => Promise<void>;
 }
 
 const publicationPageLimit = 32;
@@ -193,6 +194,7 @@ const defaultMaxOutstanding = 1024;
 // https://developers.cloudflare.com/queues/platform/limits/
 const receiptMilliseconds = (14 * 24 + 1) * 60 * 60 * 1000;
 const rejectedSendRetryMilliseconds = 5 * 60 * 1000;
+const maxQueuePublications = 3;
 
 // Run-history compaction can remove a review row while leaving its task ID.
 export function supersededReviewTaskSql(taskTable: string) {
@@ -211,6 +213,101 @@ export function supersededReviewTaskSql(taskTable: string) {
             WHERE archive.comparison_id = comparison.id AND archive.state = 'ready'))
           AND instr(${taskTable}.id, ':') > 1
           AND comparison.id = substr(${taskTable}.id, 1, instr(${taskTable}.id, ':') - 1))))`;
+}
+
+function currentComparisonTaskSql(taskTable: string) {
+  return `AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
+    JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+    JOIN visonaut_runs run ON run.id = comparison.run_id
+    WHERE row.id = ${taskTable}.id AND comparison.state = 'comparing'
+      AND (comparison.purpose = 'historical'
+        OR (comparison.purpose = 'review' AND run.active = 1
+          AND run.comparison_id = comparison.id)))`;
+}
+
+/** A dead-letter delivery releases only the matching, still-current Queue receipt. */
+export async function recoverDeadLetteredComparison(
+  database: Database,
+  params: { taskId: string; publicationAttempt: number; now: number },
+) {
+  positiveInteger(params.publicationAttempt, "publicationAttempt");
+  const eligible = `id = ? AND kind = 'compare' AND attempts < max_attempts
+    AND publication_attempts = ? AND publication_due_at > ?
+    AND (publication_token IS NULL OR publication_token NOT LIKE 'dead-letter:%')
+    AND (state = 'queued' OR (state = 'leased' AND lease_until <= ?))
+    ${currentComparisonTaskSql("work_tasks")}`;
+  if (params.publicationAttempt < maxQueuePublications) {
+    const recovered = await database
+      .prepare(`UPDATE work_tasks SET publication_due_at = ?,
+        publication_token = 'dead-letter:' || publication_attempts,
+        published_at = COALESCE(published_at, ?), updated_at = ?
+      WHERE ${eligible} RETURNING id`)
+      .bind(
+        params.now + rejectedSendRetryMilliseconds,
+        params.now,
+        params.now,
+        params.taskId,
+        params.publicationAttempt,
+        params.now,
+        params.now,
+      )
+      .first<{ id: string }>();
+    if (recovered) return "requeued" as const;
+  } else {
+    const owner = await database
+      .prepare(`SELECT run.id AS id, run.project_id AS projectId,
+        run.sealed_at AS sealedAt, comparison.purpose AS purpose FROM visonaut_comparison_rows row
+        JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+        JOIN visonaut_runs run ON run.id = comparison.run_id
+        WHERE row.id = ?`)
+      .bind(params.taskId)
+      .first<{ id: string; projectId: string; sealedAt: number | null; purpose: string }>();
+    const terminal = database
+      .prepare(`UPDATE work_tasks SET state = 'dead', lease_token = NULL,
+        lease_until = NULL, publication_token = NULL,
+        last_error = substr(COALESCE(last_error || '; ', '') ||
+          'Queue delivery exhausted', 1, 4096), updated_at = ?
+      WHERE ${eligible} RETURNING id`)
+      .bind(params.now, params.taskId, params.publicationAttempt, params.now, params.now);
+    if (owner?.purpose === "review" && owner.sealedAt !== null) {
+      try {
+        await atomic(database, [
+          assertion(
+            database,
+            `EXISTS (SELECT 1 FROM work_tasks WHERE ${eligible}
+              AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
+                JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
+                JOIN visonaut_runs run ON run.id = comparison.run_id
+                WHERE row.id = work_tasks.id AND comparison.purpose = 'review'
+                  AND run.id = ? AND run.project_id = ? AND run.sealed_at IS NOT NULL))`,
+            [
+              params.taskId,
+              params.publicationAttempt,
+              params.now,
+              params.now,
+              owner.id,
+              owner.projectId,
+            ],
+          ),
+          terminal,
+          ...touchRunStatusStatements(database, owner, params.now),
+        ]);
+        return "exhausted" as const;
+      } catch (error) {
+        if (!(error instanceof ConflictError)) throw error;
+      }
+    } else if (await terminal.first<{ id: string }>()) {
+      return "exhausted" as const;
+    }
+  }
+  const activeLease = await database
+    .prepare(`SELECT 1 AS found FROM work_tasks WHERE id = ? AND kind = 'compare'
+      AND state = 'leased' AND lease_until > ? AND attempts < max_attempts
+      AND publication_attempts = ? AND publication_due_at > ?
+      ${currentComparisonTaskSql("work_tasks")} LIMIT 1`)
+    .bind(params.taskId, params.now, params.publicationAttempt, params.now)
+    .first<{ found: number }>();
+  return activeLease ? ("deferred" as const) : ("ignored" as const);
 }
 
 function definiteQueueRejection(error: unknown) {
@@ -244,15 +341,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
     : null;
   // Superseded tasks can stay queued after their Queue messages are acknowledged.
   const currentComparison = (taskTable: string) =>
-    params.scope
-      ? `AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
-      JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-      JOIN visonaut_runs run ON run.id = comparison.run_id
-      WHERE row.id = ${taskTable}.id AND comparison.state = 'comparing'
-        AND (comparison.purpose = 'historical'
-          OR (comparison.purpose = 'review' AND run.active = 1
-            AND run.comparison_id = comparison.id)))`
-      : "";
+    params.scope ? currentComparisonTaskSql(taskTable) : "";
   await database
     .prepare(`
     UPDATE work_tasks SET state = 'dead', lease_token = NULL, lease_until = NULL,
@@ -312,7 +401,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
           OR (state = 'leased' AND lease_until <= ?))
         AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")}
         AND ? > (${outstandingSql})
-      RETURNING id
+      RETURNING id, publication_attempts
     `)
       .bind(
         params.now,
@@ -330,10 +419,10 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
         kind,
         kind,
       )
-      .first<{ id: string }>();
+      .first<{ id: string; publication_attempts: number }>();
     if (!claimed) continue;
     try {
-      await params.publish(task.id);
+      await params.publish(task.id, claimed.publication_attempts);
       await database
         .prepare(`UPDATE work_tasks SET published_at = ?, publication_token = NULL,
           publication_due_at = ? + ?,
@@ -344,11 +433,19 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
       published.push(task.id);
     } catch (error) {
       if (definiteQueueRejection(error)) {
-        // Keep the token until retry so a concurrent consumer claim still wins.
+        // No message used this generation. Reuse it only while this reservation
+        // still owns the task; a concurrent consumer claim clears the token.
         await database
-          .prepare(`UPDATE work_tasks SET publication_due_at = ?
-            WHERE id = ? AND publication_token = ? AND state IN ('queued', 'leased')`)
-          .bind(params.now + rejectedSendRetryMilliseconds, task.id, publicationToken)
+          .prepare(`UPDATE work_tasks SET publication_due_at = ?,
+            publication_attempts = publication_attempts - 1
+            WHERE id = ? AND publication_token = ? AND publication_attempts = ?
+              AND state IN ('queued', 'leased')`)
+          .bind(
+            params.now + rejectedSendRetryMilliseconds,
+            task.id,
+            publicationToken,
+            claimed.publication_attempts,
+          )
           .run();
       }
       // An ambiguous send keeps the full receipt in case Queue accepted it.

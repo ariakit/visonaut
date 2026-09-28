@@ -67,7 +67,7 @@ export interface OperationsContext {
   images: ObjectStore;
   backups: ObjectStore;
   quarantine: ObjectStore;
-  comparisons: { send(message: { taskId: string }): Promise<void> };
+  comparisons: { send(message: { taskId: string; publicationAttempt: number }): Promise<void> };
   github: GitHubClient;
   origin: string;
   budget: OperationsBudget;
