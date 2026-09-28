@@ -1,5 +1,14 @@
 # visonaut
 
+## 0.3.5
+
+### Patch Changes
+
+- 7be9f58: Reported aggregate image PUT duration, attempted bytes, retry wait, and `validation_busy` retries during upload and Submit.
+- 410867f: Staged capture images in batches of up to five and reported progress during large uploads. Busy image validation now has bounded retries within the existing request timeout.
+- Updated dependencies
+  - @visonaut/playwright@0.3.2
+
 ## 0.3.4
 
 ### Patch Changes
