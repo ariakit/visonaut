@@ -203,6 +203,7 @@ export interface ComparisonRow {
   policy_digest: string;
   ordinal: number;
   state: string;
+  created_at: number;
 }
 
 export interface ReviewRow {
