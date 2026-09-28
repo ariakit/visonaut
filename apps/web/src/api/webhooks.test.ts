@@ -38,6 +38,9 @@ const bindings: ApiBindings = {
     async head() {
       return null;
     },
+    async list() {
+      return { objects: [], truncated: false };
+    },
     async put() {},
     async delete() {},
   },
@@ -47,6 +50,9 @@ const bindings: ApiBindings = {
     },
     async head() {
       return null;
+    },
+    async list() {
+      return { objects: [], truncated: false };
     },
     async put() {},
     async delete() {},

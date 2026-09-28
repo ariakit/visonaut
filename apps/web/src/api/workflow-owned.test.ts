@@ -584,6 +584,7 @@ it("seals a reused target from its R2 checksum without reading its body again", 
   test.context.images = {
     get,
     head: (key) => storage.head(key),
+    list: (options) => storage.list(options),
     put: (key, bytes, options) => storage.put(key, bytes, options),
     delete: (key) => storage.delete(key),
   };
@@ -713,6 +714,7 @@ it("reads independent reuse sources in parallel before writing targets", async (
       return storage.get(key);
     },
     head: (key) => storage.head(key),
+    list: (options) => storage.list(options),
     async put(key, bytes, options) {
       writes++;
       if (writes === 1) {
@@ -1789,14 +1791,21 @@ describe("workflow-owned upload staging", () => {
     const storage = test.context.images;
     const get = vi.fn((key: string) => storage.get(key));
     const head = vi.fn((key: string) => storage.head(key));
+    const list = vi.fn((options: Parameters<typeof storage.list>[0]) => storage.list(options));
     test.context.images = {
       get,
       head,
+      list,
       put: (key, bytes, options) => storage.put(key, bytes, options),
       delete: (key) => storage.delete(key),
     };
     expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
-    expect(head).toHaveBeenCalledExactlyOnceWith(objectKey);
+    expect(list).toHaveBeenCalledExactlyOnceWith({
+      prefix: `runs/${test.runId}/images/`,
+      limit: 1000,
+      cursor: undefined,
+    });
+    expect(head).not.toHaveBeenCalled();
     expect(get).not.toHaveBeenCalled();
   });
 
@@ -1810,17 +1819,20 @@ describe("workflow-owned upload staging", () => {
 
     const storage = test.context.images;
     const get = vi.fn((key: string) => storage.get(key));
+    const list = vi.fn((options: Parameters<typeof storage.list>[0]) => storage.list(options));
     test.context.images = {
       get,
       head: (key) => storage.head(key),
+      list,
       put: (key, bytes, options) => storage.put(key, bytes, options),
       delete: (key) => storage.delete(key),
     };
     expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+    expect(list).toHaveBeenCalledOnce();
     expect(get).toHaveBeenCalledExactlyOnceWith(objectKey);
   });
 
-  it("overlaps bounded checksum reads before registering their images", async () => {
+  it("loads all R2 metadata pages before registering their images", async () => {
     const test = await fixture();
     const extra = await Promise.all(
       [
@@ -1916,13 +1928,12 @@ describe("workflow-owned upload staging", () => {
       .all<{ object_key: string }>();
     const stagedKeys = new Set(staged.results.map((row) => row.object_key));
     const storage = test.context.images;
-    let heads = 0;
-    let activeHeads = 0;
-    let maximumActiveHeads = 0;
-    let releaseHeads = () => {};
-    const blockedHeads = new Promise<void>((resolve) => {
-      releaseHeads = resolve;
+    const registerImages = vi.spyOn(test.context.service, "registerImages");
+    const list = vi.fn((options: Parameters<typeof storage.list>[0]) => {
+      expect(registerImages).not.toHaveBeenCalled();
+      return storage.list({ ...options, limit: 2 });
     });
+    const head = vi.fn((key: string) => storage.head(key));
     test.context.images = {
       async get(key) {
         if (stagedKeys.has(key)) {
@@ -1930,38 +1941,20 @@ describe("workflow-owned upload staging", () => {
         }
         return storage.get(key);
       },
-      async head(key) {
-        const stored = await storage.head(key);
-        if (stagedKeys.has(key)) {
-          heads += 1;
-          activeHeads += 1;
-          maximumActiveHeads = Math.max(maximumActiveHeads, activeHeads);
-          await blockedHeads;
-          activeHeads -= 1;
-        }
-        return stored;
-      },
+      head,
+      list,
       put: (key, bytes, options) => storage.put(key, bytes, options),
       delete: (key) => storage.delete(key),
     };
-    const registerImages = vi.spyOn(test.context.service, "registerImages");
-    const operation = materializeWorkflowRun(test.context, test.runId);
-    try {
-      await vi.waitFor(() => expect(heads).toBe(6), { timeout: 5000 });
-      expect(maximumActiveHeads).toBe(6);
-      expect(
-        await database
-          .prepare("SELECT COUNT(*) AS count FROM visonaut_images WHERE run_id = ?")
-          .bind(test.runId)
-          .first<{ count: number }>(),
-      ).toEqual({ count: 0 });
-    } finally {
-      releaseHeads();
-      await operation.catch(() => undefined);
-    }
-    expect((await operation).sealed_at).not.toBeNull();
-    expect(heads).toBe(7);
-    expect(maximumActiveHeads).toBe(6);
+    expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(4);
+    expect(list.mock.calls[0]?.[0]).toEqual({
+      prefix: `runs/${test.runId}/images/`,
+      limit: 1000,
+      cursor: undefined,
+    });
+    expect(list.mock.calls.slice(1).every(([options]) => options.cursor)).toBe(true);
+    expect(head).not.toHaveBeenCalled();
     expect(registerImages).toHaveBeenCalledTimes(1);
     expect(registerImages.mock.calls[0]?.[0]).toHaveLength(7);
   });
@@ -2038,6 +2031,7 @@ describe("workflow-owned upload staging", () => {
     test.context.images = {
       get,
       head: (key) => storage.head(key),
+      list: (options) => storage.list(options),
       put: (key, bytes, options) => storage.put(key, bytes, options),
       delete: (key) => storage.delete(key),
     };
@@ -2499,6 +2493,7 @@ describe("workflow-owned upload staging", () => {
       test.context.images = {
         get,
         head: (key) => storage.head(key),
+        list: (options) => storage.list(options),
         put: (key, bytes, options) => storage.put(key, bytes, options),
         delete: (key) => storage.delete(key),
       };

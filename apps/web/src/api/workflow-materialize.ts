@@ -28,6 +28,11 @@ interface StagedImage {
   complete: number;
 }
 
+interface StagedObjectMetadata {
+  size: number;
+  sha256?: ArrayBuffer;
+}
+
 interface MaterializationMeasurements {
   imageCount: number;
   imageBytes: number;
@@ -43,6 +48,7 @@ interface MaterializeImagesParams {
   context: ApiContext;
   runId: string;
   bundle: ReconciledBundle;
+  currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
   measurements: MaterializationMeasurements;
 }
 
@@ -51,6 +57,7 @@ interface MaterializeBundleParams {
   run: RunRow;
   bundle: ReconciledBundle;
   proof: string;
+  currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
   measurements: MaterializationMeasurements;
 }
 
@@ -60,9 +67,33 @@ class StagedOriginalUnavailableError extends IncompleteError {}
 // Six R2 operations match the Worker connection limit; batches stay byte-bounded.
 const maximumMaterializationReads = 6;
 const maximumMaterializationReadBytes = 8 * 1024 * 1024;
+// R2 accepts at most 1,000 objects per list request.
+const maximumR2ListPageSize = 1000;
 
 function hexChecksum(bytes: ArrayBuffer) {
   return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function listCurrentRunImages(context: ApiContext, runId: string) {
+  const images = new Map<string, StagedObjectMetadata>();
+  let cursor: string | undefined;
+  while (true) {
+    const page = await context.images.list({
+      prefix: `runs/${runId}/images/`,
+      limit: maximumR2ListPageSize,
+      cursor,
+    });
+    for (const image of page.objects) {
+      images.set(image.key, { size: image.size, sha256: image.checksums.sha256 });
+    }
+    if (!page.truncated) {
+      return images;
+    }
+    if (!page.cursor || page.cursor === cursor) {
+      throw new IncompleteError("The staged image inventory is incomplete.");
+    }
+    cursor = page.cursor;
+  }
 }
 
 export function materializationBatchEnd(images: readonly { bytes: number }[], offset: number) {
@@ -123,6 +154,7 @@ async function materializeImages({
   context,
   runId,
   bundle,
+  currentRunImages,
   measurements,
 }: MaterializeImagesParams) {
   const images = await context.database
@@ -163,8 +195,8 @@ async function materializeImages({
     }
     // R2 checksums come from a validated PUT; older objects still need a body check.
     if (bundle.sourceRunId === runId) {
-      const stored = await context.images.head(image.object_key);
-      const checksum = stored?.checksums.sha256;
+      const stored = currentRunImages.get(image.object_key);
+      const checksum = stored?.sha256;
       if (stored?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
         return { image, bytes: null };
       }
@@ -232,10 +264,17 @@ async function materializeBundle({
   run,
   bundle,
   proof,
+  currentRunImages,
   measurements,
 }: MaterializeBundleParams) {
   const manifest = bundle.manifest;
-  const imageIds = await materializeImages({ context, runId: run.id, bundle, measurements });
+  const imageIds = await materializeImages({
+    context,
+    runId: run.id,
+    bundle,
+    currentRunImages,
+    measurements,
+  });
   const shardCommitStarted = performance.now();
   const capturedProfiles = new Set(manifest.captures.map((capture) => capture.profileDigest));
   await storeCaptureProfiles(
@@ -523,8 +562,13 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     throw new IncompleteError("The workflow attempt was superseded before conversion.");
   }
   const reservedAt = performance.now();
+  const inventoryStarted = performance.now();
+  const currentRunImages = bundles.some((bundle) => bundle.sourceRunId === run.id)
+    ? await listCurrentRunImages(context, run.id)
+    : new Map();
+  measurements.verificationMs += performance.now() - inventoryStarted;
   for (const bundle of bundles) {
-    await materializeBundle({ context, run, bundle, proof, measurements });
+    await materializeBundle({ context, run, bundle, proof, currentRunImages, measurements });
   }
   const materializedAt = performance.now();
   const current = await workflowAttempt(github, submit);
