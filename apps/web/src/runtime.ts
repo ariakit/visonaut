@@ -210,6 +210,13 @@ export function apiBindings(env: Env): ApiBindings {
                 workflowOwned.additionalTrustedWorkflowBlobSha,
                 "VISONAUT_WORKFLOW_OWNED.additionalTrustedWorkflowBlobSha",
               ),
+        additionalTrustedExecutorDigest:
+          workflowOwned.additionalTrustedExecutorDigest === undefined
+            ? undefined
+            : required(
+                workflowOwned.additionalTrustedExecutorDigest,
+                "VISONAUT_WORKFLOW_OWNED.additionalTrustedExecutorDigest",
+              ),
       }
     : undefined;
   const configuration: ApiConfiguration = {

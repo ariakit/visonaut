@@ -9,7 +9,7 @@ import {
 } from "@visonaut/service";
 import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
-import { assertConfiguredProject, type ApiContext } from "./context.js";
+import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
 import { scheduleComparison, verifyAncestry } from "./ingest.js";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
@@ -388,9 +388,12 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     workflowAttempt: staged.workflow_attempt,
   });
   const proof = await digestJson({ submit, jobSetDigest, lineage: lineage.proof });
-  const executorDigest = context.configuration.trustedExecutorDigest;
-  if (!executorDigest) {
-    throw new SecurityError("workflow_configuration", 503, "The trusted executor is unavailable.");
+  const executorDigest = bundles[0]?.manifest.discovery?.executorDigest;
+  if (
+    !isTrustedWorkflowExecutor(context.configuration, executorDigest) ||
+    bundles.some((bundle) => bundle.manifest.discovery?.executorDigest !== executorDigest)
+  ) {
+    throw new IncompleteError("The trusted capture jobs must use one configured executor.");
   }
   const plan = {
     digest: jobSetDigest,

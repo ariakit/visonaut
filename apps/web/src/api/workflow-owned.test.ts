@@ -916,6 +916,13 @@ describe("workflow-owned upload staging", () => {
     configuration.additionalTrustedWorkflowBlobSha = "not-a-sha";
     expect(() => workflowConfiguration(test.context)).toThrow();
     configuration.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
+    configuration.additionalTrustedExecutorDigest = "d".repeat(64);
+    expect(workflowConfiguration(test.context)).toBe(configuration);
+    configuration.additionalTrustedExecutorDigest = executorDigest;
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.additionalTrustedExecutorDigest = "invalid";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.additionalTrustedExecutorDigest = "d".repeat(64);
     configuration.callerWorkflowPath = ".github/workflows/visonaut.yml";
     expect(() => workflowConfiguration(test.context)).toThrow();
     configuration.callerWorkflowPath = ".github/workflows/ci.yml";
@@ -1176,6 +1183,39 @@ describe("workflow-owned upload staging", () => {
       manifestDigest,
       state: "staged",
     });
+  });
+
+  it("materializes the second exact executor digest during the direct-workflow rollout", async () => {
+    const test = await fixture();
+    const workflow = test.context.configuration.workflowOwned;
+    if (!workflow) throw new Error("Expected workflow configuration.");
+    workflow.callerWorkflowPath = ".github/workflows/ci.yml";
+    workflow.trustedWorkflowPath = ".github/workflows/app.yml";
+    workflow.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
+    workflow.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
+    workflow.additionalTrustedExecutorDigest = "d".repeat(64);
+    await database
+      .prepare(
+        "UPDATE ingest_staged_runs SET caller_workflow_path = ?, reusable_workflow_ref = ? WHERE id = ?",
+      )
+      .bind(workflow.callerWorkflowPath, workflow.reusableWorkflowRef, test.runId)
+      .run();
+    const untrusted = structuredClone(test.manifest);
+    untrusted.discovery!.executorDigest = "f".repeat(64);
+    await expect(
+      declareStaged(test.post(untrusted), test.context, test.runId, test.shardKey),
+    ).rejects.toMatchObject({ code: "manifest_provenance", status: 403 });
+    test.manifest.discovery!.executorDigest = workflow.additionalTrustedExecutorDigest;
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
+    const provenance = await database
+      .prepare("SELECT verified_json FROM ingest_run_provenance WHERE run_id = ?")
+      .bind(test.runId)
+      .first<{ verified_json: string }>();
+    expect(JSON.parse(provenance!.verified_json).executorDigest).toBe(
+      workflow.additionalTrustedExecutorDigest,
+    );
   });
 
   const verifySignedSubmit = async (directAppWorkflow: boolean) => {

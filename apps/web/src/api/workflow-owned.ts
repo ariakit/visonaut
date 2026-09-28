@@ -28,7 +28,12 @@ import {
   type VerifiedRun,
 } from "@visonaut/security";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "@visonaut/service";
-import { loadVerifiedMergeGroup, type ApiConfiguration, type ApiContext } from "./context.js";
+import {
+  isTrustedWorkflowExecutor,
+  loadVerifiedMergeGroup,
+  type ApiConfiguration,
+  type ApiContext,
+} from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { ensureSignedAttemptCheck } from "./pre-run.js";
 
@@ -109,6 +114,14 @@ export function workflowConfiguration(context: ApiContext) {
     (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
       (!/^[a-f0-9]{40}$/.test(configuration.additionalTrustedWorkflowBlobSha) ||
         configuration.additionalTrustedWorkflowBlobSha === configuration.reusableWorkflowSha ||
+        context.configuration.github.repository !== "ariakit/ariakit" ||
+        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
+        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
+    (configuration.additionalTrustedExecutorDigest !== undefined &&
+      (!/^[a-f0-9]{64}$/.test(configuration.additionalTrustedExecutorDigest) ||
+        configuration.additionalTrustedExecutorDigest ===
+          context.configuration.trustedExecutorDigest ||
+        configuration.additionalTrustedWorkflowBlobSha === undefined ||
         context.configuration.github.repository !== "ariakit/ariakit" ||
         configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
         configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
@@ -405,7 +418,7 @@ export async function declareStaged(
   if (
     !discovery ||
     !context.configuration.trustedExecutorDigest ||
-    discovery.executorDigest !== context.configuration.trustedExecutorDigest ||
+    !isTrustedWorkflowExecutor(context.configuration, discovery.executorDigest) ||
     discovery.inventoryDigest !==
       (await digestJson(
         manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
