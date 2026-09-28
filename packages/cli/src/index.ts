@@ -19,8 +19,8 @@ const MAX_UPLOAD_TICKET_LENGTH = 4096;
 const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
 // Leave a full 30-second request deadline plus clock/scheduling headroom.
 const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
-// Keep at most two byte-limited reuse pages in flight.
-const REUSE_PAGE_CONCURRENCY = 2;
+// Keep at most four byte-limited reuse pages in flight.
+const REUSE_PAGE_CONCURRENCY = 4;
 const IMAGE_PUT_CONCURRENCY = 5;
 
 const HELP = `Usage:
