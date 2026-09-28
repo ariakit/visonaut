@@ -191,6 +191,13 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       report.deferred.push(candidate.id);
       continue;
     }
+    const started = performance.now();
+    let copyRows = 0;
+    let copyObjects = 0;
+    let copyBytes = 0;
+    let verifyRows = 0;
+    let verifyBytes = 0;
+    let outcome = "deferred";
     try {
       const comparison = await service.comparison(candidate.comparison_id);
       const copies = await service.preparePromotion({
@@ -200,11 +207,14 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         now: context.now(),
         copyLimit: remainingObjects,
       });
+      copyRows = copies.length;
       const copyGroups = new Map<string, typeof copies>();
       for (const copy of copies) {
         const group = copyGroups.get(copy.object_key);
         if (!group) {
           copyGroups.set(copy.object_key, [copy]);
+          copyObjects += 1;
+          copyBytes += copy.bytes;
           continue;
         }
         const first = group[0];
@@ -269,6 +279,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
           .all<{ capture_id: string; object_key: string; digest: string; bytes: number }>();
         const verificationRows = verification.results ?? [];
         const page = verificationRows.slice(0, remainingObjects);
+        verifyRows = page.length;
+        verifyBytes = page.reduce((bytes, copy) => bytes + copy.bytes, 0);
         remainingObjects -= page.length;
         await mapConcurrent(page, maximumConcurrentPromotionObjects, async (copy) => {
           const object = await context.images.get(copy.object_key);
@@ -307,10 +319,12 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         });
         await resolveEvents(database, "promotion", candidate.id, context.now());
         report.completed.push(candidate.id);
+        outcome = "completed";
         // Publishing checks runs before copying; schedule a pass for the new revision.
         report.hasMore = true;
       }
     } catch (error) {
+      outcome = "attention";
       const code =
         error instanceof ConflictError || error instanceof IncompleteError
           ? "state-changed"
@@ -323,7 +337,26 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       });
       report.attention.push(candidate.id);
     } finally {
-      await releasePromotionLeaseStatement(database, { ...lease, now: context.now() }).run();
+      const finishedAt = context.now();
+      const leaseRemainingMs = lease.now + lease.leaseMs - finishedAt;
+      try {
+        await releasePromotionLeaseStatement(database, { ...lease, now: finishedAt }).run();
+      } finally {
+        console.info(
+          JSON.stringify({
+            event: "baseline_promotion_step",
+            runId: candidate.id,
+            copyRows,
+            copyObjects,
+            copyBytes,
+            verifyRows,
+            verifyBytes,
+            elapsedMs: Math.round(performance.now() - started),
+            leaseRemainingMs,
+            outcome,
+          }),
+        );
+      }
     }
   }
   const candidatesRemaining = await savePromotionCursor(context, candidates, candidateAfter);
