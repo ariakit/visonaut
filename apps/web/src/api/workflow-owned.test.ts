@@ -1384,11 +1384,41 @@ describe("workflow-owned upload staging", () => {
           .first<{ submitted_at: number | null }>(),
       ).toEqual({ submitted_at: null });
       const submitToken = await signedToken(submitJobId);
+      const originalGitHubFetch = test.context.configuration.github.fetch;
+      if (!originalGitHubFetch) throw new Error("Expected fixture GitHub transport");
+      let createdChecks = 0;
+      test.context.configuration.github.fetch = async (input, init) => {
+        const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+        if (url.pathname.endsWith(`/git/commits/${test.manifest.run.testedSha}`)) {
+          return Response.json({ parents: [{ sha: "a".repeat(40) }] });
+        }
+        if (url.pathname.includes("/check-runs") && url.pathname.includes("/commits/")) {
+          return Response.json({ check_runs: [] });
+        }
+        if (url.pathname.endsWith("/check-runs") && init?.method === "POST") {
+          createdChecks += 1;
+          const check = {
+            ...JSON.parse(String(init.body)),
+            id: Number(submitJobId) + 30_000,
+            app: { id: 123 },
+          };
+          test.githubResponses.set(`/repos/ariakit/ariakit/check-runs/${check.id}`, check);
+          return Response.json(check, { status: 201 });
+        }
+        return originalGitHubFetch(input, init);
+      };
+      const oldCheck = await database
+        .prepare("SELECT check_id FROM pre_run_checks")
+        .first<{ check_id: string }>();
+      if (oldCheck) {
+        test.githubResponses.delete(`/repos/ariakit/ariakit/check-runs/${oldCheck.check_id}`);
+      }
       await database.prepare("DELETE FROM pre_run_checks").run();
       const first = await send(submitToken);
       const replay = await send(submitToken);
       expect(first?.status).toBe(202);
       expect(replay?.status).toBe(202);
+      expect(createdChecks).toBe(1);
       const receipt = object(await first?.json());
       expect(receipt).toMatchObject({ runId: test.runId, state: "submitted" });
       expect(await replay?.json()).toEqual(receipt);
