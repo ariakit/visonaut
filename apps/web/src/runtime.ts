@@ -32,7 +32,7 @@ import {
 } from "./capacity.ts";
 import { recordEvent, validateBudget } from "./operations/common.ts";
 import { expireStagedAttempts } from "./api/workflow-retention.ts";
-import { retireUnpinnedMainChecks } from "./api/pre-run.ts";
+import { reconcileEquivalentPullRequestChecks, retireUnpinnedMainChecks } from "./api/pre-run.ts";
 
 function required(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is not configured.`);
@@ -331,6 +331,7 @@ export async function runScheduledOperations(env: Env) {
   for (const [kind, reconcile] of [
     ["webhooks", reconcileWebhooks],
     ["checks", retireUnpinnedMainChecks],
+    ["check-aliases", reconcileEquivalentPullRequestChecks],
     ["staged", reconcileStagedWorkflows],
     ["ingest", reconcileIngest],
   ] as const) {

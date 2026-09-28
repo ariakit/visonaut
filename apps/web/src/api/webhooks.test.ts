@@ -12,6 +12,7 @@ import {
   ensureSignedAttemptCheck,
   findPreRunCheck,
   hasPinnedMainWorkflow,
+  reconcileEquivalentPullRequestChecks,
   retireUnpinnedMainChecks,
   settlePreRunWorkflow,
 } from "./pre-run.ts";
@@ -181,14 +182,21 @@ function preRunFixture() {
     currentTree: "1".repeat(40),
     currentMergeBase: baseSha,
     currentMergeHead: sourceSha,
+    mergeTrees: new Map<string, string>(),
     workflowSha: "e".repeat(40),
     workflowShas: new Map<string, string>(),
     pullBaseSha: baseSha,
     pullBaseRef: "main",
     pullState: "open" as "open" | "closed",
+    pullMerged: false,
+    mergedSha: "9".repeat(40),
+    mergedBase: baseSha,
+    mergedTree: "1".repeat(40),
     pullHeadRef: "feature",
     pullHeadSha: sourceSha,
+    beforeCheckRead: undefined as ((id: string) => Promise<void>) | undefined,
     beforeCheckPatch: undefined as (() => Promise<void>) | undefined,
+    losePatch: false,
     files: [{ filename: "README.md", status: "modified" }] as Record<string, unknown>[],
     checks: new Map<string, Record<string, unknown>>(),
     jobs: [
@@ -239,12 +247,14 @@ function preRunFixture() {
       if (path.endsWith("/pulls/7")) {
         return {
           state: state.pullState,
-          merge_commit_sha: state.currentSha,
+          merged: state.pullMerged,
+          merge_commit_sha: state.pullState === "closed" ? state.mergedSha : state.currentSha,
           base: { ref: state.pullBaseRef, sha: state.pullBaseSha, repo: { id: 100 } },
           head: { ref: state.pullHeadRef, sha: state.pullHeadSha, repo: { id: 100 } },
         };
       }
       if (path.endsWith("/git/ref/pull/7/merge")) {
+        if (state.pullState === "closed") throw new Error("Merged PR ref no longer exists");
         return { object: { sha: state.refSha } };
       }
       if (path.endsWith("/git/ref/heads/main")) {
@@ -258,13 +268,23 @@ function preRunFixture() {
         return { object: { sha: state.refSha } };
       }
       if (path.includes("/git/commits/")) {
+        const commitSha = path.split("/").at(-1) ?? "";
+        if (path.endsWith(`/${state.mergedSha}`)) {
+          return {
+            parents: [{ sha: state.mergedBase }],
+            tree: { sha: state.mergedTree },
+          };
+        }
         const current = state.currentSha !== mergeSha && path.endsWith(`/${state.currentSha}`);
         return {
           parents: [
             { sha: current ? state.currentMergeBase : baseSha },
             { sha: current ? state.currentMergeHead : sourceSha },
           ],
-          tree: { sha: current ? state.currentTree : state.testedTree },
+          tree: {
+            sha:
+              state.mergeTrees.get(commitSha) ?? (current ? state.currentTree : state.testedTree),
+          },
         };
       }
       if (path.includes("/compare/")) {
@@ -313,9 +333,13 @@ function preRunFixture() {
       if (check && init?.method === "PATCH") {
         await state.beforeCheckPatch?.();
         Object.assign(check, JSON.parse(String(init.body)));
+        if (state.losePatch) throw new Error("GitHub PATCH response was lost");
         return check;
       }
-      if (check) return check;
+      if (check) {
+        await state.beforeCheckRead?.(id);
+        return check;
+      }
       throw new Error(`Unexpected GitHub request: ${path}`);
     },
   };
@@ -372,6 +396,289 @@ async function boundMainWorkflowFixture() {
 }
 
 describe("pre-run App checks", () => {
+  async function equivalentMergeChecks() {
+    const fixture = preRunFixture();
+    const aliasSha = "f".repeat(40);
+    const sourceExternalId = `visonaut:pre:${mergeSha}`;
+    const aliasExternalId = `visonaut:pre:${aliasSha}`;
+    fixture.state.currentSha = aliasSha;
+    fixture.state.refSha = aliasSha;
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    await database
+      .prepare(`INSERT INTO pre_run_checks
+        (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
+          docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at)
+        VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'1','active','77',1,1,1),
+          (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'2','active',NULL,NULL,1,1)`)
+      .bind(
+        mergeSha,
+        sourceSha,
+        baseSha,
+        sourceExternalId,
+        aliasSha,
+        sourceSha,
+        baseSha,
+        aliasExternalId,
+      )
+      .run();
+    await database
+      .prepare(`INSERT INTO visonaut_runs
+        (id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,
+          plan_digest,plan_json,state,created_at)
+        VALUES ('1234','project','77',1,'pull_request',?,'pr:7','plan','{}','reviewing',1)`)
+      .bind(mergeSha)
+      .run();
+    fixture.state.checks.set("1", {
+      id: 1,
+      app: { id: 123 },
+      name: "Visonaut",
+      head_sha: mergeSha,
+      external_id: sourceExternalId,
+      status: "completed",
+      conclusion: "success",
+      details_url: "https://preview.example/runs/1234",
+    });
+    fixture.state.checks.set("2", {
+      id: 2,
+      app: { id: 123 },
+      name: "Visonaut",
+      head_sha: aliasSha,
+      external_id: aliasExternalId,
+      status: "in_progress",
+      conclusion: null,
+      details_url: `https://preview.example/pulls/7?check=${encodeURIComponent(aliasExternalId)}`,
+    });
+    return fixture;
+  }
+
+  it("retires the current equivalent merge check with a link to the signed result", async () => {
+    const fixture = await equivalentMergeChecks();
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")).toMatchObject({
+      status: "completed",
+      conclusion: "neutral",
+      details_url: "https://preview.example/runs/1234",
+      output: { title: "Equivalent merge check retired" },
+    });
+    expect(
+      await database.prepare("SELECT state FROM pre_run_checks WHERE check_id='2'").first(),
+    ).toEqual({ state: "docs_complete" });
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+  });
+
+  it("retires an older equivalent alias after GitHub regenerates the merge again", async () => {
+    const fixture = await equivalentMergeChecks();
+    fixture.state.currentSha = "e".repeat(40);
+    fixture.state.refSha = fixture.state.currentSha;
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")).toMatchObject({
+      status: "completed",
+      conclusion: "neutral",
+      details_url: "https://preview.example/runs/1234",
+    });
+  });
+
+  it("retires an equivalent alias after the PR is squash merged", async () => {
+    const fixture = await equivalentMergeChecks();
+    fixture.state.pullState = "closed";
+    fixture.state.pullMerged = true;
+    await database
+      .prepare("UPDATE visonaut_runs SET active=0,state='superseded' WHERE id='1234'")
+      .run();
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")).toMatchObject({
+      status: "completed",
+      conclusion: "neutral",
+      details_url: "https://preview.example/runs/1234",
+    });
+  });
+
+  it("does not use a retired run while the PR remains open", async () => {
+    const fixture = await equivalentMergeChecks();
+    await database
+      .prepare("UPDATE visonaut_runs SET active=0,state='superseded' WHERE id='1234'")
+      .run();
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+    expect(fixture.state.checks.get("2")?.status).toBe("in_progress");
+  });
+
+  it.each(["not merged", "base", "tree"] as const)(
+    "leaves an old alias pending when the closed PR has changed %s",
+    async (change) => {
+      const fixture = await equivalentMergeChecks();
+      fixture.state.pullState = "closed";
+      fixture.state.pullMerged = true;
+      if (change === "not merged") fixture.state.pullMerged = false;
+      if (change === "base") fixture.state.mergedBase = "e".repeat(40);
+      if (change === "tree") fixture.state.mergedTree = "2".repeat(40);
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "in_progress",
+        conclusion: null,
+      });
+    },
+  );
+
+  it("does not retire an alias when workflow binding wins the race", async () => {
+    const fixture = await equivalentMergeChecks();
+    fixture.state.beforeCheckRead = async (id) => {
+      if (id !== "2") return;
+      fixture.state.beforeCheckRead = undefined;
+      await database
+        .prepare(`UPDATE pre_run_checks SET workflow_run_id='78',workflow_attempt=1
+          WHERE check_id='2' AND state='active' AND workflow_run_id IS NULL`)
+        .run();
+    };
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+    expect(fixture.state.checks.get("2")?.status).toBe("in_progress");
+    expect(
+      await database
+        .prepare("SELECT state,workflow_run_id FROM pre_run_checks WHERE check_id='2'")
+        .first(),
+    ).toEqual({ state: "active", workflow_run_id: "78" });
+  });
+
+  it("prevents workflow binding after an alias retirement claim", async () => {
+    const fixture = await equivalentMergeChecks();
+    fixture.state.beforeCheckPatch = async () => {
+      const binding = await database
+        .prepare(`UPDATE pre_run_checks SET workflow_run_id='78',workflow_attempt=1
+          WHERE check_id='2' AND state='active' AND workflow_run_id IS NULL
+          RETURNING external_id`)
+        .first();
+      expect(binding).toBeNull();
+    };
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")?.conclusion).toBe("neutral");
+  });
+
+  it("confirms an alias retirement after a lost PATCH response", async () => {
+    const fixture = await equivalentMergeChecks();
+    fixture.state.losePatch = true;
+    const aliasExternalId = `visonaut:pre:${"f".repeat(40)}`;
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [aliasExternalId] });
+    expect(fixture.state.checks.get("2")?.conclusion).toBe("neutral");
+    await database.prepare("UPDATE pre_run_checks SET lease_until=0 WHERE check_id='2'").run();
+    fixture.state.losePatch = false;
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(
+      await database
+        .prepare("SELECT state,lease_until FROM pre_run_checks WHERE check_id='2'")
+        .first(),
+    ).toEqual({ state: "docs_complete", lease_until: null });
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+  });
+
+  it("rotates an expired retry that no longer matches so the next alias can retire", async () => {
+    const fixture = await equivalentMergeChecks();
+    const staleSha = "d".repeat(40);
+    const staleExternalId = `visonaut:pre:${staleSha}`;
+    fixture.state.mergeTrees.set(staleSha, "2".repeat(40));
+    await database
+      .prepare(`INSERT INTO pre_run_checks
+        (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
+          docs_only,external_id,check_id,state,lease_until,created_at,updated_at)
+        VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'3',
+          'docs_complete',0,1,0)`)
+      .bind(staleSha, sourceSha, baseSha, staleExternalId)
+      .run();
+    fixture.state.checks.set("3", {
+      id: 3,
+      app: { id: 123 },
+      name: "Visonaut",
+      head_sha: staleSha,
+      external_id: staleExternalId,
+      status: "in_progress",
+    });
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 1, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+    const rotated = await database
+      .prepare("SELECT updated_at FROM pre_run_checks WHERE check_id='3'")
+      .first<{ updated_at: number }>();
+    expect(rotated?.updated_at).toBeGreaterThan(1);
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 1, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")?.conclusion).toBe("neutral");
+  });
+
+  it("creates a new generation when a signed attempt later uses the retired merge", async () => {
+    const fixture = await equivalentMergeChecks();
+    await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github);
+    const aliasSha = "f".repeat(40);
+    fixture.state.posts = 2;
+    fixture.state.run.run_attempt = 2;
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    fixture.state.run.referenced_workflows = [
+      {
+        path: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${aliasSha}`,
+        ref: "refs/pull/7/merge",
+        sha: aliasSha,
+      },
+    ];
+    await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
+      workflowRunId: "77",
+      workflowAttempt: 2,
+      testedSha: aliasSha,
+      sourceHead: sourceSha,
+      targetHead: baseSha,
+      event: "pull_request",
+      ref: "refs/pull/7/merge",
+      pullRequestNumber: 7,
+    });
+    expect(fixture.state.checks.get("3")).toMatchObject({
+      head_sha: aliasSha,
+      external_id: `visonaut:pre:${aliasSha}:1`,
+      status: "in_progress",
+    });
+    expect(
+      await database
+        .prepare("SELECT generation,state,workflow_run_id FROM pre_run_checks WHERE check_id='3'")
+        .first(),
+    ).toEqual({ generation: 1, state: "active", workflow_run_id: "77" });
+  });
+
+  it.each(["head", "base", "tree"] as const)(
+    "does not pass an alias after the current merge %s changes",
+    async (change) => {
+      const fixture = await equivalentMergeChecks();
+      if (change === "head") fixture.state.pullHeadSha = "e".repeat(40);
+      if (change === "base") fixture.state.currentMergeBase = "e".repeat(40);
+      if (change === "tree") fixture.state.currentTree = "2".repeat(40);
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "in_progress",
+        conclusion: null,
+      });
+    },
+  );
+
   it.each([
     ["old", "01b78334223b47515b41f63f587308050a5dcdad", true],
     ["new", "c86f2dc5370fe07030a27af87979072f86afa8de", true],
