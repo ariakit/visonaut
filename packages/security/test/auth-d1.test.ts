@@ -131,6 +131,14 @@ describe("Better Auth 1.7.5 with native D1", () => {
       receivedAt: Date.now(),
     };
     expect(await persistWebhook(database, webhook)).toEqual({ processed: false });
+    expect(
+      await database
+        .prepare(
+          "SELECT payload_json, processed_at FROM github_webhook_delivery WHERE delivery_id = ?",
+        )
+        .bind(webhook.deliveryId)
+        .first(),
+    ).toEqual({ payload_json: JSON.stringify(webhook.payload), processed_at: null });
     expect(await persistWebhook(database, webhook)).toEqual({ processed: false });
     await expect(
       persistWebhook(database, { ...webhook, payloadDigest: "b".repeat(64) }),
@@ -152,7 +160,23 @@ describe("Better Auth 1.7.5 with native D1", () => {
         headers: new Headers({ authorization: `Bearer ${session.token}` }),
       }),
     ).toBeNull();
+    expect(
+      await database
+        .prepare(
+          "SELECT event, payload_digest, payload_json, processed_at FROM github_webhook_delivery WHERE delivery_id = ?",
+        )
+        .bind(webhook.deliveryId)
+        .first(),
+    ).toMatchObject({
+      event: webhook.event,
+      payload_digest: webhook.payloadDigest,
+      payload_json: "{}",
+      processed_at: expect.any(Number),
+    });
     expect(await persistWebhook(database, webhook)).toEqual({ processed: true });
+    await expect(
+      persistWebhook(database, { ...webhook, payloadDigest: "e".repeat(64) }),
+    ).rejects.toMatchObject({ status: 409 });
   });
   it("preserves a new login when a delayed processor repeats a settled revocation", async () => {
     const { auth, context, user, session } = await createSession();
