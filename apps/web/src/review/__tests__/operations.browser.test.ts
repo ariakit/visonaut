@@ -5,8 +5,8 @@ const status = {
   events: [
     {
       kind: "backup",
-      code: "rpo-exceeded",
-      subject: "freshness",
+      code: "backup-failed",
+      subject: "2026-09-22T00Z",
       firstSeenAt: 1790000000000,
       lastSeenAt: 1790000060000,
     },
@@ -25,7 +25,8 @@ test("operation alerts explain recovery and poll resolved events while the dashb
   );
   await page.goto(path);
   await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
+  await expect(page.getByText("a failed set is terminal", { exact: false })).toBeVisible();
   await expect(page.getByText("1 unresolved operation alert", { exact: false })).toBeVisible();
   await expect(
     page.getByText("No external notifications are sent.", { exact: false }),
@@ -40,7 +41,7 @@ test("operation alerts explain recovery and poll resolved events while the dashb
   await page.clock.fastForward(60000);
   await expect(page.getByRole("status")).toContainText("all alerts resolved");
   await expect(page.getByText("No unresolved operation alerts", { exact: false })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toHaveCount(0);
 });
 
 test("a new incident is announced while the alert popover is closed", async ({ page }) => {
@@ -143,11 +144,11 @@ test("alert refresh failure stays explicit and Retry alerts works with the keybo
   );
   await page.goto(path);
   await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   fail = true;
   await page.getByRole("button", { name: "Refresh alerts" }).click();
   await expect(page.getByRole("alert")).toContainText("Shown alerts may be out of date");
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   await page.getByRole("button", { name: "Dismiss popup" }).click();
   const failedTrigger = page.getByRole("button", {
     name: "Service attention: 1 cached alert; refresh failed",
@@ -171,11 +172,11 @@ test("permission denial on refresh removes private alert content", async ({ page
   );
   await page.goto(path);
   await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   denied = true;
   await page.getByRole("button", { name: "Refresh alerts" }).click();
   await expect(page.getByRole("alert")).toHaveText("Repository access required");
-  await expect(page.getByRole("heading", { name: "A recent backup is missing" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toHaveCount(0);
 });
 
 test("capacity alerts show measured usage, admission headroom, and capture slots", async ({

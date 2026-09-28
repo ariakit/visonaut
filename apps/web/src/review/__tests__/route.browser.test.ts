@@ -59,8 +59,8 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
         events: [
           {
             kind: "backup",
-            code: "rpo-exceeded",
-            subject: "freshness",
+            code: "backup-failed",
+            subject: "2026-09-22T00Z",
             firstSeenAt: 1790000000000,
             lastSeenAt: 1790000060000,
           },

@@ -103,17 +103,11 @@ function recovery(event: OperationEvent) {
     };
   }
   if (event.kind === "backup") {
-    return event.code === "rpo-exceeded"
-      ? {
-          title: "A recent backup is missing",
-          action:
-            "Check backup access and storage, then let the backup operation finish. Verify a completed backup from the last 24 hours.",
-        }
-      : {
-          title: "A backup needs attention",
-          action:
-            "Check backup access and storage. Correct the reported failure and retry the existing backup operation.",
-        };
+    return {
+      title: "A backup needs attention",
+      action:
+        "Check backup access and storage, then inspect the backup row state. An exporting or copying set may continue after the fault is fixed; a failed set is terminal and needs another recovery source.",
+    };
   }
   if (
     event.kind === "check-creation" ||
