@@ -96,13 +96,9 @@ export function databaseCapacityPolicy(env: Env): CapacityPolicy {
   const policy: CapacityPolicy = {
     databaseWarningBytes: positive(limits.databaseWarningBytes, "databaseWarningBytes"),
     databaseAdmissionBytes: positive(limits.databaseAdmissionBytes, "databaseAdmissionBytes"),
-    sqlWarningBytes: positive(limits.sqlWarningBytes, "sqlWarningBytes"),
-    sqlAdmissionBytes: positive(limits.sqlAdmissionBytes, "sqlAdmissionBytes"),
     maximumActiveRuns: positive(limits.maximumActiveRuns, "maximumActiveRuns"),
   };
   validateCapacityPolicy(policy);
-  if (policy.sqlAdmissionBytes >= operationsBudget(env).maximumDatabaseBytes)
-    throw new Error("SQL admission must leave headroom below the backup byte limit.");
   return policy;
 }
 

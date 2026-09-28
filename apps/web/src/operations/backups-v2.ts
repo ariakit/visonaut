@@ -81,6 +81,7 @@ async function readJson<T>(store: ObjectStore, key: string, maximum = 4 * 1024 *
 export async function backupDaily(
   context: OperationsContext,
   exporter: DatabaseExporter,
+  options: { allowNew?: boolean } = {},
 ): Promise<OperationReport> {
   const { database, budget } = context;
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
@@ -98,6 +99,9 @@ export async function backupDaily(
       .bind(id)
       .first<BackupRow>());
   if (existing && !["exporting", "copying"].includes(existing.state)) return report;
+  if (!existing && options.allowNew === false) {
+    return report;
+  }
   if (!existing) {
     await atomic(database, [
       noBackupDeletion(context),

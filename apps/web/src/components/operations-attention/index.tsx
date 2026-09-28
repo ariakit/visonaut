@@ -86,14 +86,9 @@ function parseStatus(value: unknown): OperationsStatus {
       databaseBytes: number("databaseBytes"),
       databaseWarningBytes: number("databaseWarningBytes"),
       databaseAdmissionBytes: number("databaseAdmissionBytes"),
-      sqlWarningBytes: number("sqlWarningBytes"),
-      sqlAdmissionBytes: number("sqlAdmissionBytes"),
       maximumActiveRuns: number("maximumActiveRuns"),
       activeRuns: number("activeRuns"),
       observedAt: number("observedAt"),
-      sqlBytes: "sqlBytes" in entry && entry.sqlBytes === null ? null : number("sqlBytes"),
-      sqlSnapshotAt:
-        "sqlSnapshotAt" in entry && entry.sqlSnapshotAt === null ? null : number("sqlSnapshotAt"),
     };
   }
   return { events, hasMore: value.hasMore, checkedAt: value.checkedAt, capacity };
@@ -104,7 +99,7 @@ function recovery(event: OperationEvent) {
     return {
       title: "Database capacity needs attention",
       action:
-        "New capture runs pause at the admission limit. Let existing runs finish, then review database and backup capacity. Preserve identity and review history.",
+        "New capture runs pause at the admission limit. Let existing runs finish, then review database size and retained history. Preserve identity and review history.",
     };
   }
   if (event.kind === "backup") {
@@ -361,12 +356,6 @@ export function OperationsAttention({
               Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
               {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
               before new runs pause.
-              <br />
-              Latest SQL backup:{" "}
-              {status.capacity.sqlBytes === null
-                ? "not measured yet"
-                : `${mebibytes(status.capacity.sqlBytes)}; ${mebibytes(status.capacity.sqlAdmissionBytes - status.capacity.sqlBytes)} before new runs pause`}
-              .
               <br />
               Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
               Capacity sampled {time(status.capacity.observedAt)}.

@@ -71,18 +71,22 @@ function pinLiveRuns(context: OperationsContext, id: string) {
 export async function backupDaily(
   context: OperationsContext,
   exporter: DatabaseExporter,
+  options: { allowNew?: boolean } = {},
 ): Promise<OperationReport> {
   const { database, budget } = context;
-  if (budget.objectsPerStep < 2 || budget.objectsPerStep > 1000)
-    throw new Error("Grouped backups require between 2 and 1000 objects per step.");
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const unfinished = await database
     .prepare(
       "SELECT * FROM operations_backups WHERE state IN ('exporting','copying') ORDER BY created_at LIMIT 1",
     )
     .first<BackupRow>();
-  if (unfinished?.format_version === 2) return backupDailyV2(context, exporter);
-  // Reserve half of the 24-hour recovery target for scheduling and copying.
+  if (unfinished?.format_version === 2) return backupDailyV2(context, exporter, options);
+  if (!unfinished && options.allowNew === false) {
+    return report;
+  }
+  if (budget.objectsPerStep < 2 || budget.objectsPerStep > 1000)
+    throw new Error("Grouped backups require between 2 and 1000 objects per step.");
+  // Preserve the legacy half-day identity for direct starts and unfinished sets.
   const now = new Date(context.now());
   const slot = `${now.toISOString().slice(0, 10)}T${now.getUTCHours() < 12 ? "00" : "12"}Z`;
   const id = unfinished?.id ?? slot;

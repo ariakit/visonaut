@@ -41,8 +41,6 @@ beforeAll(async () => {
           ...JSON.parse(String(configuration.vars?.VISONAUT_API_LIMITS)),
           databaseWarningBytes: 100000000,
           databaseAdmissionBytes: 200000000,
-          sqlWarningBytes: 100000000,
-          sqlAdmissionBytes: 200000000,
           maximumActiveRuns: 1,
         }),
         BETTER_AUTH_SECRET: "runtime-test-secret",
@@ -158,14 +156,10 @@ beforeEach(async () => {
   vi.spyOn(Date, "now").mockReturnValue(now);
   vi.spyOn(capacity, "monitorDatabaseCapacity").mockResolvedValue({
     databaseBytes: 1,
-    sqlBytes: null,
-    sqlSnapshotAt: null,
     activeRuns: 0,
     observedAt: now,
     databaseWarningBytes: 100000000,
     databaseAdmissionBytes: 200000000,
-    sqlWarningBytes: 100000000,
-    sqlAdmissionBytes: 200000000,
     maximumActiveRuns: 1,
   });
   vi.spyOn(api, "reconcileWebhooks").mockResolvedValue({ checked: 0, pending: [] });
@@ -293,21 +287,18 @@ describe("scheduler alert recovery", () => {
   });
 });
 
-it("reads a healthy native D1 size sample before the first SQL backup", async () => {
+it("reads a healthy native D1 size sample", async () => {
   vi.mocked(capacity.monitorDatabaseCapacity).mockRestore();
   const snapshot = await capacity.monitorDatabaseCapacity(
     env.DB,
     {
       databaseWarningBytes: 100000000,
       databaseAdmissionBytes: 200000000,
-      sqlWarningBytes: 100000000,
-      sqlAdmissionBytes: 200000000,
       maximumActiveRuns: 1,
     },
     now,
   );
   expect(snapshot.databaseBytes).toBeGreaterThan(0);
-  expect(snapshot.sqlBytes).toBeNull();
   expect(snapshot.activeRuns).toBe(0);
 });
 
