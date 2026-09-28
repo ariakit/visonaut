@@ -130,6 +130,7 @@ interface FixtureInput {
   captureProfileDigest?: string;
   measuredEnvironmentProfile?: boolean;
   realDigest?: boolean;
+  finalize?: boolean;
 }
 
 async function fixture(service: Service, input: FixtureInput) {
@@ -238,7 +239,9 @@ async function fixture(service: Service, input: FixtureInput) {
       });
     }
   }
-  await service.finalizeComparison({ comparisonId: `comparison-${input.id}`, now: 6 });
+  if (input.finalize !== false) {
+    await service.finalizeComparison({ comparisonId: `comparison-${input.id}`, now: 6 });
+  }
   return `comparison-${input.id}`;
 }
 
@@ -496,8 +499,13 @@ describe("full run and immutable comparison state", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     const now = vi.spyOn(Date, "now").mockReturnValue(6);
     try {
-      const comparisonId = await fixture(service, { id: "timed" });
-      await service.finalizeComparison({ comparisonId, now: 7 });
+      const comparisonId = await fixture(service, { id: "timed", finalize: false });
+      expect(
+        (await service.finalizeComparison({ comparisonId, now: 7 })).reviewReadyTransitioned,
+      ).toBe(true);
+      expect(
+        (await service.finalizeComparison({ comparisonId, now: 8 })).reviewReadyTransitioned,
+      ).toBe(false);
       expect(info).toHaveBeenCalledTimes(1);
       expect(JSON.parse(String(info.mock.calls[0]?.[0]))).toEqual({
         event: "comparison_ready_timing",
@@ -3292,7 +3300,10 @@ describe("closed stored-run recomparison", () => {
         codecVersion: "codec",
       },
     });
-    await service.finalizeComparison({ comparisonId: comparison.id, now: 24 });
+    expect(
+      (await service.finalizeComparison({ comparisonId: comparison.id, now: 24 }))
+        .reviewReadyTransitioned,
+    ).toBe(false);
     expect((await service.comparison(comparison.id)).state).toBe("ready");
     expect(await service.comparisonRows("comparison-closed")).toEqual(original);
     expect(liveAuthority(database)).toEqual(authority);

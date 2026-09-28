@@ -71,12 +71,27 @@ async function recoverDeadLetter(message: Message<unknown>, env: Env) {
   message.ack();
 }
 
-async function finishComparison(service: Service, comparisonId: string) {
+async function finishComparison(
+  service: Service,
+  comparisonId: string,
+  operations: Env["OPERATIONS"],
+) {
+  let reviewReadyTransitioned: boolean;
   try {
-    await service.finalizeComparison({ comparisonId, now: Date.now() });
+    ({ reviewReadyTransitioned } = await service.finalizeComparison({
+      comparisonId,
+      now: Date.now(),
+    }));
   } catch (error) {
     if (error instanceof IncompleteError || error instanceof ConflictError) return;
     throw error;
+  }
+  if (!reviewReadyTransitioned) return;
+  try {
+    await operations.send({ kind: "continue" });
+  } catch {
+    // The status outbox remains available to the five-minute scheduler.
+    console.error(JSON.stringify({ event: "comparison-status-wakeup-failed", comparisonId }));
   }
 }
 
@@ -100,7 +115,7 @@ async function consume(message: Message<unknown>, env: Env) {
       const state = await service.getComparisonTaskState(taskId);
       if (state?.state === "complete") {
         const completedTask = await service.getComparisonTask(taskId);
-        await finishComparison(service, completedTask.comparisonId);
+        await finishComparison(service, completedTask.comparisonId, env.OPERATIONS);
       }
       if (state?.state === "complete" || state?.state === "dead" || state?.state === "superseded") {
         message.ack();
@@ -128,7 +143,7 @@ async function consume(message: Message<unknown>, env: Env) {
       result,
       artifacts,
     });
-    await finishComparison(service, task.comparisonId);
+    await finishComparison(service, task.comparisonId, env.OPERATIONS);
     message.ack();
   } catch (error) {
     const code =

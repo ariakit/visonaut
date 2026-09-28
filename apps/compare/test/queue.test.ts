@@ -1,16 +1,89 @@
-import { expect, it, vi } from "vitest";
+import { Service } from "@visonaut/service";
+import { afterEach, expect, it, vi } from "vitest";
 import { withCodecCapacity } from "../src/capacity.ts";
 
 const recoverDeadLetteredComparison = vi.hoisted(() => vi.fn());
+const processComparisonTask = vi.hoisted(() => vi.fn());
 vi.mock("@visonaut/service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@visonaut/service")>()),
   recoverDeadLetteredComparison,
 }));
 vi.mock("@cloudflare/containers", () => ({ Container: class {} }));
 vi.mock("../src/codecs.ts", () => ({ codecsReady: Promise.resolve({}) }));
+vi.mock("../src/process.ts", () => ({ processComparisonTask }));
 
 const { default: worker } = await import("../src/index.ts");
 const env = { VISONAUT_COMPARISON_DEAD_LETTER_QUEUE: "comparison-dlq" } as Env;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  processComparisonTask.mockReset();
+});
+
+function claimedTask() {
+  vi.spyOn(Service.prototype, "claimComparisonTask")
+    .mockResolvedValueOnce({ comparisonId: "comparison" } as never)
+    .mockResolvedValueOnce(null);
+  vi.spyOn(Service.prototype, "getComparisonTaskState").mockResolvedValue({
+    state: "complete",
+  } as never);
+  vi.spyOn(Service.prototype, "getComparisonTask").mockResolvedValue({
+    comparisonId: "comparison",
+  } as never);
+  vi.spyOn(Service.prototype, "commitComparisonResult").mockResolvedValue(undefined as never);
+  processComparisonTask.mockResolvedValue({ result: { outcome: "unchanged" }, artifacts: [] });
+}
+
+function comparisonMessage() {
+  return { body: { taskId: "comparison:row" }, ack: vi.fn(), retry: vi.fn() };
+}
+
+it("wakes status delivery only for the first review-ready transition", async () => {
+  claimedTask();
+  vi.spyOn(Service.prototype, "finalizeComparison")
+    .mockResolvedValueOnce({ reviewReadyTransitioned: true } as never)
+    .mockResolvedValueOnce({ reviewReadyTransitioned: false } as never);
+  const send = vi.fn(async () => {});
+  const first = comparisonMessage();
+  const duplicate = comparisonMessage();
+
+  await worker.queue(
+    { queue: "comparisons", messages: [first, duplicate] } as MessageBatch<unknown>,
+    { ...env, VISONAUT_CODEC_BACKEND: "worker", OPERATIONS: { send } } as Env,
+  );
+
+  expect(send).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+  expect(first.ack).toHaveBeenCalledOnce();
+  expect(duplicate.ack).toHaveBeenCalledOnce();
+  expect(first.retry).not.toHaveBeenCalled();
+  expect(duplicate.retry).not.toHaveBeenCalled();
+  expect(processComparisonTask).toHaveBeenCalledOnce();
+});
+
+it("acknowledges committed work when the status wake fails", async () => {
+  claimedTask();
+  vi.spyOn(Service.prototype, "finalizeComparison").mockResolvedValue({
+    reviewReadyTransitioned: true,
+  } as never);
+  const fail = vi.spyOn(Service.prototype, "failComparisonTask");
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  const send = vi.fn(async () => {
+    throw new Error("Queue unavailable");
+  });
+  const message = comparisonMessage();
+
+  await worker.queue(
+    { queue: "comparisons", messages: [message] } as MessageBatch<unknown>,
+    { ...env, VISONAUT_CODEC_BACKEND: "worker", OPERATIONS: { send } } as Env,
+  );
+
+  expect(message.ack).toHaveBeenCalledOnce();
+  expect(message.retry).not.toHaveBeenCalled();
+  expect(fail).not.toHaveBeenCalled();
+  expect(error).toHaveBeenCalledWith(
+    JSON.stringify({ event: "comparison-status-wakeup-failed", comparisonId: "comparison" }),
+  );
+});
 
 it("delays a busy codec delivery, then recovers its exhausted receipt", async () => {
   const retry = vi.fn();

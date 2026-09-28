@@ -55,6 +55,10 @@
         "binding": "COMPARISONS",
         "queue": "visonaut-preview-comparisons",
       },
+      {
+        "binding": "OPERATIONS",
+        "queue": "visonaut-preview-operations",
+      },
     ],
     "consumers": [
       {
@@ -116,6 +120,10 @@
           {
             "binding": "COMPARISONS",
             "queue": "visonaut-production-comparisons",
+          },
+          {
+            "binding": "OPERATIONS",
+            "queue": "visonaut-production-operations",
           },
         ],
         "consumers": [
