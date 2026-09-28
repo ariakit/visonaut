@@ -1498,6 +1498,21 @@ export class Service {
     );
     statements.push(...this.touch(run, input.now));
     await atomic(this.database, statements);
+    // A stored-run recompare can start long after seal and skew ordinary-run timing.
+    if (comparison.ordinal === 1 && run.sealed_at !== null) {
+      const readyAt = Date.now();
+      console.info(
+        JSON.stringify({
+          event: "comparison_ready_timing",
+          runId: run.id,
+          comparisonId: comparison.id,
+          runKind: run.kind,
+          sealToComparisonMs: comparison.created_at - run.sealed_at,
+          comparisonToReadyMs: readyAt - comparison.created_at,
+          sealToReadyMs: readyAt - run.sealed_at,
+        }),
+      );
+    }
     return this.status(run.id);
   }
 

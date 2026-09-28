@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { canonicalJson, digestJson, type CaptureProfile } from "@visonaut/protocol";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { compareImages, selectedComparisonPolicy } from "../../compare/src/compare.ts";
 import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import { ConflictError, IncompleteError } from "./database.ts";
@@ -489,6 +489,31 @@ describe("rejection of inherited acceptance", () => {
 });
 
 describe("full run and immutable comparison state", () => {
+  it("logs the first comparison's seal-to-ready timing only once", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await setup(service);
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const now = vi.spyOn(Date, "now").mockReturnValue(6);
+    try {
+      const comparisonId = await fixture(service, { id: "timed" });
+      await service.finalizeComparison({ comparisonId, now: 7 });
+      expect(info).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(info.mock.calls[0]?.[0]))).toEqual({
+        event: "comparison_ready_timing",
+        runId: "timed",
+        comparisonId,
+        runKind: "main",
+        sealToComparisonMs: 1,
+        comparisonToReadyMs: 2,
+        sealToReadyMs: 3,
+      });
+    } finally {
+      now.mockRestore();
+      info.mockRestore();
+    }
+  });
+
   it("registers a page with bounded D1 work and rolls back conflicting originals", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
