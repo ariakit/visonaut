@@ -24,12 +24,15 @@ const metadata = {
   },
 };
 
-async function runFixture(
-  source: string,
-  retries = 0,
-  discovery = false,
-  extraArgs: string[] = [],
-) {
+interface FixtureOptions {
+  retries?: number;
+  discovery?: boolean;
+  extraArgs?: string[];
+  browserName?: "chromium" | "webkit";
+}
+
+async function runFixture(source: string, options: FixtureOptions = {}) {
+  const { retries = 0, discovery = false, extraArgs = [], browserName = "chromium" } = options;
   const directory = await mkdtemp(path.join(packageDirectory, ".fixture-"));
   const modules = path.join(directory, "node_modules");
   await mkdir(path.join(modules, "@visonaut"), { recursive: true });
@@ -48,7 +51,7 @@ async function runFixture(
     timeout: 10000,
     metadata,
     use: {
-      browserName: "chromium",
+      browserName,
       viewport: { width: 32, height: 32 },
       reducedMotion: "reduce",
       locale: "en-US",
@@ -82,7 +85,7 @@ async function runFixture(
   );
   await writeFile(
     path.join(directory, "capture.spec.ts"),
-    `import { test, expect } from '@playwright/test';\nimport { visual } from ${JSON.stringify(adapter)};\n${source}`,
+    `import { test, expect } from '@playwright/test';\nimport { visual, visualBatch } from ${JSON.stringify(adapter)};\n${source}`,
   );
   const result = await new Promise<{ code: number | null; output: string }>((resolve, reject) => {
     const child = spawn(
@@ -122,6 +125,154 @@ async function manifestAt(directory: string) {
 }
 
 describe("published adapter and reporter", () => {
+  it.each(["chromium", "webkit"] as const)(
+    "captures separate items from one stable %s full-page screenshot pair",
+    async (browserName) => {
+      await using fixture = await runFixture(
+        `
+        test('batch', async ({ page }) => {
+          await page.setViewportSize({ width: 64, height: 40 });
+          await page.setContent('<body style="margin:0;height:80px"><div style="position:absolute;left:8px;top:8px;width:16px;height:16px;background:red"></div><div style="position:absolute;left:24px;top:48px;width:16px;height:16px;background:blue"></div></body>');
+          const screenshot = page.screenshot.bind(page);
+          let screenshots = 0;
+          page.screenshot = async (options) => {
+            screenshots++;
+            return screenshot(options);
+          };
+          await visualBatch(page, {
+            variant: { key: 'light', browser: ${JSON.stringify(browserName)} },
+            items: [
+              { item: 'card/red', clip: { x: 8, y: 8, width: 16, height: 16 } },
+              { item: 'card/blue', clip: { x: 24, y: 48, width: 16, height: 16 } },
+            ],
+          });
+          expect(screenshots).toBe(2);
+        });
+      `,
+        { browserName },
+      );
+      expect(fixture.code, fixture.output).toBe(0);
+      const manifest = await manifestAt(fixture.directory);
+      expect(manifest.captures.map((capture) => [capture.itemKey, capture.ordinal])).toEqual([
+        ["card/red", 0],
+        ["card/blue", 1],
+      ]);
+      for (const [index, capture] of manifest.captures.entries()) {
+        const clip = { x: index === 0 ? 8 : 24, y: index === 0 ? 8 : 48, width: 16, height: 16 };
+        const profile = manifest.profiles.find((entry) => entry.digest === capture.profileDigest);
+        expect(profile?.profile.captureOptions).toMatchObject({
+          fullPage: true,
+          scale: "css",
+          captureMethod: "shared-full-page-crop-v1",
+          clip,
+        });
+        const bytes = await readFile(path.join(fixture.directory, "evidence", capture.image.path));
+        expect(await sha256(bytes)).toBe(capture.image.digest);
+        const image = PNG.sync.read(bytes);
+        expect([image.width, image.height]).toEqual([16, 16]);
+        const color = index === 0 ? [255, 0, 0, 255] : [0, 0, 255, 255];
+        for (let offset = 0; offset < image.data.length; offset += 4) {
+          expect([...image.data.subarray(offset, offset + 4)]).toEqual(color);
+        }
+      }
+    },
+    20000,
+  );
+
+  it("rejects a caught batch crop failure", async () => {
+    await using fixture = await runFixture(`
+      test('batch crop outside the screenshot', async ({ page }) => {
+        await page.setContent('<p>Capture</p>');
+        await visualBatch(page, {
+          variant: { key: 'light', browser: 'chromium' },
+          items: [
+            { item: 'card/valid', clip: { x: 0, y: 0, width: 10, height: 10 } },
+            { item: 'card/outside', clip: { x: 999, y: 0, width: 10, height: 10 } },
+          ],
+        }).catch(() => {});
+      });
+    `);
+    expect(fixture.code).toBe(1);
+    expect(fixture.output).toContain("required capture started but did not complete");
+    await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
+  }, 20000);
+
+  it("rejects a caught empty batch after a completed capture", async () => {
+    await using fixture = await runFixture(`
+      test('caught empty batch', async ({ page }) => {
+        await page.setContent('<p>Capture</p>');
+        const variant = { key: 'light', browser: 'chromium' };
+        await visual(page, { item: 'card/valid', variant });
+        await visualBatch(page, { variant, items: [] }).catch(() => {});
+      });
+    `);
+    expect(fixture.code).toBe(1);
+    expect(fixture.output).toContain("required capture started but did not complete");
+    await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
+  }, 20000);
+
+  it("rejects a batch when its second screenshot returns after the deadline", async () => {
+    await using fixture = await runFixture(`
+      test('late batch screenshot', async ({ page }) => {
+        await page.setContent('<p>Capture</p>');
+        const screenshot = page.screenshot.bind(page);
+        let calls = 0;
+        page.screenshot = async (options) => {
+          const bytes = await screenshot(options);
+          if (++calls === 2) {
+            const finish = Date.now() + 700;
+            while (Date.now() < finish) {}
+          }
+          return bytes;
+        };
+        await visualBatch(page, {
+          variant: { key: 'light', browser: 'chromium' },
+          timeout: 500,
+          items: [{ item: 'card/late', clip: { x: 0, y: 0, width: 32, height: 32 } }],
+        }).catch(() => {});
+        expect(calls).toBe(2);
+        console.log('late second screenshot reached');
+      });
+    `);
+    expect(fixture.code).toBe(1);
+    expect(fixture.output).toContain("late second screenshot reached");
+    expect(fixture.output).toContain("required capture started but did not complete");
+    await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
+  }, 20000);
+
+  it("gives shared crops a profile distinct from direct screenshots", async () => {
+    await using fixture = await runFixture(`
+      test('distinct capture methods', async ({ page }) => {
+        await page.setContent('<p>Capture</p>');
+        const clip = { x: 0, y: 0, width: 32, height: 32 };
+        const variant = { key: 'light', browser: 'chromium' };
+        await visualBatch(page, {
+          variant,
+          items: [{ item: 'card/batch', clip }],
+        });
+        await visual(page, {
+          item: 'card/direct',
+          variant,
+          screenshot: { fullPage: true, clip },
+        });
+      });
+    `);
+    expect(fixture.code, fixture.output).toBe(0);
+    const manifest = await manifestAt(fixture.directory);
+    const batch = manifest.captures.find((capture) => capture.itemKey === "card/batch");
+    const direct = manifest.captures.find((capture) => capture.itemKey === "card/direct");
+    expect(batch?.profileDigest).toBeDefined();
+    expect(direct?.profileDigest).toBeDefined();
+    expect(batch?.profileDigest).not.toBe(direct?.profileDigest);
+    const batchProfile = manifest.profiles.find((entry) => entry.digest === batch?.profileDigest);
+    const directProfile = manifest.profiles.find((entry) => entry.digest === direct?.profileDigest);
+    expect(batchProfile?.profile.captureOptions).toMatchObject({
+      captureMethod: "shared-full-page-crop-v1",
+      clip: { x: 0, y: 0, width: 32, height: 32 },
+    });
+    expect(directProfile?.profile.captureOptions).not.toHaveProperty("captureMethod");
+  }, 20000);
+
   it("captures when fonts.ready stays pending but all font faces are settled", async () => {
     await using fixture = await runFixture(`
       test('settled font faces', async ({ page }) => {
@@ -185,7 +336,7 @@ describe("published adapter and reporter", () => {
         expect(info.retry).toBe(1);
       });
     `,
-      1,
+      { retries: 1 },
     );
     expect(fixture.code, fixture.output).toBe(0);
     const manifest = await manifestAt(fixture.directory);
@@ -238,7 +389,7 @@ describe("published adapter and reporter", () => {
     async (_, source, retries) => {
       await using fixture = await runFixture(
         `test('fails safely', async ({page}) => { ${source} });`,
-        retries,
+        { retries },
       );
       expect(fixture.code).toBe(1);
       await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
@@ -253,8 +404,7 @@ it("discovers candidate identities under the immutable full collection configura
     await page.setContent('<p>Added item</p>');
     await visual(page, { item: 'new/item', variant: { key: 'new-variant', browser: 'chromium' } });
   });`,
-    0,
-    true,
+    { discovery: true },
   );
   expect(fixture.code, fixture.output).toBe(0);
   const manifest = await manifestAt(fixture.directory);
@@ -276,9 +426,7 @@ it("refuses a command-line subset of the trusted collection", async () => {
     await page.setContent('<p>Added item</p>');
     await visual(page, { item: 'new/item', variant: { key: 'new-variant', browser: 'chromium' } });
   });`,
-    0,
-    true,
-    ["--grep", "candidate"],
+    { discovery: true, extraArgs: ["--grep", "candidate"] },
   );
   expect(fixture.code).toBe(1);
   expect(fixture.output).toContain("command-line selection");
