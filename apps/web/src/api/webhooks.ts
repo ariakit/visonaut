@@ -143,7 +143,7 @@ async function settleAppLifecycle(
       : []),
     database
       .prepare(
-        "UPDATE github_webhook_delivery SET processed_at=? WHERE delivery_id=? AND event=? AND payload_digest=? AND processed_at IS NULL",
+        "UPDATE github_webhook_delivery SET processed_at=?, payload_json='{}' WHERE delivery_id=? AND event=? AND payload_digest=? AND processed_at IS NULL",
       )
       .bind(Date.now(), ...identity),
   ]);
@@ -299,7 +299,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
   }
   await context.database
     .prepare(
-      "UPDATE github_webhook_delivery SET processed_at = ? WHERE delivery_id = ? AND payload_digest = ?",
+      "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?",
     )
     .bind(Date.now(), webhook.deliveryId, webhook.payloadDigest)
     .run();

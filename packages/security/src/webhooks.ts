@@ -144,7 +144,7 @@ export async function revokeGitHubAuthorization(
       .bind(`webhook:${webhook.deliveryId}`, userId, webhook.receivedAt, ...identity),
     database
       .prepare(
-        "UPDATE github_webhook_delivery SET processed_at = ? WHERE delivery_id = ? AND event = ? AND payload_digest = ? AND processed_at IS NULL",
+        "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND event = ? AND payload_digest = ? AND processed_at IS NULL",
       )
       .bind(Date.now(), ...identity),
   ]);

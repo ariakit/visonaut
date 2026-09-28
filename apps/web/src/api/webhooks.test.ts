@@ -2275,8 +2275,27 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
     const result = await deliver("ping", payload);
     expect(result.response?.status).toBe(202);
     expect(await processed(result.deliveryId)).toBeTypeOf("number");
+    const settled = await database
+      .prepare(
+        "SELECT event, payload_digest, payload_json FROM github_webhook_delivery WHERE delivery_id=?",
+      )
+      .bind(result.deliveryId)
+      .first<{ event: string; payload_digest: string; payload_json: string }>();
+    expect(settled).toMatchObject({
+      event: "ping",
+      payload_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      payload_json: "{}",
+    });
     expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
     expect((await deliver("ping", payload, result.deliveryId)).response?.status).toBe(202);
+    expect(
+      await database
+        .prepare(
+          "SELECT payload_digest, payload_json FROM github_webhook_delivery WHERE delivery_id=?",
+        )
+        .bind(result.deliveryId)
+        .first(),
+    ).toEqual({ payload_digest: settled?.payload_digest, payload_json: "{}" });
     expect(await count("session")).toBe(1);
     expect(await count("auth_audit")).toBe(0);
   });
@@ -2406,6 +2425,12 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
       deliveryId = result.deliveryId;
       expect(result.response?.status).toBe(202);
       expect(await processed(deliveryId)).toBeNull();
+      expect(
+        await database
+          .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+          .bind(deliveryId)
+          .first(),
+      ).toEqual({ payload_json: JSON.stringify({ action: "deleted", installation, sender }) });
       expect(await count("session")).toBe(1);
       expect(await count("auth_audit")).toBe(0);
     } finally {
@@ -2413,6 +2438,12 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
     }
     expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 1, pending: [] });
     expect(await processed(deliveryId)).toBeTypeOf("number");
+    expect(
+      await database
+        .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+        .bind(deliveryId)
+        .first(),
+    ).toEqual({ payload_json: "{}" });
     expect(await count("session")).toBe(0);
     expect(await count("auth_audit")).toBe(1);
   });
@@ -2425,6 +2456,12 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
     });
     expect(result.response?.status).toBe(202);
     expect(await processed(result.deliveryId)).toBeTypeOf("number");
+    expect(
+      await database
+        .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+        .bind(result.deliveryId)
+        .first(),
+    ).toEqual({ payload_json: "{}" });
     const rejected = await deliver("push", {
       repository: { id: 100 },
       installation: { id: 999 },
@@ -2465,5 +2502,65 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
     ).rejects.toThrow();
     expect(await count("session")).toBe(1);
     expect(await processed(deliveryId)).toBeNull();
+  });
+
+  it("backfills at most 250 settled payloads per statement without changing pending receipts", async () => {
+    await database
+      .prepare(`WITH RECURSIVE numbers(n) AS (
+      SELECT 1 UNION ALL SELECT n + 1 FROM numbers WHERE n < 251
+    ) INSERT INTO github_webhook_delivery(
+      delivery_id, event, payload_digest, payload_json, received_at, processed_at
+    ) SELECT 'historical-' || n, 'ping', printf('%064d', n), '{"historic":true}', 1, 1
+    FROM numbers`)
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_delivery(delivery_id,event,payload_digest,payload_json,received_at) VALUES('pending','ping','pending-digest','{\"retry\":true}',1)",
+      )
+      .run();
+    const statement = await readFile(
+      new URL("../../../../docs/operations/compact-processed-webhooks.sql", import.meta.url),
+      "utf8",
+    );
+    await database.prepare(statement).run();
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(*) AS remaining FROM github_webhook_delivery WHERE processed_at IS NOT NULL AND payload_json != '{}'",
+        )
+        .first(),
+    ).toEqual({ remaining: 1 });
+    expect(
+      await database
+        .prepare(
+          "SELECT event,payload_digest,payload_json,processed_at FROM github_webhook_delivery WHERE delivery_id='pending'",
+        )
+        .first(),
+    ).toEqual({
+      event: "ping",
+      payload_digest: "pending-digest",
+      payload_json: '{"retry":true}',
+      processed_at: null,
+    });
+    await database.prepare(statement).run();
+    expect(
+      await database
+        .prepare(
+          "SELECT COUNT(*) AS remaining FROM github_webhook_delivery WHERE processed_at IS NOT NULL AND payload_json != '{}'",
+        )
+        .first(),
+    ).toEqual({ remaining: 0 });
+    expect(
+      await database
+        .prepare(
+          "SELECT event,payload_digest,payload_json,processed_at FROM github_webhook_delivery WHERE delivery_id='historical-251'",
+        )
+        .first(),
+    ).toEqual({
+      event: "ping",
+      payload_digest: "0".repeat(61) + "251",
+      payload_json: "{}",
+      processed_at: 1,
+    });
   });
 });
