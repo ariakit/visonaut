@@ -13,7 +13,7 @@ import {
 import { workflowSourceDigest } from "@visonaut/protocol";
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
-import { completeWorkflowJobs, jobExecutedInAttempt } from "./jobs.js";
+import { completeWorkflowJobs } from "./jobs.js";
 import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
 import { stagedAttemptRetentionMs } from "./workflow-retention.js";
 
@@ -203,7 +203,7 @@ export async function candidateForWebhook(
   return candidate;
 }
 
-/** A main push can start a check only after the trusted App workflow reaches main. */
+/** A main push can record a candidate only after the trusted App workflow reaches main. */
 export async function hasPinnedMainWorkflow(
   context: ApiContext,
   github: GitHubClient,
@@ -719,15 +719,23 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
   if (candidate.kind !== "main") return;
   const previous = await storedCheck(context, candidate.testedSha);
   if (!previous || previous.kind === "main") return;
-  if (previous.repository_id !== github.repositoryId || !previous.check_id) {
+  if (previous.repository_id !== github.repositoryId) {
     throw new SecurityError("check_conflict", 409, "The previous commit check is unavailable.");
   }
-  const check = await verifiedCheck(github, previous, previous.check_id);
-  if (
-    check.status !== "completed" ||
-    (check.conclusion !== "success" && check.conclusion !== "neutral")
+  if (previous.check_id) {
+    const check = await verifiedCheck(github, previous, previous.check_id);
+    if (
+      check.status !== "completed" ||
+      (check.conclusion !== "success" && check.conclusion !== "neutral")
+    ) {
+      throw new SecurityError("check_conflict", 409, "The previous commit check has not passed.");
+    }
+  } else if (
+    previous.state !== "pending" ||
+    previous.request_started ||
+    previous.workflow_run_id !== null
   ) {
-    throw new SecurityError("check_conflict", 409, "The previous commit check has not passed.");
+    throw new SecurityError("check_conflict", 409, "The previous commit check is unavailable.");
   }
   const generation = previous.generation + 1;
   const now = Date.now();
@@ -754,7 +762,23 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
     .run();
 }
 
-/** A signed candidate creates one initial App check before any capture job starts. */
+/** Preserve candidate provenance without publishing a GitHub check. */
+export async function recordPreRunCandidate(
+  context: ApiContext,
+  github: GitHubClient,
+  candidate: Candidate,
+) {
+  await storeCandidateCheck({
+    context,
+    github,
+    candidate,
+    currentCandidate: () => Promise.resolve(candidate),
+    validateBeforeCreation: false,
+    createCheck: false,
+  });
+}
+
+/** Keep this path for checks created after a signed submit is verified. */
 export async function ensurePreRunCheck(
   context: ApiContext,
   github: GitHubClient,
@@ -768,6 +792,7 @@ export async function ensurePreRunCheck(
     candidate,
     currentCandidate,
     validateBeforeCreation: false,
+    createCheck: true,
   });
 }
 
@@ -777,6 +802,7 @@ interface StoreCandidateCheckParams {
   candidate: Candidate;
   currentCandidate: () => Promise<Candidate | null>;
   validateBeforeCreation: boolean;
+  createCheck: boolean;
 }
 
 async function storeCandidateCheck({
@@ -785,6 +811,7 @@ async function storeCandidateCheck({
   candidate,
   currentCandidate,
   validateBeforeCreation,
+  createCheck,
 }: StoreCandidateCheckParams) {
   const now = Date.now();
   await mainSuccessor(context, github, candidate);
@@ -820,6 +847,7 @@ async function storeCandidateCheck({
   if (!row || row.repository_id !== github.repositoryId || !sameCandidate(row, candidate)) {
     throw new SecurityError("check_conflict", 409, "The check identity has different provenance.");
   }
+  if (!createCheck) return;
   if (validateBeforeCreation) {
     const current = await currentCandidate();
     if (!current || !sameCandidate(row, current)) {
@@ -832,27 +860,24 @@ async function storeCandidateCheck({
   });
 }
 
-async function dispatchCandidate(
+async function mainWorkflowCandidate(
   context: ApiContext,
   github: GitHubClient,
   runId: string,
   expectedAttempt: number,
 ) {
   const configuration = context.configuration.workflowOwned;
-  if (
-    !configuration ||
-    !context.configuration.allowMainDispatch ||
-    context.configuration.auth.environment === "production"
-  ) {
-    return null;
-  }
+  if (!configuration) return null;
   const root = `/repos/${github.repository}`;
   const run = object(await github.request(`${root}/actions/runs/${runId}`));
   const testedSha = sha(run.head_sha);
   if (
     numericId(run.id) !== runId ||
     run.run_attempt !== expectedAttempt ||
-    run.event !== "workflow_dispatch" ||
+    (run.event !== "push" &&
+      (run.event !== "workflow_dispatch" ||
+        !context.configuration.allowMainDispatch ||
+        context.configuration.auth.environment === "production")) ||
     run.head_branch !== "main" ||
     run.path !== configuration.callerWorkflowPath ||
     numericId(object(run.repository).id) !== github.repositoryId ||
@@ -1658,6 +1683,36 @@ export async function ensureSignedAttemptCheck(
         return current && sameCandidate(current, signedCandidate) ? signedCandidate : null;
       },
       validateBeforeCreation: true,
+      createCheck: true,
+    });
+  }
+  if (
+    (identity.event === "push" || identity.event === "workflow_dispatch") &&
+    (await storedCheck(context, identity.testedSha))?.kind !== "main"
+  ) {
+    const signedCandidate = await mainWorkflowCandidate(
+      context,
+      github,
+      identity.workflowRunId,
+      identity.workflowAttempt,
+    );
+    if (!signedCandidate || signedCandidate.testedSha !== identity.testedSha) {
+      throw new SecurityError(
+        "workflow_candidate",
+        503,
+        "The signed main candidate is unavailable.",
+      );
+    }
+    await storeCandidateCheck({
+      context,
+      github,
+      candidate: signedCandidate,
+      currentCandidate: async () => {
+        const current = await workflowCandidate({ context, github, run });
+        return current && sameCandidate(current, signedCandidate) ? signedCandidate : null;
+      },
+      validateBeforeCreation: true,
+      createCheck: true,
     });
   }
   const candidate = await workflowCandidate({
@@ -1679,10 +1734,23 @@ export async function ensureSignedAttemptCheck(
   ) {
     throw new SecurityError("workflow_candidate", 503, "The signed pull request changed.");
   }
-  await bindWorkflowCheck(context, github, run, candidate);
+  await ensureStoredCheck(context, github, candidate, async () => {
+    const current = await workflowCandidate({
+      context,
+      github,
+      run,
+      testedSha: identity.testedSha,
+    });
+    return current?.external_id === candidate.external_id;
+  });
+  const ready = await storedExternalId(context, candidate.external_id);
+  if (!ready) {
+    throw new SecurityError("check_pending", 503, "The signed submit check is unavailable.");
+  }
+  await bindWorkflowCheck(context, github, run, ready);
 }
 
-/** A terminal pinned workflow without successful signed jobs fails its App check. */
+/** A terminal pinned workflow settles only a check started by signed submit. */
 export async function settlePreRunWorkflow(
   context: ApiContext,
   github: GitHubClient,
@@ -1733,7 +1801,7 @@ export async function settlePreRunWorkflow(
     );
   }
   if (run.event === "workflow_dispatch") {
-    const candidate = await dispatchCandidate(context, github, runId, Number(run.run_attempt));
+    const candidate = await mainWorkflowCandidate(context, github, runId, Number(run.run_attempt));
     if (!candidate) {
       throw new SecurityError(
         "workflow_candidate",
@@ -1741,9 +1809,7 @@ export async function settlePreRunWorkflow(
         "The signed main dispatch candidate is unavailable.",
       );
     }
-    await ensurePreRunCheck(context, github, candidate, webhook, () =>
-      dispatchCandidate(context, github, runId, Number(run.run_attempt)),
-    );
+    await recordPreRunCandidate(context, github, candidate);
   }
   let candidate: PreRunCheck | null;
   try {
@@ -1767,35 +1833,13 @@ export async function settlePreRunWorkflow(
     return "historical" as const;
   }
   if (!candidate || candidate.docs_only || candidate.state === "docs_complete") return;
-  if (
-    run.run_attempt > 1 &&
-    candidate.workflow_run_id === runId &&
-    candidate.workflow_attempt !== null &&
-    candidate.workflow_attempt < Number(run.run_attempt) &&
-    !(await attemptCheck(context, runId, Number(run.run_attempt)))
-  ) {
-    const jobs = await completeWorkflowJobs(github, runId, Number(run.run_attempt));
-    if (jobs.length === 0) return;
-    const attempt = object(
-      await github.request(
-        `/repos/${github.repository}/actions/runs/${runId}/attempts/${run.run_attempt}`,
-      ),
-    );
-    if (numericId(attempt.id) !== runId || attempt.run_attempt !== run.run_attempt) {
-      throw new SecurityError("workflow_identity", 503, "The workflow attempt changed.");
-    }
-    const reranPinnedJob = jobs.some((job) => {
-      const name = job.name;
-      if (
-        typeof name !== "string" ||
-        (!name.startsWith(configuration.captureJobPrefix) && name !== configuration.submitJobName)
-      ) {
-        return false;
-      }
-      return jobExecutedInAttempt(job, attempt.run_started_at);
-    });
-    // GitHub copies successful jobs into a Gate-only rerun's new attempt list.
-    if (!reranPinnedJob) return;
+  if (!candidate.check_id) return;
+  if (!(await attemptCheck(context, runId, run.run_attempt))) {
+    // A webhook may bind a legacy pending check, but only signed Submit can
+    // create a successor after a prior workflow attempt.
+    if (candidate.workflow_run_id !== null) return;
+    const unbound = await verifiedCheck(github, candidate, candidate.check_id);
+    if (unbound.status === "completed") return;
   }
   const row = await bindWorkflowCheck(context, github, run, candidate);
   if (webhook.payload.action !== "completed") return;

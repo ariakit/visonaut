@@ -15,8 +15,8 @@ import { trySealRun } from "./ingest.js";
 import { sameCurrentMergeTree } from "./merge.js";
 import {
   candidateForWebhook,
-  ensurePreRunCheck,
   hasPinnedMainWorkflow,
+  recordPreRunCandidate,
   settlePreRunWorkflow,
 } from "./pre-run.js";
 import { materializeWorkflowRun } from "./workflow-materialize.js";
@@ -164,7 +164,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     const github = await createGitHubClient(context.configuration.github);
     const candidate = await candidateForWebhook(github, webhook);
     if (candidate && (await hasPinnedMainWorkflow(context, github, candidate.testedSha))) {
-      await ensurePreRunCheck(context, github, candidate, webhook);
+      await recordPreRunCandidate(context, github, candidate);
     }
   }
   if (webhook.event === "merge_group") {
@@ -179,7 +179,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
       if (context.configuration.workflowOwned) {
         const github = await createGitHubClient(context.configuration.github);
         const candidate = await candidateForWebhook(github, webhook);
-        if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
+        if (candidate) await recordPreRunCandidate(context, github, candidate);
       }
     } else if (webhook.payload.action === "destroyed") {
       const group = object(webhook.payload.merge_group);
@@ -294,7 +294,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     }
     if (context.configuration.workflowOwned) {
       const candidate = await candidateForWebhook(github, webhook);
-      if (candidate) await ensurePreRunCheck(context, github, candidate, webhook);
+      if (candidate) await recordPreRunCandidate(context, github, candidate);
     }
   }
   await context.database
