@@ -288,6 +288,15 @@ describe("public commands under temporary service backpressure", () => {
     );
     expect(result.code).toBe(0);
     expect(received).toEqual([imageBytes, imageBytes]);
-    expect(JSON.parse(result.stdout)).toMatchObject({ shardStaged: true, visualApproval: false });
+    const output = JSON.parse(result.stdout);
+    expect(output).toMatchObject({
+      shardStaged: true,
+      visualApproval: false,
+      uploadedImages: 1,
+      imagePutBytes: imageBytes.length * 2,
+      validationBusyRetries: 1,
+    });
+    expect(output.imagePutRetryWaitMs).toBeGreaterThanOrEqual(100);
+    expect(output.imagePutElapsedMs).toBeGreaterThanOrEqual(output.imagePutRetryWaitMs);
   });
 });

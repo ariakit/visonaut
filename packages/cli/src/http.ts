@@ -43,6 +43,8 @@ interface RequestParams {
   empty?: boolean;
   retryUnavailable?: boolean;
   maximumResponseBytes?: number;
+  onAttempt?: () => void;
+  onRetryWait?: (code: unknown, elapsedMs: number) => void;
 }
 
 async function responseJson(
@@ -105,6 +107,8 @@ export async function request({
   empty,
   retryUnavailable = false,
   maximumResponseBytes = MAX_RESPONSE_BYTES,
+  onAttempt,
+  onRetryWait,
 }: RequestParams): Promise<unknown> {
   if (!Number.isSafeInteger(maximumResponseBytes) || maximumResponseBytes < 1) {
     throw new CliError("The response size limit is invalid.");
@@ -123,6 +127,7 @@ export async function request({
       if (remaining <= 0) {
         throw new CliError("The request timed out. Check the service and retry.");
       }
+      onAttempt?.();
       const response = await fetch(url, {
         method,
         headers,
@@ -176,7 +181,9 @@ export async function request({
           (error?.code === "validation_busy" || error?.code === "service_unavailable") &&
           performance.now() + delay < deadline
         ) {
+          const waitStarted = performance.now();
           await new Promise((resolve) => setTimeout(resolve, delay));
+          onRetryWait?.(error.code, performance.now() - waitStarted);
           continue;
         }
       }

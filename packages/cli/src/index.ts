@@ -414,6 +414,10 @@ async function uploadShard({
   uploadedImages: number;
   reusedImages: number;
   elapsedMs: number;
+  imagePutElapsedMs: number;
+  imagePutBytes: number;
+  imagePutRetryWaitMs: number;
+  validationBusyRetries: number;
   reservation: ReserveRunResponse;
 }> {
   const started = performance.now();
@@ -426,6 +430,10 @@ async function uploadShard({
   const completed = new Set<string>();
   let uploadedImages = 0;
   let reusedCount = 0;
+  let imagePutElapsedMs = 0;
+  let imagePutBytes = 0;
+  let imagePutRetryWaitMs = 0;
+  let validationBusyRetries = 0;
   let lastReportedReused = 0;
   let completedSinceReservation = 0;
   while (true) {
@@ -557,6 +565,7 @@ async function uploadShard({
         renewalRequired = true;
         break;
       }
+      const putStarted = performance.now();
       await request({
         url: new URL(TRANSPORT.upload(upload.ticket), origin),
         token: reservation.capability,
@@ -565,7 +574,17 @@ async function uploadShard({
         mediaType: capture.image.mediaType,
         empty: true,
         retryUnavailable: true,
+        onAttempt: () => {
+          imagePutBytes += bytes.byteLength;
+        },
+        onRetryWait: (code, elapsedMs) => {
+          imagePutRetryWaitMs += elapsedMs;
+          if (code === "validation_busy") {
+            validationBusyRetries++;
+          }
+        },
       });
+      imagePutElapsedMs += performance.now() - putStarted;
       completed.add(upload.imageDigest);
       uploadedImages++;
       completedSinceReservation++;
@@ -574,10 +593,17 @@ async function uploadShard({
       progress?.(
         `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
       );
+      progress?.(
+        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait, ${validationBusyRetries} validation_busy retries.\n`,
+      );
       return {
         uploadedImages,
         reusedImages: reusedCount,
         elapsedMs: Math.round(performance.now() - started),
+        imagePutElapsedMs: Math.round(imagePutElapsedMs),
+        imagePutBytes,
+        imagePutRetryWaitMs: Math.round(imagePutRetryWaitMs),
+        validationBusyRetries,
         reservation,
       };
     }
@@ -755,6 +781,10 @@ export async function runCli({
           uploadedImages: uploaded.uploadedImages,
           reusedImages: uploaded.reusedImages,
           transferElapsedMs: uploaded.elapsedMs,
+          imagePutElapsedMs: uploaded.imagePutElapsedMs,
+          imagePutBytes: uploaded.imagePutBytes,
+          imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
+          validationBusyRetries: uploaded.validationBusyRetries,
           visualApproval: false,
         });
       } else {
@@ -775,6 +805,10 @@ export async function runCli({
         uploadedImages: uploaded.uploadedImages,
         reusedImages: uploaded.reusedImages,
         transferElapsedMs: uploaded.elapsedMs,
+        imagePutElapsedMs: uploaded.imagePutElapsedMs,
+        imagePutBytes: uploaded.imagePutBytes,
+        imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
+        validationBusyRetries: uploaded.validationBusyRetries,
         shardStaged: true,
         visualApproval: false,
       });
