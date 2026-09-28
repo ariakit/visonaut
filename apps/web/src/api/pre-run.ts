@@ -1622,7 +1622,7 @@ async function bindWorkflowCheck(
   return (await attemptCheck(context, runId, attempt)) ?? next;
 }
 
-/** Bind a fresh check when a signed capture or submit job really reruns. */
+/** Bind the check when a signed Submit attempt requests its transfer key. */
 export async function ensureSignedAttemptCheck(
   context: ApiContext,
   github: GitHubClient,
