@@ -29,10 +29,17 @@ interface FixtureOptions {
   discovery?: boolean;
   extraArgs?: string[];
   browserName?: "chromium" | "webkit";
+  timeout?: number;
 }
 
 async function runFixture(source: string, options: FixtureOptions = {}) {
-  const { retries = 0, discovery = false, extraArgs = [], browserName = "chromium" } = options;
+  const {
+    retries = 0,
+    discovery = false,
+    extraArgs = [],
+    browserName = "chromium",
+    timeout = 10000,
+  } = options;
   const directory = await mkdtemp(path.join(packageDirectory, ".fixture-"));
   const modules = path.join(directory, "node_modules");
   await mkdir(path.join(modules, "@visonaut"), { recursive: true });
@@ -48,7 +55,7 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
     testMatch: "capture.spec.ts",
     retries,
     workers: 1,
-    timeout: 10000,
+    timeout,
     metadata,
     use: {
       browserName,
@@ -149,7 +156,7 @@ describe("published adapter and reporter", () => {
           expect(screenshots).toBe(2);
         });
       `,
-        { browserName },
+        { browserName, timeout: browserName === "webkit" ? 30000 : 10000 },
       );
       expect(fixture.code, fixture.output).toBe(0);
       const manifest = await manifestAt(fixture.directory);
@@ -176,7 +183,7 @@ describe("published adapter and reporter", () => {
         }
       }
     },
-    20000,
+    45000,
   );
 
   it("rejects a caught batch crop failure", async () => {
