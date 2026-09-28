@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.3.6
+
+### Patch Changes
+
+- [`598842b`](https://github.com/ariakit/visonaut/commit/598842b86a796e1d144c0cf55155096c89e99dac): Reduced waiting during large unchanged-image submissions by allowing four reuse-proof pages to run together, twice the previous limit, without changing page sizes or request counts.
+
 ## 0.3.5
 
 ### Patch Changes
