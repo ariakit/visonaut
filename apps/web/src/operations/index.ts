@@ -56,7 +56,7 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     ["checks", () => deliverGitHubStatuses(context)],
     ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
-    ["backup", () => backupDaily(context, exporter)],
+    ["backup", () => backupDaily(context, exporter, { allowNew: false })],
     ["historical-archive", () => archiveHistoricalComparisons(context)],
     ["history", () => archiveClosedRuns(context)],
     ["reference-retention", () => expireComparisonReferences(context)],
@@ -83,16 +83,6 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     }
   }
   await expireExports(context);
-  const last = await context.database
-    .prepare("SELECT MAX(created_at) AS time FROM operations_backups WHERE state='complete'")
-    .first<{ time: number | null }>();
-  if (!last?.time || last.time < context.now() - 24 * 60 * 60 * 1000)
-    await recordEvent(context.database, {
-      kind: "backup",
-      subject: "freshness",
-      code: "rpo-exceeded",
-      now: context.now(),
-    });
-  else await resolveEvents(context.database, "backup", "freshness", context.now());
+  await resolveEvents(context.database, "backup", "freshness", context.now());
   return { reports, hasMore: Object.values(reports).some((report) => report.hasMore) };
 }

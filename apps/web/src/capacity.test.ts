@@ -6,8 +6,6 @@ import { checkRunAdmission, monitorDatabaseCapacity, type CapacityPolicy } from 
 const policy: CapacityPolicy = {
   databaseWarningBytes: 1000,
   databaseAdmissionBytes: 2000,
-  sqlWarningBytes: 1000,
-  sqlAdmissionBytes: 2000,
   maximumActiveRuns: 1,
 };
 const identity = { projectId: "project", externalRunId: "new", attempt: 1 };
@@ -25,7 +23,7 @@ function measure(database: TestDatabase, bytes: number | undefined) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("database capacity admission", () => {
-  it("uses a fresh physical sample and permits bootstrap before the first SQL backup", async () => {
+  it("uses a fresh physical sample to admit a new run", async () => {
     using database = new TestDatabase();
     measure(database, 500);
     await expect(checkRunAdmission(database, policy, identity, 1)).resolves.toEqual({
@@ -33,7 +31,6 @@ describe("database capacity admission", () => {
     });
     expect(await monitorDatabaseCapacity(database, policy, 2)).toMatchObject({
       databaseBytes: 500,
-      sqlBytes: null,
       activeRuns: 0,
     });
     const saved = await database
@@ -62,26 +59,35 @@ describe("database capacity admission", () => {
         .first(),
     ).toBeNull();
   });
-  it.each(["physical", "sql"])(
-    "refuses new runs at the %s threshold and records the private alert",
-    async (kind) => {
-      using database = new TestDatabase();
-      measure(database, kind === "physical" ? 2000 : 500);
-      if (kind === "sql")
-        database.connection.exec(
-          "INSERT INTO operations_backups(id,state,database_bytes,created_at,completed_at) VALUES('2026-09-22','complete',2000,1,2)",
-        );
-      await expect(checkRunAdmission(database, policy, identity, 3)).rejects.toMatchObject({
-        status: 503,
-        code: "capacity_exceeded",
-      });
-      expect(
-        await database
-          .prepare("SELECT code FROM operations_events WHERE resolved_at IS NULL")
-          .first(),
-      ).toEqual({ code: "admission-blocked" });
-    },
-  );
+  it("refuses new runs at the physical threshold and records the private alert", async () => {
+    using database = new TestDatabase();
+    measure(database, 2000);
+    await expect(checkRunAdmission(database, policy, identity, 3)).rejects.toMatchObject({
+      status: 503,
+      code: "capacity_exceeded",
+    });
+    expect(
+      await database
+        .prepare("SELECT code FROM operations_events WHERE resolved_at IS NULL")
+        .first(),
+    ).toEqual({ code: "admission-blocked" });
+  });
+  it("does not block on the size of an old SQL backup", async () => {
+    using database = new TestDatabase();
+    measure(database, 500);
+    database.connection.exec(
+      "INSERT INTO operations_backups(id,state,database_bytes,created_at,completed_at) VALUES('2026-09-22','complete',2000,1,2)",
+    );
+    const stalePolicy = { ...policy, sqlWarningBytes: 1000, sqlAdmissionBytes: 2000 };
+    await expect(checkRunAdmission(database, stalePolicy, identity, 3)).resolves.toEqual({
+      maximumActiveRuns: 1,
+    });
+    expect(
+      await database
+        .prepare("SELECT code FROM operations_events WHERE resolved_at IS NULL")
+        .first(),
+    ).toBeNull();
+  });
   it("refuses an unknown physical sample while preserving an existing run's retry", async () => {
     using database = new TestDatabase();
     const fixture = context(database);

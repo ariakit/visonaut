@@ -198,10 +198,6 @@ test("capacity alerts show measured usage, admission headroom, and capture slots
           databaseBytes: 315 * mib,
           databaseWarningBytes: 256 * mib,
           databaseAdmissionBytes: 320 * mib,
-          sqlBytes: 275 * mib,
-          sqlWarningBytes: 256 * mib,
-          sqlAdmissionBytes: 320 * mib,
-          sqlSnapshotAt: status.checkedAt,
           activeRuns: 0,
           maximumActiveRuns: 1,
           observedAt: status.checkedAt,
@@ -217,10 +213,6 @@ test("capacity alerts show measured usage, admission headroom, and capture slots
   await expect(
     page.getByText("Database: 315.0 MiB used; 5.0 MiB before new runs pause.", { exact: false }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Latest SQL backup: 275.0 MiB; 45.0 MiB before new runs pause.", {
-      exact: false,
-    }),
-  ).toBeVisible();
+  await expect(page.getByText("Latest SQL backup", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Active captures: 0 of 1.", { exact: false })).toBeVisible();
 });

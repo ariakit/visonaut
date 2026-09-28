@@ -5,14 +5,10 @@ import { recordEvent, resolveEvents } from "./operations/common.ts";
 export interface CapacityPolicy {
   databaseWarningBytes: number;
   databaseAdmissionBytes: number;
-  sqlWarningBytes: number;
-  sqlAdmissionBytes: number;
   maximumActiveRuns: number;
 }
 export interface CapacitySnapshot extends CapacityPolicy {
   databaseBytes: number;
-  sqlBytes: number | null;
-  sqlSnapshotAt: number | null;
   activeRuns: number;
   observedAt: number;
 }
@@ -21,9 +17,7 @@ export function validateCapacityPolicy(policy: CapacityPolicy) {
   if (
     Object.values(policy).some((value) => !Number.isSafeInteger(value) || value < 1) ||
     policy.databaseWarningBytes >= policy.databaseAdmissionBytes ||
-    policy.sqlWarningBytes >= policy.sqlAdmissionBytes ||
-    policy.databaseAdmissionBytes >= 10_000_000_000 ||
-    policy.sqlAdmissionBytes >= 5_000_000_000
+    policy.databaseAdmissionBytes >= 10_000_000_000
   )
     throw new Error("Database capacity policy is invalid.");
 }
@@ -31,7 +25,6 @@ export function validateCapacityPolicy(policy: CapacityPolicy) {
 function blocked(snapshot: CapacitySnapshot) {
   return (
     snapshot.databaseBytes >= snapshot.databaseAdmissionBytes ||
-    (snapshot.sqlBytes !== null && snapshot.sqlBytes >= snapshot.sqlAdmissionBytes) ||
     snapshot.activeRuns >= snapshot.maximumActiveRuns
   );
 }
@@ -45,13 +38,9 @@ export async function monitorDatabaseCapacity(
   validateCapacityPolicy(policy);
   const result = await database
     .prepare(`SELECT
-    (SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs,
-    (SELECT database_bytes FROM operations_backups WHERE state='complete' ORDER BY created_at DESC LIMIT 1) AS sql_bytes,
-    (SELECT created_at FROM operations_backups WHERE state='complete' ORDER BY created_at DESC LIMIT 1) AS sql_snapshot_at`)
+    (SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs`)
     .all<{
       active_runs: number;
-      sql_bytes: number | null;
-      sql_snapshot_at: number | null;
     }>();
   const bytes = result.meta?.size_after;
   const row = result.results?.[0];
@@ -71,8 +60,6 @@ export async function monitorDatabaseCapacity(
   const snapshot: CapacitySnapshot = {
     ...policy,
     databaseBytes: bytes,
-    sqlBytes: row.sql_bytes,
-    sqlSnapshotAt: row.sql_snapshot_at,
     activeRuns: row.active_runs,
     observedAt: now,
   };
@@ -90,10 +77,7 @@ export async function monitorDatabaseCapacity(
       code: "admission-blocked",
       now,
     });
-  } else if (
-    snapshot.databaseBytes >= policy.databaseWarningBytes ||
-    (snapshot.sqlBytes !== null && snapshot.sqlBytes >= policy.sqlWarningBytes)
-  ) {
+  } else if (snapshot.databaseBytes >= policy.databaseWarningBytes) {
     await recordEvent(database, {
       kind: "database-capacity",
       subject: "database",
