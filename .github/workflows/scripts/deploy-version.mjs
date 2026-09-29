@@ -84,13 +84,25 @@ function selfDurableObjectNamespaces(configuration, settings) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function assertInfrastructure(configuration, settings, schedules) {
+export function assertInfrastructure(configuration, settings, schedules, retiringBackupBucket) {
   const expected = resourceInventory(configuration);
   assert(
     expected.every((binding) => typeof binding.target === "string" && binding.target.length > 0),
   );
+  const actual = remoteInventory(settings);
+  if (retiringBackupBucket) {
+    assert(!expected.some((binding) => binding.name === "BACKUPS"));
+    const retired = actual.find((binding) => binding.name === "BACKUPS");
+    if (retired) {
+      assert.deepEqual(retired, {
+        name: "BACKUPS",
+        type: "r2_bucket",
+        target: retiringBackupBucket,
+      });
+    }
+  }
   assert.deepEqual(
-    remoteInventory(settings),
+    actual.filter((binding) => !retiringBackupBucket || binding.name !== "BACKUPS"),
     expected,
     "Resource bindings differ; provision infrastructure separately",
   );
@@ -259,7 +271,18 @@ export async function deployVersion(configPath, expectedName, environment) {
   }
   const beforeSettings = await inspect("/settings");
   const beforeSchedules = await inspect("/schedules");
-  const beforeNamespaces = assertInfrastructure(configuration, beforeSettings, beforeSchedules);
+  const retiringBackupBucket =
+    expectedName === "visonaut"
+      ? "visonaut-production-backups"
+      : expectedName === "visonaut-preview"
+        ? "visonaut-preview-backups"
+        : undefined;
+  const beforeNamespaces = assertInfrastructure(
+    configuration,
+    beforeSettings,
+    beforeSchedules,
+    retiringBackupBucket,
+  );
   const wranglerDirectory = dirname(require.resolve("wrangler/package.json"));
   if (expectedName === "visonaut-preview") {
     const sourceConfiguration = unstable_readConfig({

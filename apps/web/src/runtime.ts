@@ -17,12 +17,12 @@ import {
   type ApiConfiguration,
 } from "./api/index.ts";
 import {
-  createCloudflareDatabaseExporter,
   createRunExport,
   runOperations,
   streamRunExport,
   type OperationsBudget,
   type OperationsContext,
+  type ObjectStore,
 } from "./operations/index.ts";
 import {
   checkRunAdmission,
@@ -119,7 +119,7 @@ export function operationsContext(env: Env): OperationsContext {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    backups: env.BACKUPS,
+    backups: retiredBackups,
     comparisons: {
       async send(message) {
         await env.COMPARISONS.send(message);
@@ -131,6 +131,24 @@ export function operationsContext(env: Env): OperationsContext {
     now: Date.now,
   };
 }
+
+const retiredBackups: ObjectStore = {
+  async get() {
+    throw new Error("Scheduled backups are retired.");
+  },
+  async put() {
+    throw new Error("Scheduled backups are retired.");
+  },
+  async list() {
+    throw new Error("Scheduled backups are retired.");
+  },
+  async delete() {
+    throw new Error("Scheduled backups are retired.");
+  },
+  async createMultipartUpload() {
+    throw new Error("Scheduled backups are retired.");
+  },
+};
 
 export async function assertOperationsProject(env: Env) {
   const expected = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
@@ -385,23 +403,7 @@ export async function runScheduledOperations(env: Env) {
       });
     }
   }
-  const exporter = {
-    async export() {
-      const maximumMilliseconds = positive(
-        env.VISONAUT_DATABASE_EXPORT_TIMEOUT_MS,
-        "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS",
-      );
-      if (maximumMilliseconds >= context.budget.leaseMilliseconds)
-        throw new Error("Database export deadline must be shorter than the operations lease.");
-      return createCloudflareDatabaseExporter({
-        accountId: required(env.CLOUDFLARE_ACCOUNT_ID, "CLOUDFLARE_ACCOUNT_ID"),
-        databaseId: required(env.D1_DATABASE_ID, "D1_DATABASE_ID"),
-        apiToken: required(env.D1_BACKUP_API_TOKEN, "D1_BACKUP_API_TOKEN"),
-        maximumMilliseconds,
-      }).export();
-    },
-  };
-  const result = await runOperations(context, exporter);
+  const result = await runOperations(context);
   if (result.hasMore || reconcileMore)
     await env.OPERATIONS.send({ kind: "continue" } satisfies OperationsMessage, {
       delaySeconds: 1,

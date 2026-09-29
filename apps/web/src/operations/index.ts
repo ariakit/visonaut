@@ -2,7 +2,6 @@ import { reportComparisonRecovery } from "./comparison-alerts.ts";
 import { pruneCaptureProfiles } from "../profiles.ts";
 import { expireComparisonReferences, expireSnapshotImages } from "./snapshot-retention.ts";
 import { reconcileWork, Service } from "@visonaut/service";
-import { backupDaily, expireBackups, type DatabaseExporter } from "./backups.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { publishReviewLinks } from "./review-links.ts";
 import { recordEvent, resolveEvents, validateBudget } from "./common.ts";
@@ -22,11 +21,10 @@ export * from "./history-format.ts";
 export * from "./history-supplement.ts";
 
 /** Invoke after ingest reconciliation. Queue a continuation when hasMore is true. */
-export async function runOperations(context: OperationsContext, exporter: DatabaseExporter) {
+export async function runOperations(context: OperationsContext) {
   validateBudget(context.budget);
   const started = performance.now();
   let promotionMs = 0;
-  let backupMs = 0;
   const reports: Record<string, OperationReport> = {};
   const publication = await reconcileWork(context.database, {
     kind: "compare",
@@ -59,7 +57,6 @@ export async function runOperations(context: OperationsContext, exporter: Databa
     ["checks", () => deliverGitHubStatuses(context)],
     ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
-    ["backup", () => backupDaily(context, exporter, { allowNew: false })],
     ["historical-archive", () => archiveHistoricalComparisons(context)],
     ["history", () => archiveClosedRuns(context)],
     ["reference-retention", () => expireComparisonReferences(context)],
@@ -69,7 +66,6 @@ export async function runOperations(context: OperationsContext, exporter: Databa
       "profile-retention",
       () => pruneCaptureProfiles(context.database, context.budget.objectsPerStep),
     ],
-    ["backup-retention", () => expireBackups(context)],
   ];
   for (const [name, operation] of steps) {
     const stepStarted = performance.now();
@@ -88,23 +84,17 @@ export async function runOperations(context: OperationsContext, exporter: Databa
       if (name === "promotion") {
         promotionMs = Math.round(performance.now() - stepStarted);
       }
-      if (name === "backup") {
-        backupMs = Math.round(performance.now() - stepStarted);
-      }
     }
   }
   const hasMore = Object.values(reports).some((report) => report.hasMore);
   try {
     await expireExports(context);
-    await resolveEvents(context.database, "backup", "freshness", context.now());
   } finally {
     console.info(
       JSON.stringify({
         event: "operations_pass",
         elapsedMs: Math.round(performance.now() - started),
         promotionMs,
-        backupMs,
-        backupHasMore: reports.backup?.hasMore ?? false,
       }),
     );
   }

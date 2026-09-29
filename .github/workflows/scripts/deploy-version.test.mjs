@@ -90,6 +90,29 @@ test("preflight refuses changed resource targets and cron expressions", () => {
   );
 });
 
+test("web preflight permits only its exact retired backup binding before upload", () => {
+  const withBackups = structuredClone(settings);
+  withBackups.bindings.push({
+    type: "r2_bucket",
+    name: "BACKUPS",
+    bucket_name: "visonaut-production-backups",
+  });
+  assert.throws(
+    () => assertInfrastructure(configuration, withBackups, schedules),
+    /Resource bindings differ/,
+  );
+  assert.deepEqual(
+    assertInfrastructure(configuration, withBackups, schedules, "visonaut-production-backups"),
+    [{ name: "CODEC_CONTAINER", namespaceId: "98373c1bd2da4606995dcd539f170626" }],
+  );
+  withBackups.bindings.at(-1).bucket_name = "another-bucket";
+  assert.throws(
+    () =>
+      assertInfrastructure(configuration, withBackups, schedules, "visonaut-production-backups"),
+    /Expected values to be strictly deep-equal/,
+  );
+});
+
 test("preflight requires the configured self Durable Object namespace", () => {
   const missingBinding = structuredClone(settings);
   missingBinding.bindings = missingBinding.bindings.filter(

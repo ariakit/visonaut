@@ -33,15 +33,6 @@ async function addCandidate(
   return externalId;
 }
 
-function exporter() {
-  return {
-    async export() {
-      const bytes = new TextEncoder().encode("CREATE TABLE restored(id TEXT);");
-      return { body: new Blob([bytes]).stream(), bytes: bytes.byteLength };
-    },
-  };
-}
-
 it("backfills one neutral PR-head review link and refreshes it for a new tested merge", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
@@ -64,7 +55,7 @@ it("backfills one neutral PR-head review link and refreshes it for a new tested 
     return request(path, init);
   };
 
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   const links = [...fixture.state.checks.values()].filter(
     (check) => check.name === "Open Visonaut review",
   );
@@ -78,7 +69,7 @@ it("backfills one neutral PR-head review link and refreshes it for a new tested 
   expect(String((links[0]?.output as Record<string, unknown>)?.summary)).toContain(
     "does not report visual approval",
   );
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   expect(
     [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
   ).toHaveLength(1);
@@ -91,7 +82,7 @@ it("backfills one neutral PR-head review link and refreshes it for a new tested 
     .bind(secondMergeSha)
     .run();
   const secondCheck = await addCandidate(database, secondMergeSha, 2, { runId: "next" });
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   expect(
     [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
   ).toHaveLength(1);
@@ -120,9 +111,9 @@ it("reconciles a lost PR-head check POST without creating a duplicate", async ()
     return request(path, init);
   };
   fixture.state.losePost = true;
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   fixture.state.losePost = false;
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   const links = [...fixture.state.checks.values()].filter(
     (check) => check.name === "Open Visonaut review",
   );
@@ -152,7 +143,7 @@ it("keeps the review link on its ready run until a same-merge rerun materializes
     return request(path, init);
   };
 
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   const link = [...fixture.state.checks.values()].find(
     (check) => check.name === "Open Visonaut review",
   );
@@ -164,7 +155,7 @@ it("keeps the review link on its ready run until a same-merge rerun materializes
     generation: 1,
     runId: "rerun",
   });
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   expect(
     await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
   ).toEqual({
@@ -174,14 +165,14 @@ it("keeps the review link on its ready run until a same-merge rerun materializes
   await reserve(fixture.context, "rerun");
   await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id='run'").run();
   await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='rerun'").run();
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   expect(
     await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
   ).toEqual({
     target_external_id: firstCheck,
   });
   await database.prepare("UPDATE visonaut_runs SET sealed_at=created_at WHERE id='rerun'").run();
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   expect(
     await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
   ).toEqual({
@@ -211,7 +202,7 @@ it("backfills a ready review when a newer same-merge rerun has no run", async ()
     return request(path, init);
   };
 
-  await runOperations(fixture.context, exporter());
+  await runOperations(fixture.context);
   const links = [...fixture.state.checks.values()].filter(
     (check) => check.name === "Open Visonaut review",
   );
@@ -242,7 +233,7 @@ it("does not attach a link to a superseded PR head", async () => {
     return request(path, init);
   };
 
-  const { reports } = await runOperations(fixture.context, exporter());
+  const { reports } = await runOperations(fixture.context);
   expect(reports["review-links"]?.hasMore).toBe(true);
   expect(
     [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
@@ -283,12 +274,12 @@ it("scans past stale PR heads to link a later current pull request", async () =>
     return request(path, init);
   };
 
-  const first = await runOperations(fixture.context, exporter());
+  const first = await runOperations(fixture.context);
   expect(first.reports["review-links"]?.hasMore).toBe(true);
   expect(
     await database.prepare("SELECT value FROM operations_cursors WHERE id='review-links'").first(),
   ).toEqual({ value: "7" });
-  const second = await runOperations(fixture.context, exporter());
+  const second = await runOperations(fixture.context);
   expect(second.reports["review-links"]?.hasMore).toBe(true);
   const links = [...fixture.state.checks.values()].filter(
     (check) => check.name === "Open Visonaut review",
@@ -297,7 +288,7 @@ it("scans past stale PR heads to link a later current pull request", async () =>
   expect(links[0]?.details_url).toBe(
     "https://visonaut.example/pulls/8?check=" + encodeURIComponent(validCheck),
   );
-  const third = await runOperations(fixture.context, exporter());
+  const third = await runOperations(fixture.context);
   expect(third.reports["review-links"]?.hasMore).toBe(false);
   expect(
     await database.prepare("SELECT value FROM operations_cursors WHERE id='review-links'").first(),

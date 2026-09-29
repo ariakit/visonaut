@@ -97,13 +97,7 @@ describe("protected object operations", () => {
       }
       return put(key, value, options);
     });
-    const exporter = {
-      async export() {
-        return databaseExport("CREATE TABLE restored(id TEXT);");
-      },
-    };
-
-    const first = await runOperations(fixture.context, exporter);
+    const first = await runOperations(fixture.context);
     expect(events[0]).toBe("check");
     expect(first.reports.promotion?.hasMore).toBe(true);
     expect(
@@ -111,14 +105,14 @@ describe("protected object operations", () => {
     ).toEqual({ count: 50 });
     expect((await service.project("project")).snapshot_id).toBeNull();
 
-    const second = await runOperations(fixture.context, exporter);
+    const second = await runOperations(fixture.context);
     expect(second.reports.promotion?.hasMore).toBe(true);
-    const third = await runOperations(fixture.context, exporter);
+    const third = await runOperations(fixture.context);
     expect(third.reports.promotion?.completed).toEqual(["seed"]);
     expect(third.hasMore).toBe(true);
     expect((await service.project("project")).snapshot_id).not.toBeNull();
 
-    await runOperations(fixture.context, exporter);
+    await runOperations(fixture.context);
     expect(
       await database.prepare("SELECT desired_revision,delivered_revision FROM work_checks").first(),
     ).toEqual(
@@ -774,16 +768,10 @@ describe("private streaming exports", () => {
       )
       .bind("expired", "run", "maintainer", fixture.context.now() - 1, fixture.context.now() - 2)
       .run();
-    vi.spyOn(fixture.backups, "list").mockRejectedValue(new Error("R2 list unavailable"));
+    vi.spyOn(fixture.images, "list").mockRejectedValue(new Error("R2 list unavailable"));
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      await expect(
-        runOperations(fixture.context, {
-          async export() {
-            return databaseExport("snapshot sql");
-          },
-        }),
-      ).rejects.toThrow("R2 list unavailable");
+      await expect(runOperations(fixture.context)).rejects.toThrow("R2 list unavailable");
       expect(
         info.mock.calls
           .map(([message]) => JSON.parse(String(message)) as { event?: string })
@@ -792,7 +780,6 @@ describe("private streaming exports", () => {
         expect.objectContaining({
           elapsedMs: expect.any(Number),
           promotionMs: expect.any(Number),
-          backupMs: expect.any(Number),
         }),
       ]);
     } finally {
@@ -811,9 +798,9 @@ describe("private streaming exports", () => {
       )
       .bind(exportId, "run", "maintainer", fixture.context.now() - 1, fixture.context.now() - 2)
       .run();
-    await fixture.backups.put(`exports/${exportId}.json`, "legacy root");
-    const deleteObjects = fixture.backups.delete.bind(fixture.backups);
-    fixture.backups.delete = async (keys) => {
+    await fixture.images.put(`exports/${exportId}.json`, "legacy root");
+    const deleteObjects = fixture.images.delete.bind(fixture.images);
+    fixture.images.delete = async (keys) => {
       if (Array.isArray(keys) && keys.length === 0) {
         throw new Error("R2 rejects empty delete batches");
       }
@@ -827,7 +814,7 @@ describe("private streaming exports", () => {
         .bind(exportId)
         .first(),
     ).toEqual({ state: "expired" });
-    expect(fixture.backups.objects.has(`exports/${exportId}.json`)).toBe(false);
+    expect(fixture.images.objects.has(`exports/${exportId}.json`)).toBe(false);
   });
 
   it("streams exact original bytes with private metadata and a final integrity marker", async () => {
@@ -968,6 +955,7 @@ describe("private streaming exports", () => {
     let calls = 0;
     let cancellations = 0;
     fixture.images.get = async (key) => {
+      if (key.startsWith("exports/")) return original(key);
       calls++;
       const object = await original(key);
       if (!object) return null;
@@ -1046,15 +1034,10 @@ it("keeps scheduler failures active while failing and resolves them after recove
   const promotion = vi
     .spyOn(promotions, "promoteBaselines")
     .mockRejectedValue(new Error("Unavailable"));
-  const exporter = {
-    async export() {
-      return databaseExport("snapshot sql");
-    },
-  };
   try {
-    await runOperations(fixture.context, exporter);
+    await runOperations(fixture.context);
     fixture.state.time++;
-    await runOperations(fixture.context, exporter);
+    await runOperations(fixture.context);
     const failure = await database
       .prepare(
         "SELECT occurrences,resolved_at FROM operations_events WHERE id='promotion:scheduler:step-failed'",
@@ -1063,7 +1046,7 @@ it("keeps scheduler failures active while failing and resolves them after recove
     expect(failure).toEqual({ occurrences: 2, resolved_at: null });
     promotion.mockResolvedValue({ completed: [], deferred: [], attention: [], hasMore: false });
     fixture.state.time++;
-    await runOperations(fixture.context, exporter);
+    await runOperations(fixture.context);
     expect(
       await database
         .prepare(
