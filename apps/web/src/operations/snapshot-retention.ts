@@ -27,6 +27,13 @@ async function saveCursor(context: OperationsContext, id: string, after: string)
     .run();
 }
 
+async function resolveSnapshotDeletionFailure(context: OperationsContext, id: string) {
+  await context.database
+    .prepare("UPDATE operations_events SET resolved_at=? WHERE id=? AND resolved_at IS NULL")
+    .bind(context.now(), `snapshot-retention:${id}:delete-failed`)
+    .run();
+}
+
 /** Release expired outgoing comparison roots before considering protected-copy deletion. */
 export async function expireComparisonReferences(
   context: OperationsContext,
@@ -104,6 +111,7 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
     try {
       if (row.byte_state === "live") {
         await retireSnapshot(context.database, { snapshotId: row.id, now: context.now() });
+        await resolveSnapshotDeletionFailure(context, row.id);
         progress += 1;
         report.deferred.push(row.id);
         continue;
@@ -156,6 +164,9 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
       progress += 1;
     } catch (error) {
       if (error instanceof ConflictError) {
+        if (row.byte_state === "live") {
+          await resolveSnapshotDeletionFailure(context, row.id);
+        }
         report.deferred.push(row.id);
         continue;
       }

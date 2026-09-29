@@ -35,8 +35,18 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   await snapshot(database, fixture, "a-current");
   await snapshot(database, fixture, "z-old");
   database.connection.exec("UPDATE visonaut_projects SET snapshot_id='a-current'");
+  database.connection.exec(
+    "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES('snapshot-retention:a-current:delete-failed','snapshot-retention','a-current','delete-failed',0,0)",
+  );
   fixture.context.budget.tasksPerStep = 1;
   await expireSnapshotImages(fixture.context);
+  expect(
+    database.connection
+      .prepare(
+        "SELECT resolved_at FROM operations_events WHERE id='snapshot-retention:a-current:delete-failed'",
+      )
+      .get(),
+  ).toEqual({ resolved_at: fixture.state.time });
   expect(
     database.connection
       .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='a-current'")
@@ -63,6 +73,38 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   expect(fixture.images.objects.has("baselines/a-current/original")).toBe(true);
   expect(fixture.images.objects.has("baselines/z-old-other/original")).toBe(true);
   expect(fixture.images.objects.has("baselines/z-old/original")).toBe(false);
+});
+
+it("resolves a failed retirement alert when the next attempt retires the snapshot", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await snapshot(database, fixture, "old");
+  database.beforeBatch = () => {
+    throw new Error("Transient retirement failure.");
+  };
+
+  expect((await expireSnapshotImages(fixture.context)).attention).toEqual(["old"]);
+  expect(
+    database.connection
+      .prepare(
+        "SELECT resolved_at FROM operations_events WHERE id='snapshot-retention:old:delete-failed'",
+      )
+      .get(),
+  ).toEqual({ resolved_at: null });
+
+  await expireSnapshotImages(fixture.context);
+  expect(
+    database.connection
+      .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='old'")
+      .get(),
+  ).toEqual({ byte_state: "retiring" });
+  expect(
+    database.connection
+      .prepare(
+        "SELECT resolved_at FROM operations_events WHERE id='snapshot-retention:old:delete-failed'",
+      )
+      .get(),
+  ).toEqual({ resolved_at: fixture.state.time });
 });
 
 it("keeps protected copies during a combined backup and recovers a failed bounded deletion", async () => {
