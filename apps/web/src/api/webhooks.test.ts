@@ -695,6 +695,7 @@ describe("pre-run App checks", () => {
   it.each([
     ["old", "01b78334223b47515b41f63f587308050a5dcdad", true],
     ["new", "c86f2dc5370fe07030a27af87979072f86afa8de", true],
+    ["successor", "4aac43e3039b578913e8a603c10ca47009493ef5", true],
     ["unlisted", "f".repeat(40), false],
   ])("%s app workflow blob has the expected main check result", async (_name, blob, allowed) => {
     const fixture = preRunFixture();
@@ -708,6 +709,7 @@ describe("pre-run App checks", () => {
           trustedWorkflowPath: ".github/workflows/app.yml",
           reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
           additionalTrustedWorkflowBlobSha: "c86f2dc5370fe07030a27af87979072f86afa8de",
+          transitionTrustedWorkflowBlobSha: "4aac43e3039b578913e8a603c10ca47009493ef5",
         },
       },
     });

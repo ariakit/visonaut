@@ -27,6 +27,8 @@ export interface OidcConfiguration {
   trustedWorkflowPath?: string;
   /** One additional approved Git blob during a direct workflow transition. */
   additionalTrustedWorkflowBlobSha?: string;
+  /** One approved successor blob while the prior direct workflow remains active. */
+  transitionTrustedWorkflowBlobSha?: string;
   planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
@@ -86,13 +88,15 @@ export function isTrustedWorkflowBlob(
   blob: unknown,
   configuration: Pick<
     OidcConfiguration,
-    "reusableWorkflowSha" | "additionalTrustedWorkflowBlobSha"
+    "reusableWorkflowSha" | "additionalTrustedWorkflowBlobSha" | "transitionTrustedWorkflowBlobSha"
   >,
 ): boolean {
   return (
     blob === configuration.reusableWorkflowSha ||
     (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
-      blob === configuration.additionalTrustedWorkflowBlobSha)
+      blob === configuration.additionalTrustedWorkflowBlobSha) ||
+    (configuration.transitionTrustedWorkflowBlobSha !== undefined &&
+      blob === configuration.transitionTrustedWorkflowBlobSha)
   );
 }
 

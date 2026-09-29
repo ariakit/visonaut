@@ -197,6 +197,7 @@ describe("direct Ariakit app workflow", () => {
   it.each([
     ["old", oldBlob, true],
     ["new", newBlob, true],
+    ["successor", "4aac43e3039b578913e8a603c10ca47009493ef5", true],
     ["unlisted", "f".repeat(40), false],
   ])("%s direct workflow blob has the expected trust result", async (_name, blob, allowed) => {
     const ref = "refs/pull/7/merge";
@@ -217,6 +218,7 @@ describe("direct Ariakit app workflow", () => {
         ...direct,
         reusableWorkflowSha: oldBlob,
         additionalTrustedWorkflowBlobSha: newBlob,
+        transitionTrustedWorkflowBlobSha: "4aac43e3039b578913e8a603c10ca47009493ef5",
       },
       github: github(
         { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },
