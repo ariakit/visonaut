@@ -182,12 +182,11 @@ export default {
     }
     for (const message of batch.messages) {
       try {
-        await withCodecCapacity(() => consume(message, env));
+        await withCodecCapacity(() => consume(message, env), 120_000);
       } catch (error) {
         if (!(error instanceof CodecBusyError)) {
           throw error;
         }
-        // Upload validation can occupy this isolate throughout a long submit.
         message.retry({ delaySeconds: 60 });
       }
     }
