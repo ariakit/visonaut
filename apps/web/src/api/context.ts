@@ -30,6 +30,7 @@ export interface ApiConfiguration {
     reusableWorkflowSha: string;
     trustedWorkflowPath?: string;
     additionalTrustedWorkflowBlobSha?: string;
+    transitionTrustedWorkflowBlobSha?: string;
     additionalTrustedExecutorDigest?: string;
   };
   reusableWorkflowRef: string;

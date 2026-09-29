@@ -976,6 +976,34 @@ describe("workflow-owned upload staging", () => {
     expect(() => workflowConfiguration(test.context)).toThrow();
   });
 
+  it("limits one successor blob to the approved direct workflow transition", async () => {
+    const test = await fixture();
+    const configuration = test.context.configuration.workflowOwned;
+    if (!configuration) {
+      throw new Error("Expected workflow configuration.");
+    }
+    const additionalBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
+    const successorBlob = "4aac43e3039b578913e8a603c10ca47009493ef5";
+    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
+    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
+    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
+    configuration.additionalTrustedWorkflowBlobSha = additionalBlob;
+    configuration.transitionTrustedWorkflowBlobSha = successorBlob;
+    expect(workflowConfiguration(test.context)).toBe(configuration);
+    configuration.transitionTrustedWorkflowBlobSha = pin;
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.transitionTrustedWorkflowBlobSha = additionalBlob;
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.transitionTrustedWorkflowBlobSha = "not-a-sha";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.transitionTrustedWorkflowBlobSha = successorBlob;
+    configuration.additionalTrustedWorkflowBlobSha = undefined;
+    expect(() => workflowConfiguration(test.context)).toThrow();
+    configuration.additionalTrustedWorkflowBlobSha = additionalBlob;
+    test.context.configuration.github.repository = "ariakit/other";
+    expect(() => workflowConfiguration(test.context)).toThrow();
+  });
+
   it("redeems a combined transfer key in the named Submit job", async () => {
     const test = await fixture("combined");
     const configuration = test.context.configuration.workflowOwned;

@@ -117,6 +117,15 @@ export function workflowConfiguration(context: ApiContext) {
         context.configuration.github.repository !== "ariakit/ariakit" ||
         configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
         configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
+    (configuration.transitionTrustedWorkflowBlobSha !== undefined &&
+      (!/^[a-f0-9]{40}$/.test(configuration.transitionTrustedWorkflowBlobSha) ||
+        configuration.transitionTrustedWorkflowBlobSha === configuration.reusableWorkflowSha ||
+        configuration.transitionTrustedWorkflowBlobSha ===
+          configuration.additionalTrustedWorkflowBlobSha ||
+        configuration.additionalTrustedWorkflowBlobSha === undefined ||
+        context.configuration.github.repository !== "ariakit/ariakit" ||
+        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
+        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
     (configuration.additionalTrustedExecutorDigest !== undefined &&
       (!/^[a-f0-9]{64}$/.test(configuration.additionalTrustedExecutorDigest) ||
         configuration.additionalTrustedExecutorDigest ===
@@ -195,6 +204,7 @@ async function verifyWorkflowJob(
       reusableWorkflowSha: configuration.reusableWorkflowSha,
       trustedWorkflowPath: configuration.trustedWorkflowPath,
       additionalTrustedWorkflowBlobSha: configuration.additionalTrustedWorkflowBlobSha,
+      transitionTrustedWorkflowBlobSha: configuration.transitionTrustedWorkflowBlobSha,
       planDigest: identity.planDigest,
       shards: [{ key: identity.shardKey, jobName }],
       loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),
