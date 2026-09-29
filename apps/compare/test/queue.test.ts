@@ -16,6 +16,7 @@ const { default: worker } = await import("../src/index.ts");
 const env = { VISONAUT_COMPARISON_DEAD_LETTER_QUEUE: "comparison-dlq" } as Env;
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   processComparisonTask.mockReset();
 });
@@ -85,20 +86,30 @@ it("acknowledges committed work when the status wake fails", async () => {
   );
 });
 
-it("delays a busy codec delivery, then recovers its exhausted receipt", async () => {
-  const retry = vi.fn();
-  // Capacity is held before the handler can inspect the platform message.
-  const batch = { queue: "comparisons", messages: [{ retry }] } as MessageBatch<unknown>;
+it("waits for a busy codec without retrying the queued message", async () => {
+  claimedTask();
+  vi.spyOn(Service.prototype, "finalizeComparison").mockResolvedValue({
+    reviewReadyTransitioned: false,
+  } as never);
+  const release = Promise.withResolvers<void>();
+  const holder = withCodecCapacity(() => release.promise);
+  const queued = comparisonMessage();
+  const delivery = worker.queue(
+    { queue: "comparisons", messages: [queued] } as MessageBatch<unknown>,
+    { ...env, VISONAUT_CODEC_BACKEND: "worker" } as Env,
+  );
 
-  await withCodecCapacity(async () => {
-    await worker.queue(batch, env);
-  });
+  await Promise.resolve();
+  expect(queued.ack).not.toHaveBeenCalled();
+  expect(queued.retry).not.toHaveBeenCalled();
+  release.resolve();
+  await Promise.all([holder, delivery]);
 
-  expect(retry).toHaveBeenCalledExactlyOnceWith({ delaySeconds: 60 });
+  expect(queued.ack).toHaveBeenCalledOnce();
+  expect(queued.retry).not.toHaveBeenCalled();
   expect(recoverDeadLetteredComparison).not.toHaveBeenCalled();
 
-  // The primary consumer can exhaust its bounded retries if uploads remain busy.
-  // The dedicated DLQ must release its matching durable receipt without a codec.
+  // The dedicated DLQ releases its durable receipt without codec capacity.
   recoverDeadLetteredComparison.mockResolvedValueOnce("requeued");
   const message = {
     body: { taskId: "comparison:row", publicationAttempt: 1 },
@@ -115,6 +126,27 @@ it("delays a busy codec delivery, then recovers its exhausted receipt", async ()
   );
   expect(message.ack).toHaveBeenCalledOnce();
   expect(message.retry).not.toHaveBeenCalled();
+});
+
+it("retries when codec capacity stays occupied past the wait limit", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  const release = Promise.withResolvers<void>();
+  const holder = withCodecCapacity(() => release.promise);
+  const retry = vi.fn();
+  const delivery = worker.queue(
+    { queue: "comparisons", messages: [{ retry }] } as MessageBatch<unknown>,
+    env,
+  );
+
+  try {
+    await vi.advanceTimersByTimeAsync(119_999);
+    expect(retry).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(retry).toHaveBeenCalledExactlyOnceWith({ delaySeconds: 60 });
+  } finally {
+    release.resolve();
+    await Promise.all([holder, delivery]);
+  }
 });
 
 it("keeps a dead letter while its task lease is active", async () => {
