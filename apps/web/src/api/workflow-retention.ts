@@ -2,11 +2,8 @@ import { assertion, atomic, Service, type Database } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import type { ObjectStore, OperationReport, OperationsBudget } from "../operations/types.ts";
 
-// GitHub permits reruns for 30 days after the initial run and a workflow
-// attempt can last 35 days. Five extra days cover scheduling and clock skew.
-// https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
-// https://docs.github.com/en/actions/reference/limits
-export const stagedAttemptRetentionMs = 70 * 24 * 60 * 60 * 1000;
+// Each attempt owns a fresh combined bundle; inherited artifacts expire in one day.
+export const stagedAttemptRetentionMs = 24 * 60 * 60 * 1000;
 export const stagedMaterializationLeaseMs = 6 * 60 * 60 * 1000;
 
 interface StagedRetentionContext {
@@ -28,16 +25,7 @@ const stagedDeletionEligibility = `(
     OR (NOT EXISTS (SELECT 1 FROM visonaut_runs run WHERE run.id = ingest_staged_runs.id)
       AND NOT EXISTS (SELECT 1 FROM visonaut_images image
         WHERE image.object_key LIKE 'runs/' || ingest_staged_runs.id || '/images/%')))
-  AND NOT EXISTS (SELECT 1 FROM ingest_staged_runs newer
-    WHERE newer.repository_id = ingest_staged_runs.repository_id
-      AND newer.workflow_run_id = ingest_staged_runs.workflow_run_id
-      AND newer.workflow_attempt > ingest_staged_runs.workflow_attempt
-      AND newer.tested_sha = ingest_staged_runs.tested_sha
-      AND newer.workflow_source_digest = ingest_staged_runs.workflow_source_digest
-      AND newer.submitted_at IS NOT NULL AND newer.retention_state = 'live'
-      AND newer.created_at > ?
-      AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
-        WHERE run.id = newer.id AND run.sealed_at IS NOT NULL))
+
 )`;
 
 const stagedChildTables = [
@@ -107,7 +95,7 @@ async function hasReferencedManifest(database: Database, runId: string) {
   return reference !== null;
 }
 
-/** Retire staging evidence after every possible inherited rerun has ended. */
+/** Retire bounded staging evidence; active service runs own their originals. */
 export async function expireStagedAttempts(
   context: StagedRetentionContext,
 ): Promise<OperationReport> {
@@ -152,7 +140,7 @@ export async function expireStagedAttempts(
           OR (retention_state = 'deleting' AND deletion_until <= ?))
         AND ${stagedDeletionEligibility}
       ORDER BY created_at, id LIMIT ?`)
-    .bind(cutoff, context.now(), context.now(), cutoff, budget.tasksPerStep)
+    .bind(cutoff, context.now(), context.now(), budget.tasksPerStep)
     .all<StagedCandidate>();
   let remaining = budget.objectsPerStep;
   for (const candidate of candidates.results ?? []) {
@@ -187,7 +175,6 @@ export async function expireStagedAttempts(
         cutoff,
         context.now(),
         context.now(),
-        cutoff,
       )
       .first<StagedCandidate>();
     if (!claim) continue;

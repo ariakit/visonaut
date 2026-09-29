@@ -1,0 +1,537 @@
+{
+  "title": "Visonaut storage and infrastructure audit",
+  "sourceCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "researchedAt": "2026-09-29",
+  "scope": "Read-only source, migration probe, saved evidence, and official platform research. No infrastructure or application changes.",
+  "limitations": [
+    "Checked-in config is not live inventory. Pinned Wrangler 4.136.1 whoami returned an expired, non-refreshable login; live settings, resource counts, retirement gates, invoices, and backup bucket deletion are unverified.",
+    "The source changed during the audit: #153 and #154 arrived from origin. This report includes #154. BACKUPS is no longer a runtime binding, and exports now use IMAGES.",
+    "No new hosted latency, memory, throughput, or cost benchmark ran. Static step counts and code size are not performance measurements."
+  ],
+  "currentTopology": {
+    "perEnvironment": "One D1 database shared by web and comparison Workers; two R2 buckets (IMAGES and QUARANTINE); a comparison queue, its dead-letter queue, operations queue, and its dead-letter queue; one configured Container/DO despite Worker codec being selected; web and comparator each have a five-minute cron.",
+    "shared": "Separate webhook router forwards to preview/production. Five Worker names total in checked-in configs. Preview and production stay isolated.",
+    "source": "apps/web/wrangler.jsonc:35; apps/compare/wrangler.jsonc:23; apps/webhook/wrangler.jsonc:14",
+    "notCurrentBugs": [
+      "New scheduled backup sets were stopped in #130, and runtime backup bindings/collectors were removed in #154.",
+      "Processed webhook payloads are cleared in current code at apps/web/src/api/webhooks.ts:302. Sep 28 webhook size data is historical, not proof of an unfixed body-retention bug."
+    ]
+  },
+  "experiments": [
+    {
+      "question": "Does the source contain many live databases, or one large schema?",
+      "method": "Applied all numbered apps/web/migrations/*.sql in order to in-memory Python sqlite3.",
+      "observed": "22 migration files applied; 66 application tables, of which eight are operations_backup* tables.",
+      "limits": "Local SQLite validates schema creation only; it does not measure current deployed rows, physical bytes, query cost, or D1 behavior."
+    },
+    {
+      "question": "How much repeated operations scheduling is inherent in protected baseline copies?",
+      "method": "Read maximumPromotionObjectsPerStep=50 and copy/verification row budget. Calculate ceil(2*newCaptureCount/50).",
+      "observed": "10,580 captures => at least 424 passes; 35,820 => at least 1,433 passes when every capture requires copying plus final verification and no work is already done.",
+      "limits": "This is a structural lower-bound model, not elapsed time. Shared image keys reduce distinct objects but copy rows and final verification remain capture-based. Failures, scans, and other work add passes."
+    }
+  ],
+  "externalReferences": [
+    {
+      "url": "https://developers.cloudflare.com/workers/platform/storage-options/",
+      "claim": "D1 fits relational records; R2 fits larger objects. Do not consolidate unlike stores only to reduce product count."
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/platform/limits/",
+      "claim": "Paid D1 has a 10 GB per-database ceiling, 2 MB row/BLOB limit, and each database executes queries serially. Inspect query duration and growth before adding databases."
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/reference/time-travel/",
+      "claim": "Time Travel is automatic; paid history is 30 days. It restores D1 in place and does not provide a copy of R2 objects."
+    },
+    {
+      "url": "https://developers.cloudflare.com/r2/buckets/object-lifecycles/",
+      "claim": "R2 expiry can match object prefixes and age, but cannot see app reference pins. A blind age rule would not preserve active reviews/baselines."
+    },
+    {
+      "url": "https://developers.cloudflare.com/queues/reference/delivery-guarantees/",
+      "claim": "Queues delivers at least once. Duplicate-safe database writes remain necessary if schedulers are simplified."
+    },
+    {
+      "url": "https://developers.cloudflare.com/containers/platform/limits/",
+      "claim": "Current basic Container type is 1 GiB memory, 1/4 vCPU. This capacity is not proof of observed peak usage."
+    }
+  ],
+  "priorArtReports": [
+    {
+      "url": "https://github.com/cloudflare/workers-sdk/issues/13727",
+      "reported": "Queue producer remote:true can silently use the local Miniflare broker.",
+      "versions": "Issue opened 2026-04-29; no exact release version in body.",
+      "outcome": "Open at research date; no linked fix established from retrieved issue.",
+      "workaround": "Use a deployed isolated queue integration test to prove actual remote delivery.",
+      "effect": "Local queue tests do not certify deployed recovery/concurrency. The report was not reproduced on pinned 4.136.1, so it is a verification caution, not a claim Visonaut has the bug."
+    },
+    {
+      "url": "https://github.com/cloudflare/workers-sdk/issues/14410",
+      "reported": "Container deploy uploaded Worker then failed to read its new version, code 100146.",
+      "versions": "Wrangler 4.104.0; Visonaut pins 4.136.1.",
+      "outcome": "Closed, with no fix shown in retrieved page; status alone does not establish resolution.",
+      "workaround": "Reporter observed a later identical retry succeed.",
+      "effect": "Shows Container rollout is a separate failure boundary. Do not claim current Visonaut is affected; validate complete rollout if retaining this backend."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "S01",
+      "status": "OPEN",
+      "priority": "High",
+      "question": "Which storage boundary should Visonaut keep?",
+      "finding": "Keep one relational store for decisions and jobs, and object storage for images. The checked-in app already uses one D1 per environment. The complexity is mostly record lifetime and extra code, not a fleet of live databases.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/web/wrangler.jsonc:35",
+          "claim": "One D1 and two R2 bindings per environment after #154."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/compare/wrangler.jsonc:39",
+          "claim": "Comparator shares the web database and IMAGES bucket; it does not have its own D1."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/runtime.ts:153",
+          "claim": "Operations requires exactly one matching project in the database."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/api/images.ts:17",
+          "claim": "Public image access resolves validated database image IDs; it is not an open R2 prefix browser."
+        },
+        {
+          "kind": "historical measurement",
+          "source": "docs/evidence/capacity-admission-20260928.md:3",
+          "claim": "An 810,733,568-byte D1 caused admission refusal under the former 768 MiB limit. Receipt bodies and backup pins were measured contributors; both have since changed."
+        }
+      ],
+      "options": [
+        {
+          "id": "keep-two",
+          "label": "One D1 plus two R2 buckets",
+          "recommended": true,
+          "detail": "Keep current IMAGES/QUARANTINE separation. Remove dead code and unneeded rows before adding stores. This is the minimum migration risk and needs no new abstraction.",
+          "complexity": "Low ongoing; same bindings.",
+          "migration": "None for topology.",
+          "tests": "Verify private metadata never reaches the public image route; measure actual query time and growth.",
+          "reversibility": "High."
+        },
+        {
+          "id": "one-bucket",
+          "label": "One D1 plus one private R2 bucket",
+          "detail": "Use explicit prefixes for staged files, validated images, history, and exports. Removes one binding per environment, but not ownership checks or expiry guards.",
+          "complexity": "Lower resource count; same logical lifetime complexity.",
+          "migration": "Copy and verify retained objects or retain a temporary old-bucket read path. Audit every listing/deletion prefix.",
+          "tests": "Upload validation, prefix isolation, history and export privacy, active-run deletion races.",
+          "reversibility": "Moderate while old buckets remain; low after deletion."
+        },
+        {
+          "id": "object-centric",
+          "label": "Put run manifests and results primarily in R2",
+          "detail": "Keep D1 only for identity and small decisions. Larger redesign can reduce row volume, but querying, atomic review changes, and indexes become application work.",
+          "complexity": "Higher custom code; lower relational detail count.",
+          "migration": "Version read paths and convert history/live records.",
+          "tests": "Atomic acceptance, stale revisions, filtering, pagination, crash recovery.",
+          "reversibility": "Low after conversion."
+        }
+      ],
+      "recommendation": "keep-two",
+      "invalidation": "Choose one bucket if deployed access policies and lifecycle rules are identical and bucket administration itself causes material work. Revisit D1 if measured post-cleanup growth or indexed query service time exceeds agreed bounds.",
+      "risks": "Do not share preview and production data to reduce counts. Do not move image BLOBs into D1: current maximum image bytes can exceed its row size ceiling.",
+      "snippet": {
+        "language": "ts",
+        "text": "const run = await db.prepare('SELECT * FROM visonaut_runs WHERE id = ?').bind(runId).first();\nconst image = await images.get(run.objectKey); // private bucket, explicit key"
+      },
+      "interactive": "Topology selector: show one D1 + two buckets vs one D1 + one bucket. Toggle a staged object and a validated object; show which API may read each. Show logical checks stay the same when buckets merge."
+    },
+    {
+      "id": "S02",
+      "status": "OPEN",
+      "priority": "High",
+      "question": "What recovery promise replaces the retired backup system?",
+      "finding": "#154 removes live backup work, but the app still contains legacy backup/restore modules, eight schema tables, backup fields in live operation types, and a runtime object whose methods always throw. D1 Time Travel also lacks a tested app reactivation procedure.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/index.ts:15",
+          "claim": "Operations barrel still re-exports backups, cloudflare-export, and recovery although live runOperations no longer invokes them."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/types.ts:61",
+          "claim": "maximumDatabaseBytes and backups still belong to the live operations contracts."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/runtime.ts:135",
+          "claim": "retiredBackups implements every store method by throwing."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/README.md:24",
+          "claim": "Cutover requires zero unfinished backups, live old exports, and backup recovery pins; physical bucket deletion is separate."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/README.md:50",
+          "claim": "No tested in-place Time Travel reactivation exists; queues, R2, sessions and GitHub state are not rewound together."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/backups.ts:71",
+          "claim": "Legacy system remains callable offline; backup and restore family contains 2,322 lines across eight inspected core files, excluding tests."
+        }
+      ],
+      "options": [
+        {
+          "id": "native-recovery",
+          "label": "Native D1 recovery and manual evidence export",
+          "recommended": true,
+          "detail": "Make Time Travel plus retained R2 images the explicit limited recovery contract. Write and test one offline recovery runbook. Move legacy backup tools out of runtime source, then remove obsolete fields and export token references after the cutover gates pass.",
+          "complexity": "Removes unused live interfaces and backup implementation surface. Keeps one recovery path.",
+          "migration": "Read back both environments and satisfy three-zero query. Retain a frozen legacy tool only while retained sets are supported. Do not rewrite past migrations merely to erase table history.",
+          "tests": "Isolated Time Travel rehearsal; missing-R2 detection; no old sessions/tasks/check deliveries resume; export creation/download after cutover.",
+          "reversibility": "High for code, low for deleted legacy objects."
+        },
+        {
+          "id": "legacy-offline",
+          "label": "Keep legacy restore tools indefinitely",
+          "detail": "Separate their types and entrypoint from live operations, but preserve all historical formats and existing sets for manual restoration.",
+          "complexity": "Runtime becomes smaller; long-term maintenance and format obligations remain.",
+          "migration": "Mostly source relocation and clearer interfaces.",
+          "tests": "Legacy format restore fixtures remain required.",
+          "reversibility": "High."
+        },
+        {
+          "id": "combined-recovery",
+          "label": "Require database and image recovery together",
+          "detail": "If a full retained evidence restore is essential, explicitly restore that product requirement and build the smallest verified snapshot process. This reverses the recent retirement decision.",
+          "complexity": "Highest; restores consistent snapshot, pins, copy/expiry work and restore operations.",
+          "migration": "New agreed backup contract and live resource provisioning.",
+          "tests": "Full DB+image restore under actual load, access sanitation, retention and interrupted-copy tests.",
+          "reversibility": "Moderate."
+        }
+      ],
+      "recommendation": "native-recovery",
+      "invalidation": "If losing any currently retained visual evidence after database recovery is unacceptable, native D1 recovery alone is not sufficient; choose combined recovery. A legal or contractual independent-backup requirement also invalidates the recommendation.",
+      "risks": "Deleting a configured binding is not proof buckets or tokens were removed. Current docs about a backup export credential in .github/workflows/README.md:32 are stale. Do not delete legacy sets or pins based on static inspection.",
+      "snippet": {
+        "language": "ts",
+        "text": "// Live operations contain only live resources.\ninterface OperationsContext {\n  database: Database;\n  images: ObjectStore;\n  quarantine: ObjectStore;\n}\n// LegacyRestoreContext stays in an offline tool."
+      },
+      "interactive": "Recovery timeline: choose a D1 restore time, expire an R2 image, and observe whether the row and bytes still match. Toggle 'rebuild baseline from new capture' versus 'restore old evidence'. Show the three cutover counters explicitly as unverified."
+    },
+    {
+      "id": "S03",
+      "status": "OPEN",
+      "priority": "High",
+      "question": "Should the unused Container comparison backend stay in the app?",
+      "finding": "Both environments select the Worker codec but also declare a Container and Durable Object. The second backend adds deployment and CI paths, while the saved evidence does not certify either a continuous Worker memory peak or full-production Container workload.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/compare/wrangler.jsonc:23",
+          "claim": "VISONAUT_CODEC_BACKEND is worker and Container/DO is configured; production repeats this at line 89."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/compare/src/index.ts:127",
+          "claim": "The container backend is chosen only by the string flag; /validate still uses the Worker codec at line 173."
+        },
+        {
+          "kind": "verified",
+          "source": ".github/workflows/checks.yml:135",
+          "claim": "Container native test and Docker build are required by the final Gate."
+        },
+        {
+          "kind": "verified",
+          "source": ".github/workflows/README.md:38",
+          "claim": "Container image rollout requires separate full deployment; version-only CI cannot deploy the image."
+        },
+        {
+          "kind": "measurement limit",
+          "source": "docs/evidence/worker-memory/README.md:3",
+          "claim": "Whole workerd process RSS is not proof of a hosted isolate peak."
+        },
+        {
+          "kind": "measurement limit",
+          "source": "docs/evidence/container-codec/README.md:23",
+          "claim": "Saved Container probes include parity/queue checks, but no continuous memory peak or full 10,580/35,820 workload and invoice-aligned cost."
+        }
+      ],
+      "options": [
+        {
+          "id": "worker-only",
+          "label": "Worker only; keep Container as a separate experiment",
+          "recommended": true,
+          "detail": "Keep current live behavior and remove the dormant backend from the production interface after agreeing the supported image bounds. Keep useful parity evidence in tooling. This does not claim the unresolved memory measurement is solved.",
+          "complexity": "One runtime and deployment path; fewer required dependencies and CI paths.",
+          "migration": "Verify live flag, stop/observe any instances, then remove binding/image only with an explicit infrastructure change and rollback plan.",
+          "tests": "Hosted image-limit and repeated-comparison measurement; capacity contention; codec parity fixtures; deployment readback.",
+          "reversibility": "Moderate if frozen image and experiment remain."
+        },
+        {
+          "id": "container-only",
+          "label": "Use one Container backend for validation and comparison",
+          "detail": "Give both operations one native codec path. Requires a measured reason such as Worker memory failure; current /validate route would need to move too.",
+          "complexity": "One codec backend but Container lifecycle, deployment, scheduling and cost remain.",
+          "migration": "Parity and full-workload trial, route validation through same backend, controlled cutover.",
+          "tests": "Cold/warm lifecycle, invalid images, queue retries, sustained memory and real cost.",
+          "reversibility": "Moderate with Worker path retained during trial."
+        },
+        {
+          "id": "dual",
+          "label": "Keep both as supported backends",
+          "detail": "Retain switchable fallback only if its availability is a real product requirement. Both backends need full release checks and equivalent validation behavior.",
+          "complexity": "Highest support surface.",
+          "migration": "Define fallback activation and deactivation, then certify it.",
+          "tests": "Full matrix for both backends and rollback behavior.",
+          "reversibility": "High but carries recurring work."
+        }
+      ],
+      "recommendation": "worker-only",
+      "invalidation": "A hosted test that cannot process supported images safely in Worker bounds invalidates Worker-only. Then measure Container-only before accepting permanent dual infrastructure.",
+      "risks": "No measured cost saving is claimed for a sleeping configured Container. Removing a Docker job saves code paths, but elapsed CI savings are unmeasured.",
+      "snippet": {
+        "language": "ts",
+        "text": "// One live codec path.\nconst result = await processComparisonTask({\n  task, images: env.IMAGES, codecs: await codecsReady,\n});"
+      },
+      "interactive": "Select Worker-only, Container-only, or dual. Show validation and comparison arrows and all deployment/test responsibilities. Display the unmeasured memory and cost cells as OPEN, not green."
+    },
+    {
+      "id": "S04",
+      "status": "OPEN",
+      "priority": "High",
+      "question": "Should each background wakeup run the full maintenance pass?",
+      "finding": "A single operations queue handles GitHub delivery, ingest reconciliation, comparison publication, promotion, archives, retention, and exports. Each continuation repeats the broad pass. The comparator also runs comparison reconciliation on its own cron. Durable job receipts are necessary, but duplicated scheduling and broad wakeups are optional.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/web/src/runtime.ts:338",
+          "claim": "runScheduledOperations samples capacity and reconciles five families before runOperations."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/index.ts:29",
+          "claim": "Every pass republishes due comparison tasks, finalizes comparisons, then executes nine maintenance steps."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/server.ts:105",
+          "claim": "Every valid queue message executes runScheduledOperations; configured operations concurrency is one."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/compare/src/scheduled.ts:13",
+          "claim": "Comparator cron independently publishes and finalizes comparisons."
+        },
+        {
+          "kind": "verified",
+          "source": "packages/service/src/work.ts:192",
+          "claim": "1024 outstanding receipt cap and 14-day-plus-hour expiry protect against duplicated/ambiguous sends."
+        },
+        {
+          "kind": "inference",
+          "source": "apps/web/src/operations/promotions.ts:26",
+          "claim": "Repeated broad passes add avoidable scans and can put a new status wakeup behind an existing maintenance invocation. Current user-visible delay is unmeasured."
+        }
+      ],
+      "options": [
+        {
+          "id": "scoped-pass",
+          "label": "One queue with small, named work kinds",
+          "recommended": true,
+          "detail": "Keep existing queue and durable receipts. Let status/ingest wakeups run their small path, and let maintenance continuations resume only the family that has work. Give comparison recovery one clear scheduler owner.",
+          "complexity": "A small discriminated message union; fewer repeated paths. Do not add a workflow framework.",
+          "migration": "Accept old {kind:'continue'} messages during queue retention, then retire their decoder.",
+          "tests": "Lost wakeup, duplicate delivery, expired lease, superseded comparison, maintenance starvation, and status latency under backlog.",
+          "reversibility": "High if old message handling remains through rollout."
+        },
+        {
+          "id": "current-pass",
+          "label": "Keep the single full pass",
+          "detail": "Smallest immediate change. Add step duration and query counters to establish whether scheduling is material before changing it.",
+          "complexity": "Current implementation stays, with clearer measurements.",
+          "migration": "None.",
+          "tests": "Measure idle pass, large promotion, archive and status backlog.",
+          "reversibility": "High."
+        },
+        {
+          "id": "split-queues",
+          "label": "Separate urgent work from maintenance queues",
+          "detail": "Independent consumers remove shared queue backlog, but add another queue, dead-letter handling, deploy configuration and operators' work.",
+          "complexity": "Higher resource and scheduling count.",
+          "migration": "New consumer and bounded dual-message rollout.",
+          "tests": "Cross-queue races, fair progress, retry behavior and resource contention.",
+          "reversibility": "Moderate."
+        }
+      ],
+      "recommendation": "scoped-pass",
+      "invalidation": "If full-pass measurements show negligible repeated query cost and acceptable status delivery under worst supported backlog, keep the current pass. If named work still misses the agreed urgent-work target, consider a separate queue.",
+      "risks": "Do not replace durable publication receipts with fire-and-forget sends. Queues permits duplicates. Do not remove both recovery schedulers without one remaining fallback.",
+      "snippet": {
+        "language": "ts",
+        "text": "type OperationsMessage =\n  | { kind: 'status'; runId: string }\n  | { kind: 'maintenance'; step: 'promotion' | 'history' | 'retention' }\n  | { kind: 'continue' }; // temporary old-message decoder"
+      },
+      "interactive": "Simulated work queue: add a review-save wakeup during a long promotion. Compare whole-pass versus named-step scheduling; show scan counts and simulated wait separately from any observed latency. Reset button restores same workload."
+    },
+    {
+      "id": "S05",
+      "status": "OPEN",
+      "priority": "High",
+      "question": "Should an accepted baseline copy every original image?",
+      "finding": "Promotion copies images to a protected baseline prefix, hashes source and destination, then reads/hashes the destination again before promotion. This gives simple independent ownership, but it is substantial repeated object work. A source-run pin can avoid copy work; a global content-addressed store adds much more ownership logic.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/promotions.ts:26",
+          "claim": "Each pass budgets 50 copy/verification rows and at most five concurrent objects."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/promotions.ts:203",
+          "claim": "preparePromotion requests protected copies into baselines/<digest>."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/common.ts:105",
+          "claim": "copyVerifiedObject hashes source and re-reads/hashes stored destination."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/promotions.ts:273",
+          "claim": "Final verification again reads and hashes protected images by capture row."
+        },
+        {
+          "kind": "verified",
+          "source": "packages/service/src/retention.ts:37",
+          "claim": "Current and previous baselines, reviews, exports, manual pins and active work influence retention."
+        },
+        {
+          "kind": "structural model",
+          "source": "apps/web/src/operations/promotions.ts:162",
+          "claim": "At least 424 passes for 10,580 new capture rows and 1,433 for 35,820 under copy-plus-final-verify budget; not a timing measurement."
+        }
+      ],
+      "options": [
+        {
+          "id": "pin-source",
+          "label": "Point the baseline at an immutable source run",
+          "recommended": true,
+          "detail": "Keep source originals while the baseline or a review uses them. Remove protected copying and separate snapshot byte collection for new baselines. Prefer a whole-run owner pin first, because it uses the current retention model.",
+          "complexity": "Less copying and one fewer object lifetime; may retain extra non-baseline originals in an inherited run.",
+          "migration": "New baseline format points to verified originals; old copied snapshots stay readable until unreferenced. Preserve identity, exact decisions and one-level rollback.",
+          "tests": "Concurrent promotion/expiry, inherited originals, superseded runs, rollback, export and missing-source detection.",
+          "reversibility": "Moderate; can recreate protected copies while originals remain."
+        },
+        {
+          "id": "keep-copies",
+          "label": "Keep protected copies and tune measured work",
+          "detail": "Retain the present ownership contract. Investigate redundant final verification and page size only after integrity and latency measurements.",
+          "complexity": "Lowest behavior change; copy/GC state remains.",
+          "migration": "None unless verification policy changes.",
+          "tests": "Corrupt source/destination, incomplete copy, final promotion race and hosted pass timings.",
+          "reversibility": "High."
+        },
+        {
+          "id": "global-blobs",
+          "label": "One shared image per content digest",
+          "detail": "Maximize cross-run reuse. Every image needs durable owners or a traced garbage collector across runs, baselines and exports.",
+          "complexity": "Highest; global deletion correctness replaces simple run-prefix deletion.",
+          "migration": "Content-addressed keys, owner backfill, dual readers and delayed GC.",
+          "tests": "Reference races, digest collision refusal, lost owner writes, stale deletes, restore and rollback.",
+          "reversibility": "Low after old prefixes are removed."
+        }
+      ],
+      "recommendation": "pin-source",
+      "invalidation": "If whole-run pins retain much more data than baseline copies, or inherited ownership keeps long chains live, keep copies. Measure retained bytes on real runs before committing to source pins. No automatic global deduplication is justified yet.",
+      "risks": "This changes a prior D16 design choice (docs/design-r9.json near line 401) and needs explicit maintainer selection. Pointer baselines still need verification of original bytes and deletion protection.",
+      "snippet": {
+        "language": "ts",
+        "text": "// Proposed: baseline owns immutable original bytes through a run pin.\nawait atomic(db, [\n  pinRun(sourceRunId, `baseline:${snapshotId}`),\n  setBaseline({ snapshotId, sourceRunId, comparisonId }),\n]);"
+      },
+      "interactive": "Slider for captures, mean image bytes, shared-image ratio and inherited owner runs. Show copy/verification row count for current design and retained extra run bytes for pins. Label estimates and let the user switch expiry/current-baseline/rollback states."
+    },
+    {
+      "id": "S06",
+      "status": "OPEN",
+      "priority": "Medium",
+      "question": "How much closed-run history must remain interactive?",
+      "finding": "Old history is a second data system: detailed D1 rows are archived into verified R2 pages, replaced by compact database records, rehydrated for historical comparison, then archived again. This is justified by exact replay and permanent detail promises. A smaller history promise would remove more code than changing the database product.",
+      "evidence": [
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/history.ts:54",
+          "claim": "Archive writer maps many SQL record families, including commands, decisions, snapshots, lineage, manifests, profiles and provenance."
+        },
+        {
+          "kind": "verified",
+          "source": "packages/service/src/history.ts:146",
+          "claim": "Compaction erases detailed rows/JSON only after archive proof and preserves command replay digests."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/historical-captures.ts:20",
+          "claim": "Historical comparisons can recreate capture state from archive data."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/history-supplement.ts:60",
+          "claim": "Historical comparison results have their own archive work."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/retention.ts:16",
+          "claim": "Ready history archive is required before original-run byte deletion."
+        },
+        {
+          "kind": "verified",
+          "source": "apps/web/src/operations/history-format.ts:75",
+          "claim": "Archives allow up to 4096 pages, 200 rows/page, and bounded progress metadata."
+        }
+      ],
+      "options": [
+        {
+          "id": "summary-history",
+          "label": "Detailed active reviews, compact closed history",
+          "recommended": true,
+          "detail": "Keep run identity, status, actor decisions, exact acceptance tuples and audit summary permanently. After a stated retention period, offer a read-only summary and an explicit evidence download instead of historical recomparison and exact old command replay.",
+          "complexity": "Removes rehydration and replay branches if those features are not needed. A summary format is smaller than a generic archived database.",
+          "migration": "New closure policy; preserve existing archive readers until their agreed support end. Keep acceptance identity separate from display history.",
+          "tests": "Acceptance reuse survives compaction; old links show clear expiry; active/rollback/export pins block deletion; old command retries get an explicit terminal response.",
+          "reversibility": "Low once detailed source data is deleted."
+        },
+        {
+          "id": "full-history",
+          "label": "Keep permanent interactive history",
+          "detail": "Keep the existing archive/rehydration system and focus on bounded queries, page reads, tests and clear state. This preserves the widest existing behavior.",
+          "complexity": "Current complexity remains because the contract requires it.",
+          "migration": "None.",
+          "tests": "Missing/corrupt pages, historical recomparison, exact command replay, archive retention races.",
+          "reversibility": "High until data is removed."
+        },
+        {
+          "id": "d1-history",
+          "label": "Keep retained detail in D1, then expire it",
+          "detail": "Use one read path for a fixed history window. Keep compact permanent identity and decisions, then delete expired detail instead of archiving all row families.",
+          "complexity": "Simpler reads; may increase D1 capacity needs during the window.",
+          "migration": "Stop new full archives after new retention policy; leave old archives readable during transition.",
+          "tests": "Measured bytes per run and growth horizon, batched expiry, permanent identity/acceptance, expired links.",
+          "reversibility": "Moderate before detail expiry."
+        }
+      ],
+      "recommendation": "summary-history",
+      "invalidation": "If maintainers routinely need exact historical recomparison or command replay after closure, full history is a real product requirement. Usage is unmeasured; do not remove it merely from code size.",
+      "risks": "Do not discard exact acceptance tuples or source identity while simplifying display history. Those affect future correctness. Existing permanent-history promises must change explicitly.",
+      "snippet": {
+        "language": "ts",
+        "text": "type ClosedRunSummary = {\n  id: string; testedSha: string; status: string;\n  decisions: readonly DecisionReceipt[];\n  evidenceExpiresAt: number | null;\n};"
+      },
+      "interactive": "A closed-run timeline with 1-day, 30-day and 90-day positions. Select a policy and show what remains possible: view verdict, inspect image, retry old command, compare history, download evidence. Show permanent acceptance identity independently."
+    }
+  ]
+}

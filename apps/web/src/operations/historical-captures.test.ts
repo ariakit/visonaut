@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancelHistoricalPreparation, compactHistoricalComparison } from "@visonaut/service";
+import { cancelHistoricalPreparation } from "@visonaut/service";
 import { archiveClosedRuns, readHistoryManifest } from "./history.ts";
 import { prepareHistoricalCaptures } from "./historical-captures.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
@@ -19,76 +19,20 @@ async function archivedFixture() {
 }
 
 describe("historical comparison candidate recovery", () => {
-  it("hydrates verified archived candidates and retains byte pins until the result archive is committed", async () => {
+  it("refuses to create an interactive historical comparison after compaction", async () => {
     const { database, fixture, service } = await archivedFixture();
     using _owned = database;
-    const before = await service.run("run");
-    const count = await prepareHistoricalCaptures(fixture.context, {
-      runId: "run",
-      comparisonId: "history",
-      referenceSnapshotId: null,
-      maximumCaptures: 10,
-    });
-    expect(count).toBe(1);
-    const comparison = await service.createComparison({
-      id: "history",
-      runId: "run",
-      referenceSnapshotId: null,
-      purpose: "historical",
-      expectedCaptureCount: count,
-      now: fixture.context.now(),
-      maxAttempts: 2,
-    });
-    await service.finalizeComparison({ comparisonId: comparison.id, now: fixture.context.now() });
-    expect(await service.run("run")).toEqual(before);
-    expect(
-      database.connection
-        .prepare("SELECT owner FROM work_retention_pins WHERE owner='historical:history'")
-        .all(),
-    ).toHaveLength(1);
-    expect((await service.comparisonRows(comparison.id))[0]?.candidate_capture_id).toBe(
-      "capture-run",
-    );
-    database.connection
-      .prepare(
-        "INSERT INTO operations_comparison_archives(comparison_id,run_id,generation,lease_token,lease_until,created_at,object_key) VALUES ('history','run','g','token',?,?,'history/run/g/manifest.json')",
-      )
-      .run(fixture.context.now() + 1000, fixture.context.now());
     await expect(
-      compactHistoricalComparison(database, {
-        comparisonId: "history",
-        generation: "g",
-        token: "stale",
-        objectKey: "history/run/g/manifest.json",
-        digest: "a".repeat(64),
-        bytes: 100,
-        pageCount: 1,
+      service.createComparison({
+        id: "history",
+        runId: "run",
+        referenceSnapshotId: null,
+        purpose: "historical",
+        expectedCaptureCount: 1,
         now: fixture.context.now(),
+        maxAttempts: 2,
       }),
-    ).rejects.toThrow();
-    expect(await service.comparisonRows(comparison.id)).toHaveLength(1);
-    await compactHistoricalComparison(database, {
-      comparisonId: "history",
-      generation: "g",
-      token: "token",
-      objectKey: "history/run/g/manifest.json",
-      digest: "a".repeat(64),
-      bytes: 100,
-      pageCount: 1,
-      now: fixture.context.now(),
-    });
-    expect(await service.comparisonRows(comparison.id)).toHaveLength(0);
-    expect(await service.getComparisonTaskState("history:capture-run")).toEqual({
-      state: "superseded",
-    });
-    expect(
-      database.connection.prepare("SELECT key FROM visonaut_shards WHERE run_id='run'").all(),
-    ).toHaveLength(0);
-    expect(
-      database.connection
-        .prepare("SELECT owner FROM work_retention_pins WHERE owner='historical:history'")
-        .all(),
-    ).toEqual([]);
+    ).rejects.toThrow("read-only summary");
   });
 
   it("fails on a corrupt archive without restoring capture rows and releases abandoned preparation pins", async () => {

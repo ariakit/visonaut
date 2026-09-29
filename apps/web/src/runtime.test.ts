@@ -1,10 +1,13 @@
-import { readFile } from "node:fs/promises";
+import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { unstable_readConfig } from "wrangler";
 import * as api from "./api/index.ts";
 import * as capacity from "./capacity.ts";
+import * as preRun from "./api/pre-run.ts";
+import * as workflowRetention from "./api/workflow-retention.ts";
+import * as deliveries from "./operations/github-deliveries.ts";
 import * as operations from "./operations/index.ts";
 import { recordEvent } from "./operations/common.ts";
 import {
@@ -29,6 +32,7 @@ const queueResponse = { metadata: { metrics: { backlogCount: 0, backlogBytes: 0 
 beforeAll(async () => {
   const configuration = unstable_readConfig({
     config: fileURLToPath(new URL("../wrangler.jsonc", import.meta.url)),
+    env: "production",
   });
   runtime = new Miniflare(
     convertV4MiniflareOptions({
@@ -56,7 +60,11 @@ beforeAll(async () => {
     }),
   );
   env = await runtime.getBindings<Env>();
-  const schema = await readFile(new URL("./operations/schema.sql", import.meta.url), "utf8");
+  // This handler fixture needs only events and capacity rows, not run transitions.
+  const schema = readTestMigrations().find(
+    (migration) => migration.name === "0005_operations.sql",
+  )?.sql;
+  if (!schema) throw new Error("Operations migration is missing.");
   const events = schema.match(/CREATE TABLE IF NOT EXISTS operations_events \([\s\S]*?\);/u)?.[0];
   if (!events) throw new Error("Operations event schema is missing.");
   await env.DB.prepare(events).run();
@@ -124,28 +132,24 @@ afterAll(async () => {
   await runtime?.dispose();
 });
 
-it("enables automatic Ariakit pre-run checks only in production", () => {
-  expect(apiBindings(env).configuration.workflowOwned).toBeUndefined();
-  const production = unstable_readConfig({
+it("keeps live workflow and authentication configuration only in production", () => {
+  const preview = unstable_readConfig({
     config: fileURLToPath(new URL("../wrangler.jsonc", import.meta.url)),
-    env: "production",
   });
-  expect(production.vars?.VISONAUT_WORKFLOW_OWNED).toBeTruthy();
-  const workflow = JSON.parse(String(production.vars?.VISONAUT_WORKFLOW_OWNED));
-  expect(workflow).toMatchObject({
-    reusableWorkflowRef:
-      "ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f",
-    reusableWorkflowSha: "697172dfed281348d79bfe8ce61f9ccf21537c5f",
-    additionalTrustedWorkflowBlobSha: "6720c8f6e6038bc00046d08c86243f2ce160f4b6",
-    transitionTrustedWorkflowBlobSha: "4aac43e3039b578913e8a603c10ca47009493ef5",
-    additionalTrustedExecutorDigest:
-      "5d29257230b1d822b846af7670741e3195a58fddbe7c8cac61dedd3a8a403179",
-  });
-  expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_REF).toBe(workflow.reusableWorkflowRef);
-  expect(production.vars?.VISONAUT_REUSABLE_WORKFLOW_SHA).toBe(workflow.reusableWorkflowSha);
-  expect(production.vars?.VISONAUT_TRUSTED_EXECUTOR_DIGEST).toBe(
-    "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
-  );
+  expect(preview.vars?.VISONAUT_ENVIRONMENT).toBe("preview");
+  expect(preview.vars?.GITHUB_APP_ID).toBeUndefined();
+  expect(preview.vars?.GITHUB_CLIENT_ID).toBeUndefined();
+  expect(preview.vars?.VISONAUT_WORKFLOW_OWNED).toBeUndefined();
+  expect(preview.triggers.crons).toEqual([]);
+  const workflow = apiBindings(env).configuration.workflowOwned;
+  expect(workflow).toBeDefined();
+  expect(workflow?.callerWorkflowPath).toBe(".github/workflows/ci.yml");
+  expect(workflow?.trustedWorkflowPath).toMatch(/^\.github\/workflows\/[^/]+\.yml$/);
+  expect(workflow?.reusableWorkflowSha).toMatch(/^[a-f0-9]{40}$/);
+  expect(workflow).not.toHaveProperty("additionalTrustedWorkflowBlobSha");
+  expect(workflow).not.toHaveProperty("transitionTrustedWorkflowBlobSha");
+  expect(workflow).not.toHaveProperty("additionalTrustedExecutorDigest");
+  expect(apiBindings(env).configuration.trustedExecutorDigest).toMatch(/^[a-f0-9]{64}$/);
 });
 
 beforeEach(async () => {
@@ -168,7 +172,23 @@ beforeEach(async () => {
     maximumActiveRuns: 1,
   });
   vi.spyOn(api, "reconcileWebhooks").mockResolvedValue({ checked: 0, pending: [] });
-  vi.spyOn(api, "reconcileIngest").mockResolvedValue({ checked: 0, errors: [], progressed: 0 });
+  vi.spyOn(api, "reconcileStagedWorkflows").mockResolvedValue({
+    checked: 0,
+    errors: [],
+    progressed: 0,
+  });
+  vi.spyOn(preRun, "retireUnpinnedMainChecks").mockResolvedValue({ checked: 0, pending: [] });
+  vi.spyOn(preRun, "reconcileEquivalentPullRequestChecks").mockResolvedValue({
+    checked: 0,
+    pending: [],
+  });
+  vi.spyOn(workflowRetention, "expireStagedAttempts").mockResolvedValue({
+    completed: [],
+    deferred: [],
+    attention: [],
+    hasMore: false,
+  });
+  vi.spyOn(deliveries, "recoverGitHubDeliveries").mockResolvedValue({ checked: 0, requested: 0 });
   vi.spyOn(operations, "runOperations").mockResolvedValue({ reports: {}, hasMore: false });
 });
 
@@ -183,13 +203,13 @@ async function event(id: string) {
 }
 
 describe("scheduler alert recovery", () => {
-  it.each(["webhooks", "ingest"] as const)(
+  it.each(["webhooks", "staged"] as const)(
     "records returned %s failures without requiring a thrown exception first",
     async (kind) => {
       if (kind === "webhooks") {
         vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 1, pending: ["delivery"] });
       } else {
-        vi.mocked(api.reconcileIngest).mockResolvedValue({
+        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
           checked: 1,
           errors: [{ runId: "run", code: "incomplete" }],
           progressed: 0,
@@ -203,12 +223,12 @@ describe("scheduler alert recovery", () => {
       expect(operations.runOperations).toHaveBeenCalled();
     },
   );
-  it.each(["webhooks", "ingest"] as const)(
+  it.each(["webhooks", "staged"] as const)(
     "resolves only %s reconciliation errors after a clean reconciliation",
     async (kind) => {
       await recordEvent(env.DB, { kind, subject: "scheduler", code: "another-failure", now });
       await recordEvent(env.DB, { kind, subject: "item", code: "reconciliation-failed", now });
-      const reconcile = kind === "webhooks" ? api.reconcileWebhooks : api.reconcileIngest;
+      const reconcile = kind === "webhooks" ? api.reconcileWebhooks : api.reconcileStagedWorkflows;
       vi.mocked(reconcile).mockRejectedValue(new Error("Reconciliation unavailable."));
       await runScheduledOperations(env);
       await runScheduledOperations(env);
@@ -218,7 +238,7 @@ describe("scheduler alert recovery", () => {
       if (kind === "webhooks") {
         vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 1, pending: ["delivery"] });
       } else {
-        vi.mocked(api.reconcileIngest).mockResolvedValue({
+        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
           checked: 1,
           errors: [{ runId: "run", code: "incomplete" }],
           progressed: 0,
@@ -230,7 +250,11 @@ describe("scheduler alert recovery", () => {
       if (kind === "webhooks") {
         vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 0, pending: [] });
       } else {
-        vi.mocked(api.reconcileIngest).mockResolvedValue({ checked: 0, errors: [], progressed: 0 });
+        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
+          checked: 0,
+          errors: [],
+          progressed: 0,
+        });
       }
       await runScheduledOperations(env);
       expect(await event(id)).toEqual({ occurrences: 3, resolved_at: now });
@@ -260,7 +284,10 @@ describe("scheduler alert recovery", () => {
     const id = "runtime:scheduler:configuration-or-step-failed";
     expect(await event(id)).toEqual({ occurrences: 2, resolved_at: null });
 
-    vi.mocked(operations.runOperations).mockResolvedValue({ reports: {}, hasMore: true });
+    vi.mocked(operations.runOperations).mockResolvedValue({
+      reports: { checks: { completed: [], deferred: [], attention: [], hasMore: true } },
+      hasMore: true,
+    });
     vi.mocked(env.OPERATIONS.send).mockRejectedValue(new Error("Queue unavailable."));
     await expect(runScheduledOperations(env)).rejects.toThrow("Queue unavailable.");
     await reportSchedulerFailure(env);
@@ -268,7 +295,7 @@ describe("scheduler alert recovery", () => {
 
     vi.mocked(env.OPERATIONS.send).mockResolvedValue(queueResponse);
     await runScheduledOperations(env);
-    expect(env.OPERATIONS.send).toHaveBeenCalledWith({ kind: "continue" }, { delaySeconds: 1 });
+    expect(env.OPERATIONS.send).toHaveBeenCalledWith({ kind: "status" }, { delaySeconds: 1 });
     expect(await event(id)).toEqual({ occurrences: 3, resolved_at: now });
     expect(await event("runtime:scheduler:another-failure")).toEqual({
       occurrences: 1,
@@ -313,11 +340,55 @@ it("keeps existing work and cleanup running when capacity sampling fails", async
   );
   await expect(runScheduledOperations(env)).resolves.toMatchObject({ hasMore: false });
   expect(api.reconcileWebhooks).toHaveBeenCalled();
-  expect(api.reconcileIngest).toHaveBeenCalled();
+  expect(api.reconcileStagedWorkflows).toHaveBeenCalled();
   expect(operations.runOperations).toHaveBeenCalled();
   expect(await event("database-capacity:database:measurement-unavailable")).toMatchObject({
     resolved_at: null,
   });
+});
+
+it.each([
+  { kind: "status" },
+  { kind: "maintenance", family: "history" },
+  { kind: "ingest" },
+] as const)("keeps $kind continuations inside their queue family", async (message) => {
+  vi.mocked(operations.runOperations).mockResolvedValue({ reports: {}, hasMore: true });
+  await runScheduledOperations(env, message);
+  expect(deliveries.recoverGitHubDeliveries).not.toHaveBeenCalled();
+  expect(capacity.monitorDatabaseCapacity).not.toHaveBeenCalled();
+  expect(api.reconcileWebhooks).not.toHaveBeenCalled();
+  expect(preRun.retireUnpinnedMainChecks).not.toHaveBeenCalled();
+  expect(preRun.reconcileEquivalentPullRequestChecks).not.toHaveBeenCalled();
+  expect(api.reconcileStagedWorkflows).toHaveBeenCalledTimes(message.kind === "ingest" ? 1 : 0);
+  expect(workflowRetention.expireStagedAttempts).toHaveBeenCalledTimes(
+    message.kind === "ingest" ? 1 : 0,
+  );
+  expect(vi.mocked(operations.runOperations).mock.calls[0]?.[1]).toEqual(message);
+  expect(env.OPERATIONS.send).toHaveBeenCalledExactlyOnceWith(message, { delaySeconds: 1 });
+});
+
+it("keeps preview scheduling and recovery independent of live credentials or D1", async () => {
+  const preview = { ...env, VISONAUT_ENVIRONMENT: "preview", DB: undefined } as unknown as Env;
+  await expect(runScheduledOperations(preview)).resolves.toMatchObject({ hasMore: false });
+  await server.scheduled({ scheduledTime: now, cron: "*/5 * * * *", noRetry: vi.fn() }, preview);
+  expect(env.OPERATIONS.send).not.toHaveBeenCalled();
+  expect(deliveries.recoverGitHubDeliveries).not.toHaveBeenCalled();
+  expect(capacity.monitorDatabaseCapacity).not.toHaveBeenCalled();
+  expect(operations.runOperations).not.toHaveBeenCalled();
+});
+
+it("keeps upstream recovery alerts open until an actual recovery pass succeeds", async () => {
+  vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValueOnce(
+    new Error("Delivery unavailable."),
+  );
+  await runScheduledOperations(env);
+  const id = "upstream-webhook:scheduler:recovery-unavailable";
+  expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+  await runScheduledOperations(env, { kind: "status" });
+  expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+  await runScheduledOperations(env);
+  expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
+  expect(deliveries.recoverGitHubDeliveries).toHaveBeenCalledTimes(2);
 });
 
 describe("scheduled operations dispatch", () => {
@@ -327,12 +398,12 @@ describe("scheduled operations dispatch", () => {
     noRetry: vi.fn(),
   };
 
-  it("only publishes a continuation from cron, leaving export and reconciliation to the queue", async () => {
+  it("only publishes recovery from cron, leaving export and reconciliation to the queue", async () => {
     await server.scheduled(controller, env);
-    expect(env.OPERATIONS.send).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+    expect(env.OPERATIONS.send).toHaveBeenCalledExactlyOnceWith({ kind: "recovery" });
     expect(capacity.monitorDatabaseCapacity).not.toHaveBeenCalled();
     expect(api.reconcileWebhooks).not.toHaveBeenCalled();
-    expect(api.reconcileIngest).not.toHaveBeenCalled();
+    expect(api.reconcileStagedWorkflows).not.toHaveBeenCalled();
     expect(operations.runOperations).not.toHaveBeenCalled();
   });
 
@@ -344,7 +415,7 @@ describe("scheduled operations dispatch", () => {
     expect(operations.runOperations).not.toHaveBeenCalled();
 
     await server.scheduled(controller, env);
-    expect(env.OPERATIONS.send).toHaveBeenNthCalledWith(2, { kind: "continue" });
+    expect(env.OPERATIONS.send).toHaveBeenNthCalledWith(2, { kind: "recovery" });
     expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
     expect(operations.runOperations).not.toHaveBeenCalled();
 

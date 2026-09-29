@@ -217,3 +217,26 @@ test("capacity alerts show measured usage, admission headroom, and capture slots
   await expect(page.getByText("Latest SQL backup", { exact: false })).toHaveCount(0);
   await expect(page.getByText("Active captures: 0 of 1.", { exact: false })).toBeVisible();
 });
+
+for (const [code, action] of [
+  ["production-receiver-mismatch", "production /v1/webhooks receiver"],
+  ["redelivery-exhausted", "request manual redelivery"],
+  ["recovery-unavailable", "retries delivery recovery automatically"],
+] as const) {
+  test(`GitHub webhook ${code} alerts give the matching recovery action`, async ({ page }) => {
+    await page.route("**/api/operations", (route) =>
+      route.fulfill({
+        json: {
+          ...status,
+          events: [{ ...status.events[0], kind: "upstream-webhook", code }],
+        },
+      }),
+    );
+    await page.goto(path);
+    await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
+    await expect(
+      page.getByRole("heading", { name: "GitHub webhook delivery needs attention" }),
+    ).toBeVisible();
+    await expect(page.getByText(action, { exact: false })).toBeVisible();
+  });
+}

@@ -1,6 +1,7 @@
 import {
   canonicalJson,
   digestJson,
+  digestRenderingProfile,
   validateDigest,
   validateProfile,
   type CaptureProfile,
@@ -11,6 +12,7 @@ import { assertion, atomic, type Database } from "@visonaut/service";
 interface ProfileRow {
   digest: string;
   profile_json: string;
+  rendering_digest?: string;
 }
 
 export interface CaptureMetadataRow {
@@ -69,18 +71,22 @@ async function profileRows(profiles: readonly ProfileRecord[]) {
     if (previous && previous.profile_json !== encoded) {
       throw new Error("The capture profile digest has conflicting content.");
     }
-    collected.set(digest, { digest, profile_json: encoded });
+    collected.set(digest, {
+      digest,
+      profile_json: encoded,
+      rendering_digest: await digestRenderingProfile(profile),
+    });
   }
   return [...collected.values()];
 }
 
 function profileStatements(database: Database, profiles: readonly ProfileRow[]) {
-  return profiles.flatMap(({ digest, profile_json }) => [
+  return profiles.flatMap(({ digest, profile_json, rendering_digest }) => [
     database
       .prepare(
-        "INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?) ON CONFLICT(digest) DO NOTHING",
+        "INSERT INTO visonaut_capture_profiles(digest,profile_json,rendering_digest) VALUES(?,?,?) ON CONFLICT(digest) DO UPDATE SET rendering_digest=excluded.rendering_digest WHERE visonaut_capture_profiles.profile_json=excluded.profile_json",
       )
-      .bind(digest, profile_json),
+      .bind(digest, profile_json, rendering_digest ?? null),
     assertion(
       database,
       "EXISTS(SELECT 1 FROM visonaut_capture_profiles WHERE digest=? AND profile_json=?)",

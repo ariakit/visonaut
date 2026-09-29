@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runCli } from "../src/index.js";
+import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
 
 const environment = {
@@ -405,7 +405,7 @@ describe("public upload command", () => {
   });
 });
 
-describe("public submit command", () => {
+describe("private upload and submission transport", () => {
   it("uses a separate OIDC audience and sends the signed workflow attempt", async () => {
     const local = await localFixture();
     const { requests } = await mockService({ local });

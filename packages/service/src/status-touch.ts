@@ -13,9 +13,9 @@ export function touchRunStatusStatements(
     database.prepare("UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?").bind(run.id),
     database
       .prepare(
-        "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ?)",
+        "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_run_id FROM visonaut_runs WHERE id=?))",
       )
-      .bind(run.projectId, run.projectId),
+      .bind(run.projectId, run.projectId, run.id),
     database
       .prepare(
         "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?",

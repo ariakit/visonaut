@@ -1,0 +1,230 @@
+{
+  "config": {
+    "argv": [
+      "/Users/diegohaz/Library/pnpm/store/v11/links/@/node/24.18.0/250a5a92c14115124d4b542cffe6626750fadf7559c490864eff8b1af06ef65d/node_modules/node/bin/node",
+      "/tmp/visonaut-simplify-ui-01a0ed98/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/tmp/visonaut-built-preview-smoke/playwright.config.ts"
+    ],
+    "configFile": "/tmp/visonaut-built-preview-smoke/playwright.config.ts",
+    "rootDir": "/tmp/visonaut-built-preview-smoke",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/tmp/visonaut-built-preview-smoke/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/tmp/visonaut-built-preview-smoke",
+        "testIgnore": [],
+        "testMatch": ["smoke.browser.test.ts"],
+        "timeout": 45000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      ["list", null],
+      [
+        "json",
+        {
+          "outputFile": "/tmp/visonaut-built-preview-smoke/playwright-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "smoke.browser.test.ts",
+      "file": "smoke.browser.test.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "probe desktop geometry after reload and screenshots",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2011,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:46:01.009Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "973d3927ecdf65af2f29-e30786a55a4fc29e6203",
+          "file": "../../private/tmp/visonaut-built-preview-smoke/smoke.browser.test.ts",
+          "line": 27,
+          "column": 5
+        },
+        {
+          "title": "built Worker serves document shells, favicon and its fixture model",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 39,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:46:03.316Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "973d3927ecdf65af2f29-8855f5dca9741b4e1f6a",
+          "file": "../../private/tmp/visonaut-built-preview-smoke/smoke.browser.test.ts",
+          "line": 54,
+          "column": 5
+        },
+        {
+          "title": "desktop: built preview links, focus, reload, Back and decoded images",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3340,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:46:03.360Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "desktop-evidence",
+                      "contentType": "application/json",
+                      "path": "/tmp/visonaut-built-preview-smoke/test-results/smoke.browser-desktop-buil-02851-oad-Back-and-decoded-images/attachments/desktop-evidence-215f87f69a2b5993db70b2f3d6d01be8e1893fc2.json"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "973d3927ecdf65af2f29-b2bd9a131ae17c3d0b41",
+          "file": "../../private/tmp/visonaut-built-preview-smoke/smoke.browser.test.ts",
+          "line": 97,
+          "column": 7
+        },
+        {
+          "title": "narrow: built preview links, focus, reload, Back and decoded images",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 45000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3343,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-09-29T19:46:06.706Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "narrow-evidence",
+                      "contentType": "application/json",
+                      "path": "/tmp/visonaut-built-preview-smoke/test-results/smoke.browser-narrow-built-257f8-oad-Back-and-decoded-images/attachments/narrow-evidence-766fafffaaca00a02de2dabc4c8b5302ca10cdf3.json"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "973d3927ecdf65af2f29-80b8ad9ec11f091010d8",
+          "file": "../../private/tmp/visonaut-built-preview-smoke/smoke.browser.test.ts",
+          "line": 97,
+          "column": 7
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-09-29T19:46:00.782Z",
+    "duration": 9380.056,
+    "expected": 4,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "browser": "154.0.8037.58",
+  "versions": {
+    "reactRouter": "1.170.38",
+    "routerCore": "1.171.32"
+  },
+  "scope": "Mounted React RouterProvider; memory history; synthetic loader; no HTTP/SSR/auth or product data",
+  "results": [
+    {
+      "step": "initial",
+      "calls": 1
+    },
+    {
+      "step": "item+variant",
+      "calls": 1
+    },
+    {
+      "step": "comparison",
+      "calls": 2
+    },
+    {
+      "step": "invalidate",
+      "calls": 3
+    }
+  ],
+  "calls": [
+    {
+      "params": {
+        "runId": "a"
+      },
+      "deps": {
+        "comparison": "c"
+      },
+      "cause": "enter",
+      "signal": false
+    },
+    {
+      "params": {
+        "runId": "a"
+      },
+      "deps": {
+        "comparison": "other"
+      },
+      "cause": "stay",
+      "signal": false
+    },
+    {
+      "params": {
+        "runId": "a"
+      },
+      "deps": {
+        "comparison": "other"
+      },
+      "cause": "stay",
+      "signal": false
+    }
+  ]
+}

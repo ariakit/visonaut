@@ -1,0 +1,36 @@
+{
+  "decision": "U06",
+  "selectedOption": "automatic",
+  "date": "2026-09-29",
+  "environment": {
+    "browser": "Chromium headless via Playwright 1.63.0 on macOS",
+    "ariakit": "@ariakit/react 0.4.40 and @ariakit/react-components 0.6.1",
+    "router": "@tanstack/react-router 1.170.38",
+    "server": "Local HTTP preview 127.0.0.1:4177"
+  },
+  "harness": {
+    "source": "/private/tmp/visonaut-u06-probe/router.tsx",
+    "executableCheck": "/private/tmp/visonaut-u06-probe/router-probe.mjs",
+    "approach": "URL-derived selectedId, selectOnMove=false, Tab render=Link, keydown capture then requestAnimationFrame focused-anchor.click()"
+  },
+  "observed": {
+    "initial": { "urlSearch": "?variant=light", "selected": "light", "panel": "light" },
+    "arrowRight": { "urlSearch": "?variant=dark", "selected": "dark", "panel": "dark", "focus": "dark" },
+    "browserBack": { "urlSearch": "?variant=light", "selected": "light", "panel": "light", "focus": "light" },
+    "programmaticFocusOnDark": { "urlSearch": "?variant=light", "selected": "light", "panel": "light", "focus": "dark" },
+    "metaClickDark": { "originalUrlSearch": "?variant=light", "originalSelected": "light", "popupUrlSearch": "?variant=dark" },
+    "middleClickDark": { "originalUrlSearch": "?variant=light", "originalSelected": "light", "popupUrlSearch": "?variant=dark" },
+    "ordinaryClickDark": { "urlSearch": "?variant=dark", "selected": "dark", "panel": "dark" },
+    "pageErrors": []
+  },
+  "limits": [
+    "Two variants only; no real image load or latency measurement",
+    "Meta-click on macOS was checked; Ctrl-click on Windows was not",
+    "No screen-reader output or rapid-repeat test",
+    "Product route and global page shortcuts were not changed or tested"
+  ],
+  "officialReferences": [
+    "https://ariakit.com/examples/tab-react-router",
+    "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/"
+  ]
+}

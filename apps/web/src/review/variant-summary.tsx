@@ -53,14 +53,17 @@ export function VariantSummary({ variant, index }: { variant: ReviewVariant; ind
     .map((part) => part.value)
     .join(" · ");
   return (
-    <span className="review-variant-summary">
+    <span className="review-variant-summary flex items-center gap-1.5 min-w-0">
       {variant.thumbnail && (
         <img className="review-variant-thumbnail" src={variant.thumbnail} alt="" loading="lazy" />
       )}
-      <span className="review-variant-index" aria-hidden="true">
+      <span className="review-variant-index text-xs tabular-nums" aria-hidden="true">
         {index + 1}
       </span>
-      <span className="review-variant-icons" aria-hidden="true">
+      <span
+        className="review-variant-icons inline-flex shrink-0 gap-1 [&_span]:inline-flex [&_svg]:size-3.5"
+        aria-hidden="true"
+      >
         {parts.map((part, partIndex) => {
           const icon = iconForPart(part);
           return icon ? (
@@ -71,7 +74,11 @@ export function VariantSummary({ variant, index }: { variant: ReviewVariant; ind
         })}
       </span>
       {title && (
-        <span className="review-variant-title" aria-hidden="true" title={title}>
+        <span
+          className="review-variant-title min-w-0 truncate text-xs"
+          aria-hidden="true"
+          title={title}
+        >
           {title}
         </span>
       )}

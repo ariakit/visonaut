@@ -1,0 +1,9 @@
+
+ RUN  v5.0.1 /Users/diegohaz/.codex/worktrees/1de3/visonaut
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 24 skipped (25)
+   Start at  19:07:11
+   Duration  3.17s (tests 78%, import 15%, transform 7%)
+

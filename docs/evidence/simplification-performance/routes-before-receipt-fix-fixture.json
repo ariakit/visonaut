@@ -1,0 +1,217 @@
+{
+  "runId": "00000000-0000-4000-8000-000000000001",
+  "comparisonId": "26f9ace1-7e83-4463-84f0-358fa26fa101",
+  "captures": 3,
+  "imageBytes": 94,
+  "dimensions": {
+    "width": 3,
+    "height": 2
+  },
+  "syntheticProfileIdentities": true,
+  "knownMainIdentities": true,
+  "decisions": 12,
+  "githubRequests": [
+    {
+      "method": "POST",
+      "path": "/app/installations/34/access_tokens"
+    },
+    {
+      "method": "GET",
+      "path": "/user/42"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/fixture/repository/collaborators/fixture-maintainer/permission"
+    }
+  ],
+  "persistence": "ephemeral native D1 and R2; disposed after the probe",
+  "limits": "Synthetic three-variant PR; external GitHub responses are local. Capture, comparison execution, production networking, and Queue processing are outside the measurement."
+}

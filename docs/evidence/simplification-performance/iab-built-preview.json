@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-09-29T19:33:27.493Z",
+  "method": "In-app browser through cua_repl; actual built Worker with Wrangler local bindings",
+  "origin": "http://localhost:4184",
+  "configuration": {
+    "environment": "preview",
+    "localUpstream": "localhost:4184",
+    "upstreamProtocol": "http",
+    "productionCredentials": false
+  },
+  "sourceCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "build": {
+    "workerSha256": "c023f645d4dd83927e73b3d7079c972a19bf1a309a8eeb12b293671e9e7f532d"
+  },
+  "checks": {
+    "dashboard": true,
+    "reviewRoute": true,
+    "arrowFocusOpensDarkVariant": true,
+    "reloadRestoresVariant": true,
+    "dashboardAndBackRestoreVariant": true,
+    "diffImage": true,
+    "decodedImages": true,
+    "narrowViewport": {
+      "width": 390,
+      "height": 844,
+      "documentScrollWidth": 390
+    },
+    "githubLoginAbsent": true,
+    "reviewWritesDisabled": true,
+    "warningAndErrorLogs": []
+  },
+  "screenshots": {
+    "desktop": "iab-desktop.jpg",
+    "narrow": "iab-narrow.jpg"
+  },
+  "limits": "Synthetic read-only preview fixture. Does not prove production OAuth, a review save, production storage, or hosted performance."
+}

@@ -1,7 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { applyTestMigrations } from "../../../tooling/test-migrations.js";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAuth } from "../src/auth.js";
+import { requireMaintainer } from "../src/authorization.js";
+import type { GitHubClient } from "../src/github.js";
 import { persistWebhook, revokeGitHubAuthorization } from "../src/webhooks.js";
 
 const runtime = new Miniflare(
@@ -24,11 +26,8 @@ const configuration = {
 } as const;
 
 beforeAll(async () => {
-  const migration = (
-    await readFile(new URL("../migrations/0001_auth.sql", import.meta.url), "utf8")
-  ).replace(/^--.*$/gm, "");
-  await database.exec(migration);
-  await previewDatabase.exec(migration);
+  await applyTestMigrations(database);
+  await applyTestMigrations(previewDatabase);
 });
 afterAll(async () => runtime.dispose());
 
@@ -219,5 +218,104 @@ describe("Better Auth 1.7.5 with native D1", () => {
         .bind(`webhook:${webhook.deliveryId}`)
         .first(),
     ).toEqual({ count: 1 });
+  });
+});
+
+describe("bounded private-read permission", () => {
+  it("validates sessions on every read, expires at 60 seconds, and keeps writes live", async () => {
+    const { auth, session } = await createSession();
+    let permission = "write";
+    const requestGithub = vi.fn(async (path: string) =>
+      path.includes("/permission")
+        ? { user: { id: 42 }, permission, role_name: permission }
+        : { id: 42, login: "maintainer" },
+    );
+    const github: GitHubClient = {
+      appId: "read-cache",
+      repositoryId: "100",
+      repository: "ariakit/ariakit",
+      request: requestGithub,
+    };
+    const request = new Request(configuration.origin, {
+      headers: { authorization: `Bearer ${session.token}` },
+    });
+    const parameters = { request, auth, database, github, access: "read" as const };
+    const checkedAt = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    try {
+      await requireMaintainer(parameters);
+      permission = "read";
+      clock.mockReturnValue(checkedAt + 59_999);
+      await requireMaintainer(parameters);
+      expect(
+        requestGithub.mock.calls.filter(([path]) => path.includes("/permission")),
+      ).toHaveLength(1);
+      await expect(requireMaintainer({ ...parameters, access: "write" })).rejects.toMatchObject({
+        code: "not_maintainer",
+      });
+      await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+      permission = "write";
+      await requireMaintainer(parameters);
+      clock.mockReturnValue(checkedAt + 119_999);
+      permission = "read";
+      await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+      permission = "write";
+      await requireMaintainer(parameters);
+      await auth.api.signOut({ headers: request.headers });
+      const calls = requestGithub.mock.calls.length;
+      await expect(requireMaintainer(parameters)).rejects.toMatchObject({
+        code: "sign_in_required",
+      });
+      expect(requestGithub).toHaveBeenCalledTimes(calls);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("isolates sessions and repositories and never caches a denial", async () => {
+    const first = await createSession();
+    const second = await createSession();
+    let permission = "read";
+    const transport = vi.fn(async (path: string) =>
+      path.includes("/permission")
+        ? { user: { id: 42 }, permission, role_name: permission }
+        : { id: 42, login: "maintainer" },
+    );
+    const github: GitHubClient = {
+      appId: "isolated-cache",
+      repositoryId: "100",
+      repository: "ariakit/ariakit",
+      request: transport,
+    };
+    const parameters = {
+      request: new Request(configuration.origin, {
+        headers: { authorization: `Bearer ${first.session.token}` },
+      }),
+      auth: first.auth,
+      database,
+      github,
+      access: "read" as const,
+    };
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+    permission = "write";
+    await requireMaintainer(parameters);
+    permission = "read";
+    await requireMaintainer(parameters);
+    await expect(
+      requireMaintainer({
+        ...parameters,
+        request: new Request(configuration.origin, {
+          headers: { authorization: `Bearer ${second.session.token}` },
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "not_maintainer" });
+    await expect(
+      requireMaintainer({ ...parameters, github: { ...github, repositoryId: "101" } }),
+    ).rejects.toMatchObject({ code: "not_maintainer" });
+    const calls = transport.mock.calls.length;
+    await expect(
+      requireMaintainer({ ...parameters, request: new Request(configuration.origin) }),
+    ).rejects.toMatchObject({ code: "sign_in_required" });
+    expect(transport).toHaveBeenCalledTimes(calls);
   });
 });

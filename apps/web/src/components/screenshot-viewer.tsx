@@ -1,7 +1,8 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import type { SyntheticEvent } from "react";
 import type { ReviewImage, ReviewMode, ReviewVariant, ReviewZoom } from "../review/model.ts";
 import type { EvidenceRole, ImageEvidence } from "../review/use-evidence.ts";
+import { Frame } from "./ariakit/components/frame.ariakit.react.tsx";
 import { ControlButton as Button } from "./control-button.tsx";
 
 interface ImagePaneProps {
@@ -31,6 +32,9 @@ function ImagePane({
   const position = useRef({ left: 0, top: 0 });
   const ready = evidence?.status === "ready";
   useLayoutEffect(() => {
+    position.current = { left: 0, top: 0 };
+  }, [identity]);
+  useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
     if (hidden) return;
@@ -42,6 +46,7 @@ function ImagePane({
     if (!image) return;
     try {
       await element.decode();
+      if (!element.isConnected) return;
       if (element.naturalWidth !== image.width || element.naturalHeight !== image.height) {
         report(role, {
           status: "error",
@@ -52,6 +57,7 @@ function ImagePane({
       }
       report(role, { status: "ready" });
     } catch {
+      if (!element.isConnected) return;
       report(role, {
         status: "error",
         error: "The image could not be decoded. Retry loading the evidence.",
@@ -68,40 +74,27 @@ function ImagePane({
     });
   };
   return (
-    <figure
+    <Frame
+      $layer="canvas"
+      $p={0}
+      render={<figure />}
       className="review-pane"
       style={{ display: hidden ? "none" : undefined }}
       aria-busy={!!image && !ready && evidence?.status !== "error"}
     >
-      <figcaption>{label}</figcaption>
+      <figcaption className="text-xs ak-ink-60 px-3 py-2">{label}</figcaption>
       {image && zoom !== "fit" && (
-        <div className="review-control-group" aria-label={`Pan ${label}`}>
-          <Button
-            className="review-control"
-            aria-label={`Pan ${label} left`}
-            onClick={() => pan(-1, 0)}
-          >
+        <div className="flex flex-wrap gap-1 p-2" aria-label={`Pan ${label}`}>
+          <Button className="text-xs" aria-label={`Pan ${label} left`} onClick={() => pan(-1, 0)}>
             ←
           </Button>
-          <Button
-            className="review-control"
-            aria-label={`Pan ${label} right`}
-            onClick={() => pan(1, 0)}
-          >
+          <Button className="text-xs" aria-label={`Pan ${label} right`} onClick={() => pan(1, 0)}>
             →
           </Button>
-          <Button
-            className="review-control"
-            aria-label={`Pan ${label} up`}
-            onClick={() => pan(0, -1)}
-          >
+          <Button className="text-xs" aria-label={`Pan ${label} up`} onClick={() => pan(0, -1)}>
             ↑
           </Button>
-          <Button
-            className="review-control"
-            aria-label={`Pan ${label} down`}
-            onClick={() => pan(0, 1)}
-          >
+          <Button className="text-xs" aria-label={`Pan ${label} down`} onClick={() => pan(0, 1)}>
             ↓
           </Button>
         </div>
@@ -156,7 +149,7 @@ function ImagePane({
           </p>
         )}
       </div>
-    </figure>
+    </Frame>
   );
 }
 
@@ -179,8 +172,17 @@ export function ScreenshotViewer({
   identity,
   report,
 }: ScreenshotViewerProps) {
+  const [diffState, setDiffState] = useState({ identity, opened: mode === "diff" });
+  if (diffState.identity !== identity || (mode === "diff" && !diffState.opened)) {
+    setDiffState({ identity, opened: mode === "diff" });
+  }
   return (
-    <div className="review-viewer" data-mode={mode} data-ready={ready} aria-busy={!ready}>
+    <div
+      className="review-viewer max-md:grid-cols-1!"
+      data-mode={mode}
+      data-ready={ready}
+      aria-busy={!ready}
+    >
       <ImagePane
         image={variant.reference}
         label="Reference"
@@ -203,25 +205,27 @@ export function ScreenshotViewer({
         evidence={images.candidate}
         report={report}
       />
-      <ImagePane
-        image={variant.diff}
-        label="Pixel diff · red pixels changed"
-        empty={
-          !ready
-            ? "Pixel diff is not available for review."
-            : variant.changedPixels === 0
-              ? "No pixels changed."
-              : variant.maskExpected === false
-                ? "Pixel changes are within the comparison tolerance."
-                : "Pixel diff unavailable"
-        }
-        zoom={zoom}
-        hidden={mode !== "diff"}
-        identity={identity}
-        role="diff"
-        evidence={images.diff}
-        report={report}
-      />
+      {diffState.opened && (
+        <ImagePane
+          image={variant.diff}
+          label="Pixel diff · red pixels changed"
+          empty={
+            !ready
+              ? "Pixel diff is not available for review."
+              : variant.changedPixels === 0
+                ? "No pixels changed."
+                : variant.maskExpected === false
+                  ? "Pixel changes are within the comparison tolerance."
+                  : "Pixel diff unavailable"
+          }
+          zoom={zoom}
+          hidden={mode !== "diff"}
+          identity={identity}
+          role="diff"
+          evidence={images.diff}
+          report={report}
+        />
+      )}
     </div>
   );
 }

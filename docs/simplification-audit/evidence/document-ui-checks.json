@@ -1,0 +1,88 @@
+{
+  "initial": {
+    "progress": "0 / 39 answered",
+    "dark": {
+      "colorScheme": "dark",
+      "background": "oklch(0.17 0.014 259)"
+    },
+    "overflow": {
+      "viewport": 1440,
+      "document": 1440
+    }
+  },
+  "termText": "Ariakit UI",
+  "definitionMatches": true,
+  "hover": {
+    "text": "Shared styled components used to build the page, such as Shell, Frame, and Layer.",
+    "visible": true
+  },
+  "keyboard": {
+    "text": "Shared styled components used to build the page, such as Shell, Frame, and Layer.",
+    "visible": true,
+    "focused": true
+  },
+  "escapeClosed": true,
+  "touch": {
+    "visible": true,
+    "text": "Shared styled components used to build the page, such as Shell, Frame, and Layer.",
+    "selected": 0
+  },
+  "snippets": {
+    "count": 39,
+    "failures": []
+  },
+  "nested": [],
+  "nestedTerms": 0,
+  "desktopAfter": {
+    "overflow": {
+      "viewport": 1440,
+      "document": 1440
+    },
+    "selected": 0
+  },
+  "narrow": {
+    "overflow": {
+      "viewport": 390,
+      "document": 390
+    },
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 72,
+      "top": 0,
+      "right": 390,
+      "bottom": 72,
+      "left": 0
+    },
+    "controls": [
+      {
+        "text": "Copy continuation prompt ",
+        "rect": {
+          "x": 191.9375,
+          "y": 6.90625,
+          "width": 108.359375,
+          "height": 57.171875,
+          "top": 6.90625,
+          "right": 300.296875,
+          "bottom": 64.078125,
+          "left": 191.9375
+        }
+      },
+      {
+        "text": "Decisions ☰",
+        "rect": {
+          "x": 307.296875,
+          "y": 15.796875,
+          "width": 70.703125,
+          "height": 39.390625,
+          "top": 15.796875,
+          "right": 378,
+          "bottom": 55.1875,
+          "left": 307.296875
+        }
+      }
+    ]
+  },
+  "pageErrors": []
+}

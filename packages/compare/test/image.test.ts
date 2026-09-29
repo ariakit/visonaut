@@ -211,6 +211,7 @@ describe("validated originals and visible pixels", () => {
     hidden.data[19] = 129;
     const result = compareImages(image, hidden, strict);
     expect(result).toMatchObject({ outcome: "changed", changedPixels: 1, ratio: 1 / 6 });
+    if (result.outcome !== "changed") throw new Error("Expected a changed comparison.");
     expect(Array.from(result.mask.data.subarray(16, 20))).toEqual([255, 0, 0, 255]);
     expect(Array.from(result.mask.data.subarray(0, 16))).toEqual(new Array(16).fill(0));
     expect(compareImages(image, hidden, strict)).toEqual(result);
@@ -249,9 +250,7 @@ describe("validated originals and visible pixels", () => {
       changedPixels: 4,
       ratio: 4 / 67_392,
     });
-    expect(Array.from(tolerated.mask.data.subarray(0, 16))).toEqual([
-      255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255,
-    ]);
+    expect(tolerated.mask).toBeNull();
     expect(
       compareImages(reference, candidate, {
         ...selectedComparisonPolicy,

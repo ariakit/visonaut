@@ -37,8 +37,7 @@ export async function releaseExpiredComparisonReferences(
 /** This is distinct from byte retention: closed history is served from its archive. */
 function snapshotDetailRootsSql(snapshot: string) {
   return `EXISTS(SELECT 1 FROM visonaut_projects project
-    LEFT JOIN visonaut_promotions promotion ON promotion.id=project.promotion_id
-    WHERE project.snapshot_id=${snapshot}.id OR promotion.previous_snapshot_id=${snapshot}.id)
+    WHERE project.snapshot_id=${snapshot}.id)
     OR EXISTS(SELECT 1 FROM visonaut_runs run WHERE run.id=${snapshot}.run_id
       AND run.active=1 AND run.state IN ('uploading','comparing','reviewing'))
     OR EXISTS(SELECT 1 FROM visonaut_comparisons comparison JOIN visonaut_runs run ON run.id=comparison.run_id
@@ -93,11 +92,9 @@ export async function retireSnapshot(
       "DELETE FROM visonaut_pins WHERE snapshot_id=? AND reason IN ('promotion','rollback')",
       [snapshot.id],
     ),
-    statement(
-      database,
-      "DELETE FROM work_retention_pins WHERE run_id=? AND owner=? AND reason='baseline'",
-      [snapshot.run_id, `promotion:${snapshot.id}`],
-    ),
+    statement(database, "DELETE FROM work_retention_pins WHERE owner=? AND reason='baseline'", [
+      `promotion:${snapshot.id}`,
+    ]),
     statement(
       database,
       `UPDATE visonaut_runs SET active=0,state='superseded',closed_at=COALESCE(closed_at,?),revision=revision+1
@@ -143,7 +140,6 @@ export async function claimRetiredSnapshotDeletion(
   return database
     .prepare(`UPDATE visonaut_snapshot_retention SET byte_state='deleting',lease_token=?,lease_until=?
     WHERE snapshot_id=? AND ((byte_state='retiring' AND delete_after<=?) OR (byte_state='deleting' AND lease_until<=?))
-      AND NOT EXISTS(SELECT 1 FROM operations_backups WHERE state IN ('exporting','copying'))
       AND EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN operations_run_archives archive ON archive.run_id=snapshot.run_id
         WHERE snapshot.id=visonaut_snapshot_retention.snapshot_id AND snapshot.reference_eligible=0 AND archive.state='ready'
           AND NOT (${snapshotDetailRootsSql("snapshot")})

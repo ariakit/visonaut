@@ -2,7 +2,9 @@ import { assertion, atomic, ConflictError, statement } from "./database.ts";
 import type { Database } from "./database.ts";
 import { affectedHistoryOwners, pruneArchivedImageMetadataStatements } from "./prune.ts";
 
-/** The authorized API resolves this exact replay from the verified private archive. */
+export { affectedHistoryOwners, pruneArchivedImageMetadataStatements } from "./prune.ts";
+
+/** The receipt identifies expired command detail for the authorized history reader. */
 export class ArchivedCommandResultError extends Error {
   readonly runId: string;
   readonly commandId: string;
@@ -39,8 +41,6 @@ export function archiveEligibilitySql(runAlias: string) {
     AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin
       WHERE pin.run_id=${runAlias}.id AND NOT (
         pin.reason='comparison' AND (
-          pin.owner='workflow-rerun:' || ${runAlias}.id
-          OR
           EXISTS (SELECT 1 FROM visonaut_runs dependent
             WHERE dependent.active=0 AND pin.owner='inherited-by:' || dependent.id)
           OR EXISTS (SELECT 1 FROM visonaut_comparisons comparison

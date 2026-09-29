@@ -1,0 +1,493 @@
+{
+  "track": "App performance and request flow",
+  "revision": "2026-09-29-source-7e23173",
+  "state": "All choices remain OPEN. Recommendations are not maintainer selections.",
+  "method": {
+    "source": "Read current source, current browser tests, and committed September 22 scale evidence. Built the real ReviewWorkspace in a disposable copy. No tracked source was changed.",
+    "environment": "Apple M4 Pro, 14 logical CPUs, 48 GiB RAM, macOS Darwin 25.6.0 arm64, Node 24.18.0, headless Chrome 154.0.8037.58, production React, 1280 x 900, DPR 1, localhost, no CPU or network throttle for the primary sample.",
+    "sample": "3 fresh-context mounts and 1 excluded warmup at each size. Four cached variant changes per measured mount. Values are small diagnostic samples; p95 is the maximum with n=3 and is not a stable population estimate. Shared developer laptop, not an isolated benchmark host. A separate image probe overlapped part of the final collection; results are diagnostic, not a controlled regression test.",
+    "harnessChanges": "Temporary copy only: current .review-variants option selector replaced stale selected-tab selector. App source and styles were unchanged for the final measurement. Build from apps/web, as the documented command does; the first root-directory invocation omitted recipe classes and was discarded.",
+    "limits": "Synthetic data; no production GitHub, Workers, D1, R2, writes, auth, physical display times, Core Web Vitals, network throttling, live compression headers, heap-retention study, or screen reader. Two animation frames measure a paint opportunity. No DevTools MCP trace tools were available; Playwright/CDP provided bounded browser probes. Do not compare this as a regression against September 22 data, because source and generated styles differ.",
+    "rawArtifacts": [
+      "/tmp/visonaut-perf-evidence-final/measurements.json",
+      "/tmp/visonaut-perf-evidence-final/probes.json",
+      "/tmp/visonaut-perf-evidence-final/encoding.json",
+      "/tmp/visonaut-perf-evidence-final/harness-notes.md"
+    ],
+    "measurements": [
+      {
+        "captures": 3582,
+        "items": 597,
+        "domNodes": 543,
+        "rawJsonBytes": 3156970,
+        "localGzipBytes": 134133,
+        "localBrotliQ4Bytes": 64332,
+        "medianModelFetchAndParseMs": 7.9,
+        "medianRenderToListOpportunityMs": 112.4,
+        "medianRenderToImageOpportunityMs": 149.6,
+        "medianDocumentToImageOpportunityMs": 182.2,
+        "medianCachedVariantReadyMs": 36.6
+      },
+      {
+        "captures": 10580,
+        "items": 1764,
+        "domNodes": 543,
+        "rawJsonBytes": 9356222,
+        "localGzipBytes": 393860,
+        "localBrotliQ4Bytes": 171376,
+        "medianModelFetchAndParseMs": 21.7,
+        "medianRenderToListOpportunityMs": 109.5,
+        "medianRenderToImageOpportunityMs": 151.4,
+        "medianDocumentToImageOpportunityMs": 200.5,
+        "medianCachedVariantReadyMs": 37.1
+      },
+      {
+        "captures": 35820,
+        "items": 5970,
+        "domNodes": 543,
+        "rawJsonBytes": 31972612,
+        "localGzipBytes": 1329130,
+        "localBrotliQ4Bytes": 575988,
+        "medianModelFetchAndParseMs": 49.6,
+        "medianRenderToListOpportunityMs": 115.8,
+        "medianRenderToImageOpportunityMs": 152.8,
+        "medianDocumentToImageOpportunityMs": 246.7,
+        "medianCachedVariantReadyMs": 41.6
+      }
+    ],
+    "cpuPilot": "One 4x CPU-throttled diagnostic at 3,582 captures recorded 570.2 ms render-to-image opportunity and a 486 ms long task. This is not a named mobile-device result or a cause attribution. A normal-CPU image probe overlapped other browser work and is used only for request-count evidence.",
+    "sourceStatus": "Existing open issue #72 concerns run-review model latency. The issue index was available; its body was not fetched by web browsing. Existing issue status does not establish current performance."
+  },
+  "decisions": [
+    {
+      "id": "P01",
+      "status": "OPEN",
+      "priority": "high",
+      "question": "How much review data should the first request load?",
+      "finding": "The API returns every review item and variant. Sidebar paging limits rendered rows, but it does not limit the model. Repeated image and comparison fields make the synthetic 35,820-capture model 31.97 MB before compression. This is a data-volume fact, not a production transfer-time claim.",
+      "evidence": [
+        {
+          "path": "apps/web/src/api/review.ts",
+          "line": 309,
+          "claim": "Reads all comparison rows and related capture, image, and decision metadata."
+        },
+        {
+          "path": "apps/web/src/api/review.ts",
+          "line": 569,
+          "claim": "Returns every assembled item."
+        },
+        {
+          "path": "apps/web/src/review/client.ts",
+          "line": 135,
+          "claim": "Validates and constructs the entire returned model."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 981,
+          "claim": "Diagnostic fields are used in a details panel; they are not proven dead data."
+        }
+      ],
+      "measurement": "Raw model sizes 3.16/9.36/31.97 MB. Local gzip sizes 0.134/0.394/1.329 MB and Brotli quality-4 sizes 0.064/0.171/0.576 MB. Compression makes a large difference. Deployed wire sizes remain unmeasured. Local fetch+parse median grows from 7.9 to 49.6 ms.",
+      "options": [
+        {
+          "id": "compact-complete",
+          "label": "One compact complete model",
+          "recommended": true,
+          "consequence": "Keep one request and full navigation. Put genuinely shared policy/image metadata once in the response and retain variant-specific values. Check real response compression and read timing before adding another endpoint. This preserves simple client ownership and cross-item review."
+        },
+        {
+          "id": "summary-detail",
+          "label": "Summary plus selected evidence",
+          "consequence": "Load navigation summaries first, then details for the selected item. Bounds initial detail work but adds request, loading, cancellation, and caching rules. Bulk review and Undo must still use authoritative revision targets."
+        },
+        {
+          "id": "keep-current",
+          "label": "Keep the current response",
+          "consequence": "No migration. Accept the complete model allocation and measure production first. This is defensible if deployed loads meet the agreed budget."
+        }
+      ],
+      "recommendationReason": "Keep one request while reducing proven repetition. Current local rendering stays bounded. A new page/detail protocol should have a measured reason.",
+      "strongestCounterexample": "If live D1 assembly dominates initial load, changing JSON repetition will not fix the main delay. If common metadata differs across variants, hoisting it could obscure evidence semantics.",
+      "invalidateRecommendation": "A route measurement shows that complete-model reads or parse time exceed the selected budget after compression and simple query cleanup, or representative client memory is excessive.",
+      "migration": "Keep a response version or compatible parser during rollout. Preserve archived runs, row revisions, deep links, all-item navigation, whole-item review, and Undo. No storage migration is required for the compact option.",
+      "tests": [
+        "Compare raw and encoded representative responses at 3,582 and 35,820 captures.",
+        "Measure route click to first verified image, including authorization and D1.",
+        "Test metadata overrides, archived runs, pending/failed items, full navigation, bulk commands, stale revisions, and Undo."
+      ],
+      "snippet": "type ReviewResponse = {\n  comparison: ComparisonInfo;\n  images: Record<string, ImageInfo>;\n  items: ReviewItemSummary[];\n}; // Proposed shape; no extra data service.",
+      "demo": "Use a Shell with a capture-count selector and three Frame cards. Selecting a response policy updates a visible request list and raw/encoded payload bars. Mark request timing as simulated; use measured payload sizes only for the current model.",
+      "references": [
+        {
+          "label": "Existing model latency issue",
+          "url": "https://github.com/ariakit/visonaut/issues/72"
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "status": "OPEN",
+      "priority": "medium",
+      "question": "When should the pixel diff image load?",
+      "finding": "The viewer mounts reference, candidate, and diff image elements in every mode. CSS hides the unused pane. Chrome still fetched and decoded the hidden diff on initial side-by-side load.",
+      "evidence": [
+        {
+          "path": "apps/web/src/components/screenshot-viewer.tsx",
+          "line": 73,
+          "claim": "The hidden pane uses display:none."
+        },
+        {
+          "path": "apps/web/src/components/screenshot-viewer.tsx",
+          "line": 123,
+          "claim": "The image keeps its src even when the pane is hidden."
+        },
+        {
+          "path": "apps/web/src/components/screenshot-viewer.tsx",
+          "line": 206,
+          "claim": "The diff pane is always mounted."
+        },
+        {
+          "path": "apps/web/src/review/use-evidence.ts",
+          "line": 92,
+          "claim": "Diff evidence is required only in diff mode; reference and candidate are still required for review."
+        }
+      ],
+      "measurement": "Two browser probes each fetched all 3 full 1280x720 images plus 16 visible/nearby lazy thumbnails. The diff pane had display:none, complete:true, and naturalWidth:1280. Switching to diff caused 0 new requests. Each synthetic full image was 10,273 bytes; delaying the diff avoids one initial full-image fetch in this case. Real image bytes and user mode frequency were not measured.",
+      "options": [
+        {
+          "id": "on-demand",
+          "label": "Load diff when selected",
+          "recommended": true,
+          "consequence": "Avoid optional initial image work with one condition. Keep the diff mounted after its first use for the current variant if a mode switch must retain pan position. Preserve required reference/candidate decode checks before actions."
+        },
+        {
+          "id": "eager",
+          "label": "Keep all three eager",
+          "consequence": "Keep instant mode changes and the current simple component. Accept optional initial network and decode work."
+        },
+        {
+          "id": "idle",
+          "label": "Load diff after required evidence",
+          "consequence": "Prioritize the initial view and prepare the next mode. Adds a scheduling and cancellation policy; useful only if mode switching is frequent enough."
+        }
+      ],
+      "recommendationReason": "A small conditional removes verified optional work. It does not require a cache package or image service.",
+      "strongestCounterexample": "Reviewers may switch to diff for almost every variant; the deferred request would move delay onto that action.",
+      "invalidateRecommendation": "Observed review sessions show frequent diff use and a meaningful mode-switch delay under representative network conditions.",
+      "migration": "Change only pane loading. Keep image identity, dimension validation, late decode protection, retry, and action gating. Do not mistake hiding an image for not loading it.",
+      "tests": [
+        "Initial side-by-side load requests reference and candidate, not diff.",
+        "First diff view requests and verifies the diff; later mode changes reuse it.",
+        "Corrupt diff disables diff review, required evidence failures still block actions, late responses cannot mark a new variant ready, and pan position resets only under the agreed policy."
+      ],
+      "snippet": "const loadDiff = mode === \"diff\" || diffWasOpened;\n{loadDiff && <ImagePane image={variant.diff} hidden={mode !== \"diff\"} {...props} />}",
+      "demo": "Show the same selected screenshot inside a Layer with Side by side and Diff controls. A visible request counter compares eager and on-demand policies. Reset clears the simulated cache. Explicitly label this an example policy, not a new production implementation.",
+      "references": []
+    },
+    {
+      "id": "P03",
+      "status": "OPEN",
+      "priority": "medium",
+      "question": "Who should cancel and own page reads?",
+      "finding": "The run page creates and aborts an AbortController, but loadReview and its fetch helper never receive the signal. Leaving a run suppresses the state update without canceling its request. The dashboard and pull-request page already pass a real signal.",
+      "evidence": [
+        {
+          "path": "apps/web/src/routes/runs.$runId.tsx",
+          "line": 79,
+          "claim": "Creates the controller and calls loadReview without a signal."
+        },
+        {
+          "path": "apps/web/src/routes/runs.$runId.tsx",
+          "line": 103,
+          "claim": "Cleanup aborts only the local controller."
+        },
+        {
+          "path": "apps/web/src/review/client.ts",
+          "line": 224,
+          "claim": "Fetch options contain no signal."
+        },
+        {
+          "path": "apps/web/src/review/client.ts",
+          "line": 252,
+          "claim": "loadReview has no signal parameter."
+        },
+        {
+          "path": "apps/web/src/routes/index.tsx",
+          "line": 131,
+          "claim": "Dashboard fetch already forwards the signal."
+        },
+        {
+          "path": "apps/web/src/routes/pulls.$pullNumber.tsx",
+          "line": 41,
+          "claim": "Pull-request resolution already forwards the signal."
+        }
+      ],
+      "measurement": "Source-verified request ownership gap. No claim about saved milliseconds or guaranteed cancellation of work already running on the server.",
+      "options": [
+        {
+          "id": "forward-signal",
+          "label": "Keep effects and pass the signal",
+          "recommended": true,
+          "consequence": "Smallest correction: add an optional signal to the read helper and loadReview, pass the existing route signal, and keep mutation lifetimes separate. No new dependency."
+        },
+        {
+          "id": "router-loaders",
+          "label": "Use the existing router loaders",
+          "consequence": "Move initial reads into TanStack Router and use its abort signal. Removes repeated loading state code and can preload routes, but needs explicit search-key, stale-data, and permission rules."
+        },
+        {
+          "id": "query-layer",
+          "label": "Add a query cache layer",
+          "consequence": "Adds cross-route caching and invalidation APIs. More state ownership and a dependency; no measured need in this three-page app."
+        }
+      ],
+      "recommendationReason": "Fix the proven cancellation gap first. Reuse router loading if the wider page simplification already requires it; do not add a third owner only for this defect.",
+      "strongestCounterexample": "If several pages now share review data and navigation frequently revisits a run, route loaders may remove more code than patching each effect.",
+      "invalidateRecommendation": "A route-level rewrite is selected elsewhere or measured repeated reads require shared route caching. Any cache must preserve live authorization and stale-write guards.",
+      "migration": "Keep the existing loading/error/401/403 behavior and selection URLs. Read cancellation must not silently cancel an in-flight save or make it appear unsaved.",
+      "tests": [
+        "Navigate away while a run read is delayed; fetch receives and observes an aborted signal.",
+        "An old run response cannot replace the new run.",
+        "Changing only item/variant selection does not refetch the full model.",
+        "Permission loss and stale mutation conflicts retain their current behavior."
+      ],
+      "snippet": "loadReview(runId, comparisonId, { signal: controller.signal });\n// The same signal reaches fetch(path, { signal, credentials: \"same-origin\" }).",
+      "demo": "Two run buttons in a Shell start simulated delayed reads. A request row shows active, canceled, and completed. Switch runs to see whether the old read stops; Reset clears the log.",
+      "references": [
+        {
+          "label": "TanStack Router data loading and abort signals",
+          "url": "https://tanstack.com/router/latest/docs/guide/data-loading"
+        },
+        {
+          "label": "React effect data-fetching limitations",
+          "url": "https://react.dev/reference/react/useEffect"
+        },
+        {
+          "label": "AbortSignal and fetch",
+          "url": "https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal"
+        }
+      ]
+    },
+    {
+      "id": "P04",
+      "status": "OPEN",
+      "priority": "medium",
+      "question": "Should the item list keep simple pages or add a virtual list?",
+      "finding": "The current list already renders at most 50 attention rows and at most 50 accepted rows when that section is open. It has explicit keyboard behavior across page boundaries. The audit found bounded rendered output at each tested size, so a new virtualizer has no demonstrated need.",
+      "evidence": [
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 15,
+          "claim": "Page size is 50."
+        },
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 237,
+          "claim": "Only the active attention page is rendered."
+        },
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 247,
+          "claim": "Accepted contents unmount when closed."
+        },
+        {
+          "path": "apps/web/src/review/__tests__/scale.browser.test.ts",
+          "line": 32,
+          "claim": "Tests page limits and keyboard focus across boundaries."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 237,
+          "claim": "The workspace still counts all variants on each render; local measurement is needed before changing state ownership."
+        },
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 36,
+          "claim": "Partitions all items on render; it is not proof of a dominant bottleneck."
+        }
+      ],
+      "measurement": "At 3,582/10,580/35,820 captures the fixture had 543 DOM elements and 50 rendered attention rows. Median render-to-image opportunities were 149.6/151.4/152.8 ms and cached-variant ready commits 36.6/37.1/41.6 ms. This small sample shows rendered-view time remains bounded with these model sizes. A 4x CPU pilot exposed a 486 ms initial long task; its cause was not profiled.",
+      "options": [
+        {
+          "id": "keep-pages",
+          "label": "Keep pages and profile slow actions",
+          "recommended": true,
+          "consequence": "Preserve the tested keyboard model. Target measured hot paths with local derived values or smaller components only when a trace justifies them."
+        },
+        {
+          "id": "virtualize",
+          "label": "Add a virtual scrolling list",
+          "consequence": "Makes continuous scrolling possible. Adds item-height, measurement, scroll, focus-restoration, and accessibility obligations. This is a product choice, not a proven performance requirement."
+        },
+        {
+          "id": "smaller-pages",
+          "label": "Reduce the page size",
+          "consequence": "Fewer mounted rows and more page changes. A simple option if slow-device tracing identifies list rendering as material."
+        }
+      ],
+      "recommendationReason": "Keep the simple mechanism already shown to bound rendering. Avoid a broad state or list rewrite on an unmeasured cause.",
+      "strongestCounterexample": "A page control can impede rapid scanning, and slower devices may spend significant time mounting even 50 rich rows.",
+      "invalidateRecommendation": "A representative trace identifies the 50-row list as a material delay, or reviewers select continuous scrolling as a required workflow.",
+      "migration": "No migration for the recommended option. Any future change must retain deep links, remembered variant choice, item position announcements, empty-list focus, and focus after deletion.",
+      "tests": [
+        "Keep existing page-boundary, accepted-section, narrow-layout, removal, and Undo tests.",
+        "Profile one cold mount and one review auto-advance on a slower CPU before memoization or virtualization.",
+        "Validate keyboard and assistive-technology behavior if list semantics change."
+      ],
+      "snippet": "const pageSize = 50;\nconst visible = attention.slice(pageStart, pageStart + pageSize);\n// Keep the simple bound while measuring the full route.",
+      "demo": "Use a ShellSidebar with the current page size and a simulated 6,000-item count. Let the maintainer choose page size, press arrows through a boundary, and see mounted row count, focused item, and current page. Compare a continuous-list mock only as proposed behavior.",
+      "references": [
+        {
+          "label": "Committed scale evidence and limits",
+          "url": "https://github.com/ariakit/visonaut/blob/main/docs/evidence/review-scale/README.md"
+        }
+      ]
+    },
+    {
+      "id": "P05",
+      "status": "OPEN",
+      "priority": "high",
+      "question": "Which performance checks should guide changes?",
+      "finding": "The committed scale runner no longer matches the shipped variant roles and times out while the app works. Its synthetic path also starts rendering only after the model is ready and does not include auth, Workers, D1, R2, or a saved review. Old successful measurements cannot settle current end-to-end complaints.",
+      "evidence": [
+        {
+          "path": "apps/web/tooling/review-scale/fixture.jsx",
+          "line": 86,
+          "claim": "Runner waits for selected tabs; current variants are listbox options."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 740,
+          "claim": "Current variants render a listbox."
+        },
+        {
+          "path": "apps/web/tooling/review-scale/fixture.jsx",
+          "line": 63,
+          "claim": "Render clock begins after fetch and parse."
+        },
+        {
+          "path": "apps/web/tooling/review-scale/fixture.jsx",
+          "line": 68,
+          "claim": "Save and Undo deliberately throw in the scale fixture."
+        }
+      ],
+      "measurement": "Unchanged harness timed out after 15 seconds on variant navigation. With only the disposable measurement-selector fix and a production build from the documented apps/web directory, all 9 measured mounts and 36 measured cached transitions completed. Final app source/styles were unchanged. Audit fixture CSS is 255.29 kB (gzip 35.99 kB) and JavaScript 440.72 kB (gzip 134.97 kB); these are not production app-bundle measurements. No production performance conclusion follows from local success.",
+      "options": [
+        {
+          "id": "small-route-gate",
+          "label": "One current fixture plus two route checks",
+          "recommended": true,
+          "consequence": "Repair the existing fixture, assert real Shell layout and selected option, and measure open-run-to-first-image plus save-to-next-image with warm/cold paths. Keep raw samples, source hashes, bytes, environment, and clear limits. Use existing tools."
+        },
+        {
+          "id": "synthetic-only",
+          "label": "Keep only the synthetic scale check",
+          "consequence": "Cheapest to run but cannot explain production request, auth, or storage delay."
+        },
+        {
+          "id": "full-observability",
+          "label": "Add full production tracing",
+          "consequence": "Can connect client and backend stages across real sessions. Adds instrumentation, maintenance, storage, privacy, and sampling rules; decide only if the two focused checks cannot isolate the delay."
+        }
+      ],
+      "recommendationReason": "A small maintained path gives actionable evidence without another performance platform. The issue is coverage and freshness before it is missing tools.",
+      "strongestCounterexample": "Intermittent queue, region, or authorization latency may not appear in scripted route checks and can require production traces.",
+      "invalidateRecommendation": "Repeated real user delays cannot be reproduced or assigned to a stage by the focused checks.",
+      "migration": "Update the harness independently of product behavior. Choose a realistic dataset and agree a latency budget in a later explicit decision; do not invent a universal threshold from this laptop sample.",
+      "tests": [
+        "Harness fails if the selected option never changes or Shell display is not grid.",
+        "Current source hashes and fixture modifications accompany results.",
+        "Measure actual encoded bytes and endpoint spans; keep successful writes in an isolated environment.",
+        "Include one slower CPU and a defined network profile; distinguish proxy timing from Core Web Vitals."
+      ],
+      "snippet": "const selected = page.getByRole(\"listbox\", { name: \"Variants\" })\n  .getByRole(\"option\", { selected: true });\nawait expect(selected).toContainText(nextVariant);",
+      "demo": "A Layer timeline lets the maintainer adjust auth, model, image, and save delays. It shows what the old render-only check sees and what each proposed route check sees. Separate measured audit values from adjustable simulated delays.",
+      "references": [
+        {
+          "label": "Chrome throttling settings and calibration",
+          "url": "https://developer.chrome.com/docs/devtools/settings/throttling"
+        },
+        {
+          "label": "Existing model-read measurement issue",
+          "url": "https://github.com/ariakit/visonaut/issues/72"
+        }
+      ]
+    },
+    {
+      "id": "P06",
+      "status": "OPEN",
+      "priority": "medium",
+      "question": "Should image responses stream from R2?",
+      "finding": "The public image route asks storage for an object before handling HEAD or a matching ETag. A normal GET then copies the complete object into an ArrayBuffer before returning the response. The configured image limit is 2 MiB, so this is a bounded avoidable allocation, not an unbounded memory leak.",
+      "evidence": [
+        {
+          "path": "apps/web/src/api/images.ts",
+          "line": 30,
+          "claim": "Gets the R2 object before conditional and HEAD handling, including snapshot fallback."
+        },
+        {
+          "path": "apps/web/src/api/images.ts",
+          "line": 53,
+          "claim": "ETag and HEAD branches follow object retrieval."
+        },
+        {
+          "path": "apps/web/src/api/images.ts",
+          "line": 60,
+          "claim": "GET awaits stored.arrayBuffer before Response construction."
+        },
+        {
+          "path": "apps/web/src/api/context.ts",
+          "line": 64,
+          "claim": "The storage interface hides the R2 body stream, but already exposes head."
+        },
+        {
+          "path": "apps/web/wrangler.jsonc",
+          "line": 32,
+          "claim": "maximumImageBytes is 2,097,152."
+        },
+        {
+          "path": "apps/web/src/api/api.test.ts",
+          "line": 992,
+          "claim": "Existing public-image test covers GET/HEAD and missing bytes; conditional metadata behavior needs coverage."
+        }
+      ],
+      "measurement": "Source-verified. No deployed memory, first-byte, R2 billing, or latency experiment was run. Up to 2 MiB per successful GET is allocated by this specific arrayBuffer call; overall Worker/browser memory is not established. R2 get exposes a stream, so the custom interface is the local barrier.",
+      "options": [
+        {
+          "id": "stream-and-head",
+          "label": "Stream GET and use metadata for HEAD/304",
+          "recommended": true,
+          "consequence": "Expose the existing body stream and return it directly. Use head for metadata-only responses while keeping existence, size, and snapshot-fallback checks. Removes the full-body copy without adding a cache service."
+        },
+        {
+          "id": "stream-only",
+          "label": "Stream GET only",
+          "consequence": "Smallest behavior-preserving change; keep current object lookup for conditional requests until its semantics are tested."
+        },
+        {
+          "id": "keep-buffer",
+          "label": "Keep the bounded buffer",
+          "consequence": "No interface/test changes. Accept the 2 MiB maximum body copy. Appropriate if measured operational benefit is negligible."
+        }
+      ],
+      "recommendationReason": "Use R2's existing response stream. Metadata requests need no image-body reader. Keep the custom content digest ETag contract; do not blindly replace it with R2's upload ETag.",
+      "strongestCounterexample": "Returning 304 from the D1 row alone could hide an object removed from R2. Changing existence/fallback semantics would be a correctness regression, and stream errors may happen after response headers start.",
+      "invalidateRecommendation": "Tests show the route relies on completing a body read before publishing a successful response, or the storage adapter cannot preserve stream ownership and errors. Use stream-only as the smaller fallback.",
+      "migration": "Add body to the storage contract and update test doubles. Preserve image validation, the 2 MiB guard, immutable caching, exact ETag contract, HEAD headers, 404 behavior, and snapshot copy fallback. No new bucket or database.",
+      "tests": [
+        "GET streams identical bytes without calling arrayBuffer.",
+        "HEAD and matching ETag read metadata only and still reject a missing or oversized object.",
+        "Live-to-snapshot fallback preserves headers, ETag, and missing-object semantics.",
+        "Canceled clients and stream errors do not retain an open body."
+      ],
+      "snippet": "return new Response(stored.body, { headers });\n// Keep the existing validation and fallback checks before returning.",
+      "demo": "A small Frame shows a configurable image size (up to 2 MiB) and GET/HEAD/ETag controls. Compare full-body-copy bytes with stream/metadata mode and show the same status/headers. Mark the memory bar as the specific modeled copy, not total Worker memory.",
+      "references": [
+        {
+          "label": "Cloudflare R2 Workers API: get, head, and body stream",
+          "url": "https://developers.cloudflare.com/r2/api/workers/workers-api-reference/"
+        }
+      ]
+    }
+  ]
+}

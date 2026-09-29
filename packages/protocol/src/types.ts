@@ -35,8 +35,30 @@ export interface CaptureProfile {
   forcedColors: "active" | "none";
   animationPolicy: "disabled";
   captureOptions: Record<string, Json>;
-  comparisonPolicyDigest: string;
-  comparisonEngineVersion: string;
+  /** Present only in immutable pre-cutover profile evidence. */
+  comparisonPolicyDigest?: string;
+  /** Present only in immutable pre-cutover profile evidence. */
+  comparisonEngineVersion?: string;
+}
+
+export const COMPARISON_ENGINE_VERSION = "rgba-visible-1";
+export const IMAGE_CODEC_VERSION = "jsquash-png-3.1.1-webp-1.5.0";
+
+export interface ComparisonPolicy {
+  id: string;
+  channelThreshold: number;
+  maxChangedPixels?: number;
+  maxChangedRatio: number;
+}
+
+export interface CaptureSource {
+  shardKey: string;
+  workflowAttempt: number;
+  jobId: string;
+  jobName: string;
+  manifestDigest: string;
+  artifactId: string;
+  artifactName: string;
 }
 
 export interface ProfileRecord {
@@ -89,6 +111,8 @@ export interface Manifest {
   tests: TestOutcome[];
   captures: Capture[];
   discovery?: CandidateDiscovery;
+  /** Added only by the pinned signed Submit job after GitHub artifact verification. */
+  captureSources?: CaptureSource[];
 }
 
 export interface PlannedTest {

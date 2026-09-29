@@ -50,7 +50,13 @@ jobs:
         run: node .github/workflows/scripts/deploy-source.mjs
         env:
           GH_TOKEN: ${{ github.token }}
-      - name: Load scoped deployment credentials
+      - name: Verify the dedicated flat secret scope
+        run: node .github/workflows/scripts/deploy-scope.mjs
+        env:
+          INFISICAL_ENVIRONMENT: ${{ vars.INFISICAL_ENVIRONMENT }}
+          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
+          INFISICAL_DEPLOY_IDENTITY_ID: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
+      - name: Load the deployment credential
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
           method: oidc
@@ -59,20 +65,37 @@ jobs:
           domain: https://eu.infisical.com
           project-id: ${{ vars.INFISICAL_PROJECT_ID }}
           env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
-          secret-path: /ci/visonaut-deploy
+          secret-path: /
+          secret-name: CLOUDFLARE_API_TOKEN
+          include-imports: "false"
+          recursive: "false"
+          export-type: env
+      - name: Load the independent migration credential
+        uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
+        with:
+          method: oidc
+          identity-id: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
+          oidc-audience: visonaut-deploy
+          domain: https://eu.infisical.com
+          project-id: ${{ vars.INFISICAL_PROJECT_ID }}
+          env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
+          secret-path: /
+          secret-name: CLOUDFLARE_MIGRATIONS_API_TOKEN
           include-imports: "false"
           recursive: "false"
           export-type: env
       - name: Require both independent credentials
         run: node .github/workflows/scripts/deploy-credentials.mjs
+      - name: Require current Container drain evidence before class retirement
+        run: node .github/workflows/scripts/deploy-infrastructure.mjs
+        env:
+          VISONAUT_CONTAINER_RETIREMENT_VERIFIED: ${{ vars.VISONAUT_CONTAINER_RETIREMENT_VERIFIED }}
       - name: Apply production schema migrations
         working-directory: apps/web
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
       - name: Deploy production comparator
-        run: node .github/workflows/scripts/deploy-version.mjs apps/compare/wrangler.jsonc visonaut-compare production
+        run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
-        run: node .github/workflows/scripts/deploy-version.mjs apps/web/dist/server/wrangler.json visonaut
-      - name: Deploy GitHub App webhook router
-        run: node .github/workflows/scripts/deploy-version.mjs apps/webhook/wrangler.jsonc visonaut-webhook
+        run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json

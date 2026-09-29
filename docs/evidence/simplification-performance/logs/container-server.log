@@ -1,0 +1,13 @@
+npm notice run test
+npm notice run node --test server.test.mjs
+✔ the native Container preserves exact, changed, and addition outcomes (16.216375ms)
+✔ the native Container rejects a changed original and invalid policy (2.279625ms)
+✔ the Container exits cleanly on SIGTERM (101.804916ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2764.49175

@@ -109,6 +109,7 @@ export default class VisonautReporter implements Reporter {
     this.receiptFile = path.join(path.dirname(this.outputFile), "receipt.json");
     await rm(this.outputFile, { force: true });
     await rm(this.receiptFile, { force: true });
+    await rm(path.join(path.dirname(this.outputFile), "images"), { recursive: true, force: true });
     if (this.options.discovery) {
       const { repositoryRoot, executorDigest, expectedInvocation, expectedProjects } =
         this.options.discovery;
@@ -197,6 +198,12 @@ export default class VisonautReporter implements Reporter {
             throw new Error("Capture image attachment is missing or ambiguous");
           }
           const bytes = await attachmentBytes(imageAttachment);
+          if (
+            imageAttachment.path &&
+            path.basename(path.dirname(imageAttachment.path)).startsWith("visonaut-attachment-")
+          ) {
+            await rm(path.dirname(imageAttachment.path), { recursive: true, force: true });
+          }
           const image = record(payload.image, "image");
           const imageDigest = await sha256(bytes);
           if (image.digest !== imageDigest || image.bytes !== bytes.byteLength) {
@@ -260,6 +267,21 @@ export default class VisonautReporter implements Reporter {
       }
       process.stderr.write(`Visonaut: ${error instanceof Error ? error.message : String(error)}\n`);
       return { status: "failed" };
+    } finally {
+      for (const { test } of this.collectedTests) {
+        for (const result of test.results) {
+          for (const attachment of result.attachments) {
+            if (
+              attachment.contentType === "image/png" &&
+              attachment.name.startsWith("visonaut-image-") &&
+              attachment.path &&
+              path.basename(path.dirname(attachment.path)).startsWith("visonaut-attachment-")
+            ) {
+              await rm(path.dirname(attachment.path), { recursive: true, force: true });
+            }
+          }
+        }
+      }
     }
   }
 }

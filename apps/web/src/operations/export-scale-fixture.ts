@@ -41,7 +41,7 @@ export async function seedExport({ captureCount, imageCount }: SeedExportParams)
   const fixture = context(database);
   const runId = "e0800000-0000-4000-8000-000000000011";
   await captured(fixture.context, runId);
-  fixture.context.budget.maximumDatabaseBytes = 128 * 1024 * 1024;
+  fixture.context.budget.maximumMetadataBytes = 128 * 1024 * 1024;
   fixture.context.budget.maximumExportEntries = 200_000;
   const profileDigest = await digestJson(profile);
   await storeCaptureProfiles(database, [{ digest: profileDigest, profile }]);

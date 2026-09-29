@@ -1,0 +1,22 @@
+{
+  "body": {
+    "mode": "body",
+    "testCount": 80,
+    "retainedAttachmentBodies": 80,
+    "retainedBodyBytes": 83886080,
+    "fileAttachments": 0,
+    "node": "v24.18.0",
+    "playwright": "1.63.0",
+    "note": "Synthetic 1 MiB buffers, no browser or real screenshots; proves attachment retention, not production memory or timing."
+  },
+  "path": {
+    "mode": "path",
+    "testCount": 80,
+    "retainedAttachmentBodies": 0,
+    "retainedBodyBytes": 0,
+    "fileAttachments": 80,
+    "node": "v24.18.0",
+    "playwright": "1.63.0",
+    "note": "Synthetic 1 MiB buffers, no browser or real screenshots; proves attachment retention, not production memory or timing."
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "track": "quality",
+  "sourceCommit": "7e23173",
+  "researchDate": "2026-09-29",
+  "scope": "Read-only review of test setup, repository tools, build boundaries, and current documentation. No application code or external records changed.",
+  "issueHistory": {
+    "source": "gh issue list --repo ariakit/visonaut --state all --limit 100",
+    "result": "Read all 16 returned issues. No dedicated issue covers the schema-fixture or command-entrypoint decisions. Issue 1 is the canonical implementation record, and its snapshot was read from /tmp/visonaut-audit-issue-1.json. The review/performance issues are owned by other audit tracks.",
+    "urls": ["https://github.com/ariakit/visonaut/issues/1"]
+  },
+  "decisions": [
+    {
+      "id": "Q01",
+      "title": "Use one current database schema in ordinary tests",
+      "question": "How should tests load the current database schema?",
+      "status": "OPEN",
+      "impact": "high",
+      "finding": "Ordinary service, API, and operations tests each choose migrations by hand. Their lists differ from each other and from the deployed migration sequence. A migration can therefore pass many tests without their database containing that migration.",
+      "verified": [
+        "apps/web/src/operations/test-fixtures.ts:43-78 loads 17 of the 22 committed migrations and substitutes the identical operations schema copy for migration 0005.",
+        "A disposable Python SQLite 3.50.2 probe loaded the exact operations-fixture migration set and all current migrations into separate in-memory databases. Full current schema: 113 objects. Operations fixture: 106 objects. Seven objects are absent; ingest_manifests lacks declared_bytes.",
+        "The missing objects are github_webhook_delivery_pending, ingest_staged_bundles, ingest_staged_images, ingest_staged_images_reuse, ingest_staged_manifests, ingest_staged_runs, and transfer_key_redemptions.",
+        "packages/service/src/service.test.ts:69-90 has a separate list ending at 0016 and omits 0015. apps/web/src/api/api.test.ts:98-135 uses another list and its own SQL statement splitter. apps/web/src/api/webhooks.test.ts:109-139 has a third list.",
+        "apps/web/src/operations/schema.sql is byte-identical to apps/web/migrations/0005_operations.sql. packages/security/migrations/0001_auth.sql is byte-identical to apps/web/migrations/0003_auth.sql. packages/service/work-schema.sql differs from the original migration because it includes later fields. These copies have distinct maintenance rules today."
+      ],
+      "limits": "This proves schema drift in test fixtures, not a production defect. Some tests deliberately need an old or small schema. No full test suite or production query was run.",
+      "evidence": [
+        {"path": "apps/web/src/operations/test-fixtures.ts", "line": 43},
+        {"path": "packages/service/src/service.test.ts", "line": 69},
+        {"path": "apps/web/src/api/api.test.ts", "line": 98},
+        {"path": "apps/web/src/api/webhooks.test.ts", "line": 109},
+        {"path": "apps/web/migrations/0015_run_original_bytes.sql", "line": 3},
+        {"path": "apps/web/migrations/0023_pending_webhook_index.sql", "line": 1},
+        {"path": "apps/web/src/operations/brand-migration.test.ts", "line": 8}
+      ],
+      "experimentArtifact": "/tmp/visonaut-quality-schema-evidence.json",
+      "options": [
+        {"id": "full-default", "label": "Read the numbered migration directory by default", "recommended": true, "detail": "Use one small test helper to read sorted committed migrations. Keep the existing SQLite and native D1 runtimes. Tests of old migrations request an explicit end version. Remove schema copies only after checking their separate consumers.", "complexity": "Removes repeated lists and splitters; no new test framework or production abstraction.", "migration": "Small test-only changes, one fixture group at a time.", "risk": "Some fixtures rely on an incomplete schema; new constraints can expose setup errors."},
+        {"id": "one-parity-test", "label": "Keep fixtures and add one full-schema check", "detail": "This is the smallest edit. Verify a fresh database after all migrations and label each partial fixture. Keep the lists for independent package tests.", "complexity": "Adds one check but retains the repeated lists.", "migration": "Very small.", "risk": "Feature tests still run against partial schemas and lists can continue to drift."},
+        {"id": "native-all", "label": "Run all database tests in the Worker runtime", "detail": "Use Cloudflare's test support and migrations for every database suite.", "complexity": "Larger runner and fixture migration.", "migration": "Substantial; fast SQLite tests and fault injection need changes.", "risk": "Runtime parity improves, but the change can cost speed and make state tests harder to isolate."}
+      ],
+      "recommendation": "full-default",
+      "strongestCounterexample": "A migration regression must start from the old database state. Applying all migrations automatically would hide its starting condition. Keep explicit versioned setup for those tests; brand-migration.test.ts is one example.",
+      "invalidationEvidence": "Prefer the minimal parity check if full-schema setup measurably dominates test time or if a private package must remain independent of the app migration directory. Measure before adding caches or runner layers.",
+      "compatibility": "No public API, database migration, or behavior change. D01-D61 stay settled.",
+      "reversibility": "Test-only refactor; revert the helper use if needed. Do not edit historical production migrations.",
+      "tests": ["Run the changed fixture suites.", "Compare sqlite_schema and foreign_key_check after the common setup with the sorted production migration sequence.", "Keep old-to-new migration regression tests with explicit starting versions."],
+      "snippetLanguage": "ts",
+      "snippet": "// Proposed test helper call.\nawait applyTestMigrations(database);\n// Only a migration regression asks for an old state.\nawait applyTestMigrations(database, { through: '0013_promotion_scans' });",
+      "interactiveModel": {"kind": "schema-coverage", "description": "Choose Current schema, Existing operations fixture, or Versioned migration test. Show the loaded migration names and schema differences. A toggle adds a hypothetical next migration: the current-schema loader includes it; a hand-written list does not. Label this source-derived model, not a D1 performance test.", "reset": "Existing operations fixture", "values": {"currentObjects": 113, "operationsFixtureObjects": 106, "missingObjects": 7, "missingColumns": 1}},
+      "references": [{"url": "https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/#d1", "claim": "Cloudflare provides migration-reading and migration-application helpers for its test integration. This is a possible larger alternative, not a requirement to replace the current runner.", "checked": "2026-09-29"}]
+    },
+    {
+      "id": "Q02",
+      "title": "Make local check commands match their stated scope",
+      "question": "Should one command cover every CI check, or should local and CI checks have explicit scopes?",
+      "status": "OPEN",
+      "impact": "medium",
+      "finding": "The documented pnpm check command and the CI gate cover different work. The difference is not visible in the root command names. A contributor can complete the documented command without running the Container server tests, Docker image build, release guards, or package archive audit.",
+      "verified": [
+        "package.json:13 defines check as lint, typecheck, build, test, and test:browser.",
+        "vitest.config.ts:5 includes package .test.ts/.test.mjs and app .test.ts only. It excludes apps/compare/container/server.test.mjs and does not include .github/workflows/scripts/*.test.mjs.",
+        ".github/workflows/checks.yml:147-152 separately runs the native Container test and Docker build; :166 runs release guards; :80-81 packs and audits public packages.",
+        "README.md:43-52 presents pnpm check as the repository workflow without naming these omitted checks. CI itself does run them; this is a local entrypoint/documentation gap, not a CI coverage gap."
+      ],
+      "limits": "No claim that all checks should run after every edit. Some CI checks need Linux, Docker, registry access, or exact commit metadata. Their duration was not measured in this track.",
+      "evidence": [
+        {"path": "package.json", "line": 13},
+        {"path": "vitest.config.ts", "line": 5},
+        {"path": ".github/workflows/checks.yml", "line": 80},
+        {"path": ".github/workflows/checks.yml", "line": 147},
+        {"path": ".github/workflows/checks.yml", "line": 166},
+        {"path": "README.md", "line": 43}
+      ],
+      "options": [
+        {"id": "explicit-scopes", "label": "Keep a local check and name the extra CI checks", "recommended": true, "detail": "Keep pnpm check useful on a normal development machine. Add direct script names for release guards and Container tests, and document the small CI-only set. CI calls the same scripts. Add no command runner or build system.", "complexity": "Small script and documentation change.", "migration": "Preserve pnpm check behavior; add explicit commands.", "risk": "The documentation still needs to stay aligned with the CI job list."},
+        {"id": "docs-only", "label": "Document the difference only", "detail": "The minimum change: add a command table showing what local check does and what only CI does.", "complexity": "No new script.", "migration": "None.", "risk": "Commands remain spread between workflow YAML and package manifests."},
+        {"id": "all-in-one", "label": "Make check run the complete CI contract", "detail": "Run native Container checks, release guards, package audit, and Docker build from check.", "complexity": "One entry point, but more platform prerequisites and setup.", "migration": "Every contributor needs the added tools and package audit inputs.", "risk": "The common edit loop becomes slower and less portable."}
+      ],
+      "recommendation": "explicit-scopes",
+      "strongestCounterexample": "A release maintainer may need one complete preflight command. Provide check:ci only if this is a real workflow; do not force Linux/Docker prerequisites into every UI edit.",
+      "invalidationEvidence": "Choose all-in-one if all contributors already use the same reproducible Linux development environment and measured total time is acceptable. Choose docs-only if new aliases would be unused.",
+      "compatibility": "No public client or runtime behavior changes. Do not reduce the required Gate checks.",
+      "reversibility": "Script aliases and docs can be reverted independently of application changes.",
+      "tests": ["Confirm each documented command discovers the intended test files.", "Run existing release guard and Container commands when those scripts change.", "Check that the CI gate still requires every existing job."],
+      "snippetLanguage": "json",
+      "snippet": "{\n  \"test:release\": \"node --test .github/workflows/scripts/*.test.mjs\",\n  \"test:container\": \"npm test --prefix apps/compare/container\"\n}",
+      "interactiveModel": {"kind": "command-coverage", "description": "Choose Local check, Release guards, Container test, or CI gate. Show which checks run and which prerequisites are needed. Allow a UI-only or release-file edit to highlight the relevant command without claiming that it replaces CI.", "reset": "Local check"},
+      "references": [{"url": "https://vitest.dev/config/include", "claim": "Vitest's include patterns determine which test files it collects; the repository overrides its defaults.", "checked": "2026-09-29"}]
+    },
+    {
+      "id": "Q03",
+      "title": "Keep one current contract and retain historical evidence",
+      "question": "Where should a maintainer find the current decisions after a policy changes?",
+      "status": "OPEN",
+      "impact": "high",
+      "finding": "The repo has a canonical issue, a 61-decision design archive, deployment instructions, operations instructions, and a current-readiness page. They contain different ages of policy. The historical data is useful, but current entry pages still direct readers to statements that have been superseded.",
+      "verified": [
+        "README.md:7 says issue 1 defines requirements. README.md:72-74 links revision 9 and says its design archive records selected behavior.",
+        "docs/design-r9.json:9 still describes the private ariakit/ariviso repository. :1614 says no repository, package, domain, or namespace has been created. The current issue snapshot and .github/workflows/README.md:58 say the repository is public and Visonaut is released.",
+        "docs/design-r9.json:1461-1485 retains D55 daily combined backup. The current issue 1 body also still contains that requirement and its D55 ledger entry. apps/web/src/operations/README.md:24 and :40 say scheduled SQL-plus-R2 backups are retired and only legacy offline code remains.",
+        ".github/workflows/README.md:48 calls CLI 0.3.2 and adapter 0.3.1 the versions pinned by Ariakit. The checked-out package manifests are CLI 0.3.6 and adapter 0.3.2. The manifests alone do not prove Ariakit's installed versions; this statement should be linked to a dated verified receipt rather than presented as current without a date."
+      ],
+      "limits": "The repo intentionally preserves old evidence, and an old measurement is not invalid because it is old. This finding concerns present-tense entry points and decision authority. Do not treat documentation conflicts as permission to restore retired infrastructure or reopen all settled choices.",
+      "evidence": [
+        {"path": "README.md", "line": 7},
+        {"path": "README.md", "line": 72},
+        {"path": "docs/design-r9.json", "line": 9},
+        {"path": "docs/design-r9.json", "line": 1461},
+        {"path": "docs/design-r9.json", "line": 1614},
+        {"path": "apps/web/src/operations/README.md", "line": 24},
+        {"path": ".github/workflows/README.md", "line": 48}
+      ],
+      "options": [
+        {"id": "repo-current-index", "label": "Keep a short current contract in the repo", "recommended": true, "detail": "Retain every historical answer and dated measurement. Add one small current decision index with explicit supersession links, the source commit, and verified deployment dates. Entry pages link there. The old design stays an archive. Update issue 1 only with separate authorization.", "complexity": "One small maintained record; fewer repeated current-policy statements.", "migration": "Classify existing policy statements as current, historical, or unresolved. Link to source records rather than copying long evidence.", "risk": "A second current record would add drift if issue 1 remains independently authoritative; explicitly choose which is canonical."},
+        {"id": "issue-canonical", "label": "Keep issue 1 canonical and fix archive labels", "detail": "Minimum structure change. Keep issue 1 as the complete current contract; mark the local revision-9 design historical and point readers to issue 1. Record later policy changes in that issue after approval.", "complexity": "No additional contract file.", "migration": "Requires an authorized issue update to resolve known conflicts; local labels can be prepared first.", "risk": "The working checkout needs online access for the current policy and policy changes require a GitHub edit."},
+        {"id": "evidence-only", "label": "Use code and dated evidence as the current guide", "detail": "Retain the existing documents and add dates and warning labels only. Let implementation and receipts establish current behavior.", "complexity": "Smallest maintenance surface.", "migration": "Small documentation edits.", "risk": "Readers must reconstruct product decisions from many files; code cannot establish unimplemented policy or user intent."}
+      ],
+      "recommendation": "repo-current-index",
+      "strongestCounterexample": "A repo index would make matters worse if it competes with issue 1. The first entry must identify the single authoritative record and distinguish approved policy from observed code. If the maintainer wants issue 1 to stay authoritative, choose that option instead.",
+      "invalidationEvidence": "Retain issue 1 as canonical if the user prefers GitHub as the implementation specification and commits cannot be relied on to carry policy changes. No external publication is authorized by this audit.",
+      "compatibility": "All 61 settled decisions remain preserved with their original answers and notes. This choice sets record ownership. Conflicts such as D55 require explicit supersession evidence or a separate product decision; they do not silently reopen or change policy.",
+      "reversibility": "Documentation-only. Preserve dated source records and links so record ownership can move later without losing decisions.",
+      "tests": ["Check each current claim against the source commit, accepted user decisions, and dated operational receipts.", "Verify archive links and preserve the full 61-decision history.", "Ensure copied continuation prompts load the current record and preserve unchanged decisions."],
+      "snippetLanguage": "json",
+      "snippet": "{\n  \"id\": \"D55\",\n  \"historicalAnswer\": \"daily\",\n  \"currentStatus\": \"Needs explicit supersession link\",\n  \"observedCode\": \"Scheduled backups retired at 7e23173\"\n}",
+      "interactiveModel": {"kind": "decision-timeline", "description": "Switch between Original design, Current source, and Canonical record for D55 or project identity. Show each source's date and exact claim. A simulated change to the current policy shows which one record changes and which archive stays intact. Do not preselect a product policy.", "reset": "D55 — all sources"},
+      "references": [{"url": "https://github.com/ariakit/visonaut/issues/1", "claim": "README designates this issue as the product and launch specification; the root audit has its complete read-only snapshot.", "checked": "2026-09-29"}]
+    },
+    {
+      "id": "Q04",
+      "title": "Add a small check of the built app boundary",
+      "question": "How much of the built application should the browser checks exercise?",
+      "status": "OPEN",
+      "impact": "medium",
+      "finding": "The browser suite has useful interaction coverage, but it serves source fixtures. Its route fixture replaces the real document root and supplies API responses in the browser. The suite therefore does not itself prove that the built Worker, document shell, assets, and client startup work together.",
+      "verified": [
+        "apps/web/src/review/__tests__/playwright.config.ts:18-22 starts a Vite fixture server, not the application build.",
+        "apps/web/src/review/__tests__/vite.config.ts:9 loads React and Tailwind plugins, while apps/web/vite.config.ts:8-13 also uses Cloudflare and TanStack Start.",
+        "apps/web/src/review/__tests__/route-fixture.tsx:9 replaces the route root with Outlet and :12 starts createRoot. The real apps/web/src/routes/__root.tsx:16-26 renders html, head, HeadContent, body, and Scripts.",
+        "apps/web/src/review/__tests__/route.browser.test.ts:11-18 intercepts API calls and loads route-fixture.html. Existing runtime/API tests test many server behaviors separately. This is a missing integration boundary, not an absence of tests."
+      ],
+      "limits": "No current boot or hydration bug was reproduced. Production/browser performance is covered by other audit tracks. This decision must not be used to claim that fixture timing equals production timing.",
+      "evidence": [
+        {"path": "apps/web/src/review/__tests__/playwright.config.ts", "line": 18},
+        {"path": "apps/web/src/review/__tests__/vite.config.ts", "line": 9},
+        {"path": "apps/web/vite.config.ts", "line": 8},
+        {"path": "apps/web/src/review/__tests__/route-fixture.tsx", "line": 9},
+        {"path": "apps/web/src/routes/__root.tsx", "line": 16},
+        {"path": "apps/web/src/review/__tests__/route.browser.test.ts", "line": 11}
+      ],
+      "options": [
+        {"id": "small-built-smoke", "label": "Keep fixtures and add a small built-app check", "recommended": true, "detail": "Keep the current interaction suite. Add a few checks against the built Worker using local bindings: direct route load, actual document and asset load, sign-in-required state, reload, and client navigation. Reuse the build that CI already produces.", "complexity": "One narrow integration fixture; no full GitHub login system in tests.", "migration": "Add a small Playwright project or config for the built boundary.", "risk": "Local Worker startup adds time; avoid expanding this into a duplicate interaction suite."},
+        {"id": "manual-built-check", "label": "Keep the suite and record a manual built-app check", "detail": "Minimum change. Check the built app after framework, route, or deployment changes and record the result. Label fixture coverage precisely.", "complexity": "No test infrastructure added.", "migration": "Small checklist in the existing workflow guide.", "risk": "The check can be missed and regressions reach CI without an automated signal."},
+        {"id": "full-preview-e2e", "label": "Run the whole browser suite against preview", "detail": "Use a deployed environment with real login and data for normal interaction checks.", "complexity": "Credentials, accounts, fixtures, state reset, deployment, and cleanup become test requirements.", "migration": "High.", "risk": "Slower and more fragile; it works against the simplicity goal for routine changes."}
+      ],
+      "recommendation": "small-built-smoke",
+      "strongestCounterexample": "A built smoke check that needs live GitHub login, a new deployment, and remote state cleanup costs too much for this gap. Keep it local and test only the boot boundary; use existing separate tests for authorization and review behavior.",
+      "invalidationEvidence": "Choose the manual option if a local built Worker cannot boot without extensive auth bypass code. Do not add a production back door just to make tests easier. If the app changes to static assets plus API, test that new built boundary instead.",
+      "compatibility": "No product policy change. Preserves D53 desktop Chrome scope and the current tested interaction contract. Related to D52 evidence, not a reopening of launch scope.",
+      "reversibility": "Test-only addition. Remove the separate config if the architecture later changes; retain the same observable checks.",
+      "tests": ["Run the built boundary check with local data only.", "Fail on missing script/style assets and unhandled page errors.", "Load a route directly, reload it, and navigate between routes.", "Confirm no production secrets or remote mutations are required."],
+      "snippetLanguage": "ts",
+      "snippet": "// Proposed check against the built local app.\nawait page.goto('/runs/example');\nawait expect(page.getByRole('button', { name: 'Sign in with GitHub' })).toBeVisible();\nawait page.reload();\nawait expect(page).toHaveTitle('Visonaut');",
+      "interactiveModel": {"kind": "test-boundary", "description": "Toggle Fixture suite, Built local check, and Deployed check. Show which boxes are real: document shell, compiled assets, client routing, API, and GitHub. Inject a missing script into the model to show why a source fixture can remain green while a built check fails. Label this a coverage model, not a reproduced defect.", "reset": "Fixture suite"},
+      "references": [{"url": "https://playwright.dev/docs/test-webserver", "claim": "Playwright can start a local server and use it as the browser test base URL; a deployed test service is not necessary for a built-app check.", "checked": "2026-09-29"}]
+    }
+  ],
+  "handoffs": [
+    "Duplicate main-branch CI and repeated workspace builds belong to security_ops_audit O01. Sent exact evidence: five full builds per checks invocation and one production deploy build; two main checks calls schedule eleven full builds before in-test CLI rebuilds.",
+    "Sent the root release script versus exact-artifact release workflow contradiction to security_ops_audit, without claiming an authentication bypass."
+  ]
+}

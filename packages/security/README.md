@@ -16,7 +16,14 @@ const auth = createAuth({
 return auth.handler(request);
 ```
 
-Call `requireMaintainer` for every protected read and write. It reads the live D1 session, resolves the numeric GitHub account ID, and checks current repository permission with an installation token. A bounded, in-memory login hint can skip the numeric user lookup on a warm Worker, but every request still verifies the permission response's numeric user ID and current write access. Neither permission results nor installation tokens are shared across requests. Forward `sessionHeaders` on the response to preserve cookie renewal. Do not put those headers in JSON. Apply `requireSameOrigin` before cookie-authenticated mutations. Apply `securePrivateResponse` to all private metadata and app responses. Public validated images use their separate image response policy.
+Call `requireMaintainer` for every protected read and write. It reads the live D1 session and resolves the linked numeric GitHub account ID on every request. Pass `access: "read"` for private GET and HEAD requests. A positive repository-write permission for that session, user, repository, and App configuration can be reused for at most 60 seconds. Denials are never cached. The default `access: "write"` checks current permission and numeric identity live, even after a cached read. Logout and expired or replaced sessions cannot use a cached permission. Forward `sessionHeaders` on the response to preserve cookie renewal. Do not put those headers in JSON. Apply `requireSameOrigin` before cookie-authenticated mutations. Apply `securePrivateResponse` to all private metadata and app responses. Public validated images use their separate image response policy.
+
+```ts
+await requireMaintainer({ request, auth, database, github, access: "read" });
+await requireMaintainer({ request, auth, database, github, access: "write" });
+```
+
+`createGitHubClient` reuses only resolved installation-token bytes until their expiry, with a 30-second safety margin. The cache is bounded and isolated by the exact App key, installation, repository, and transport. Pending token requests stay within the current request's client. A rejected token is removed; a failed mutation is not retried.
 
 GitHub App credentials and user OAuth credentials have separate code paths. App private keys must use PKCS8 PEM. `createGitHubClient` restricts requests to GitHub's API host and obtains a token limited to the configured repository. Required repository permissions are Metadata read, Actions read, Checks write, Pull requests read, and Contents read. Merge-group webhooks also require Merge queues read. GitHub sign-in requires the account Email addresses read permission for private email addresses. Named custom roles use the permission endpoint's base permission; its `write` result includes maintain access.
 

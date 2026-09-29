@@ -1,0 +1,142 @@
+{
+  "browser": "154.0.8037.58",
+  "scope": "1000 synthetic anchors; fixed 40px rows; 300px scroll viewport; production React; lower package installed 0.6.1; no app changes",
+  "results": [
+    {
+      "step": "initial",
+      "count": 11,
+      "active": "",
+      "storeActive": "item-0",
+      "scroll": 0,
+      "visible": [
+        "item-0",
+        "item-1",
+        "item-2",
+        "item-3",
+        "item-4",
+        "item-5",
+        "item-6",
+        "item-7",
+        "item-8",
+        "item-9",
+        "item-999"
+      ],
+      "href": null
+    },
+    {
+      "step": "30 ArrowDown",
+      "count": 14,
+      "active": "item-30",
+      "storeActive": "item-30",
+      "scroll": 940,
+      "visible": [
+        "item-0",
+        "item-21",
+        "item-22",
+        "item-23",
+        "item-24",
+        "item-25",
+        "item-26",
+        "item-27",
+        "item-28",
+        "item-29",
+        "item-30",
+        "item-31",
+        "item-32",
+        "item-999"
+      ],
+      "href": "#item-30"
+    },
+    {
+      "step": "End",
+      "count": 11,
+      "active": "item-999",
+      "storeActive": "item-999",
+      "scroll": 39700,
+      "visible": [
+        "item-0",
+        "item-990",
+        "item-991",
+        "item-992",
+        "item-993",
+        "item-994",
+        "item-995",
+        "item-996",
+        "item-997",
+        "item-998",
+        "item-999"
+      ],
+      "href": "#item-999"
+    },
+    {
+      "step": "Home",
+      "count": 11,
+      "active": "item-0",
+      "storeActive": "item-0",
+      "scroll": 0,
+      "visible": [
+        "item-0",
+        "item-1",
+        "item-2",
+        "item-3",
+        "item-4",
+        "item-5",
+        "item-6",
+        "item-7",
+        "item-8",
+        "item-9",
+        "item-999"
+      ],
+      "href": "#item-0"
+    },
+    {
+      "step": "store.move offscreen",
+      "count": 14,
+      "active": "item-700",
+      "storeActive": "item-700",
+      "scroll": 27740,
+      "visible": [
+        "item-0",
+        "item-691",
+        "item-692",
+        "item-693",
+        "item-694",
+        "item-695",
+        "item-696",
+        "item-697",
+        "item-698",
+        "item-699",
+        "item-700",
+        "item-701",
+        "item-702",
+        "item-999"
+      ],
+      "href": "#item-700"
+    },
+    {
+      "step": "offscreen+ArrowDown",
+      "count": 14,
+      "active": "item-701",
+      "storeActive": "item-701",
+      "scroll": 27780,
+      "visible": [
+        "item-0",
+        "item-692",
+        "item-693",
+        "item-694",
+        "item-695",
+        "item-696",
+        "item-697",
+        "item-698",
+        "item-699",
+        "item-700",
+        "item-701",
+        "item-702",
+        "item-703",
+        "item-999"
+      ],
+      "href": "#item-701"
+    }
+  ],
+  "errors": []
+}

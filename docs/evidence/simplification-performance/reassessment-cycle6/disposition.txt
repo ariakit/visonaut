@@ -1,0 +1,8 @@
+Finding-bearing implementation cycle 4. Address now.
+P02 regression: saved pan {left:220,top:252} returned as {0,0} after Diff→New only→Diff. The explicit selected contract requires lazy first use and same-variant pan retention. Preserve no initial diff request and reset for changed variant identity.
+
+Finding-bearing implementation cycle 5. Address now.
+Actual built route samples: /api/run starts54.3,end65.6; first image fetch639.6. Baseline imagefetch102.8. Locked router default pending minimum500 retains the ssr:false hydration fallback after model readiness. Preserve router loader, loading UI, access checks and abort behavior.
+
+Finding-bearing implementation cycle 6. Address now.
+Current Service.review saves runRevision:run.revision+2. The simplified review batch has only touchRunStatusStatements, whose run revision UPDATE increments once. The API compact-save fence compares the persisted run revision to the receipt, fails, and sends the complete model for ordinary saves. The first tiny fixture command grew from358 to3262 decoded bytes. A large complete review model is then repeated on every save. Preserve exact tuples, concurrent/stale-command refresh, idempotent replay and live write authorization.

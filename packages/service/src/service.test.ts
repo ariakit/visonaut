@@ -1,7 +1,13 @@
+import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
-import { canonicalJson, digestJson, type CaptureProfile } from "@visonaut/protocol";
+import {
+  canonicalJson,
+  digestJson,
+  digestRenderingProfile,
+  type CaptureProfile,
+} from "@visonaut/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { compareImages, selectedComparisonPolicy } from "../../compare/src/compare.ts";
 import type { Database, Result, SqlValue, Statement } from "./database.ts";
@@ -51,42 +57,15 @@ class SqliteStatement implements Statement {
   }
 }
 
-function reapplyAcceptanceBackfill(connection: DatabaseSync) {
-  // Historical migration SQL needs current table names when rerun after the brand migration.
-  const source = readFileSync(
-    new URL("../../../apps/web/migrations/0006_acceptance.sql", import.meta.url),
-    "utf8",
-  );
-  connection.exec(source.replaceAll("ariviso_", "visonaut_"));
-}
-
 class TestDatabase implements Database {
   readonly connection = new DatabaseSync(":memory:");
   beforeBatch: (() => void) | null = null;
   preparedQueries = 0;
   batchCalls = 0;
   maximumBindings = Number.POSITIVE_INFINITY;
-  constructor() {
-    for (const name of [
-      "0001_service.sql",
-      "0002_work.sql",
-      "0003_auth.sql",
-      "0004_ingest.sql",
-      "0005_operations.sql",
-      "0006_acceptance.sql",
-      "0007_backup_inventory.sql",
-      "0008_capture_profiles.sql",
-      "0009_retention_history.sql",
-      "0010_run_history.sql",
-      "0011_backup_groups.sql",
-      "0012_historical_comparisons.sql",
-      "0013_promotion_scans.sql",
-      "0014_visonaut_brand.sql",
-      "0016_comparison_publication.sql",
-    ]) {
-      this.connection.exec(
-        readFileSync(new URL(`../../../apps/web/migrations/${name}`, import.meta.url), "utf8"),
-      );
+  constructor(through?: string) {
+    for (const migration of readTestMigrations({ through })) {
+      this.connection.exec(migration.sql);
     }
   }
   prepare(sql: string) {
@@ -245,40 +224,6 @@ async function fixture(service: Service, input: FixtureInput) {
   return `comparison-${input.id}`;
 }
 
-async function recompareFromSeed(service: Service, runId: string) {
-  const comparisonId = `recomparison-${runId}-${crypto.randomUUID()}`;
-  await service.createComparison({
-    id: comparisonId,
-    runId,
-    referenceSnapshotId: "snapshot-seed",
-    now: 12,
-    maxAttempts: 3,
-  });
-  for (const row of await service.comparisonRows(comparisonId)) {
-    if (row.outcome !== "pending") continue;
-    await service.claimComparisonTask({
-      taskId: row.id,
-      owner: "worker",
-      now: 13,
-      leaseMilliseconds: 100,
-    });
-    await service.commitComparisonResult({
-      taskId: row.id,
-      leaseOwner: "worker",
-      result: {
-        outcome: "changed",
-        changedPixels: 1,
-        ratio: 0.01,
-        engineVersion: "engine",
-        codecVersion: "codec",
-      },
-      now: 13,
-    });
-  }
-  await service.finalizeComparison({ comparisonId, now: 14 });
-  return comparisonId;
-}
-
 async function setup(service: Service) {
   await service.createPolicy({
     digest: "policy",
@@ -341,18 +286,6 @@ function count(database: TestDatabase, table: string) {
 describe("pre-created App check adoption", () => {
   it("adopts the exact check atomically and preserves the old run when its successor is stale", async () => {
     using database = new TestDatabase();
-    database.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0019_staged_workflows.sql", import.meta.url),
-        "utf8",
-      ),
-    );
-    database.connection.exec(
-      readFileSync(
-        new URL("../../../apps/web/migrations/0020_pre_run_checks.sql", import.meta.url),
-        "utf8",
-      ),
-    );
     const service = new Service(database);
     await setup(service);
     const testedSha = "a".repeat(40);
@@ -451,7 +384,7 @@ describe("pre-created App check adoption", () => {
 });
 
 describe("rejection of inherited acceptance", () => {
-  it("blocks an existing related main candidate and Undo restores eligibility", async () => {
+  it("keeps a copied main approval independent of a later source rejection", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -467,15 +400,7 @@ describe("rejection of inherited acceptance", () => {
     await fixture(service, { id: "merged", color: "red", related: ["original", "retry"] });
     expect((await service.status("merged")).status).toBe("passed");
     const rejection = await review(service, "comparison-retry", { verdict: "rejected" });
-    expect((await service.status("merged")).status).toBe("needs-review");
-    await expect(
-      service.preparePromotion({
-        snapshotId: "blocked",
-        comparisonId: "comparison-merged",
-        prefix: "baselines/blocked",
-        now: 8,
-      }),
-    ).rejects.toBeInstanceOf(ConflictError);
+    expect((await service.status("merged")).status).toBe("passed");
     expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
     await service.undo({
       commandId: rejection.commandId,
@@ -816,27 +741,26 @@ describe("full run and immutable comparison state", () => {
         captureProfileDigest: profileDigest,
         compare: unchanged,
       });
-      expect((await service.comparisonRows(`comparison-${id}`)).map((row) => row.outcome)).toEqual([
-        "changed",
-        "changed",
-      ]);
-      expect((await service.status(id)).status).toBe("needs-review");
+      expect((await service.comparisonRows(`comparison-${id}`)).map((row) => row.outcome)).toEqual(
+        id === "rendering-change" ? ["changed", "changed"] : ["unchanged", "unchanged"],
+      );
+      expect((await service.status(id)).status).toBe(
+        id === "rendering-change" ? "needs-review" : "passed",
+      );
     }
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 8);
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 4);
 
-    const comparisonsBeforeRecompare = count(database, "visonaut_comparisons");
-    await expect(
-      service.createComparison({
-        id: "comparison-stale-recompare",
-        runId: "stale-policy-same-profile",
-        referenceSnapshotId: (await service.project("project")).snapshot_id,
-        requireCurrentCapturePolicy: true,
-        now: 5,
-        maxAttempts: 3,
-      }),
-    ).rejects.toThrow(ConflictError);
-    expect(count(database, "visonaut_comparisons")).toBe(comparisonsBeforeRecompare);
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 8);
+    const comparisonsBeforeRecompare = Number(count(database, "visonaut_comparisons"));
+    await service.createComparison({
+      id: "comparison-stale-recompare",
+      runId: "stale-policy-same-profile",
+      referenceSnapshotId: (await service.project("project")).snapshot_id,
+      requireCurrentCapturePolicy: true,
+      now: 5,
+      maxAttempts: 3,
+    });
+    expect(count(database, "visonaut_comparisons")).toBe(comparisonsBeforeRecompare + 1);
+    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 4);
   });
 
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {
@@ -887,7 +811,7 @@ describe("full run and immutable comparison state", () => {
         compare(task) {
           expect(task.reference).toMatchObject({
             imageId: `image-${previous}-dialog`,
-            objectKey: `baselines/${previous}/image-${previous}-dialog`,
+            objectKey: `runs/${previous}/dialog`,
             digest: `dialog-${previous}`,
           });
           expect(task.candidate?.imageId).toBe(`image-${id}-dialog`);
@@ -1088,11 +1012,11 @@ describe("exact acceptance and automatic reservations", () => {
     await fixture(service, { id: "merged", color: "red", related: ["pr"] });
     expect((await service.status("merged")).status).toBe("passed");
     const reused = await service.comparisonRows("comparison-merged");
-    expect(reused[0]?.source_decision_id).toBeTruthy();
-    expect(reused[0]?.decision_id).toBeNull();
+    expect(reused[0]?.source_decision_id).toBeNull();
+    expect(reused[0]?.decision_id).toBe(`copied:${reused[0]?.id}`);
   });
 
-  it("invalidates reused acceptance after source rejection and refuses retry recreation", async () => {
+  it("keeps copied approval after source rejection and permits verified descendants", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await setup(service);
@@ -1104,14 +1028,14 @@ describe("exact acceptance and automatic reservations", () => {
       related: ["first"],
     });
     await review(service, "comparison-first", { verdict: "rejected" });
-    expect((await service.status("retry")).status).toBe("needs-review");
+    expect((await service.status("retry")).status).toBe("passed");
     await fixture(service, {
       id: "retry-again",
       kind: "pull_request",
       lineage: "pr-1",
       related: ["first", "retry"],
     });
-    expect((await service.status("retry-again")).status).toBe("needs-review");
+    expect((await service.status("retry-again")).status).toBe("passed");
   });
 
   it("automatically accepts confirmed removal, keeps the Removed row, and protects promoted history", async () => {
@@ -1136,7 +1060,7 @@ describe("exact acceptance and automatic reservations", () => {
         expectedPromotionId: "promotion-remove",
         expectedBaselineRevision: 2,
       }),
-    ).rejects.toThrow("protected");
+    ).rejects.toThrow("read-only");
     expect((await service.project("project")).snapshot_id).toBe("snapshot-remove");
   });
 });
@@ -1154,8 +1078,9 @@ describe("atomic review, rollback, and session Undo", () => {
     expect(result.revisions).toHaveLength(items.length);
     expect(result).toMatchObject({
       previousRunRevision,
-      runRevision: previousRunRevision + 2,
+      runRevision: previousRunRevision + 1,
     });
+    expect(result.runRevision).toBe((await service.run("batch-review")).revision);
     const revisions = new Map(
       result.revisions.map((target) => [target.id, target.expectedRevision]),
     );
@@ -1207,8 +1132,11 @@ describe("atomic review, rollback, and session Undo", () => {
       targets: [{ id: row.id, expectedRevision: row.decision_revision }],
     };
     const first = await review(service, "comparison-pr", options);
+    const savedRevision = (await service.run("pr")).revision;
+    expect(first.runRevision).toBe(savedRevision);
     const replay = await review(service, "comparison-pr", options);
     expect(replay).toEqual(first);
+    expect((await service.run("pr")).revision).toBe(savedRevision);
     expect(count(database, "visonaut_commands")).toBe(1);
     await service.undo({
       commandId: "reject",
@@ -1229,59 +1157,6 @@ describe("atomic review, rollback, and session Undo", () => {
         now: 21,
       }),
     ).rejects.toBeInstanceOf(ConflictError);
-  });
-
-  it("D22 rolls back the current human promotion and revokes acceptance", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "red", color: "red" });
-    const approval = await review(service, "comparison-red");
-    await promote(service, "red");
-    await service.undo({
-      commandId: approval.commandId,
-      undoCommandId: "undo",
-      actorId: "maintainer-1",
-      sessionId: "session",
-      expectedBaselineRevision: 2,
-      now: 20,
-    });
-    expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
-    expect((await service.status("red")).status).toBe("needs-review");
-    expect(
-      database.connection
-        .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id = 'snapshot-red'")
-        .get()?.reference_eligible,
-    ).toBe(0);
-  });
-
-  it("D26 reject after reload and its Undo restore verdict and a new promotion atomically", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "red", color: "red" });
-    await review(service, "comparison-red");
-    await promote(service, "red");
-    const rejected = await review(service, "comparison-red", {
-      verdict: "rejected",
-      actorId: "maintainer-2",
-      sessionId: "after-reload",
-      expectedPromotionId: "promotion-red",
-      expectedBaselineRevision: 2,
-    });
-    expect((await service.project("project")).baseline_revision).toBe(3);
-    const restored = await service.undo({
-      commandId: rejected.commandId,
-      undoCommandId: "restore",
-      actorId: "maintainer-2",
-      sessionId: "after-reload",
-      expectedBaselineRevision: 3,
-      now: 30,
-    });
-    expect((await service.project("project")).snapshot_id).toBe("snapshot-red");
-    expect(restored.promotionId).not.toBe("promotion-red");
-    expect(restored.baselineRevision).toBe(4);
-    expect((await service.status("red")).status).toBe("passed");
   });
 
   it("refuses stale D22 after a later baseline without partial audit work", async () => {
@@ -1328,7 +1203,7 @@ describe("restoration and workflow attempt inheritance", () => {
     const exact = (await service.comparisonRows("comparison-restored")).find(
       (row) => row.item_key === "menu",
     );
-    expect(exact?.source_decision_id).toBeTruthy();
+    expect(exact?.decision_id).toBe(`copied:${exact?.id}`);
     await fixture(service, {
       id: "changed-restoration",
       items: ["dialog", "menu"],
@@ -1657,33 +1532,6 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.project("project")).snapshot_id).toBe("snapshot-main");
   });
 
-  it("rolls back a mixed snapshot without revoking its automatic additions", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "mixed", items: ["dialog", "menu"], color: "red" });
-    const rows = await service.comparisonRows("comparison-mixed");
-    const changed = rows.find((row) => row.item_key === "dialog");
-    const added = rows.find((row) => row.item_key === "menu");
-    if (!changed || !added) throw new Error("Missing mixed variants");
-    await review(service, "comparison-mixed", {
-      targets: [{ id: changed.id, expectedRevision: 0 }],
-    });
-    await promote(service, "mixed");
-    await review(service, "comparison-mixed", {
-      verdict: "rejected",
-      targets: [{ id: changed.id, expectedRevision: 1 }],
-      expectedPromotionId: "promotion-mixed",
-      expectedBaselineRevision: 2,
-    });
-    expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
-    expect(
-      database.connection
-        .prepare("SELECT revoked FROM visonaut_decisions WHERE id = ?")
-        .get(added.decision_id)?.revoked,
-    ).toBe(0);
-  });
-
   it("invalidates queued success in the same rejection transaction", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -1773,34 +1621,6 @@ describe("restoration and workflow attempt inheritance", () => {
         .prepare("SELECT COUNT(*) AS count FROM visonaut_runs WHERE active=1 AND state='comparing'")
         .get()?.count,
     ).toBe(0);
-  });
-
-  it("moves invalidated in-flight PR comparisons out of active capture after rollback", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "main", color: "red" });
-    await review(service, "comparison-main");
-    await promote(service, "main");
-    await fixture(service, { id: "pr", kind: "pull_request", color: "green" });
-    await service.createComparison({
-      id: "pending-pr",
-      runId: "pr",
-      referenceSnapshotId: "snapshot-main",
-      now: 20,
-      maxAttempts: 3,
-    });
-    expect((await service.run("pr")).state).toBe("comparing");
-
-    await review(service, "comparison-main", {
-      verdict: "rejected",
-      expectedPromotionId: "promotion-main",
-      expectedBaselineRevision: 2,
-    });
-
-    expect((await service.comparison("pending-pr")).state).toBe("invalidated");
-    expect((await service.run("pr")).state).toBe("reviewing");
-    expect((await service.status("pr")).status).toBe("needs-recompare");
   });
 
   it("does not claim queued work after a review comparison is invalidated", async () => {
@@ -1984,7 +1804,9 @@ describe("restoration and workflow attempt inheritance", () => {
     database.connection
       .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
       .run(row.id);
-    database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='inactive'").run();
+    database.connection
+      .prepare("UPDATE visonaut_runs SET active=0,closed_at=19 WHERE id='inactive'")
+      .run();
 
     expect(
       await service.claimComparisonTask({
@@ -2013,7 +1835,9 @@ describe("restoration and workflow attempt inheritance", () => {
     database.connection
       .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id IN (?, ?)")
       .run(inactiveRow.id, archivedRow.id);
-    database.connection.prepare("UPDATE visonaut_runs SET active=0 WHERE id='inactive'").run();
+    database.connection
+      .prepare("UPDATE visonaut_runs SET active=0,closed_at=19 WHERE id='inactive'")
+      .run();
     database.connection
       .prepare("DELETE FROM visonaut_comparison_rows WHERE id=?")
       .run(archivedRow.id);
@@ -2322,6 +2146,50 @@ describe("review evidence at the write boundary", () => {
 });
 
 describe("interrupted protected snapshot copy", () => {
+  it("releases all foreign image-owner preparation pins while keeping other roots", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await setup(service);
+    await fixture(service, { id: "source", kind: "pull_request" });
+    await fixture(service, { id: "copy" });
+    // This is the persisted shape of a verified inherited capture.
+    database.connection.exec(
+      "UPDATE visonaut_captures SET image_id='image-source-dialog' WHERE run_id='copy'",
+    );
+    database.connection.exec(
+      "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('source','manual','manual')",
+    );
+    await service.preparePromotion({
+      snapshotId: "pending-copy",
+      comparisonId: "comparison-copy",
+      prefix: "baselines/pending-copy",
+      now: 10,
+    });
+    expect(
+      database.connection
+        .prepare(
+          "SELECT run_id FROM work_retention_pins WHERE owner='promotion:pending-copy' ORDER BY run_id",
+        )
+        .all(),
+    ).toEqual([{ run_id: "copy" }, { run_id: "source" }]);
+    await service.cancelPreparedPromotion({ snapshotId: "pending-copy", now: 11 });
+    expect(
+      database.connection
+        .prepare("SELECT run_id FROM work_retention_pins WHERE owner='promotion:pending-copy'")
+        .all(),
+    ).toEqual([]);
+    expect(
+      database.connection
+        .prepare("SELECT run_id FROM work_retention_pins WHERE owner='manual'")
+        .get(),
+    ).toEqual({ run_id: "source" });
+    expect(
+      database.connection
+        .prepare("SELECT run_id FROM work_retention_pins WHERE owner='review:copy'")
+        .get(),
+    ).toEqual({ run_id: "copy" });
+  });
+
   it("replays preparation and cancels only an unpromoted copy", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -2473,7 +2341,7 @@ describe("HTTP state integration", () => {
     expect((await service.run("pr-ancestry")).comparison_id).toBe("comparison-pr-ancestry");
   });
 
-  it("projects inherited approval eligibility using related rejection vetoes", async () => {
+  it("projects each run-owned copied approval independently", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -2493,288 +2361,7 @@ describe("HTTP state integration", () => {
     });
     expect(await service.eligibleApprovalRowIds("comparison-candidate-main")).toHaveLength(1);
     await review(service, "comparison-retry-source", { verdict: "rejected" });
-    expect(await service.eligibleApprovalRowIds("comparison-candidate-main")).toEqual([]);
-  });
-});
-
-describe("acceptance replacement boundaries", () => {
-  it("keeps an ancestor acceptance blocked when an intermediate human approval is undone", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "ancestor", kind: "pull_request", lineage: "pr" });
-    await fixture(service, {
-      id: "human",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["ancestor"],
-    });
-    const approval = await review(service, "comparison-human");
-    await fixture(service, {
-      id: "rejection",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["ancestor", "human"],
-    });
-    await review(service, "comparison-rejection", { verdict: "rejected" });
-    const replacements = database.connection
-      .prepare(
-        "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
-      )
-      .all();
-    database.connection.exec("DROP TABLE visonaut_decision_replacements");
-    reapplyAcceptanceBackfill(database.connection);
-    expect(
-      database.connection
-        .prepare(
-          "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
-        )
-        .all(),
-    ).toEqual(replacements);
-    await service.undo({
-      commandId: approval.commandId,
-      undoCommandId: "undo-intermediate",
-      actorId: "maintainer-1",
-      sessionId: "session",
-      expectedBaselineRevision: 0,
-      now: 8,
-    });
-    expect((await service.status("human")).status).toBe("needs-review");
-    await fixture(service, {
-      id: "retry",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["ancestor", "human", "rejection"],
-    });
-    expect((await service.status("retry")).status).toBe("needs-review");
-  });
-
-  it("protects a restored baseline even when its current promotion pointer is null", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "introduced", items: ["dialog", "menu"] });
-    const [initialDialog] = (await service.comparisonRows("comparison-introduced")).filter(
-      (row) => row.item_key === "dialog",
-    );
-    if (!initialDialog) throw new Error("Missing initial dialog comparison");
-    await review(service, "comparison-introduced", {
-      targets: [{ id: initialDialog.id, expectedRevision: initialDialog.decision_revision }],
-    });
-    await promote(service, "introduced");
-    await fixture(service, { id: "removed", color: "red" });
-    const [dialog] = (await service.comparisonRows("comparison-removed")).filter(
-      (row) => row.item_key === "dialog",
-    );
-    if (!dialog) throw new Error("Missing dialog comparison");
-    await review(service, "comparison-removed", {
-      targets: [{ id: dialog.id, expectedRevision: dialog.decision_revision }],
-    });
-    await promote(service, "removed");
-    await fixture(service, {
-      id: "pending",
-      kind: "pull_request",
-      lineage: "pr",
-      items: ["dialog", "menu"],
-      related: ["introduced"],
-      ancestorShas: ["sha-seed"],
-    });
-    const pendingComparison = await recompareFromSeed(service, "pending");
-    await review(service, "comparison-removed", {
-      verdict: "rejected",
-      targets: [{ id: dialog.id, expectedRevision: dialog.decision_revision + 1 }],
-      expectedPromotionId: "promotion-removed",
-      expectedBaselineRevision: 3,
-    });
-    const project = await service.project("project");
-    expect(project.snapshot_id).toBe("snapshot-introduced");
-    expect(project.promotion_id).toBeNull();
-    const [menu] = (await service.comparisonRows(pendingComparison)).filter(
-      (row) => row.item_key === "menu",
-    );
-    if (!menu) throw new Error("Missing menu comparison");
-    await expect(
-      review(service, pendingComparison, {
-        verdict: "rejected",
-        targets: [{ id: menu.id, expectedRevision: menu.decision_revision }],
-      }),
-    ).rejects.toBeInstanceOf(ConflictError);
-    expect(await service.project("project")).toEqual(project);
-  });
-
-  it("accepts fresh human approval after an exact inherited rejection and reuses its revision", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "source", kind: "pull_request", lineage: "pr", color: "red" });
-    await review(service, "comparison-source");
-    await fixture(service, {
-      id: "rejected",
-      kind: "pull_request",
-      lineage: "pr",
-      color: "red",
-      related: ["source"],
-    });
-    await review(service, "comparison-rejected", { verdict: "rejected" });
-    await fixture(service, {
-      id: "fresh",
-      kind: "pull_request",
-      lineage: "pr",
-      color: "red",
-      related: ["source", "rejected"],
-    });
-    expect((await service.status("fresh")).status).toBe("needs-review");
-    await review(service, "comparison-fresh");
-    const [approved] = await service.comparisonRows("comparison-fresh");
-    expect((await service.status("fresh")).status).toBe("passed");
-    expect(await service.eligibleApprovalRowIds("comparison-fresh")).toEqual([approved?.id]);
-    await fixture(service, { id: "main", color: "red", related: ["source", "rejected", "fresh"] });
-    expect((await service.comparisonRows("comparison-main"))[0]?.source_decision_id).toBe(
-      approved?.decision_id,
-    );
-    await promote(service, "main");
-    expect((await service.status("main")).status).toBe("passed");
-  });
-
-  it("refuses inherited rejection that would invalidate a current promoted dependent atomically", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "source", kind: "pull_request", lineage: "pr", color: "red" });
-    await review(service, "comparison-source");
-    await fixture(service, {
-      id: "retry",
-      kind: "pull_request",
-      lineage: "pr",
-      color: "red",
-      related: ["source"],
-    });
-    await fixture(service, { id: "main", color: "red", related: ["source", "retry"] });
-    await promote(service, "main");
-    const retryComparison = await recompareFromSeed(service, "retry");
-    const project = await service.project("project");
-    const rows = await service.comparisonRows(retryComparison);
-    const audits = count(database, "visonaut_audit");
-    const commands = count(database, "visonaut_commands");
-    await expect(review(service, retryComparison, { verdict: "rejected" })).rejects.toBeInstanceOf(
-      ConflictError,
-    );
-    expect(await service.project("project")).toEqual(project);
-    expect(await service.comparisonRows(retryComparison)).toEqual(rows);
-    expect(count(database, "visonaut_audit")).toBe(audits);
-    expect(count(database, "visonaut_commands")).toBe(commands);
-    expect((await service.status("main")).status).toBe("passed");
-  });
-
-  it("keeps D26 inherited rejection local to the promoted comparison", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "source", kind: "pull_request", lineage: "pr", color: "red" });
-    await review(service, "comparison-source");
-    await fixture(service, { id: "main", color: "red", related: ["source"] });
-    await fixture(service, {
-      id: "other",
-      kind: "pull_request",
-      lineage: "other-pr",
-      color: "red",
-      related: ["source"],
-    });
-    await promote(service, "main");
-    await recompareFromSeed(service, "other");
-    await review(service, "comparison-main", {
-      verdict: "rejected",
-      expectedPromotionId: "promotion-main",
-      expectedBaselineRevision: 2,
-    });
-    expect((await service.status("main")).status).toBe("rejected");
-    await recompareFromSeed(service, "other");
-    expect((await service.status("other")).status).toBe("passed");
-    expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
-    await fixture(service, { id: "related-main-retry", color: "red", related: ["source", "main"] });
-    expect((await service.status("related-main-retry")).status).toBe("needs-review");
-    await review(service, "comparison-related-main-retry");
-    expect((await service.status("related-main-retry")).status).toBe("passed");
-  });
-
-  it("does not recover an older automatic source after a promoted human replacement is rejected", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "automatic", kind: "pull_request", lineage: "pr" });
-    await fixture(service, { id: "main", related: ["automatic"] });
-    await review(service, "comparison-main");
-    await promote(service, "main");
-    await review(service, "comparison-main", {
-      verdict: "rejected",
-      expectedPromotionId: "promotion-main",
-      expectedBaselineRevision: 1,
-    });
-    await fixture(service, { id: "retry", related: ["automatic", "main"] });
-    expect((await service.status("retry")).status).toBe("needs-review");
-    await fixture(service, {
-      id: "unrelated",
-      kind: "pull_request",
-      lineage: "other",
-      related: ["automatic"],
-    });
-    expect((await service.status("unrelated")).status).toBe("passed");
-  });
-
-  it("preserves a rejected automatic reservation until fresh human approval, including Undo", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "automatic", kind: "pull_request", lineage: "pr" });
-    await fixture(service, {
-      id: "rejected",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["automatic"],
-    });
-    await review(service, "comparison-rejected", { verdict: "rejected" });
-    await fixture(service, {
-      id: "retry",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["automatic", "rejected"],
-    });
-    expect((await service.status("retry")).status).toBe("needs-review");
-    const approval = await review(service, "comparison-rejected");
-    expect((await service.status("rejected")).status).toBe("passed");
-    expect((await service.status("automatic")).status).toBe("needs-review");
-    const replacements = database.connection
-      .prepare(
-        "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
-      )
-      .all();
-    database.connection.exec("DROP TABLE visonaut_decision_replacements");
-    reapplyAcceptanceBackfill(database.connection);
-    expect(
-      database.connection
-        .prepare(
-          "SELECT * FROM visonaut_decision_replacements ORDER BY source_decision_id, replacement_decision_id, scope_run_id",
-        )
-        .all(),
-    ).toEqual(replacements);
-    await service.undo({
-      commandId: approval.commandId,
-      undoCommandId: "undo-fresh",
-      actorId: "maintainer-1",
-      sessionId: "session",
-      expectedBaselineRevision: 0,
-      now: 8,
-    });
-    expect((await service.status("rejected")).status).toBe("rejected");
-    expect((await service.status("automatic")).status).toBe("needs-review");
-    await fixture(service, {
-      id: "last",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["automatic", "rejected", "retry"],
-    });
-    expect((await service.status("last")).status).toBe("needs-review");
-    expect(count(database, "visonaut_reservations")).toBe(1);
+    expect(await service.eligibleApprovalRowIds("comparison-candidate-main")).toHaveLength(1);
   });
 });
 
@@ -2962,9 +2549,13 @@ describe("verified closed history compaction", () => {
       related: ["source"],
     });
     expect((await service.status("related")).status).toBe("passed");
-    expect((await service.comparisonRows("comparison-related"))[0]?.source_decision_id).toBe(
-      (decisions.find((decision) => decision.kind === "human") as { id: string }).id,
-    );
+    const copied = (await service.comparisonRows("comparison-related"))[0];
+    expect(copied?.source_decision_id).toBeNull();
+    expect(
+      database.connection
+        .prepare("SELECT source_decision_id FROM visonaut_decisions WHERE id=?")
+        .get(copied?.decision_id ?? "")?.source_decision_id,
+    ).toBe((decisions.find((decision) => decision.kind === "human") as { id: string }).id);
     expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
@@ -3054,7 +2645,7 @@ describe("bounded snapshot evidence roots", () => {
     expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
-  it("keeps current and rollback bytes while expiring an older reference without an infinite predecessor chain", async () => {
+  it("keeps the current baseline while retiring predecessor snapshots without rollback roots", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -3067,9 +2658,7 @@ describe("bounded snapshot evidence roots", () => {
     await expect(
       retireSnapshot(database, { snapshotId: "snapshot-third", now: 100, graceMs: 10 }),
     ).rejects.toBeInstanceOf(ConflictError);
-    await expect(
-      retireSnapshot(database, { snapshotId: "snapshot-second", now: 100, graceMs: 10 }),
-    ).rejects.toBeInstanceOf(ConflictError);
+    await retireSnapshot(database, { snapshotId: "snapshot-second", now: 100, graceMs: 10 });
     await retireSnapshot(database, { snapshotId: "snapshot-seed", now: 100, graceMs: 10 });
     expect(
       database.connection
@@ -3107,23 +2696,7 @@ describe("bounded snapshot evidence roots", () => {
       database.connection
         .prepare("SELECT run_id FROM work_retention_pins WHERE owner='promotion:snapshot-second'")
         .get()?.run_id,
-    ).toBe("second");
-    database.connection
-      .prepare(
-        "INSERT INTO operations_backups(id,state,created_at) VALUES('active-backup','copying',?)",
-      )
-      .run(expires);
-    expect(
-      await claimRetiredSnapshotDeletion(database, {
-        snapshotId: "snapshot-seed",
-        token: "during-backup",
-        now: expires,
-        leaseMs: 100,
-      }),
-    ).toBeNull();
-    database.connection
-      .prepare("UPDATE operations_backups SET state='complete' WHERE id='active-backup'")
-      .run();
+    ).toBeUndefined();
     expect(
       await claimRetiredSnapshotDeletion(database, {
         snapshotId: "snapshot-seed",
@@ -3226,9 +2799,169 @@ it("rebuilds eligible historical ancestry from direct proofs after intermediate 
     lineage: "pr",
     related: ["middle"],
   });
-  expect((await service.comparisonRows("comparison-target"))[0]?.source_decision_id).toBe(source);
+  const target = (await service.comparisonRows("comparison-target"))[0];
+  const attributed = database.connection
+    .prepare(
+      "WITH RECURSIVE sources(id,source) AS(SELECT id,source_decision_id FROM visonaut_decisions WHERE id=? UNION ALL SELECT decision.id,decision.source_decision_id FROM visonaut_decisions decision JOIN sources ON decision.id=sources.source) SELECT 1 FROM sources WHERE source=?",
+    )
+    .get(target?.decision_id ?? "", source ?? "");
+  expect(attributed).toBeTruthy();
   expect((await service.status("target")).status).toBe("passed");
 });
+it("resumes profile cutover after mapping commit and preserves approval reuse", async () => {
+  using database = new TestDatabase();
+  const service = new Service(database);
+  await seed(service);
+  const profile: CaptureProfile = {
+    browser: "chromium",
+    browserVersion: "1",
+    osImageDigest: "a".repeat(64),
+    fontsDigest: "b".repeat(64),
+    viewport: { width: 498, height: 360 },
+    deviceScaleFactor: 1,
+    locale: "en-US",
+    timezone: "UTC",
+    reducedMotion: "no-preference",
+    colorScheme: "light",
+    contrast: "no-preference",
+    forcedColors: "none",
+    animationPolicy: "disabled",
+    captureOptions: { type: "png", fullPage: false },
+    comparisonPolicyDigest: "c".repeat(64),
+    comparisonEngineVersion: "rgba-visible-1",
+  };
+  const fullDigest = await digestJson(profile);
+  const renderingDigest = await digestRenderingProfile(profile);
+  database.connection
+    .prepare("INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?)")
+    .run(fullDigest, canonicalJson(profile));
+  await fixture(service, {
+    id: "source",
+    kind: "pull_request",
+    lineage: "pr",
+    color: "red",
+    captureProfileDigest: fullDigest,
+  });
+  await review(service, "comparison-source");
+  const row = (await service.comparisonRows("comparison-source"))[0];
+  if (!row) throw new Error("Missing approval row.");
+  const legacyTuple = JSON.parse(row.tuple_json);
+  legacyTuple.candidateProfileDigest = fullDigest;
+  delete legacyTuple.comparisonEngineVersion;
+  delete legacyTuple.imageCodecVersion;
+  const encodedLegacy = JSON.stringify(legacyTuple);
+  database.connection
+    .prepare("UPDATE visonaut_comparison_rows SET tuple_json=?,original_tuple_json=NULL WHERE id=?")
+    .run(encodedLegacy, row.id);
+  database.connection
+    .prepare("UPDATE visonaut_decisions SET tuple_json=?,original_tuple_json=NULL WHERE id=?")
+    .run(encodedLegacy, row.decision_id);
+  database.connection
+    .prepare("UPDATE visonaut_capture_profiles SET rendering_digest=NULL WHERE digest=?")
+    .run(fullDigest);
+  // Reset the old-state fixture after its initial comparison verified the profile.
+  database.connection
+    .prepare("DELETE FROM visonaut_policy_cutovers WHERE id=?")
+    .run(`rendering-profile:${fullDigest}`);
+  const originalBatch = database.batch.bind(database);
+  const interrupted = vi
+    .spyOn(database, "batch")
+    .mockImplementationOnce(originalBatch)
+    .mockRejectedValueOnce(new Error("Stopped after mapping commit."));
+  await expect(service.convertRenderingProfiles("source", "snapshot-seed")).rejects.toThrow(
+    "Stopped after mapping commit",
+  );
+  interrupted.mockRestore();
+  expect(
+    database.connection
+      .prepare("SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=?")
+      .get(fullDigest),
+  ).toEqual({ rendering_digest: renderingDigest });
+  expect((await service.comparisonRows("comparison-source"))[0]?.tuple_json).toBe(encodedLegacy);
+  expect(
+    database.connection
+      .prepare("SELECT 1 FROM visonaut_policy_cutovers WHERE id=?")
+      .get(`rendering-profile:${fullDigest}`),
+  ).toBeUndefined();
+  await service.convertRenderingProfiles("source", "snapshot-seed");
+  expect(
+    JSON.parse((await service.comparisonRows("comparison-source"))[0]?.tuple_json ?? "{}")
+      .candidateProfileDigest,
+  ).toBe(renderingDigest);
+  expect(
+    database.connection
+      .prepare("SELECT original_tuple_json FROM visonaut_decisions WHERE id=?")
+      .get(row.decision_id),
+  ).toEqual({ original_tuple_json: encodedLegacy });
+  expect(
+    database.connection
+      .prepare("SELECT 1 FROM visonaut_policy_cutovers WHERE id=?")
+      .get(`rendering-profile:${fullDigest}`),
+  ).toBeDefined();
+  const repeatedConversionBatches = database.batchCalls;
+  await service.convertRenderingProfiles("source", "snapshot-seed");
+  expect(database.batchCalls - repeatedConversionBatches).toBe(0);
+  await fixture(service, {
+    id: "target",
+    kind: "pull_request",
+    lineage: "pr",
+    color: "red",
+    captureProfileDigest: fullDigest,
+    related: ["source"],
+  });
+  expect((await service.status("target")).status).toBe("passed");
+  const modernProfile = { ...profile };
+  delete modernProfile.comparisonPolicyDigest;
+  delete modernProfile.comparisonEngineVersion;
+  const modernDigest = await digestJson(modernProfile);
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_capture_profiles(digest,profile_json,rendering_digest) VALUES(?,?,?)",
+    )
+    .run(modernDigest, canonicalJson(modernProfile), modernDigest);
+  await fixture(service, {
+    id: "modern",
+    kind: "pull_request",
+    lineage: "pr",
+    color: "red",
+    captureProfileDigest: modernDigest,
+    related: ["source"],
+  });
+  const batchesBeforeModernComparison = database.batchCalls;
+  await service.convertRenderingProfiles("modern", "snapshot-seed");
+  expect(database.batchCalls - batchesBeforeModernComparison).toBe(0);
+});
+
+it("publishes a closed current baseline check and fences a past promoted run", async () => {
+  using database = new TestDatabase();
+  const service = new Service(database);
+  await seed(service);
+  expect(
+    (
+      await service.prepareStatusIntent({
+        runId: "seed",
+        checkId: "check-seed",
+        detailsUrl: "https://example.test/seed",
+        maxAttempts: 2,
+        now: 20,
+      })
+    ).conclusion,
+  ).toBe("success");
+  await fixture(service, { id: "next" });
+  await review(service, "comparison-next");
+  await promote(service, "next");
+  expect((await service.status("seed")).status).toBe("passed");
+  await expect(
+    service.prepareStatusIntent({
+      runId: "seed",
+      checkId: "check-seed",
+      detailsUrl: "https://example.test/seed",
+      maxAttempts: 2,
+      now: 21,
+    }),
+  ).rejects.toBeInstanceOf(ConflictError);
+});
+
 describe("closed stored-run recomparison", () => {
   async function closedFixture(service: Service) {
     await seed(service);
@@ -3267,6 +3000,34 @@ describe("closed stored-run recomparison", () => {
     ].map((table) => database.connection.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
   }
 
+  it("ends native historical recomparison at the exact closed-run retention boundary", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await closedFixture(service);
+    database.connection.exec(
+      "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('closed','manual','manual')",
+    );
+    await expect(
+      service.createComparison({
+        id: "too-late",
+        runId: "closed",
+        referenceSnapshotId: "snapshot-seed",
+        purpose: "historical",
+        expectedCaptureCount: 2,
+        now: 20 + closedRunRetentionMs,
+        maxAttempts: 2,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(
+      database.connection.prepare("SELECT id FROM visonaut_comparisons WHERE id='too-late'").get(),
+    ).toBeUndefined();
+    expect(
+      database.connection
+        .prepare("SELECT byte_state FROM work_retained_runs WHERE id='closed'")
+        .get(),
+    ).toEqual({ byte_state: "live" });
+  });
+
   it("recompares a closed stored run without capture or live authority changes", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -3287,7 +3048,7 @@ describe("closed stored-run recomparison", () => {
       leaseMilliseconds: 100,
     });
     expect(task?.candidate?.objectKey).toBe("runs/closed/dialog");
-    expect(task?.reference?.objectKey).toContain("baselines/seed");
+    expect(task?.reference?.objectKey).toBe("runs/seed/dialog");
     await service.commitComparisonResult({
       taskId: taskRow.id,
       leaseOwner: "history-worker",
@@ -3452,5 +3213,134 @@ describe("closed stored-run recomparison", () => {
       (await service.comparisonRows(comparison.id)).find((candidate) => candidate.id === row.id)
         ?.outcome,
     ).toBe("error");
+  });
+});
+
+describe("forward-only cutover and run-owned approval migration", () => {
+  it("converts valid live links and clears invalid links without erasing source decisions", async () => {
+    using database = new TestDatabase("0023_pending_webhook_index.sql");
+    const service = new Service(database);
+    await setup(service);
+    const tuple = JSON.stringify({
+      projectId: "project",
+      itemKey: "dialog",
+      variantKey: "light",
+      referenceDigest: "before",
+      candidateDigest: "after",
+      referenceProfileDigest: "profile",
+      candidateProfileDigest: "profile",
+      comparisonPolicyDigest: "policy",
+    });
+    for (const id of ["source", "valid", "invalid"]) {
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,comparison_id,sealed_at,created_at) VALUES(?,'project',?,1,'pull_request',?,'pr','plan','{}','reviewing',?,1,1)",
+        )
+        .run(id, id, `sha-${id}`, `comparison-${id}`);
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at) VALUES(?,?,0,'policy',1,'ready',1)",
+        )
+        .run(`comparison-${id}`, id);
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json,outcome,decision_revision,decision_id,source_decision_id) VALUES(?,?,'dialog','light',0,?,'changed',1,?,?)",
+        )
+        .run(
+          `row-${id}`,
+          `comparison-${id}`,
+          tuple,
+          id === "source" ? "source-decision" : null,
+          id === "source" ? null : "source-decision",
+        );
+    }
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,tuple_json,created_at) VALUES('source-decision','row-source',1,'approved','human','maintainer',?,1)",
+      )
+      .run(tuple);
+    database.connection.exec("INSERT INTO visonaut_lineage VALUES('source','valid','verified');");
+    database.connection.exec(
+      readFileSync(
+        new URL("../../../apps/web/migrations/0024_core_simplification.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    expect((await service.comparisonRows("comparison-valid"))[0]).toMatchObject({
+      decision_id: "cutover:row-valid",
+      source_decision_id: null,
+      decision_revision: 2,
+    });
+    expect((await service.comparisonRows("comparison-invalid"))[0]).toMatchObject({
+      decision_id: null,
+      source_decision_id: null,
+    });
+    expect(
+      database.connection
+        .prepare(
+          "SELECT actor_id,tuple_json,source_decision_id FROM visonaut_decisions WHERE id='cutover:row-valid'",
+        )
+        .get(),
+    ).toEqual({ actor_id: "maintainer", tuple_json: tuple, source_decision_id: "source-decision" });
+    database.connection.exec("UPDATE visonaut_decisions SET revoked=1 WHERE id='source-decision';");
+    expect(await service.eligibleApprovalRowIds("comparison-valid")).toEqual(["row-valid"]);
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
+  it("fences promotion racing with session Undo and makes every promoted review read-only", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "next", color: "red" });
+    const approval = await review(service, "comparison-next");
+    const references = await service.preparePromotion({
+      snapshotId: "snapshot-next",
+      comparisonId: "comparison-next",
+      prefix: "baselines/next",
+      now: 10,
+    });
+    for (const image of references)
+      await service.recordSnapshotCopy({
+        snapshotId: "snapshot-next",
+        captureId: image.capture_id,
+        objectKey: image.object_key,
+        digest: image.digest,
+      });
+    const outcomes = await Promise.allSettled([
+      service.promote({
+        snapshotId: "snapshot-next",
+        promotionId: "promotion-next",
+        expectedBaselineRevision: 1,
+        now: 11,
+      }),
+      service.undo({
+        commandId: approval.commandId,
+        undoCommandId: "undo-race",
+        actorId: "maintainer-1",
+        sessionId: "session",
+        expectedBaselineRevision: 1,
+        now: 11,
+      }),
+    ]);
+    expect(outcomes.filter((outcome) => outcome.status === "fulfilled")).toHaveLength(1);
+    if ((await service.run("next")).state === "accepted") {
+      await expect(review(service, "comparison-next", { verdict: "rejected" })).rejects.toThrow(
+        "read-only",
+      );
+      await expect(
+        service.undo({
+          commandId: approval.commandId,
+          undoCommandId: "undo-after",
+          actorId: "maintainer-1",
+          sessionId: "session",
+          expectedBaselineRevision: 2,
+          now: 12,
+        }),
+      ).rejects.toThrow("read-only");
+    } else {
+      expect((await service.project("project")).snapshot_id).toBe("snapshot-seed");
+      expect((await service.status("next")).status).toBe("needs-review");
+    }
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 });

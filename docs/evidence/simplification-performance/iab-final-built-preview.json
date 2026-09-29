@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-09-29T19:48:23.567Z",
+  "method": "cua_repl in-app browser; exact Dashboard -> review -> ArrowRight -> reload -> image readiness sequence",
+  "afterBuild": true,
+  "sourceCheckLog": "/tmp/visonaut-final-check.log",
+  "serverSession": 19033,
+  "command": "wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+  "workerSha256": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+  "localApiStatus": 200,
+  "checks": {
+    "desktop": {
+      "width": 1280,
+      "height": 900,
+      "sidebarRight": 256,
+      "mainX": 256,
+      "headerX": 256,
+      "bodyX": 256
+    },
+    "narrow": {
+      "width": 390,
+      "height": 844,
+      "documentScrollWidth": 390,
+      "variant": "Dark",
+      "referenceDecoded": true,
+      "candidateDecoded": true
+    },
+    "faviconHref": "/favicon.svg"
+  },
+  "screenshots": ["iab-final-desktop.jpg", "iab-final-narrow.jpg"],
+  "limits": "Synthetic read-only preview. Document shell and client boot only; run route has ssr:false. Does not prove a save, production OAuth or storage. A separate transient headless full-page capture anomaly is preserved; actual in-app and repeated geometry were correct.",
+  "runtimeRestart": {
+    "checkedAt": "2026-09-29T19:39:57.386Z",
+    "afterBuild": true,
+    "sourceCheckLog": "/tmp/visonaut-final-check.log",
+    "serverSession": 19033,
+    "command": "wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+    "workerSha256": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+    "localApiStatus": 200
+  }
+}

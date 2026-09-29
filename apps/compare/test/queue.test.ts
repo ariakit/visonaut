@@ -8,7 +8,6 @@ vi.mock("@visonaut/service", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@visonaut/service")>()),
   recoverDeadLetteredComparison,
 }));
-vi.mock("@cloudflare/containers", () => ({ Container: class {} }));
 vi.mock("../src/codecs.ts", () => ({ codecsReady: Promise.resolve({}) }));
 vi.mock("../src/process.ts", () => ({ processComparisonTask }));
 
@@ -50,10 +49,10 @@ it("wakes status delivery only for the first review-ready transition", async () 
 
   await worker.queue(
     { queue: "comparisons", messages: [first, duplicate] } as MessageBatch<unknown>,
-    { ...env, VISONAUT_CODEC_BACKEND: "worker", OPERATIONS: { send } } as Env,
+    { ...env, OPERATIONS: { send } } as Env,
   );
 
-  expect(send).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+  expect(send).toHaveBeenCalledExactlyOnceWith({ kind: "status", comparisonId: "comparison" });
   expect(first.ack).toHaveBeenCalledOnce();
   expect(duplicate.ack).toHaveBeenCalledOnce();
   expect(first.retry).not.toHaveBeenCalled();
@@ -75,7 +74,7 @@ it("acknowledges committed work when the status wake fails", async () => {
 
   await worker.queue(
     { queue: "comparisons", messages: [message] } as MessageBatch<unknown>,
-    { ...env, VISONAUT_CODEC_BACKEND: "worker", OPERATIONS: { send } } as Env,
+    { ...env, OPERATIONS: { send } } as Env,
   );
 
   expect(message.ack).toHaveBeenCalledOnce();
@@ -96,7 +95,7 @@ it("waits for a busy codec without retrying the queued message", async () => {
   const queued = comparisonMessage();
   const delivery = worker.queue(
     { queue: "comparisons", messages: [queued] } as MessageBatch<unknown>,
-    { ...env, VISONAUT_CODEC_BACKEND: "worker" } as Env,
+    { ...env } as Env,
   );
 
   await Promise.resolve();

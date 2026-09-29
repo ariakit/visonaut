@@ -1,0 +1,354 @@
+{
+  "measuredAt": "2026-09-29T14:49:34.234Z",
+  "browser": "154.0.8037.58",
+  "probes": [
+    {
+      "cpu": 1,
+      "initial": {
+        "metrics": {
+          "start": 23.5,
+          "longTasks": [
+            {
+              "start": 36,
+              "duration": 110
+            }
+          ],
+          "headers": 25.899999976158142,
+          "body": 29.5,
+          "modelReady": 33.300000071525574,
+          "jsonBytes": 3156970,
+          "captures": 3582,
+          "items": 597,
+          "renderStart": 35.700000047683716,
+          "listCommit": 137.30000007152557,
+          "imageReadyCommit": 218.70000004768372,
+          "listPaintOpportunity": 392.39999997615814,
+          "imagePaintOpportunity": 404.8000000715256,
+          "domNodes": 543,
+          "complete": true
+        },
+        "panes": [
+          {
+            "display": "flex",
+            "alt": "Reference",
+            "complete": true,
+            "naturalWidth": 1280
+          },
+          {
+            "display": "flex",
+            "alt": "New image",
+            "complete": true,
+            "naturalWidth": 1280
+          },
+          {
+            "display": "none",
+            "alt": "Pixel diff · red pixels changed",
+            "complete": true,
+            "naturalWidth": 1280
+          }
+        ],
+        "resources": [
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/reference.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 0.8999999761581421
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/candidate.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 1.399999976158142
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/diff.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 1.7000000476837158
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 0.8999999761581421
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-6/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-12/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.1999999284744263
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-18/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.399999976158142
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-24/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.600000023841858
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-30/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-36/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.5999999046325684
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-42/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.7999999523162842
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-48/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-54/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-60/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.0999999046325684
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-1/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.299999952316284
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-2/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.5999999046325684
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-3/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.5
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-4/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.700000047683716
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-5/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.700000047683716
+          }
+        ],
+        "cssRules": 346,
+        "shellDisplay": "grid"
+      },
+      "imageRequests": 19,
+      "requestsAfterDiff": 0,
+      "fullImageRequests": [
+        "http://127.0.0.1:5191/media/capture-0/reference.png",
+        "http://127.0.0.1:5191/media/capture-0/candidate.png",
+        "http://127.0.0.1:5191/media/capture-0/diff.png"
+      ]
+    },
+    {
+      "cpu": 4,
+      "initial": {
+        "metrics": {
+          "start": 77.60000002384186,
+          "longTasks": [
+            {
+              "start": 28,
+              "duration": 58
+            },
+            {
+              "start": 147.20000004768372,
+              "duration": 486
+            }
+          ],
+          "headers": 88.10000002384186,
+          "body": 118.30000007152557,
+          "modelReady": 133.10000002384186,
+          "jsonBytes": 3156970,
+          "captures": 3582,
+          "items": 597,
+          "renderStart": 144.30000007152557,
+          "listCommit": 593.6000000238419,
+          "listPaintOpportunity": 672.7000000476837,
+          "imageReadyCommit": 708.2000000476837,
+          "imagePaintOpportunity": 714.5,
+          "domNodes": 543,
+          "complete": true
+        },
+        "panes": [
+          {
+            "display": "flex",
+            "alt": "Reference",
+            "complete": true,
+            "naturalWidth": 1280
+          },
+          {
+            "display": "flex",
+            "alt": "New image",
+            "complete": true,
+            "naturalWidth": 1280
+          },
+          {
+            "display": "none",
+            "alt": "Pixel diff · red pixels changed",
+            "complete": true,
+            "naturalWidth": 1280
+          }
+        ],
+        "resources": [
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/reference.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 0.9000000953674316
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/candidate.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 0.8999999761581421
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/diff.png",
+            "bytes": 10573,
+            "decoded": 10273,
+            "duration": 1
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-0/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 0.7000000476837158
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-6/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-12/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 0.6999999284744263
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-18/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 0.7999999523162842
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-24/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-30/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.1999999284744263
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-36/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.3000000715255737
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-42/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.5
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-48/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.600000023841858
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-54/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.9000000953674316
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-60/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.9000000953674316
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-1/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 1.9000000953674316
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-2/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-3/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.100000023841858
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-4/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.200000047683716
+          },
+          {
+            "url": "http://127.0.0.1:5191/media/capture-5/thumbnail.png",
+            "bytes": 642,
+            "decoded": 342,
+            "duration": 2.4000000953674316
+          }
+        ],
+        "cssRules": 346,
+        "shellDisplay": "grid"
+      },
+      "imageRequests": 19,
+      "requestsAfterDiff": 0,
+      "fullImageRequests": [
+        "http://127.0.0.1:5191/media/capture-0/reference.png",
+        "http://127.0.0.1:5191/media/capture-0/candidate.png",
+        "http://127.0.0.1:5191/media/capture-0/diff.png"
+      ]
+    }
+  ]
+}

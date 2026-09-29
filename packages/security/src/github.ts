@@ -16,6 +16,8 @@ export interface GitHubClient {
   request(path: string, init?: RequestInit): Promise<unknown>;
   repository: string;
   repositoryId: string;
+  /** Exact App configuration identity for private permission caching. */
+  authorizationKey?: string;
 }
 
 export class GitHubUnavailableError extends SecurityError {
@@ -92,7 +94,16 @@ async function githubRequest({
   }
 }
 
-/** Installation tokens are request scoped and never share user OAuth storage. */
+interface InstallationToken {
+  token: string;
+  expiresAt: number;
+}
+
+const installationTokens = new WeakMap<typeof fetch, Map<string, InstallationToken>>();
+const maximumInstallationTokens = 128;
+const tokenExpirySkew = 30_000;
+
+/** Reuse resolved token bytes; pending I/O stays within the request's client. */
 export async function createGitHubClient(
   configuration: GitHubAppConfiguration,
 ): Promise<GitHubClient> {
@@ -100,32 +111,75 @@ export async function createGitHubClient(
     throw new Error("Invalid configured repository.");
   }
   const repositoryId = numericId(configuration.repositoryId);
+  const installationId = numericId(configuration.installationId);
   const fetcher = configuration.fetch ?? fetch;
-  let installationToken: Promise<string> | undefined;
-  async function authorize() {
+  const keyDigest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(configuration.privateKey),
+  );
+  const authorizationKey = JSON.stringify([
+    configuration.appId,
+    installationId,
+    repositoryId,
+    configuration.repository,
+    Array.from(new Uint8Array(keyDigest), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+  ]);
+  let tokens = installationTokens.get(fetcher);
+  if (!tokens) {
+    tokens = new Map();
+    installationTokens.set(fetcher, tokens);
+  }
+  const tokenCache = tokens;
+  let pendingToken: Promise<InstallationToken> | undefined;
+  const authorize = async () => {
     const token = await createAppJwt(configuration.appId, configuration.privateKey);
     const result = record(
       await githubRequest({
-        path: `/app/installations/${numericId(configuration.installationId)}/access_tokens`,
+        path: `/app/installations/${installationId}/access_tokens`,
         token,
         fetcher,
         init: { method: "POST", body: JSON.stringify({ repository_ids: [Number(repositoryId)] }) },
       }),
     );
-    const expires = Date.parse(textField(result.expires_at));
-    if (!Number.isFinite(expires) || expires <= Date.now()) {
+    const expiresAt = Date.parse(textField(result.expires_at));
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now() + tokenExpirySkew) {
       throw new GitHubUnavailableError();
     }
-    return textField(result.token);
-  }
+    const resolved = { token: textField(result.token), expiresAt };
+    tokenCache.delete(authorizationKey);
+    if (tokenCache.size >= maximumInstallationTokens) {
+      const oldest = tokenCache.keys().next().value;
+      if (oldest !== undefined) {
+        tokenCache.delete(oldest);
+      }
+    }
+    tokenCache.set(authorizationKey, resolved);
+    return resolved;
+  };
   return {
     appId: configuration.appId,
     repository: configuration.repository,
     repositoryId,
+    authorizationKey,
     async request(path, init) {
-      // Reject anonymous sessions before obtaining a GitHub installation token.
-      installationToken ??= authorize();
-      return githubRequest({ path, init, token: await installationToken, fetcher });
+      // No token is minted until a verified session needs GitHub access.
+      let resolved = tokenCache.get(authorizationKey);
+      if (!resolved || resolved.expiresAt <= Date.now() + tokenExpirySkew) {
+        tokenCache.delete(authorizationKey);
+        pendingToken ??= authorize().finally(() => {
+          pendingToken = undefined;
+        });
+        resolved = await pendingToken;
+      }
+      try {
+        return await githubRequest({ path, init, token: resolved.token, fetcher });
+      } catch (error) {
+        if (error instanceof GitHubUnavailableError && error.upstreamStatus === 401) {
+          // Do not retry a mutation; the next request can mint a new token.
+          tokenCache.delete(authorizationKey);
+        }
+        throw error;
+      }
     },
   };
 }

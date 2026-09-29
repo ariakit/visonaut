@@ -1,0 +1,30 @@
+package: @visonaut/playwright@0.4.0
+Tarball Contents
+dist/environment.d.ts
+dist/environment.js
+dist/index.d.ts
+dist/index.js
+dist/reporter.d.ts
+dist/reporter.js
+dist/types-CNVvwvib.d.ts
+LICENSE
+package.json
+README.md
+Tarball Details
+/var/folders/c_/166fym8j0t71tpfh5s2757sr0000gn/T/visonaut-package-smoke-Wdnfrn/visonaut-playwright.tgz
+package: visonaut@0.4.0
+Tarball Contents
+dist/bin.d.ts
+dist/bin.js
+dist/chunk-SOBN3NGO.js
+dist/index.d.ts
+dist/index.js
+LICENSE
+package.json
+README.md
+Tarball Details
+/var/folders/c_/166fym8j0t71tpfh5s2757sr0000gn/T/visonaut-package-smoke-Wdnfrn/visonaut.tgz
+
+added 1 package in 249ms
+
+added 5 packages, and changed 1 package in 2s

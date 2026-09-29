@@ -1,0 +1,24 @@
+✔ the class deletion gate requires current exact-namespace drain evidence (1.023041ms)
+✔ flat credential loading stays closed without the exact reviewed scope (162.503417ms)
+✔ verified provenance binds the exact registry package, checked source and signer policy (1.465292ms)
+✔ older verified source can be inspected but cannot satisfy this commit's publication (0.8765ms)
+✔ source claims cannot replace the supported certificate issuer and SAN verification (0.204542ms)
+✔ source, build workflow and package subject mismatches fail before acceptance (2.046ms)
+✔ unverified, missing, duplicated and wrong-registry attestation output stays closed (0.501208ms)
+✔ scoped package PURL is checked against the exact independently published package (0.135459ms)
+✔ empty eligible plan performs no registry installation or signature subprocess (0.180708ms)
+✔ publication requires manual main and the approved source commit (1.057208ms)
+✔ source publication permits different archives but requires the selected tag and provenance (0.343375ms)
+✔ all ready packages and partial reruns share one release plan (0.707042ms)
+✔ eligible versions include new publications and verified partial reruns from this source (0.532833ms)
+✔ unchanged old packages stay outside the source claim while stale versions fail (0.274459ms)
+✔ receipts cannot change source, tag, selected version, or duplicate a package (0.201041ms)
+✔ unchanged eligibility compares public contents and ignores filesystem timestamps (5.433ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 198.143917

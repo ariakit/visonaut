@@ -1,0 +1,1357 @@
+{
+  "recordedAt": "2026-09-29T22:18:39.956693+00:00",
+  "scope": "Local checked implementation prepared for an authorized draft PR. No production deployment, live conversion, secret move, App/rule change, npm release, consumer migration, or resource retirement is claimed.",
+  "baselineCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "source": {
+    "fingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+    "algorithm": "SHA-256 of UTF-8 compact JSON (sort_keys=true, separators=comma/colon) of the manifest array, ordered by path",
+    "manifest": {
+      "file": "docs/evidence/simplification-performance/source-manifest.json",
+      "bytes": 106241,
+      "sha256": "a93c18d7be426fc63412aade981291880b2159f79e0c33989dc6b97812a8dd6a"
+    },
+    "fileCount": 559,
+    "untrackedSourceFileCount": 0,
+    "includesTrackedAndUntracked": true,
+    "includePrefixes": ["apps/", "packages/", ".github/", "tooling/", ".changeset/"],
+    "rootFiles": [
+      ".dockerignore",
+      ".gitignore",
+      ".infisical.json",
+      ".oxfmtrc.jsonc",
+      ".oxlintrc.json",
+      "lefthook.yml",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "renovate.json",
+      "tsconfig.json",
+      "vitest.config.ts"
+    ],
+    "excludes": ["docs/frozen living audit", "ignored generated files", "node_modules", "dist"],
+    "deletedVersionedPaths": [".changeset/100-single-capture-submission.md"],
+    "priorHistoryCheckpoint": {
+      "fingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de",
+      "manifest": {
+        "file": "docs/evidence/simplification-performance/source-manifest-history-checkpoint.json",
+        "bytes": 106244,
+        "sha256": "6d8b85e429a6c45176eacc5004d456f43a86b6d6568a01d7276b179d25660723"
+      },
+      "scope": "Source of the preserved history-corrected whole check, native route timings, and last manual preview before formal gate repairs."
+    }
+  },
+  "audit": {
+    "file": {
+      "file": "docs/simplification-audit/audit-data.json",
+      "bytes": 462618,
+      "sha256": "779c89cfbc08f68771579f75f63ae4042e99fae056790cbb40e8e1af8ed6281c"
+    },
+    "revision": "6",
+    "feedbackBaselineSha256": "9fc31bea05ee0249f0ea985d31c46fc93bdb3554a75998a6bf142e993de884b5",
+    "decisionCount": 45,
+    "priorDecisionCount": 61,
+    "selections": [
+      {
+        "id": "S01",
+        "selectedOptionId": "keep-two"
+      },
+      {
+        "id": "S02",
+        "selectedOptionId": "native-recovery"
+      },
+      {
+        "id": "S05",
+        "selectedOptionId": "pin-source"
+      },
+      {
+        "id": "S06",
+        "selectedOptionId": "summary-history"
+      },
+      {
+        "id": "C01",
+        "selectedOptionId": "forward"
+      },
+      {
+        "id": "C02",
+        "selectedOptionId": "copy"
+      },
+      {
+        "id": "C04",
+        "selectedOptionId": "worker"
+      },
+      {
+        "id": "S04",
+        "selectedOptionId": "scoped-pass"
+      },
+      {
+        "id": "U01",
+        "selectedOptionId": "compose"
+      },
+      {
+        "id": "U02",
+        "selectedOptionId": "single-shell"
+      },
+      {
+        "id": "U03",
+        "selectedOptionId": "nav-tabs"
+      },
+      {
+        "id": "U06",
+        "selectedOptionId": "automatic"
+      },
+      {
+        "id": "U04",
+        "selectedOptionId": "global"
+      },
+      {
+        "id": "U05",
+        "selectedOptionId": "task-first"
+      },
+      {
+        "id": "P01",
+        "selectedOptionId": "compact-complete"
+      },
+      {
+        "id": "P02",
+        "selectedOptionId": "on-demand"
+      },
+      {
+        "id": "P03",
+        "selectedOptionId": "router-loaders"
+      },
+      {
+        "id": "P04",
+        "selectedOptionId": "virtualize"
+      },
+      {
+        "id": "P06",
+        "selectedOptionId": "stream-and-head"
+      },
+      {
+        "id": "C06",
+        "selectedOptionId": "two-pass"
+      },
+      {
+        "id": "P05",
+        "selectedOptionId": "small-route-gate"
+      },
+      {
+        "id": "A01",
+        "selectedOptionId": "local"
+      },
+      {
+        "id": "A02",
+        "selectedOptionId": "small-file"
+      },
+      {
+        "id": "A03",
+        "selectedOptionId": "one-path"
+      },
+      {
+        "id": "A04",
+        "selectedOptionId": "app-check"
+      },
+      {
+        "id": "A05",
+        "selectedOptionId": "files"
+      },
+      {
+        "id": "A06",
+        "selectedOptionId": "github-artifact"
+      },
+      {
+        "id": "A07",
+        "selectedOptionId": "ordinary"
+      },
+      {
+        "id": "C03",
+        "selectedOptionId": "split"
+      },
+      {
+        "id": "C05",
+        "selectedOptionId": "ratio"
+      },
+      {
+        "id": "O01",
+        "selectedOptionId": "one-owner"
+      },
+      {
+        "id": "O02",
+        "selectedOptionId": "narrow-oidc"
+      },
+      {
+        "id": "O03",
+        "selectedOptionId": "standard"
+      },
+      {
+        "id": "O04",
+        "selectedOptionId": "production-owner"
+      },
+      {
+        "id": "O05",
+        "selectedOptionId": "short-permission"
+      },
+      {
+        "id": "O08",
+        "selectedOptionId": "60s"
+      },
+      {
+        "id": "O06",
+        "selectedOptionId": "small-record"
+      },
+      {
+        "id": "O07",
+        "selectedOptionId": "workflow-only"
+      },
+      {
+        "id": "O09",
+        "selectedOptionId": "source"
+      },
+      {
+        "id": "O10",
+        "selectedOptionId": "plan-all"
+      },
+      {
+        "id": "O11",
+        "selectedOptionId": "fixtures-only"
+      },
+      {
+        "id": "Q01",
+        "selectedOptionId": "full-default"
+      },
+      {
+        "id": "Q02",
+        "selectedOptionId": "explicit-scopes"
+      },
+      {
+        "id": "Q03",
+        "selectedOptionId": "repo-current-index"
+      },
+      {
+        "id": "Q04",
+        "selectedOptionId": "manual-built-check"
+      }
+    ],
+    "changesToAudit": "none"
+  },
+  "checkReceipts": {
+    "file": "docs/evidence/simplification-performance/check-receipts.json",
+    "bytes": 5748,
+    "sha256": "62aeaa131636feb763da59eb99638f232762f4164126c1b2e08ff25db0307b4b"
+  },
+  "build": {
+    "durableWholeCheckLog": "docs/evidence/simplification-performance/logs/pr-gate-check.log",
+    "httpHashAttestation": false,
+    "priorNativeRouteBuildFiles": [
+      {
+        "file": "apps/web/dist/client/assets/control-button-K5B54tgR.js",
+        "bytes": 27688,
+        "sha256": "88c0dc09e607c84a5c5bd038564484d73f091706d91f84ed4491dde6994815cf"
+      },
+      {
+        "file": "apps/web/dist/client/assets/index-CaJ_2b8I.css",
+        "bytes": 27,
+        "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+      },
+      {
+        "file": "apps/web/dist/client/assets/index-CthIb3EI.js",
+        "bytes": 322340,
+        "sha256": "f2c00f72be297c4c51a6bd06302fe00875f5daa17aaf94924d5dc54ab4615d19"
+      },
+      {
+        "file": "apps/web/dist/client/assets/model-BtVQP8zL.js",
+        "bytes": 741,
+        "sha256": "3624a048cd13e0e8996d2bc71ddc973625bf65a46c2d816f52bc3d4df30d40e1"
+      },
+      {
+        "file": "apps/web/dist/client/assets/preload-helper-CLaZYkgu.js",
+        "bytes": 5694,
+        "sha256": "827cbdeffe3eb84a305a855617f87de8f05943b92464db63112c98cc734e8e83"
+      },
+      {
+        "file": "apps/web/dist/client/assets/pulls._pullNumber-C3zJBo16.js",
+        "bytes": 4003,
+        "sha256": "41cfa0a56c5e216940a9938047ae2d149e9e91b4dda1362b6f402c1f4c6c1de8"
+      },
+      {
+        "file": "apps/web/dist/client/assets/react-y1c93css.js",
+        "bytes": 30761,
+        "sha256": "520a641ef7f264fb54825731cd9395154486ea8927a66e86349a544104c5d2fb"
+      },
+      {
+        "file": "apps/web/dist/client/assets/review-PI6rgGLB.css",
+        "bytes": 312729,
+        "sha256": "acab59594e580f92d5827188e3ab13a141a53e403a64b3e6e074ad53188e9918"
+      },
+      {
+        "file": "apps/web/dist/client/assets/routes-Dou-rkJ-.js",
+        "bytes": 58275,
+        "sha256": "6cffde680c802d47619ab31d1c800b9044e9e0e79f643e8c8ea0a55291e3870b"
+      },
+      {
+        "file": "apps/web/dist/client/assets/runs._runId-67tFMg0F.js",
+        "bytes": 83387,
+        "sha256": "1ab3e2617cc834c5852be23bfaa05cac8092e94a7475f6abb185e92ec395f699"
+      },
+      {
+        "file": "apps/web/dist/client/assets/runs._runId-r3hlwqNu.js",
+        "bytes": 838,
+        "sha256": "89052f7c1bc4b899cc30fd1ded883d6f41123d6c8b9572f2a6ab60c2632c57c3"
+      },
+      {
+        "file": "apps/web/dist/client/assets/shell.ariakit.react-CMuZVxjP.js",
+        "bytes": 79224,
+        "sha256": "67e6857822222c2fcaed7575e334ababd19a4b62fe66ac8914f88d760e19ad50"
+      },
+      {
+        "file": "apps/web/dist/client/assets/text-CCkjYeLb.js",
+        "bytes": 76639,
+        "sha256": "0936e4040e46dc99f6aacca31c997869b8c9083511f0b09660e47419365d5152"
+      },
+      {
+        "file": "apps/web/dist/server/assets/Match-B-DjvQbR.js",
+        "bytes": 121914,
+        "sha256": "cca0035b77a57ad0e1f0cc28f104beb5dd21dafeca6b2b83cf9e06a14d087618"
+      },
+      {
+        "file": "apps/web/dist/server/assets/_tanstack-start-manifest_v-DZUo470E.js",
+        "bytes": 1548,
+        "sha256": "8d5baaacb3a6db7720d3ea7c2573db0572da7a7e5c66b7a68ea22c884db7e629"
+      },
+      {
+        "file": "apps/web/dist/server/assets/bun-sqlite-dialect-C7ftEUSI-Bp6p0SRw.js",
+        "bytes": 4767,
+        "sha256": "c7ef1dea12ce128a09fea0d148c9e9d8018118c203344618f469a12e462f275c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/compiled-query-_mGjsD2B.js",
+        "bytes": 240424,
+        "sha256": "71407c7b36f24a055943a6193c2ad5d3691cf2e3992fef549e63a37c30349a0a"
+      },
+      {
+        "file": "apps/web/dist/server/assets/control-button-8ZZ4D0Jf.js",
+        "bytes": 63638,
+        "sha256": "cfadc57a7bb3e93f89f413303de204c1ff3dbe72c62e8e2f9b8277441f8dc03b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/d1-sqlite-dialect-D4qp4-wW-DzPRg3U6.js",
+        "bytes": 5291,
+        "sha256": "8722c88eebbe8df63eb14dfc7b079ea17a7f664c16035ccd2fa20ec54ca40ecb"
+      },
+      {
+        "file": "apps/web/dist/server/assets/default-query-compiler-yv-WbDrw.js",
+        "bytes": 45427,
+        "sha256": "4a7679a5b45323a2b88688102c99704734b8ac0bcc765a71c365b7c92c002b76"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-CNyf0Gus.js",
+        "bytes": 14709,
+        "sha256": "8edeadb7a6bbdac310f98b41bf38fbdb44259b95572991bcbc42e2222feae9d7"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-CqnlLicC.js",
+        "bytes": 223131,
+        "sha256": "741c7128e3a85627ac8a2fa0fa7314a425bbd3490d8a5bbabb8f8eb8be0f896c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-nMw9w7mT.js",
+        "bytes": 43763,
+        "sha256": "07988584d2b9bb603bb00099ab19829c02ba9d02a44e61a940b67a86228e1f5c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/empty-plugin-adapters-DETlmLN8.js",
+        "bytes": 288,
+        "sha256": "55fcde0632527eecaf70e95b4d47ab789de8561ece47f9fd868acbc4d56cd72e"
+      },
+      {
+        "file": "apps/web/dist/server/assets/error-CzdqHglb.js",
+        "bytes": 7160,
+        "sha256": "8fa4e40ae0452abb5fa5e5e90232b9f20eecc1000009bca7cee69afcd1694945"
+      },
+      {
+        "file": "apps/web/dist/server/assets/factory-Cak6yvme.js",
+        "bytes": 265164,
+        "sha256": "0f1646021bbf5aa9fafc592879d7012e21122b650ec128171c98e5ab2b2c190b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/kysely-adapter-CvS2EsC0.js",
+        "bytes": 130,
+        "sha256": "0a89af3b16b8d03c006f9faaed19601fa40eaf96968e29b6fee04c87a2f0fd82"
+      },
+      {
+        "file": "apps/web/dist/server/assets/kysely-migration-tables-DFfmKhq--Dporn1Lm.js",
+        "bytes": 955,
+        "sha256": "c4051ca8850adbb2b3d8154de2506d8429c8bd8b41cc8c14ca55dd3b7db54b45"
+      },
+      {
+        "file": "apps/web/dist/server/assets/lazyRouteComponent-DOA7EyaT.js",
+        "bytes": 14067,
+        "sha256": "026dece57e847c2b8971ae7ae9239357ce2fdf3e1ed69450a92759e5f457dd37"
+      },
+      {
+        "file": "apps/web/dist/server/assets/matchContext-CTNlU-_r.js",
+        "bytes": 2919,
+        "sha256": "51147822a73749e3c845e285c4123ca8c1a05de4cb762cbd4aa3d702917a9ed5"
+      },
+      {
+        "file": "apps/web/dist/server/assets/model-CuWtKnSz.js",
+        "bytes": 1489,
+        "sha256": "98eaee0c624223df92debd4ac464acf405dfc93391d25ff108dc6761153d8b5f"
+      },
+      {
+        "file": "apps/web/dist/server/assets/node-sqlite-dialect-Bd9yS1Ka.js",
+        "bytes": 4769,
+        "sha256": "735e5b7b53c9a33941ea7d7a16eef53c0f1f47598c1481f1f4422e33d6484c61"
+      },
+      {
+        "file": "apps/web/dist/server/assets/pulls._pullNumber-Bt79qCBX.js",
+        "bytes": 7146,
+        "sha256": "775d0c3e639923e8bd2b0cb0c27d50d7ae76c3ec1ff0661b7a906128967ae3b4"
+      },
+      {
+        "file": "apps/web/dist/server/assets/react-Dg9VL5Gi.js",
+        "bytes": 33531,
+        "sha256": "7d7fbd55db99fd7bfe4042f71c78e91c30e325eabfe01164afa085cced57137b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/react-dom-CfTUq_hB.js",
+        "bytes": 7198,
+        "sha256": "fd569a718f0ebd5b6e9264e49cb868ac77aa957aa6868e05d5e2a0a6feb707f0"
+      },
+      {
+        "file": "apps/web/dist/server/assets/review-PI6rgGLB.css",
+        "bytes": 312729,
+        "sha256": "acab59594e580f92d5827188e3ab13a141a53e403a64b3e6e074ad53188e9918"
+      },
+      {
+        "file": "apps/web/dist/server/assets/router-CaJ_2b8I.css",
+        "bytes": 27,
+        "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+      },
+      {
+        "file": "apps/web/dist/server/assets/router-Dygy7eUX.js",
+        "bytes": 31822,
+        "sha256": "886b192d9d3157c605646f61d561e9442206bdec7c4cd43c7ce4e5341fb203a6"
+      },
+      {
+        "file": "apps/web/dist/server/assets/routes-DlbfapRU.js",
+        "bytes": 136351,
+        "sha256": "089473d7519594d0b5baee959ab59ad823caaa655c5b673bd4e9206639efb414"
+      },
+      {
+        "file": "apps/web/dist/server/assets/runs._runId-BLL27Qzk.js",
+        "bytes": 1579,
+        "sha256": "392a6057ed6b3b7322c14bacfb0533c0876723e369c460d81a3852b582773845"
+      },
+      {
+        "file": "apps/web/dist/server/assets/runs._runId-Dn8fcwbS.js",
+        "bytes": 156502,
+        "sha256": "b934315e3bfe3bbf1273f4de0be848b2a4d1d4dc9962d01f8fff2f19456bfb46"
+      },
+      {
+        "file": "apps/web/dist/server/assets/shell.ariakit.react-DGAfvfsJ.js",
+        "bytes": 159938,
+        "sha256": "1d7849476d5e09ca6c81528f345c33aab4a0e028840d72294be2baf6b1c089ed"
+      },
+      {
+        "file": "apps/web/dist/server/assets/sqlite-adapter-Du-VhHiM.js",
+        "bytes": 2240,
+        "sha256": "d649f9818e3aafbf1ff2a800b52dd894c8c7a7d550674afc33ae807a5cfc2d02"
+      },
+      {
+        "file": "apps/web/dist/server/assets/start-2Wma0rwj.js",
+        "bytes": 293,
+        "sha256": "9f38433b8789f71fc9dcebb6a24138174ee572bc627ebcdab3ed2e469b59bc07"
+      },
+      {
+        "file": "apps/web/dist/server/assets/string-Ckqmx2pZ.js",
+        "bytes": 697,
+        "sha256": "8826c3e11141697c3385394a90525acea148efe604a1b1b936042b77a2c08594"
+      },
+      {
+        "file": "apps/web/dist/server/assets/text-BVirVTm9.js",
+        "bytes": 215165,
+        "sha256": "9591617695923c5381d570675a6b065f1f58cc2e709a6901077a00f9325a1b4f"
+      },
+      {
+        "file": "apps/web/dist/server/assets/useSelector-C8-FOAB0.js",
+        "bytes": 41652,
+        "sha256": "8d832ec80f47422b01b65399c121656d9ca08ec2c63ccaf1e32002dcd801253f"
+      },
+      {
+        "file": "apps/web/dist/server/index.js",
+        "bytes": 2001369,
+        "sha256": "f2cfb36cbcbad6a97e7cb2e15ef888c98a08a1f607764be4b478c154c608e3fa"
+      }
+    ],
+    "priorManualRestart": {
+      "checkedAt": "2026-09-29T20:58:41.166Z",
+      "afterBuild": true,
+      "sourceCheckLog": "/tmp/visonaut-final-history-check-green.log",
+      "sourceManifestSha256": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de",
+      "serverSession": 20763,
+      "command": "WRANGLER_LOG_PATH=/tmp/visonaut-final-wrangler-logs wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+      "workerSha256": "f2cfb36cbcbad6a97e7cb2e15ef888c98a08a1f607764be4b478c154c608e3fa",
+      "localApiStatus": 200
+    },
+    "checkedBuildFiles": [
+      {
+        "file": "apps/web/dist/client/.assetsignore",
+        "bytes": 24,
+        "sha256": "4f83140d5f4293ab55bd1207327e995c83258f1e7d3145b1b5d7a3d17fdfe0a7"
+      },
+      {
+        "file": "apps/web/dist/client/assets/control-button-K5B54tgR.js",
+        "bytes": 27688,
+        "sha256": "88c0dc09e607c84a5c5bd038564484d73f091706d91f84ed4491dde6994815cf"
+      },
+      {
+        "file": "apps/web/dist/client/assets/firefox-B8Bz3Pw-.svg",
+        "bytes": 38092,
+        "sha256": "029a7e6f1163f76de4c5d488216524264c25154bc659d7a7d3ea26e1d5181b1f"
+      },
+      {
+        "file": "apps/web/dist/client/assets/index-CaJ_2b8I.css",
+        "bytes": 27,
+        "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+      },
+      {
+        "file": "apps/web/dist/client/assets/index-CthIb3EI.js",
+        "bytes": 322340,
+        "sha256": "f2c00f72be297c4c51a6bd06302fe00875f5daa17aaf94924d5dc54ab4615d19"
+      },
+      {
+        "file": "apps/web/dist/client/assets/model-BtVQP8zL.js",
+        "bytes": 741,
+        "sha256": "3624a048cd13e0e8996d2bc71ddc973625bf65a46c2d816f52bc3d4df30d40e1"
+      },
+      {
+        "file": "apps/web/dist/client/assets/preload-helper-CLaZYkgu.js",
+        "bytes": 5694,
+        "sha256": "827cbdeffe3eb84a305a855617f87de8f05943b92464db63112c98cc734e8e83"
+      },
+      {
+        "file": "apps/web/dist/client/assets/pulls._pullNumber-C3zJBo16.js",
+        "bytes": 4003,
+        "sha256": "41cfa0a56c5e216940a9938047ae2d149e9e91b4dda1362b6f402c1f4c6c1de8"
+      },
+      {
+        "file": "apps/web/dist/client/assets/react-y1c93css.js",
+        "bytes": 30761,
+        "sha256": "520a641ef7f264fb54825731cd9395154486ea8927a66e86349a544104c5d2fb"
+      },
+      {
+        "file": "apps/web/dist/client/assets/review-PI6rgGLB.css",
+        "bytes": 312729,
+        "sha256": "acab59594e580f92d5827188e3ab13a141a53e403a64b3e6e074ad53188e9918"
+      },
+      {
+        "file": "apps/web/dist/client/assets/routes-Dou-rkJ-.js",
+        "bytes": 58275,
+        "sha256": "6cffde680c802d47619ab31d1c800b9044e9e0e79f643e8c8ea0a55291e3870b"
+      },
+      {
+        "file": "apps/web/dist/client/assets/runs._runId-67tFMg0F.js",
+        "bytes": 83387,
+        "sha256": "1ab3e2617cc834c5852be23bfaa05cac8092e94a7475f6abb185e92ec395f699"
+      },
+      {
+        "file": "apps/web/dist/client/assets/runs._runId-r3hlwqNu.js",
+        "bytes": 838,
+        "sha256": "89052f7c1bc4b899cc30fd1ded883d6f41123d6c8b9572f2a6ab60c2632c57c3"
+      },
+      {
+        "file": "apps/web/dist/client/assets/shell.ariakit.react-CMuZVxjP.js",
+        "bytes": 79224,
+        "sha256": "67e6857822222c2fcaed7575e334ababd19a4b62fe66ac8914f88d760e19ad50"
+      },
+      {
+        "file": "apps/web/dist/client/assets/text-CCkjYeLb.js",
+        "bytes": 76639,
+        "sha256": "0936e4040e46dc99f6aacca31c997869b8c9083511f0b09660e47419365d5152"
+      },
+      {
+        "file": "apps/web/dist/client/favicon.svg",
+        "bytes": 180,
+        "sha256": "733eca8d7d58aff4692ac29074938c65c24bf20113e46f2eae4632e024bac1de"
+      },
+      {
+        "file": "apps/web/dist/server/.vite/manifest.json",
+        "bytes": 13003,
+        "sha256": "05c0a533a90d69df68465eb313d3fd38e4c16099466e193e3e593aac0443b64d"
+      },
+      {
+        "file": "apps/web/dist/server/assets/Match-B-DjvQbR.js",
+        "bytes": 121914,
+        "sha256": "cca0035b77a57ad0e1f0cc28f104beb5dd21dafeca6b2b83cf9e06a14d087618"
+      },
+      {
+        "file": "apps/web/dist/server/assets/_tanstack-start-manifest_v-DZUo470E.js",
+        "bytes": 1548,
+        "sha256": "8d5baaacb3a6db7720d3ea7c2573db0572da7a7e5c66b7a68ea22c884db7e629"
+      },
+      {
+        "file": "apps/web/dist/server/assets/bun-sqlite-dialect-C7ftEUSI-Bp6p0SRw.js",
+        "bytes": 4767,
+        "sha256": "c7ef1dea12ce128a09fea0d148c9e9d8018118c203344618f469a12e462f275c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/compiled-query-_mGjsD2B.js",
+        "bytes": 240424,
+        "sha256": "71407c7b36f24a055943a6193c2ad5d3691cf2e3992fef549e63a37c30349a0a"
+      },
+      {
+        "file": "apps/web/dist/server/assets/control-button-8ZZ4D0Jf.js",
+        "bytes": 63638,
+        "sha256": "cfadc57a7bb3e93f89f413303de204c1ff3dbe72c62e8e2f9b8277441f8dc03b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/d1-sqlite-dialect-D4qp4-wW-DzPRg3U6.js",
+        "bytes": 5291,
+        "sha256": "8722c88eebbe8df63eb14dfc7b079ea17a7f664c16035ccd2fa20ec54ca40ecb"
+      },
+      {
+        "file": "apps/web/dist/server/assets/default-query-compiler-yv-WbDrw.js",
+        "bytes": 45427,
+        "sha256": "4a7679a5b45323a2b88688102c99704734b8ac0bcc765a71c365b7c92c002b76"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-CNyf0Gus.js",
+        "bytes": 14709,
+        "sha256": "8edeadb7a6bbdac310f98b41bf38fbdb44259b95572991bcbc42e2222feae9d7"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-CqnlLicC.js",
+        "bytes": 223131,
+        "sha256": "741c7128e3a85627ac8a2fa0fa7314a425bbd3490d8a5bbabb8f8eb8be0f896c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/dist-nMw9w7mT.js",
+        "bytes": 43763,
+        "sha256": "07988584d2b9bb603bb00099ab19829c02ba9d02a44e61a940b67a86228e1f5c"
+      },
+      {
+        "file": "apps/web/dist/server/assets/empty-plugin-adapters-DETlmLN8.js",
+        "bytes": 288,
+        "sha256": "55fcde0632527eecaf70e95b4d47ab789de8561ece47f9fd868acbc4d56cd72e"
+      },
+      {
+        "file": "apps/web/dist/server/assets/error-CzdqHglb.js",
+        "bytes": 7160,
+        "sha256": "8fa4e40ae0452abb5fa5e5e90232b9f20eecc1000009bca7cee69afcd1694945"
+      },
+      {
+        "file": "apps/web/dist/server/assets/factory-Cak6yvme.js",
+        "bytes": 265164,
+        "sha256": "0f1646021bbf5aa9fafc592879d7012e21122b650ec128171c98e5ab2b2c190b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/firefox-B8Bz3Pw-.svg",
+        "bytes": 38092,
+        "sha256": "029a7e6f1163f76de4c5d488216524264c25154bc659d7a7d3ea26e1d5181b1f"
+      },
+      {
+        "file": "apps/web/dist/server/assets/kysely-adapter-CvS2EsC0.js",
+        "bytes": 130,
+        "sha256": "0a89af3b16b8d03c006f9faaed19601fa40eaf96968e29b6fee04c87a2f0fd82"
+      },
+      {
+        "file": "apps/web/dist/server/assets/kysely-migration-tables-DFfmKhq--Dporn1Lm.js",
+        "bytes": 955,
+        "sha256": "c4051ca8850adbb2b3d8154de2506d8429c8bd8b41cc8c14ca55dd3b7db54b45"
+      },
+      {
+        "file": "apps/web/dist/server/assets/lazyRouteComponent-DOA7EyaT.js",
+        "bytes": 14067,
+        "sha256": "026dece57e847c2b8971ae7ae9239357ce2fdf3e1ed69450a92759e5f457dd37"
+      },
+      {
+        "file": "apps/web/dist/server/assets/matchContext-CTNlU-_r.js",
+        "bytes": 2919,
+        "sha256": "51147822a73749e3c845e285c4123ca8c1a05de4cb762cbd4aa3d702917a9ed5"
+      },
+      {
+        "file": "apps/web/dist/server/assets/model-CuWtKnSz.js",
+        "bytes": 1489,
+        "sha256": "98eaee0c624223df92debd4ac464acf405dfc93391d25ff108dc6761153d8b5f"
+      },
+      {
+        "file": "apps/web/dist/server/assets/node-sqlite-dialect-Bd9yS1Ka.js",
+        "bytes": 4769,
+        "sha256": "735e5b7b53c9a33941ea7d7a16eef53c0f1f47598c1481f1f4422e33d6484c61"
+      },
+      {
+        "file": "apps/web/dist/server/assets/pulls._pullNumber-Bt79qCBX.js",
+        "bytes": 7146,
+        "sha256": "775d0c3e639923e8bd2b0cb0c27d50d7ae76c3ec1ff0661b7a906128967ae3b4"
+      },
+      {
+        "file": "apps/web/dist/server/assets/react-Dg9VL5Gi.js",
+        "bytes": 33531,
+        "sha256": "7d7fbd55db99fd7bfe4042f71c78e91c30e325eabfe01164afa085cced57137b"
+      },
+      {
+        "file": "apps/web/dist/server/assets/react-dom-CfTUq_hB.js",
+        "bytes": 7198,
+        "sha256": "fd569a718f0ebd5b6e9264e49cb868ac77aa957aa6868e05d5e2a0a6feb707f0"
+      },
+      {
+        "file": "apps/web/dist/server/assets/review-PI6rgGLB.css",
+        "bytes": 312729,
+        "sha256": "acab59594e580f92d5827188e3ab13a141a53e403a64b3e6e074ad53188e9918"
+      },
+      {
+        "file": "apps/web/dist/server/assets/router-CaJ_2b8I.css",
+        "bytes": 27,
+        "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+      },
+      {
+        "file": "apps/web/dist/server/assets/router-Dygy7eUX.js",
+        "bytes": 31822,
+        "sha256": "886b192d9d3157c605646f61d561e9442206bdec7c4cd43c7ce4e5341fb203a6"
+      },
+      {
+        "file": "apps/web/dist/server/assets/routes-DlbfapRU.js",
+        "bytes": 136351,
+        "sha256": "089473d7519594d0b5baee959ab59ad823caaa655c5b673bd4e9206639efb414"
+      },
+      {
+        "file": "apps/web/dist/server/assets/runs._runId-BLL27Qzk.js",
+        "bytes": 1579,
+        "sha256": "392a6057ed6b3b7322c14bacfb0533c0876723e369c460d81a3852b582773845"
+      },
+      {
+        "file": "apps/web/dist/server/assets/runs._runId-Dn8fcwbS.js",
+        "bytes": 156502,
+        "sha256": "b934315e3bfe3bbf1273f4de0be848b2a4d1d4dc9962d01f8fff2f19456bfb46"
+      },
+      {
+        "file": "apps/web/dist/server/assets/shell.ariakit.react-DGAfvfsJ.js",
+        "bytes": 159938,
+        "sha256": "1d7849476d5e09ca6c81528f345c33aab4a0e028840d72294be2baf6b1c089ed"
+      },
+      {
+        "file": "apps/web/dist/server/assets/sqlite-adapter-Du-VhHiM.js",
+        "bytes": 2240,
+        "sha256": "d649f9818e3aafbf1ff2a800b52dd894c8c7a7d550674afc33ae807a5cfc2d02"
+      },
+      {
+        "file": "apps/web/dist/server/assets/start-2Wma0rwj.js",
+        "bytes": 293,
+        "sha256": "9f38433b8789f71fc9dcebb6a24138174ee572bc627ebcdab3ed2e469b59bc07"
+      },
+      {
+        "file": "apps/web/dist/server/assets/string-Ckqmx2pZ.js",
+        "bytes": 697,
+        "sha256": "8826c3e11141697c3385394a90525acea148efe604a1b1b936042b77a2c08594"
+      },
+      {
+        "file": "apps/web/dist/server/assets/text-BVirVTm9.js",
+        "bytes": 215165,
+        "sha256": "9591617695923c5381d570675a6b065f1f58cc2e709a6901077a00f9325a1b4f"
+      },
+      {
+        "file": "apps/web/dist/server/assets/useSelector-C8-FOAB0.js",
+        "bytes": 41652,
+        "sha256": "8d832ec80f47422b01b65399c121656d9ca08ec2c63ccaf1e32002dcd801253f"
+      },
+      {
+        "file": "apps/web/dist/server/index.js",
+        "bytes": 2004103,
+        "sha256": "5911cf03cf3ec65e3462a7a2c9b2953362c719fc732d43454b5eae2d83d91956"
+      },
+      {
+        "file": "apps/web/dist/server/wrangler.json",
+        "bytes": 3020,
+        "sha256": "0046250e3182e371ea8704775a18a814a41e26f339a25fde68e4ece829f7898d"
+      }
+    ],
+    "manualAndTimingScope": "Preserved manual preview and writable timing receipts precede formal gate repairs. Those repairs change webhook ingress and closed history cleanup; no new UI timing or manual runtime claim is made."
+  },
+  "measurements": {
+    "synthetic": {
+      "samplesPerSize": 3,
+      "excludedWarmupsPerSize": 1,
+      "sizes": [3582, 10580, 35820],
+      "pageErrors": [[], [], []],
+      "scope": "All 13 measured UI and fixture/probe inputs still match current source after formal gate repairs. The dated synthetic sample is reused; no rerun is claimed.",
+      "currentMatchingInputs": [
+        {
+          "file": "apps/web/src/review/review-workspace.tsx",
+          "sha256": "2c403f0fc666b845907cbad82f0937baa85b59d92a2dba3442328f2b8200e149"
+        },
+        {
+          "file": "apps/web/src/review/item-list.tsx",
+          "sha256": "304ae2f2a21549cabdf0f1abd08a73a7422a94b2f16d4f831f511ce55ff4db1c"
+        },
+        {
+          "file": "apps/web/src/review/use-evidence.ts",
+          "sha256": "f70a4abb79a78d6b82f6b0ecf1df66c39c2e2cfd1abaa7898e39fd62b4f18d0e"
+        },
+        {
+          "file": "apps/web/src/components/screenshot-viewer.tsx",
+          "sha256": "d7cfa3ad79d4d402ebbe87149fb180e886718b78f5acab985b4543b6111910b3"
+        },
+        {
+          "file": "apps/web/src/review.css",
+          "sha256": "81d0f93c558eec41d8e1778ea6ff2baafe3d423f0c5ecf104a1bb653ae96b18c"
+        },
+        {
+          "file": "apps/web/src/styles.css",
+          "sha256": "50793b1ac008664883543604d9a29b55dd6862b2da757393f3e1f886c0072a3b"
+        },
+        {
+          "file": "apps/web/src/components/ariakit/components/shell.ariakit.react.tsx",
+          "sha256": "68a5364b8546450334341b3e323b365a1e5b1c40e95df7ffe7bc0b85b3aa30cd"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/fixture.jsx",
+          "sha256": "1af68a999c9ff38795d803b6bd53619a2fee08aa7fa73d8b8f393ffaad0dce27"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/fixtures.mjs",
+          "sha256": "e7dcef078368918755894926a807710ec6797054882507964a61a9bbed7e3b60"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/run.mjs",
+          "sha256": "fc52c87e6c88b5f5f41f1bba23706f7d6358cdc186b63ba1c56342d5c585e400"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/server.mjs",
+          "sha256": "61520492ad429b5082b446313aa53c6a33f31e524d5aec492c59dcb9ad18d30a"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/vite.config.mjs",
+          "sha256": "db3cbc89ccad96a90f2b828f65454c646f59511b0a562b4c514e6c0e33281dd5"
+        },
+        {
+          "file": "apps/web/tooling/review-scale/index.html",
+          "sha256": "afb1583e9f7623dc73d8c2dd0a8d9f148a02404570e163140779a2ddb38951a7"
+        }
+      ]
+    },
+    "nativeRoutes": {
+      "paths": 12,
+      "allSavesHttp200": true,
+      "allSavesChangedOneTarget": true,
+      "revokedDecisionsAfterUndo": 12,
+      "pageErrors": [],
+      "allowlistedFixtureGithubCalls": 50,
+      "firstColdCommand": {
+        "decodedBytes": 358,
+        "encodedBytes": 261
+      },
+      "summary": {
+        "local": {
+          "cold": {
+            "openRunToFirstImageMs": {
+              "n": 3,
+              "p50": 178.23049999999967,
+              "p95": 179.92270800000006,
+              "max": 179.92270800000006
+            },
+            "saveToNextImageMs": {
+              "n": 3,
+              "p50": 139.71945899999992,
+              "p95": 152.03312499999993,
+              "max": 152.03312499999993
+            }
+          },
+          "warm": {
+            "openRunToFirstImageMs": {
+              "n": 3,
+              "p50": 155.7895409999992,
+              "p95": 169.88200000000006,
+              "max": 169.88200000000006
+            },
+            "saveToNextImageMs": {
+              "n": 3,
+              "p50": 122.77516700000069,
+              "p95": 123.38020899999992,
+              "max": 123.38020899999992
+            }
+          }
+        },
+        "slow": {
+          "cold": {
+            "openRunToFirstImageMs": {
+              "n": 3,
+              "p50": 2337.5280409999996,
+              "p95": 2340.866416,
+              "max": 2340.866416
+            },
+            "saveToNextImageMs": {
+              "n": 3,
+              "p50": 763.4595829999998,
+              "p95": 763.78125,
+              "max": 763.78125
+            }
+          },
+          "warm": {
+            "openRunToFirstImageMs": {
+              "n": 3,
+              "p50": 981.9207500000011,
+              "p95": 982.8322500000031,
+              "max": 982.8322500000031
+            },
+            "saveToNextImageMs": {
+              "n": 3,
+              "p50": 618.9283749999995,
+              "p95": 620.216042,
+              "max": 620.216042
+            }
+          }
+        }
+      },
+      "scope": "Dated measurements before formal gate repairs, which changed webhook ingress and closed history cleanup. No new timings are inferred for the current whole build."
+    },
+    "conclusion": "Mixed: lower synthetic DOM/list proxies; actual tiny route unchanged or slower. No overall/production speed gain or performance budget is established.",
+    "browserBefore": "154.0.8037.58",
+    "browserAfter": "154.0.8037.92",
+    "harnessChange": "After requires explicit synthetic local workflow SHA and executor digest; production configuration is not weakened."
+  },
+  "manualBuiltPreview": {
+    "file": "docs/evidence/simplification-performance/iab-verified-preview.json",
+    "checks": {
+      "dashboard": "Review work with native Dialog review example link",
+      "arrowSelection": "ArrowRight focused and opened Dark variant",
+      "reload": "Dark selection persisted",
+      "back": {
+        "url": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+        "preservesDark": true
+      },
+      "diffPan": {
+        "before": {
+          "left": 304,
+          "top": 252
+        },
+        "after": {
+          "left": 304,
+          "top": 252
+        },
+        "retained": true
+      },
+      "desktop": {
+        "height": 900,
+        "images": [
+          {
+            "alt": "Reference",
+            "complete": true,
+            "height": 400,
+            "width": 640
+          },
+          {
+            "alt": "New image",
+            "complete": true,
+            "height": 400,
+            "width": 640
+          }
+        ],
+        "regions": [
+          {
+            "height": 828,
+            "tag": "ASIDE",
+            "width": 256,
+            "x": 0,
+            "y": 72
+          },
+          {
+            "height": 900,
+            "tag": "MAIN",
+            "width": 1024,
+            "x": 256,
+            "y": 72
+          },
+          {
+            "height": 105,
+            "tag": "HEADER",
+            "width": 1024,
+            "x": 256,
+            "y": 72
+          }
+        ],
+        "scrollWidth": 1280,
+        "width": 1280
+      },
+      "narrow": {
+        "height": 844,
+        "images": [
+          {
+            "alt": "Reference",
+            "complete": true,
+            "height": 400,
+            "width": 640
+          },
+          {
+            "alt": "New image",
+            "complete": true,
+            "height": 400,
+            "width": 640
+          }
+        ],
+        "scrollWidth": 390,
+        "width": 390
+      },
+      "console": []
+    },
+    "consoleWarningsAndErrors": [],
+    "limits": [
+      "Read-only preview fixtures; writable save behavior is covered by the native API route harness.",
+      "DOM geometry and screenshots are observations at these two viewport sizes."
+    ],
+    "additionalLimits": "Read-only synthetic preview and ssr:false review shell/client boot do not establish production OAuth, forced server denial, physical decode/display latency, or HTTP attestation of the disk Worker hash.",
+    "sourceScope": "Dated read-only built preview before formal gate repairs. Measured review UI inputs are unchanged; the current complete build is verified by the new whole check."
+  },
+  "rawEvidence": [
+    {
+      "file": "docs/evidence/simplification-performance/before.json",
+      "bytes": 29593,
+      "sha256": "ab25e8c1aefbab30ad31be47f855bcccacc66f7ade88aaec5738b83e36e51d76"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/after.json",
+      "bytes": 28879,
+      "sha256": "56fc3da6bb1770d024f1affc7162803ace702d6909596bfddc3321c257e8a189"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before.json",
+      "bytes": 109462,
+      "sha256": "2ea5b39ad12579d97026c0347cf951cd5b19e66e180f8e090da29becefab4a7d"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before-fixture.json",
+      "bytes": 11042,
+      "sha256": "bed494c26ea9690fd79df0848de8831e3c1957d161ed4d61f9e6ef1833cc8e5d"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-pending-delay.json",
+      "bytes": 126841,
+      "sha256": "15f951299429b839ffd891464f94e4cc73b61000fb758888b74a97a543f08f7c"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-pending-delay-fixture.json",
+      "bytes": 6581,
+      "sha256": "b2d1bdfbb8809cb146088c599b24cff0c77e8d7692f72e95b6a320da15a44214"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before-receipt-fix.json",
+      "bytes": 126544,
+      "sha256": "2a400824f4ffe80d16d25a813591cfed43a21558c5ec50090d2067bdadcf002d"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before-receipt-fix-fixture.json",
+      "bytes": 6581,
+      "sha256": "39d7ce8cdf4f7d534c38f9d062985a2973eb8202e34c6b5bd0fe39e43ef33932"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before-history-identity.json",
+      "bytes": 126393,
+      "sha256": "6fd30e99fb798affe35d083453421a79531a1d56be0603d245807b37592af96b"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-before-history-identity-fixture.json",
+      "bytes": 6581,
+      "sha256": "e4c8a6e61bdbbdd6fb10c16718cbd7c45007c34b5a01da28a25f6b4fa4778b31"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-after.json",
+      "bytes": 126505,
+      "sha256": "b51025918f6530d5109187f7a421adbe67e3d634e6be341b74a217981d05a565"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/routes-after-fixture.json",
+      "bytes": 6581,
+      "sha256": "426671e77d855b10a803caaa05dc28b9e7cb522a83aebd384ccef36f69caaf76"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-built-preview.json",
+      "bytes": 1177,
+      "sha256": "55ae2f9752609c2af52b83a8c0982f37dff6174b1efd90483be65ceb76a01d0d"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-desktop.jpg",
+      "bytes": 58410,
+      "sha256": "2ee679c930515da07789dedd58e7bd0af292a2495ff79adeb54d5290b0f3731b"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-narrow.jpg",
+      "bytes": 67049,
+      "sha256": "19fee189aa8c7300e2f5dcfd90cae51c7ca9ad491c74faa49c075f674ca26b1f"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-final-built-preview.json",
+      "bytes": 1894,
+      "sha256": "76a297c4b7d72d6d5f3548db3223e1bea02af5a651bdc39432071bbad2a04b58"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-final-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-final-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-implemented-preview.json",
+      "bytes": 1829,
+      "sha256": "927179589a7452a8414eb15d8c380252e9e711b497627ad1ca843a0e193e024f"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-implemented-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-implemented-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-verified-preview.json",
+      "bytes": 2850,
+      "sha256": "2ae4c717b7d96bdd00fb67da078aa0f68819c290056941524a441b492d0a0542"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-verified-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-verified-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "5704b6f969f24cc9a1cad1c32cf07cc9942914d1ddd806c3966d68dffedbd349"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/capture-observation.json",
+      "bytes": 802,
+      "sha256": "9a143c389dc26e08d7cc314ad3708ac0d0d9011bbd37d0cfcd9b609fd9fbdc40"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/desktop-reload-capture-anomaly.png",
+      "bytes": 60102,
+      "sha256": "694b79459ba001689a5a368818cefedc44bd8c308e33c7408c817ec901a799f3"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/desktop-review-viewport.png",
+      "bytes": 67858,
+      "sha256": "afa0414ef32495f65810f84d7f703416f2206bba86da6a1d5fffa38da99e165b"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/desktop.json",
+      "bytes": 10485,
+      "sha256": "e810183b3e63771b14624a3e44926ebca0a977e27fb3ed39a5d91b477747ca92"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/initial-failure.json",
+      "bytes": 1799,
+      "sha256": "7e092ca8c8f06cec069e1b9c0956e382400152eef5f5bc0771ec9963f20808f0"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/narrow-review-viewport.png",
+      "bytes": 45249,
+      "sha256": "1e6d8aef2419450551f0cbd2164c8b9933fe82c0723e9bb3528cefc40a320886"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/narrow.json",
+      "bytes": 12172,
+      "sha256": "a643e04318159c4aa06ec751fd2856f16019d14b799dbe0b429c1609e05125c3"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/playwright-results.json",
+      "bytes": 7187,
+      "sha256": "aa197587e68de92e6e06a1da6be3cf74f883708e33357f7c6cd48fabeaea40e8"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/pre-history-identity/iab-verified-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/pre-history-identity/iab-verified-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/pre-history-identity/iab-verified-preview.json",
+      "bytes": 2771,
+      "sha256": "d4cddbb339a75e4ada5744395244044cdd33e4fba38e8b4d2321b214d5fca27c"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/runtime-receipt.json",
+      "bytes": 500,
+      "sha256": "b118a72ef8aa3b9a54038cb9aa61a3e36edc2fb2f5cbde82b42b1be2abf16e1b"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/summary.json",
+      "bytes": 8277,
+      "sha256": "f7f09bec52f9fc5f82930eb5ce5f9c43adb3edb95c83f3b77e2794e13cae32d1"
+    },
+    {
+      "file": "docs/operations/simplification-inventory.json",
+      "bytes": 5539,
+      "sha256": "654c247349d78bcb4928fd90d3d9bbe3261026a22f8b0e4fd1906c811aad432f"
+    },
+    {
+      "file": "docs/operations/ariakit-consumer.patch",
+      "bytes": 46745,
+      "sha256": "cd376b42cfa2463088d88d6a24976345fc078eea3d648929182a58cbb0b0ab88"
+    }
+  ],
+  "reviewRecord": {
+    "observedCycle": 7,
+    "countReset": false,
+    "cycle6Reassessment": "Root and fresh read-only fork_turns=none complexity agent agree to continue with narrow repairs; source-only advisory.",
+    "cycle7Disposition": "Full source decision identity preserved per summary; same selected supported-history contract, fewer reader fallbacks. Independent original in-memory readback passes; owner40 focused/3native and final whole-check pass.",
+    "nextThirdCycleReassessment": 9,
+    "durableInputs": [
+      {
+        "file": "docs/evidence/simplification-performance/reassessment-cycle6/disposition.txt",
+        "bytes": 1227,
+        "sha256": "f8c0383baadeb6d42cf7943a753be7f929a1f854fdb084afaaed3fd966008fac"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/reassessment-cycle6/outcome.txt",
+        "bytes": 1707,
+        "sha256": "3edeb10596ba97433adfced9a1b994f04f22b5398429a55175f81acfdb6eaccd"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/review-cycle7/disposition.txt",
+        "bytes": 1131,
+        "sha256": "884302826c8ea33eab33d6e1a7039c4f7f680b3375075e522acd19097d512c69"
+      }
+    ],
+    "privatePreservedSourceSnapshots": [
+      {
+        "originalPath": "/tmp/visonaut-core.patch",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/original-and-cycle7/visonaut-core.patch",
+        "bytes": 453216,
+        "sha256": "dc6aadd01219c1ada9658c58fce70c4bb797eefdaaaf43e583926c3591b2a801"
+      },
+      {
+        "originalPath": "/tmp/visonaut-review-cycle7.txt",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/original-and-cycle7/visonaut-review-cycle7.txt",
+        "bytes": 1131,
+        "sha256": "884302826c8ea33eab33d6e1a7039c4f7f680b3375075e522acd19097d512c69"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-20260929/task.txt",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-20260929/task.txt",
+        "bytes": 1224,
+        "sha256": "09c9a1886596973f6a919fbccd83cd2fba4a6f845bfe392db9a20b784bb6c35c"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-20260929/disposition.txt",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-20260929/disposition.txt",
+        "bytes": 671,
+        "sha256": "1d2e9eedca115215295ebb6a817ad8c2bbf337df8e20ce8a1df8b8af9d2b07ff"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-20260929/current.patch",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-20260929/current.patch",
+        "bytes": 1831447,
+        "sha256": "a7a863e2895039f606706faea1b3b7e62c0f7570745b70e58b4539f5e030ea5c"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-cycle6/untracked-source-files.list0",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-cycle6/untracked-source-files.list0",
+        "bytes": 135,
+        "sha256": "84741fc07288ec1866c9d0847a7533cd27d6f5ef7edcc5e1c0d281fc7a4e87a0"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-cycle6/disposition.txt",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-cycle6/disposition.txt",
+        "bytes": 1227,
+        "sha256": "f8c0383baadeb6d42cf7943a753be7f929a1f854fdb084afaaed3fd966008fac"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-cycle6/outcome.txt",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-cycle6/outcome.txt",
+        "bytes": 1707,
+        "sha256": "3edeb10596ba97433adfced9a1b994f04f22b5398429a55175f81acfdb6eaccd"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-cycle6/untracked-source.tar.gz",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-cycle6/untracked-source.tar.gz",
+        "bytes": 4992,
+        "sha256": "a67a898c2fd93d5ea3a565f47a8c1067d1de19a0219c0ff445579447aabc6c9d"
+      },
+      {
+        "originalPath": "/tmp/visonaut-reassessment-cycle6/current.patch",
+        "preservedPath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/visonaut-reassessment-cycle6/current.patch",
+        "bytes": 1941463,
+        "sha256": "065e464165b228885697a303ab22f7327039932698022179d796d0525febee96"
+      }
+    ],
+    "limits": "First complete root snapshot and raw pre-cycle3 dispositions are missing. First Core patch and exact available cycle3/6 inputs have private durable copies outside the repository; their ten-file manifest is identified here. Current final source and checked source manifest remain in this working tree.",
+    "preservedSnapshotManifest": {
+      "privatePath": "/Users/diegohaz/.codex/visualizations/2026/09/29/01a0ed98-ac42-7490-871f-74382625100c/review-snapshots/manifest.json",
+      "bytes": 3527,
+      "sha256": "c59e14fed3466df6bc6ecfcfdb6371a797c0c694f927c4e9ebfe37467199a679",
+      "durableOutsideRepository": true
+    }
+  },
+  "limits": [
+    "Docker absent; diagnostic Container image build not run.",
+    "Native local D1/R2 and synthetic GitHub responses; production network, capture/comparison execution and Queue timings are not measured.",
+    "Three samples per profile/cache cell and different Chrome versions limit causal conclusions.",
+    "Initial history full-check invocation was blocked by sandbox local-port/log permissions; the approved-localhost green rerun is the final passing proof.",
+    "Hosted Time Travel, migration/conversion readiness, deployment, Infisical move, preview-session retirement, App/rules cutover, release/provenance, consumer workflow pin/lock changes and resource retirement remain external handoff gates."
+  ],
+  "formalGateRepairs": {
+    "round": 1,
+    "reviewedTree": "7db162c46e6a83f4ab013dd8f02580ca4a8e4fff",
+    "findings": [
+      {
+        "id": "R1-F1",
+        "priority": "P1",
+        "disposition": "Address now",
+        "repair": "Canonical /v1/webhooks uses the existing signed receiver, with the former alias retained. Public native regression fails 401 before repair and verifies signed persistence plus invalid signature rejection after it."
+      },
+      {
+        "id": "R1-F2",
+        "priority": "P2",
+        "disposition": "Address now",
+        "repair": "Hash bounded command receipts before guarded summary completion; clear obsolete capture references and command detail, preserve exact raw identity/decision tuples and active owners, and use the existing affected-owner metadata pruner."
+      }
+    ],
+    "logs": [
+      {
+        "file": "docs/evidence/simplification-performance/logs/canonical-webhook-red.log",
+        "bytes": 1334,
+        "sha256": "44876c66ff8e6dfe584498297d3def98b13968c898bdc1747bb9be7b142721ac"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/canonical-webhook-green.log",
+        "bytes": 209,
+        "sha256": "901a21886ccaab274ba164cc6a4eb8226839b26b79ba6adc265c1157468bd4ee"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/s06-cleanup-red.log",
+        "bytes": 3006,
+        "sha256": "6327eb1f2003508117fba41196c59bde66c566aa682b9b81ef50af8096000c30"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/s06-cleanup-green.log",
+        "bytes": 197,
+        "sha256": "9c036b9340d9e81cb0e6df0ce532eaf33c9425f77309482c14cf904dc0d69880"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/s06-cleanup-focused-green.log",
+        "bytes": 187,
+        "sha256": "ac781bfd63c58ce594be45ecb601d3b0650e97fe1cc14ff175f364a6fad943c1"
+      }
+    ],
+    "reviewTrack": "Formal pre-commit rounds are separate from implementation checkpoint cycles. The repaired snapshot still needs its own independent full review before commit.",
+    "focusedCounts": {
+      "core": 16,
+      "native": 55,
+      "nativeFiles": 5
+    },
+    "sourceRestoration": {
+      "scope": "RED used copies of the original staged production files and restored the fixed files byte for byte without changing the index.",
+      "privateReceipt": "/tmp/visonaut-s06-cleanup-red-restoration.json"
+    }
+  }
+}

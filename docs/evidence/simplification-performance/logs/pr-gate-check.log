@@ -1,0 +1,410 @@
+$ pnpm lint && pnpm typecheck && pnpm build && pnpm test && pnpm test:browser
+$ oxlint && oxfmt --check
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 394ms on 666 files using 14 threads.
+$ pnpm -r --if-present typecheck
+packages/protocol typecheck$ tsc6 --noEmit
+packages/security typecheck$ tsc6 --noEmit
+packages/compare typecheck$ tsc6 -p tsconfig.json
+packages/protocol typecheck: Done
+packages/cli typecheck$ tsc6 --noEmit
+packages/playwright typecheck$ tsc6 --noEmit
+packages/compare typecheck: Done
+packages/service typecheck$ tsc6 --noEmit
+packages/playwright typecheck: Done
+packages/cli typecheck: Done
+packages/security typecheck: Done
+packages/service typecheck: Done
+apps/compare typecheck$ wrangler types && tsc6 -p tsconfig.json
+apps/web typecheck$ wrangler types && tsc6 --noEmit
+apps/compare typecheck: 
+apps/compare typecheck:  ⛅️ wrangler 4.136.1
+apps/compare typecheck: ────────────────────
+apps/web typecheck: 
+apps/web typecheck:  ⛅️ wrangler 4.136.1
+apps/web typecheck: ────────────────────
+apps/web typecheck: Generating project types...
+apps/web typecheck: 
+apps/compare typecheck: Generating project types...
+apps/compare typecheck: 
+apps/web typecheck: interface __BaseEnv_Env {
+apps/web typecheck: 	IMAGES: R2Bucket;
+apps/web typecheck: 	QUARANTINE: R2Bucket;
+apps/web typecheck: 	DB: D1Database;
+apps/web typecheck: 	COMPARISONS: Queue;
+apps/web typecheck: 	OPERATIONS: Queue;
+apps/web typecheck: 	VISONAUT_ENVIRONMENT: "production" | "preview";
+apps/web typecheck: 	VISONAUT_REPOSITORY: "ariakit/ariakit";
+apps/web typecheck: 	VISONAUT_LAUNCH_ENABLED: "false";
+apps/web typecheck: 	VISONAUT_ORIGIN: "https://visonaut.com" | "https://preview.visonaut.com";
+apps/web typecheck: 	GITHUB_CLIENT_ID?: "Iv23lihLxwLZeW7tlh5u";
+apps/web typecheck: 	GITHUB_APP_ID?: "5028451";
+apps/web typecheck: 	GITHUB_INSTALLATION_ID?: "163661534";
+apps/web typecheck: 	GITHUB_REPOSITORY_ID: "104133653";
+apps/web typecheck: 	GITHUB_OWNER_ID?: "40200111";
+apps/web typecheck: 	VISONAUT_PROJECT_ID: "ariakit";
+apps/web typecheck: 	VISONAUT_WORKFLOW_OWNED?: "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f\",\"reusableWorkflowSha\":\"697172dfed281348d79bfe8ce61f9ccf21537c5f\"}";
+apps/web typecheck: 	VISONAUT_TRUSTED_EXECUTOR_DIGEST?: "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f";
+apps/web typecheck: 	VISONAUT_ALLOW_MAIN_DISPATCH?: "false";
+apps/web typecheck: 	VISONAUT_API_LIMITS: "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}";
+apps/web typecheck: 	VISONAUT_OPERATIONS_BUDGET: "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumMetadataBytes\":2147483648,\"maximumExportEntries\":200000}";
+apps/web typecheck: 	BETTER_AUTH_SECRET?: string;
+apps/web typecheck: 	CAPABILITY_SECRET?: string;
+apps/web typecheck: 	GITHUB_CLIENT_SECRET?: string;
+apps/web typecheck: 	GITHUB_APP_PRIVATE_KEY?: string;
+apps/web typecheck: 	GITHUB_WEBHOOK_SECRET?: string;
+apps/web typecheck: 	COMPARATOR: Fetcher /* visonaut-compare */ | Fetcher /* visonaut-preview-compare */;
+apps/web typecheck: }
+apps/web typecheck: declare namespace Cloudflare {
+apps/web typecheck: 	interface GlobalProps {
+apps/web typecheck: 		mainModule: typeof import("./src/server");
+apps/web typecheck: 	}
+apps/web typecheck: 	interface ProductionEnv {
+apps/web typecheck: 		IMAGES: R2Bucket;
+apps/web typecheck: 		QUARANTINE: R2Bucket;
+apps/web typecheck: 		DB: D1Database;
+apps/web typecheck: 		COMPARISONS: Queue;
+apps/web typecheck: 		OPERATIONS: Queue;
+apps/web typecheck: 		VISONAUT_ENVIRONMENT: "production";
+apps/web typecheck: 		VISONAUT_REPOSITORY: "ariakit/ariakit";
+apps/web typecheck: 		VISONAUT_LAUNCH_ENABLED: "false";
+apps/web typecheck: 		VISONAUT_ORIGIN: "https://visonaut.com";
+apps/web typecheck: 		GITHUB_CLIENT_ID: "Iv23lihLxwLZeW7tlh5u";
+apps/web typecheck: 		GITHUB_APP_ID: "5028451";
+apps/web typecheck: 		GITHUB_INSTALLATION_ID: "163661534";
+apps/web typecheck: 		GITHUB_REPOSITORY_ID: "104133653";
+apps/web typecheck: 		GITHUB_OWNER_ID: "40200111";
+apps/web typecheck: 		VISONAUT_PROJECT_ID: "ariakit";
+apps/web typecheck: 		VISONAUT_WORKFLOW_OWNED: "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f\",\"reusableWorkflowSha\":\"697172dfed281348d79bfe8ce61f9ccf21537c5f\"}";
+apps/web typecheck: 		VISONAUT_TRUSTED_EXECUTOR_DIGEST: "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f";
+apps/web typecheck: 		VISONAUT_ALLOW_MAIN_DISPATCH: "false";
+apps/web typecheck: 		VISONAUT_API_LIMITS: "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}";
+apps/web typecheck: 		VISONAUT_OPERATIONS_BUDGET: "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumMetadataBytes\":2147483648,\"maximumExportEntries\":200000}";
+apps/web typecheck: 		BETTER_AUTH_SECRET: string;
+apps/web typecheck: 		CAPABILITY_SECRET: string;
+apps/web typecheck: 		GITHUB_CLIENT_SECRET: string;
+apps/web typecheck: 		GITHUB_APP_PRIVATE_KEY: string;
+apps/web typecheck: 		GITHUB_WEBHOOK_SECRET: string;
+apps/web typecheck: 		COMPARATOR: Fetcher /* visonaut-compare */;
+apps/web typecheck: 	}
+apps/web typecheck: 	interface Env extends __BaseEnv_Env {}
+apps/web typecheck: }
+apps/web typecheck: interface Env extends __BaseEnv_Env {}
+apps/web typecheck: type StringifyValues<EnvType extends Record<string, unknown>> = {
+apps/web typecheck: 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+apps/web typecheck: };
+apps/web typecheck: declare namespace NodeJS {
+apps/compare typecheck: interface __BaseEnv_Env {
+apps/compare typecheck: 	IMAGES: R2Bucket;
+apps/compare typecheck: 	DB: D1Database;
+apps/compare typecheck: 	COMPARISONS: Queue;
+apps/compare typecheck: 	OPERATIONS: Queue;
+apps/web typecheck: 	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "VISONAUT_ENVIRONMENT" | "VISONAUT_REPOSITORY" | "VISONAUT_LAUNCH_ENABLED" | "VISONAUT_ORIGIN" | "GITHUB_CLIENT_ID" | "GITHUB_APP_ID" | "GITHUB_INSTALLATION_ID" | "GITHUB_REPOSITORY_ID" | "GITHUB_OWNER_ID" | "VISONAUT_PROJECT_ID" | "VISONAUT_WORKFLOW_OWNED" | "VISONAUT_TRUSTED_EXECUTOR_DIGEST" | "VISONAUT_ALLOW_MAIN_DISPATCH" | "VISONAUT_API_LIMITS" | "VISONAUT_OPERATIONS_BUDGET" | "BETTER_AUTH_SECRET" | "CAPABILITY_SECRET" | "GITHUB_CLIENT_SECRET" | "GITHUB_APP_PRIVATE_KEY" | "GITHUB_WEBHOOK_SECRET">> {}
+apps/web typecheck: }
+apps/web typecheck: 
+apps/web typecheck: Generating runtime types...
+apps/web typecheck: 
+apps/compare typecheck: 	VISONAUT_COMPARISON_DEAD_LETTER_QUEUE: "visonaut-production-comparison-dead-letter" | "visonaut-preview-comparison-dead-letter";
+apps/compare typecheck: }
+apps/compare typecheck: declare namespace Cloudflare {
+apps/compare typecheck: 	interface GlobalProps {
+apps/compare typecheck: 		mainModule: typeof import("./src/index");
+apps/compare typecheck: 	}
+apps/compare typecheck: 	interface ProductionEnv {
+apps/compare typecheck: 		IMAGES: R2Bucket;
+apps/compare typecheck: 		DB: D1Database;
+apps/compare typecheck: 		COMPARISONS: Queue;
+apps/compare typecheck: 		OPERATIONS: Queue;
+apps/compare typecheck: 		VISONAUT_COMPARISON_DEAD_LETTER_QUEUE: "visonaut-production-comparison-dead-letter";
+apps/compare typecheck: 	}
+apps/compare typecheck: 	interface Env extends __BaseEnv_Env {}
+apps/compare typecheck: }
+apps/compare typecheck: interface Env extends __BaseEnv_Env {}
+apps/compare typecheck: type StringifyValues<EnvType extends Record<string, unknown>> = {
+apps/compare typecheck: 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+apps/compare typecheck: };
+apps/compare typecheck: declare namespace NodeJS {
+apps/compare typecheck: 	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "VISONAUT_COMPARISON_DEAD_LETTER_QUEUE">> {}
+apps/compare typecheck: }
+apps/compare typecheck: declare module "*.wasm" {
+apps/compare typecheck: 	const value: WebAssembly.Module;
+apps/compare typecheck: 	export default value;
+apps/compare typecheck: 	}
+apps/compare typecheck: Generating runtime types...
+apps/compare typecheck: 
+apps/web typecheck: Runtime types generated.
+apps/web typecheck: 
+apps/web typecheck: 
+apps/compare typecheck: Runtime types generated.
+apps/compare typecheck: 
+apps/compare typecheck: 
+apps/web typecheck: ✨ Types written to worker-configuration.d.ts
+apps/web typecheck: 
+apps/web typecheck: 📖 Read about runtime types
+apps/web typecheck: https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+apps/web typecheck: 📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+apps/web typecheck: 
+apps/compare typecheck: ✨ Types written to worker-configuration.d.ts
+apps/compare typecheck: 
+apps/compare typecheck: 📖 Read about runtime types
+apps/compare typecheck: https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+apps/compare typecheck: 📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+apps/compare typecheck: 
+apps/compare typecheck: Done
+apps/web typecheck: Done
+$ pnpm -r --if-present build
+packages/cli build$ tsup
+apps/compare build$ wrangler deploy --dry-run --outdir dist
+packages/playwright build$ tsup
+apps/web build$ vite build
+packages/cli build: CLI Building entry: src/bin.ts, src/index.ts
+packages/cli build: CLI Using tsconfig: tsconfig.json
+packages/cli build: CLI tsup v8.5.1
+packages/cli build: CLI Using tsup config: /Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/cli/tsup.config.ts
+packages/playwright build: CLI Building entry: src/environment.ts, src/index.ts, src/reporter.ts
+packages/playwright build: CLI Using tsconfig: tsconfig.json
+packages/playwright build: CLI tsup v8.5.1
+packages/playwright build: CLI Using tsup config: /Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/tsup.config.ts
+packages/cli build: CLI Target: node24
+packages/playwright build: CLI Target: node24
+packages/cli build: CLI Cleaning output folder
+packages/playwright build: CLI Cleaning output folder
+packages/cli build: ESM Build start
+packages/playwright build: ESM Build start
+packages/playwright build: ESM dist/reporter.js    27.88 KB
+packages/playwright build: ESM dist/index.js       18.18 KB
+packages/playwright build: ESM dist/environment.js 4.08 KB
+packages/playwright build: ESM ⚡️ Build success in 9ms
+packages/cli build: ESM dist/bin.js            149.00 B
+packages/cli build: ESM dist/index.js          69.00 B
+packages/cli build: ESM dist/chunk-SOBN3NGO.js 83.31 KB
+packages/cli build: ESM ⚡️ Build success in 11ms
+packages/cli build: DTS Build start
+packages/playwright build: DTS Build start
+apps/compare build: 
+apps/compare build:  ⛅️ wrangler 4.136.1 (update available 4.144.0)
+apps/compare build: ───────────────────────────────────────────────
+apps/compare build: [33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mMultiple environments are defined in the Wrangler configuration file, but no target environment was specified for the deploy command.[0m
+apps/compare build: 
+apps/compare build:   To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the `-e|--env` flag or CLOUDFLARE_ENV env variable.
+apps/compare build:   If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example `--env=""`.
+apps/compare build: 
+apps/compare build: 
+apps/compare build: Total Upload: 533.00 KiB / gzip: 179.22 KiB
+apps/compare build: Your Worker has access to the following bindings:
+apps/compare build: Binding                                                                                    Resource                  
+apps/compare build: env.COMPARISONS (visonaut-preview-comparisons)                                             Queue                     
+apps/compare build: env.OPERATIONS (visonaut-preview-operations)                                               Queue                     
+apps/compare build: env.DB (visonaut-preview)                                                                  D1 Database               
+apps/compare build: env.IMAGES (visonaut-preview-images)                                                       R2 Bucket                 
+apps/compare build: env.VISONAUT_COMPARISON_DEAD_LETTER_QUEUE ("visonaut-preview-comparison-dead-letter")      Environment Variable      
+apps/compare build: 
+apps/compare build: --dry-run: exiting now.
+apps/compare build: Done
+packages/cli build: DTS ⚡️ Build success in 647ms
+packages/cli build: DTS dist/bin.d.ts   20.00 B
+packages/cli build: DTS dist/index.d.ts 497.00 B
+packages/cli build: Done
+apps/web build: vite v8.3.0 building client environment for production...
+apps/web build: transforming...
+packages/playwright build: DTS ⚡️ Build success in 791ms
+packages/playwright build: DTS dist/environment.d.ts    860.00 B
+packages/playwright build: DTS dist/index.d.ts          1.40 KB
+packages/playwright build: DTS dist/reporter.d.ts       1.10 KB
+packages/playwright build: DTS dist/types-CNVvwvib.d.ts 2.89 KB
+packages/playwright build: Done
+apps/web build: ✓ 2373 modules transformed.
+apps/web build: rendering chunks...
+apps/web build: computing gzip size...
+apps/web build: dist/client/.assetsignore                             0.02 kB
+apps/web build: dist/client/assets/firefox-B8Bz3Pw-.svg              38.09 kB │ gzip:  10.69 kB
+apps/web build: dist/client/assets/index-CaJ_2b8I.css                 0.02 kB │ gzip:   0.04 kB
+apps/web build: dist/client/assets/review-PI6rgGLB.css              312.72 kB │ gzip:  43.44 kB
+apps/web build: dist/client/assets/model-BtVQP8zL.js                  0.74 kB │ gzip:   0.42 kB
+apps/web build: dist/client/assets/runs._runId-r3hlwqNu.js            0.83 kB │ gzip:   0.51 kB
+apps/web build: dist/client/assets/pulls._pullNumber-C3zJBo16.js      4.00 kB │ gzip:   1.70 kB
+apps/web build: dist/client/assets/preload-helper-CLaZYkgu.js         5.69 kB │ gzip:   2.22 kB
+apps/web build: dist/client/assets/control-button-K5B54tgR.js        27.68 kB │ gzip:   8.29 kB
+apps/web build: dist/client/assets/react-y1c93css.js                 30.76 kB │ gzip:  11.58 kB
+apps/web build: dist/client/assets/routes-Dou-rkJ-.js                58.27 kB │ gzip:  20.09 kB
+apps/web build: dist/client/assets/text-CCkjYeLb.js                  76.63 kB │ gzip:  25.34 kB
+apps/web build: dist/client/assets/shell.ariakit.react-CMuZVxjP.js   79.22 kB │ gzip:  24.42 kB
+apps/web build: dist/client/assets/runs._runId-67tFMg0F.js           83.38 kB │ gzip:  26.77 kB
+apps/web build: dist/client/assets/index-CthIb3EI.js                322.34 kB │ gzip: 102.86 kB
+apps/web build: 
+apps/web build: ✓ built in 430ms
+apps/web build: vite v8.3.0 building ssr environment for production...
+apps/web build: transforming...
+apps/web build: ✓ 3225 modules transformed.
+apps/web build: rendering chunks...
+apps/web build: Using secrets defined in process.env
+apps/web build: computing gzip size...
+apps/web build: dist/server/wrangler.json                                            3.02 kB │ gzip:   1.38 kB
+apps/web build: dist/server/.vite/manifest.json                                     13.00 kB │ gzip:   1.75 kB
+apps/web build: dist/server/assets/firefox-B8Bz3Pw-.svg                             38.09 kB │ gzip:  10.69 kB
+apps/web build: dist/server/assets/router-CaJ_2b8I.css                               0.02 kB │ gzip:   0.04 kB
+apps/web build: dist/server/assets/review-PI6rgGLB.css                             312.72 kB │ gzip:  43.44 kB
+apps/web build: dist/server/assets/kysely-adapter-CvS2EsC0.js                        0.13 kB │ gzip:   0.10 kB
+apps/web build: dist/server/assets/empty-plugin-adapters-DETlmLN8.js                 0.28 kB │ gzip:   0.18 kB
+apps/web build: dist/server/assets/start-2Wma0rwj.js                                 0.29 kB │ gzip:   0.21 kB
+apps/web build: dist/server/assets/string-Ckqmx2pZ.js                                0.69 kB │ gzip:   0.43 kB
+apps/web build: dist/server/assets/kysely-migration-tables-DFfmKhq--Dporn1Lm.js      0.95 kB │ gzip:   0.53 kB
+apps/web build: dist/server/assets/model-CuWtKnSz.js                                 1.48 kB │ gzip:   0.63 kB
+apps/web build: dist/server/assets/_tanstack-start-manifest_v-DZUo470E.js            1.54 kB │ gzip:   0.57 kB
+apps/web build: dist/server/assets/runs._runId-BLL27Qzk.js                           1.57 kB │ gzip:   0.73 kB
+apps/web build: dist/server/assets/sqlite-adapter-Du-VhHiM.js                        2.24 kB │ gzip:   0.85 kB
+apps/web build: dist/server/assets/matchContext-CTNlU-_r.js                          2.91 kB │ gzip:   1.18 kB
+apps/web build: dist/server/assets/bun-sqlite-dialect-C7ftEUSI-Bp6p0SRw.js           4.76 kB │ gzip:   1.71 kB
+apps/web build: dist/server/assets/node-sqlite-dialect-Bd9yS1Ka.js                   4.76 kB │ gzip:   1.70 kB
+apps/web build: dist/server/assets/d1-sqlite-dialect-D4qp4-wW-DzPRg3U6.js            5.29 kB │ gzip:   1.89 kB
+apps/web build: dist/server/assets/pulls._pullNumber-Bt79qCBX.js                     7.14 kB │ gzip:   2.24 kB
+apps/web build: dist/server/assets/error-CzdqHglb.js                                 7.16 kB │ gzip:   2.66 kB
+apps/web build: dist/server/assets/react-dom-CfTUq_hB.js                             7.19 kB │ gzip:   2.06 kB
+apps/web build: dist/server/assets/lazyRouteComponent-DOA7EyaT.js                   14.06 kB │ gzip:   3.40 kB
+apps/web build: dist/server/assets/dist-CNyf0Gus.js                                 14.70 kB │ gzip:   4.16 kB
+apps/web build: dist/server/assets/router-Dygy7eUX.js                               31.82 kB │ gzip:   8.41 kB
+apps/web build: dist/server/assets/react-Dg9VL5Gi.js                                33.53 kB │ gzip:   9.16 kB
+apps/web build: dist/server/assets/useSelector-C8-FOAB0.js                          41.65 kB │ gzip:  12.07 kB
+apps/web build: dist/server/assets/dist-nMw9w7mT.js                                 43.76 kB │ gzip:  11.94 kB
+apps/web build: dist/server/assets/default-query-compiler-yv-WbDrw.js               45.42 kB │ gzip:   7.94 kB
+apps/web build: dist/server/assets/control-button-8ZZ4D0Jf.js                       63.63 kB │ gzip:  14.93 kB
+apps/web build: dist/server/assets/Match-B-DjvQbR.js                               121.91 kB │ gzip:  29.44 kB
+apps/web build: dist/server/assets/routes-DlbfapRU.js                              136.35 kB │ gzip:  32.30 kB
+apps/web build: dist/server/assets/runs._runId-Dn8fcwbS.js                         156.50 kB │ gzip:  37.69 kB
+apps/web build: dist/server/assets/shell.ariakit.react-DGAfvfsJ.js                 159.93 kB │ gzip:  39.21 kB
+apps/web build: dist/server/assets/text-BVirVTm9.js                                215.16 kB │ gzip:  45.22 kB
+apps/web build: dist/server/assets/dist-CqnlLicC.js                                223.13 kB │ gzip:  39.96 kB
+apps/web build: dist/server/assets/compiled-query-_mGjsD2B.js                      240.42 kB │ gzip:  39.35 kB
+apps/web build: dist/server/assets/factory-Cak6yvme.js                             265.16 kB │ gzip:  57.94 kB
+apps/web build: dist/server/index.js                                             2,004.10 kB │ gzip: 435.87 kB
+apps/web build: 
+apps/web build: ✓ built in 477ms
+apps/web build: Done
+$ vitest run
+
+ RUN  v5.0.1 /Users/diegohaz/.codex/worktrees/1de3/visonaut
+
+
+ Test Files  64 passed (64)
+      Tests  898 passed (898)
+   Start at  19:16:02
+   Duration  109.37s (tests 97%, import 2%, transform 1%)
+
+$ playwright test --config apps/web/src/review/__tests__/playwright.config.ts
+[WebServer] (node:7430) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 102 tests using 3 workers
+
+(node:7449) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7450) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:7448) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    2 apps/web/src/review/__tests__/operations.browser.test.ts:47:1 › a new incident is announced while the alert popover is closed (792ms)
+  ✓    1 apps/web/src/review/__tests__/operations.browser.test.ts:72:1 › same-title incidents each update the live status (833ms)
+  ✓    3 apps/web/src/review/__tests__/operations.browser.test.ts:18:1 › operation alerts explain recovery and poll resolved events while the dashboard is open (958ms)
+  ✓    4 apps/web/src/review/__tests__/operations.browser.test.ts:106:1 › an older alert entering the bounded list is announced as visible (355ms)
+  ✓    7 apps/web/src/review/__tests__/operations.browser.test.ts:182:1 › capacity alerts show measured usage, admission headroom, and capture slots (376ms)
+  ✓    8 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook production-receiver-mismatch alerts give the matching recovery action (356ms)
+  ✓    9 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook redelivery-exhausted alerts give the matching recovery action (356ms)
+  ✓    6 apps/web/src/review/__tests__/operations.browser.test.ts:168:1 › permission denial on refresh removes private alert content (1.3s)
+  ✓    5 apps/web/src/review/__tests__/operations.browser.test.ts:138:1 › alert refresh failure stays explicit and Retry alerts works with the keyboard (1.5s)
+  ✓   12 apps/web/src/review/__tests__/pulls.browser.test.ts:32:1 › a PR page explains pending capture and can refresh (437ms)
+  ✓   10 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook recovery-unavailable alerts give the matching recovery action (517ms)
+  ✓   11 apps/web/src/review/__tests__/pulls.browser.test.ts:8:1 › a pull-request check opens its current Visonaut review (529ms)
+  ✓   14 apps/web/src/review/__tests__/pulls.browser.test.ts:99:1 › a failed capture explains that no review is ready (368ms)
+  ✓   15 apps/web/src/review/__tests__/pulls.browser.test.ts:116:1 › a PR deep link preserves its path through sign-in (419ms)
+  ✓   13 apps/web/src/review/__tests__/pulls.browser.test.ts:56:1 › a pending PR pauses polling while hidden and refreshes on return (860ms)
+  ✓   16 apps/web/src/review/__tests__/review.browser.test.ts:27:1 › review surfaces remain dark when the system uses dark mode (477ms)
+  ✓   17 apps/web/src/review/__tests__/review.browser.test.ts:51:1 › valid prototype names stay visible in compact variant labels (393ms)
+  ✓   19 apps/web/src/review/__tests__/review.browser.test.ts:107:1 › variant keys do not claim an omitted display preference (471ms)
+  ✓   18 apps/web/src/review/__tests__/review.browser.test.ts:64:1 › variant icons use brand marks and explain display preferences (496ms)
+  ✓   20 apps/web/src/review/__tests__/review.browser.test.ts:128:1 › framework names do not display browser marks (514ms)
+  ✓   21 apps/web/src/review/__tests__/review.browser.test.ts:150:1 › comparison errors stay visible ahead of accepted items (467ms)
+  ✓   23 apps/web/src/review/__tests__/review.browser.test.ts:192:1 › a pending comparison stays visible without an evidence error (510ms)
+  ✓   22 apps/web/src/review/__tests__/review.browser.test.ts:167:1 › an accepted first item does not hide the initial attention selection (643ms)
+  ✓   24 apps/web/src/review/__tests__/review.browser.test.ts:215:1 › keyboard item navigation follows attention items before accepted items (693ms)
+  ✓   26 apps/web/src/review/__tests__/review.browser.test.ts:275:1 › item navigation picks the first variant needing review unless one was chosen (601ms)
+  ✓   25 apps/web/src/review/__tests__/review.browser.test.ts:250:1 › item and variant navigation stops at ends and remembers each item (900ms)
+  ✓   27 apps/web/src/review/__tests__/review.browser.test.ts:294:1 › a missing remembered key falls back and announces the first variant (615ms)
+  ✓   28 apps/web/src/review/__tests__/review.browser.test.ts:310:1 › save confirmation gates verdicts and navigation, and repeat keys do nothing (589ms)
+  ✓   29 apps/web/src/review/__tests__/review.browser.test.ts:334:1 › a saved review keeps its reviewer visible when revisited (537ms)
+  ✓   30 apps/web/src/review/__tests__/review.browser.test.ts:342:1 › whole item freezes all changed IDs in one undoable command (575ms)
+  ✓   31 apps/web/src/review/__tests__/review.browser.test.ts:362:1 › next pending wraps, skips automatic verdicts and reviewed rejections (616ms)
+  ✓   32 apps/web/src/review/__tests__/review.browser.test.ts:385:1 › undo restores automatic acceptance and the original selection (697ms)
+  ✓   33 apps/web/src/review/__tests__/review.browser.test.ts:396:1 › protected whole-item rejection refuses every target, while individual actions stay usable (539ms)
+  ✓   34 apps/web/src/review/__tests__/review.browser.test.ts:419:1 › already accepted history creates no session undo command (455ms)
+  ✓   35 apps/web/src/review/__tests__/review.browser.test.ts:428:1 › decoded panes appear independently while review waits for all evidence (533ms)
+  ✓   36 apps/web/src/review/__tests__/review.browser.test.ts:458:1 › the new image appears while the reference is still loading (522ms)
+  ✓   37 apps/web/src/review/__tests__/review.browser.test.ts:485:1 › load errors block review and retry loads the same evidence (632ms)
+  ✓   38 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › failed comparisons explain their state without offering image retry (531ms)
+  ✓   39 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › superseded comparisons explain their state without offering image retry (431ms)
+  ✓   40 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › needs-recompare comparisons explain their state without offering image retry (444ms)
+  ✓   41 apps/web/src/review/__tests__/review.browser.test.ts:546:1 › unavailable stored captures do not offer recompare for a failed comparison (440ms)
+  ✓   42 apps/web/src/review/__tests__/review.browser.test.ts:564:1 › stale pull request captures explain how to get a new comparison (482ms)
+  ✓   43 apps/web/src/review/__tests__/review.browser.test.ts:581:1 › a dimension mismatch cannot be fixed with image retry (487ms)
+  ✓   44 apps/web/src/review/__tests__/review.browser.test.ts:596:1 › a decode failure offers image retry (476ms)
+  ✓   45 apps/web/src/review/__tests__/review.browser.test.ts:616:3 › unchanged comparisons with zero changed pixels show diff without a mask (495ms)
+  ✓   46 apps/web/src/review/__tests__/review.browser.test.ts:616:3 › changed comparisons with zero changed pixels show diff without a mask (585ms)
+  ✓   47 apps/web/src/review/__tests__/review.browser.test.ts:650:3 › unchanged comparisons with tolerated pixels show intentional mask absence (488ms)
+  ✓   48 apps/web/src/review/__tests__/review.browser.test.ts:650:3 › changed comparisons with tolerated pixels show intentional mask absence (582ms)
+  ✓   49 apps/web/src/review/__tests__/review.browser.test.ts:686:1 › an explicitly required mask fails closed even with zero changed pixels (510ms)
+  ✓   50 apps/web/src/review/__tests__/review.browser.test.ts:703:3 › a missing diff mask blocks review when changed pixels are 120 (514ms)
+  ✓   51 apps/web/src/review/__tests__/review.browser.test.ts:703:3 › a missing diff mask blocks review when changed pixels are undefined (515ms)
+  ✓   52 apps/web/src/review/__tests__/review.browser.test.ts:729:3 › 0-pixel diff still waits for original images and blocks failed evidence (546ms)
+  ✓   53 apps/web/src/review/__tests__/review.browser.test.ts:729:3 › 1-pixel diff still waits for original images and blocks failed evidence (532ms)
+  ✓   54 apps/web/src/review/__tests__/review.browser.test.ts:768:1 › addition and removal empty panes remain distinct and D keeps the current view (635ms)
+  ✓   55 apps/web/src/review/__tests__/review.browser.test.ts:793:1 › Original only shows the reference image and G switches from the other views (450ms)
+  ✓   56 apps/web/src/review/__tests__/review.browser.test.ts:809:1 › shortcut scope, native modifiers, editing exclusions, and toggle (800ms)
+  ✓   57 apps/web/src/review/__tests__/review.browser.test.ts:851:1 › conflict identifies reviewer and does not advance or save a partial item (486ms)
+  ✓   58 apps/web/src/review/__tests__/review.browser.test.ts:862:1 › disconnect shows unsaved state and retries the same frozen command (633ms)
+  ✓   59 apps/web/src/review/__tests__/review.browser.test.ts:876:1 › Undo conflict preserves the selection and later reviewer state (531ms)
+  ✓   60 apps/web/src/review/__tests__/review.browser.test.ts:885:1 › help closes with Escape and keeps native focus without rejecting (541ms)
+  ✓   61 apps/web/src/review/__tests__/review.browser.test.ts:895:1 › fit, 100%, 200%, and narrow layout preserve inspectable original images (791ms)
+  ✓   62 apps/web/src/review/__tests__/review.browser.test.ts:923:1 › stale decode completion cannot make a returned selection ready (569ms)
+  ✓   63 apps/web/src/review/__tests__/review.browser.test.ts:979:1 › keyboard pan preserves image position across modes and item thumbnails stay stable (680ms)
+  ✓   64 apps/web/src/review/__tests__/review.browser.test.ts:1005:1 › session Undo ends on reload (628ms)
+  ✓   65 apps/web/src/review/__tests__/review.browser.test.ts:1014:1 › a stale latest Undo does not block an older independent session command (698ms)
+  ✓   66 apps/web/src/review/__tests__/review.browser.test.ts:1033:1 › failed Undo retries its original command identity (651ms)
+  ✓   68 apps/web/src/review/__tests__/review.browser.test.ts:1061:1 › pending comparisons poll only status and pause while the page is hidden (551ms)
+  ✓   69 apps/web/src/review/__tests__/review.browser.test.ts:1094:1 › a superseded comparison stops status polling after one final model load (600ms)
+  ✓   70 apps/web/src/review/__tests__/review.browser.test.ts:1119:1 › archived history keeps navigation and export while blocking review, Undo, and recompare (660ms)
+  ✓   71 apps/web/src/review/__tests__/review.browser.test.ts:1153:1 › export gives pending and failure feedback without changing review verdicts (546ms)
+  ✓   73 apps/web/src/review/__tests__/review.browser.test.ts:1225:1 › expired historical images show the server reason and do not permit recompare (441ms)
+  ✓   72 apps/web/src/review/__tests__/review.browser.test.ts:1173:1 › closed retained runs can recompare while historical results remain read-only (981ms)
+  ✓   74 apps/web/src/review/__tests__/review.browser.test.ts:1242:1 › a failed historical comparison stops polling and shows its failure reason (540ms)
+  ✓   76 apps/web/src/review/__tests__/review.browser.test.ts:1301:1 › page-wide arrows work from body focus and the off switch preserves native keys (596ms)
+  ✓   67 apps/web/src/review/__tests__/review.browser.test.ts:1046:1 › recompare keeps prior evidence visible and blocks review until the new comparison is ready (3.2s)
+  ✓   75 apps/web/src/review/__tests__/review.browser.test.ts:1278:1 › a run that closes before recompare also disables the previous Undo while comparing (853ms)
+  ✓   78 apps/web/src/review/__tests__/review.browser.test.ts:1390:3 › closed summaries preserve verdicts without requesting pinned image history (479ms)
+  ✓   79 apps/web/src/review/__tests__/review.browser.test.ts:1390:3 › closed summaries preserve verdicts without requesting expired image history (507ms)
+  ✓   77 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.2s)
+  ✓   80 apps/web/src/review/__tests__/review.browser.test.ts:1423:3 › long review context and recovery controls reflow at 200% CSS zoom with none forced colors (615ms)
+  ✓   81 apps/web/src/review/__tests__/review.browser.test.ts:1423:3 › long review context and recovery controls reflow at 200% CSS zoom with active forced colors (649ms)
+  ✓   82 apps/web/src/review/__tests__/route.browser.test.ts:9:1 › dashboard loads its protected run list without a separate identity request (330ms)
+  ✓   83 apps/web/src/review/__tests__/route.browser.test.ts:26:1 › dashboard offers sign-in when the run list rejects its session (316ms)
+  ✓   85 apps/web/src/review/__tests__/route.browser.test.ts:127:1 › opening a historical link loads its selected comparison (530ms)
+  ✓   86 apps/web/src/review/__tests__/route.browser.test.ts:161:1 › item and variant links open a direct selection without reloading the run (1.0s)
+  ✓   87 apps/web/src/review/__tests__/route.browser.test.ts:203:1 › item links return to the first variant needing review after selecting an unchanged variant (721ms)
+  ✓   89 apps/web/src/review/__tests__/route.browser.test.ts:251:1 › sign-in keeps a direct item and variant link (345ms)
+  ✓   88 apps/web/src/review/__tests__/route.browser.test.ts:229:1 › a stale variant link keeps its valid item selected (436ms)
+  ✓   91 apps/web/src/review/__tests__/route.browser.test.ts:298:1 › the sign-in page follows the system dark color scheme (314ms)
+  ✓   90 apps/web/src/review/__tests__/route.browser.test.ts:273:1 › historical sign-in preserves the selected comparison in its return path (334ms)
+  ✓   84 apps/web/src/review/__tests__/route.browser.test.ts:38:1 › dashboard keeps runs in a table and operation alerts in the header (2.4s)
+  ✓   93 apps/web/src/review/__tests__/route.browser.test.ts:345:1 › the work list shows an old PR title while recent history stays separate (463ms)
+  ✓   94 apps/web/src/review/__tests__/route.browser.test.ts:395:1 › preview fixtures have no GitHub login, logout or live operations requests (319ms)
+  ✓   92 apps/web/src/review/__tests__/route.browser.test.ts:318:1 › variant links preserve native new-tab activation and keyboard routes (951ms)
+  ✓   95 apps/web/src/review/__tests__/route.browser.test.ts:416:1 › a preview review has image fixtures and no live actions or login (562ms)
+  ✓   96 apps/web/src/review/__tests__/scale.browser.test.ts:38:1 › the complete virtual list has bounded rows and arrow, Home and End navigation (837ms)
+  ✓   98 apps/web/src/review/__tests__/scale.browser.test.ts:77:1 › accepted items mount only when opened and focus spans both groups (721ms)
+  ✓   97 apps/web/src/review/__tests__/scale.browser.test.ts:60:1 › page-wide navigation remembers variants and leaves focus outside the virtual list (876ms)
+  ✓  100 apps/web/src/review/__tests__/scale.browser.test.ts:136:1 › long names have measured height and do not overlap at browser zoom (584ms)
+  ✓   99 apps/web/src/review/__tests__/scale.browser.test.ts:101:1 › approval, Undo and removal retain useful focus and stable identities (946ms)
+  ✓  101 apps/web/src/review/__tests__/scale.browser.test.ts:166:1 › narrow layout keeps items, tabs and image controls inside the page (681ms)
+  ✓  102 apps/web/src/review/__tests__/scale.browser.test.ts:177:1 › removing the full model focuses the empty navigation region (503ms)
+
+  102 passed (26.8s)

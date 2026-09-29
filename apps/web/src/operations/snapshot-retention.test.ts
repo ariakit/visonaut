@@ -1,7 +1,11 @@
 import { expect, it, vi } from "vitest";
 import { closedRunRetentionMs } from "@visonaut/service";
 import { captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
-import { expireComparisonReferences, expireSnapshotImages } from "./snapshot-retention.ts";
+import {
+  expireComparisonReferences,
+  expireSnapshotImages,
+  retireSourceBaselines,
+} from "./snapshot-retention.ts";
 
 async function snapshot(database: TestDatabase, fixture: ReturnType<typeof context>, id: string) {
   await captured(fixture.context, id, "main");
@@ -107,19 +111,13 @@ it("resolves a failed retirement alert when the next attempt retires the snapsho
   ).toEqual({ resolved_at: fixture.state.time });
 });
 
-it("keeps protected copies during a combined backup and recovers a failed bounded deletion", async () => {
+it("recovers a failed bounded protected-copy deletion", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await snapshot(database, fixture, "old");
   readyArchive(database, "old");
   await expireSnapshotImages(fixture.context);
   fixture.state.time += 86400001;
-  database.connection.exec(
-    "INSERT INTO operations_backups(id,state,created_at) VALUES('backup','exporting',0)",
-  );
-  expect((await expireSnapshotImages(fixture.context)).completed).toEqual([]);
-  expect(fixture.images.objects.has("baselines/old/original")).toBe(true);
-  database.connection.exec("UPDATE operations_backups SET state='failed'");
   await fixture.images.put("baselines/old/other", "another-object");
   fixture.context.budget.objectsPerStep = 1;
   vi.spyOn(fixture.images, "delete").mockRejectedValueOnce(new Error("Transient storage failure."));
@@ -164,4 +162,31 @@ it("pages past pinned closed runs without releasing their comparison evidence", 
       .prepare("SELECT references_released_at FROM work_retained_runs WHERE id='z-ready'")
       .get(),
   ).toEqual({ references_released_at: fixture.state.time });
+});
+
+it("pages past rooted source baselines and retires a later unrooted source", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await snapshot(database, fixture, "a-rooted");
+  await snapshot(database, fixture, "z-expired");
+  database.connection.exec(
+    "UPDATE visonaut_snapshots SET storage_mode='source'; INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('a-rooted','manual','keep'); INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('z-expired','promotion:z-expired','baseline')",
+  );
+  fixture.context.budget.tasksPerStep = 1;
+  const first = await retireSourceBaselines(fixture.context);
+  expect(first.deferred).toEqual(["a-rooted"]);
+  expect(first.hasMore).toBe(true);
+  expect((await retireSourceBaselines(fixture.context)).completed).toEqual(["z-expired"]);
+  expect((await retireSourceBaselines(fixture.context)).hasMore).toBe(false);
+  expect(
+    database.connection
+      .prepare("SELECT run_id FROM work_retention_pins WHERE owner='promotion:z-expired'")
+      .get(),
+  ).toBeUndefined();
+  expect(
+    database.connection
+      .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id='a-rooted'")
+      .get(),
+  ).toEqual({ reference_eligible: 1 });
+  expect(fixture.images.objects.has("runs/z-expired/original")).toBe(true);
 });

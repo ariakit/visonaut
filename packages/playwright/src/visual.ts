@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { digestJson, identityKey, sha256, validateKey, validateProfile } from "@visonaut/protocol";
@@ -9,8 +12,6 @@ import { PNG } from "pngjs";
 export interface EnvironmentProfile {
   osImageDigest: string;
   fontsDigest: string;
-  comparisonPolicyDigest: string;
-  comparisonEngineVersion: string;
 }
 
 export interface VisualOptions {
@@ -21,9 +22,11 @@ export interface VisualOptions {
   profile?: EnvironmentProfile;
   /** Total capture deadline, including fonts and consecutive stable images. */
   timeout?: number;
-  screenshot?: Pick<
-    PageScreenshotOptions,
-    "fullPage" | "clip" | "omitBackground" | "scale" | "caret" | "style"
+  screenshot?: Partial<
+    Pick<
+      PageScreenshotOptions,
+      "fullPage" | "clip" | "omitBackground" | "scale" | "caret" | "style"
+    >
   >;
 }
 
@@ -32,7 +35,7 @@ export interface VisualBatchOptions extends Pick<VisualOptions, "variant" | "pro
   items: Array<
     Pick<VisualOptions, "item" | "name"> & { clip: NonNullable<PageScreenshotOptions["clip"]> }
   >;
-  screenshot?: Pick<PageScreenshotOptions, "omitBackground" | "caret" | "style">;
+  screenshot?: Partial<Pick<PageScreenshotOptions, "omitBackground" | "caret" | "style">>;
 }
 
 export interface CaptureAttachment {
@@ -65,12 +68,7 @@ function getEnvironmentProfile(options: VisualOptions, info: TestInfo): Environm
   if (!profile || typeof profile !== "object") {
     throw new Error("Invalid Visonaut environment profile");
   }
-  for (const key of [
-    "osImageDigest",
-    "fontsDigest",
-    "comparisonPolicyDigest",
-    "comparisonEngineVersion",
-  ]) {
+  for (const key of ["osImageDigest", "fontsDigest"]) {
     if (!Object.hasOwn(profile, key)) {
       throw new Error(`Missing Visonaut environment profile ${key}`);
     }
@@ -79,19 +77,13 @@ function getEnvironmentProfile(options: VisualOptions, info: TestInfo): Environm
     !("osImageDigest" in profile) ||
     typeof profile.osImageDigest !== "string" ||
     !("fontsDigest" in profile) ||
-    typeof profile.fontsDigest !== "string" ||
-    !("comparisonPolicyDigest" in profile) ||
-    typeof profile.comparisonPolicyDigest !== "string" ||
-    !("comparisonEngineVersion" in profile) ||
-    typeof profile.comparisonEngineVersion !== "string"
+    typeof profile.fontsDigest !== "string"
   ) {
     throw new Error("Visonaut environment profile values must be strings");
   }
   return {
     osImageDigest: profile.osImageDigest,
     fontsDigest: profile.fontsDigest,
-    comparisonPolicyDigest: profile.comparisonPolicyDigest,
-    comparisonEngineVersion: profile.comparisonEngineVersion,
   };
 }
 
@@ -469,7 +461,12 @@ async function attachCapture({
     imageAttachment,
     ordinal,
   };
-  await info.attach(imageAttachment, { body: bytes, contentType: "image/png" });
+  const imageDirectory = await mkdtemp(path.join(tmpdir(), "visonaut-attachment-"));
+  const imagePath = path.join(imageDirectory, `${attachment.image.digest}.png`);
+  await writeFile(imagePath, bytes, { mode: 0o600 });
+  // attach({ path }) copies into test-results and extends artifact retention.
+  // The reporter owns this private attempt file and deletes it after reading.
+  info.attachments.push({ name: imageAttachment, path: imagePath, contentType: "image/png" });
   await info.attach(`visonaut-capture-${ordinal}`, {
     body: Buffer.from(JSON.stringify(attachment)),
     contentType: CAPTURE_CONTENT_TYPE,

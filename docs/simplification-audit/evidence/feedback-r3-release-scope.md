@@ -1,0 +1,11 @@
+# Changesets release-scope check
+
+Checked on 29 September 2026 against Visonaut commit `7e23173d11b1081f55021ef498e4c5c6d6a08131` and installed Changesets CLI 3.0.3. This is a disposable design probe, not a production release.
+
+The [current manual release workflow](https://github.com/ariakit/visonaut/blob/7e23173d11b1081f55021ef498e4c5c6d6a08131/.github/workflows/release.yml#L3-L18) lets the operator choose `both`, `visonaut`, or `@visonaut/playwright` and `latest` or `next`. It checks the selected main commit, reuses the verified tarball artifact, and publishes under an npm environment with `id-token: write`. The [CLI depends on the adapter](https://github.com/ariakit/visonaut/blob/7e23173d11b1081f55021ef498e4c5c6d6a08131/packages/cli/package.json#L35-L45).
+
+Plain `changeset publish` has `--tag` and `--no-git-tag`, but no package filter. Its publish plan includes every unpublished public workspace package. In a disposable Visonaut-like two-package workspace, `ignore: []` planned adapter then CLI; ignoring the CLI planned adapter only. Ignoring the adapter while the CLI remained eligible failed Changesets config validation because the CLI depends on the skipped adapter. The probe used mocked registry versions and made no package or network changes. A dispatch-time `package` selector therefore cannot be preserved by one simple ignore rule.
+
+Changesets skips a local version that already exists in the registry without checking whether it has the requested `latest` or `next` tag. The current publisher fails on a mismatched existing tag. A source-publication workflow needs a small preflight and result check for its selected tag so this no-op does not appear successful. Keep the main/repository/source-commit gate, serial release, package install/content smoke checks, npm environment, and OIDC identity.
+
+O10 separates the manual package-scope choice from O09's selected source-publication method. Removing the package dropdown lets Changesets publish its full eligible plan. Keeping all three choices needs a separate release preparation or custom publication boundary; it adds code and tests. The official [Changesets CLI guide](https://changesets.dev/guide/cli) documents the publish flags and the separate pack mode.

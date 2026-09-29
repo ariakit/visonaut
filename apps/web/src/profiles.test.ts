@@ -1,4 +1,9 @@
-import { canonicalJson, digestJson, type CaptureProfile } from "@visonaut/protocol";
+import {
+  canonicalJson,
+  digestJson,
+  digestRenderingProfile,
+  type CaptureProfile,
+} from "@visonaut/protocol";
 import { describe, expect, it, vi } from "vitest";
 import { TestDatabase, captured, context } from "./operations/test-fixtures.ts";
 import {
@@ -147,7 +152,11 @@ describe("capture profile storage", () => {
     ).toHaveLength(1);
     await storeCaptureProfiles(database, [{ digest, profile }]);
     expect(database.connection.prepare("SELECT * FROM visonaut_capture_profiles").all()).toEqual([
-      { digest, profile_json: canonicalJson(profile) },
+      {
+        digest,
+        profile_json: canonicalJson(profile),
+        rendering_digest: await digestRenderingProfile(profile),
+      },
     ]);
   });
 
@@ -167,7 +176,7 @@ describe("capture profile storage", () => {
     const changed = { ...profile, locale: "pt-BR" };
     const wrongContent = canonicalJson(changed);
     database.connection
-      .prepare("INSERT INTO visonaut_capture_profiles VALUES(?,?)")
+      .prepare("INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?)")
       .run(digest, wrongContent);
     await expect(
       storeCaptureProfiles(database, [
@@ -176,7 +185,7 @@ describe("capture profile storage", () => {
       ]),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(database.connection.prepare("SELECT * FROM visonaut_capture_profiles").all()).toEqual([
-      { digest, profile_json: wrongContent },
+      { digest, profile_json: wrongContent, rendering_digest: null },
     ]);
   });
 
@@ -231,7 +240,7 @@ describe("capture profile storage", () => {
     };
     await expect(hydrateCaptureMetadata(database, [capture])).rejects.toThrow("is unavailable");
     database.connection
-      .prepare("INSERT INTO visonaut_capture_profiles VALUES(?,?)")
+      .prepare("INSERT INTO visonaut_capture_profiles(digest,profile_json) VALUES(?,?)")
       .run(digest, canonicalJson({ ...profile, locale: "pt-BR" }));
     await expect(hydrateCaptureMetadata(database, [capture])).rejects.toThrow(
       "does not match its digest",

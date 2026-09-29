@@ -1,0 +1,136 @@
+{
+  "sourceFingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+  "checks": [
+    {
+      "id": "pr-gate-fixes-whole-check",
+      "status": "passed",
+      "sourceFingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+      "commandScope": "pnpm check",
+      "counts": {
+        "unit": 898,
+        "unitFiles": 64,
+        "browser": 102
+      },
+      "scope": "Full integrated lint/format, workspace types, build, unit, and browser checks after both formal round 1 repairs.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/pr-gate-check.log",
+        "bytes": 37070,
+        "sha256": "4358c838d2cc977599c90f4e553b2973b2aeef937ce82e2b71791f37e61169d7"
+      },
+      "originalPrivatePath": "/tmp/visonaut-pr-gate-fixes-check.log"
+    },
+    {
+      "id": "final-whole-check",
+      "status": "passed",
+      "commandScope": "pnpm check",
+      "counts": {
+        "unit": 895,
+        "unitFiles": 64,
+        "browser": 102
+      },
+      "scope": "Preserved history-corrected checkpoint before the canonical webhook and closed-detail cleanup repairs.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/final-check.log",
+        "bytes": 37291,
+        "sha256": "ff626c7e09cefc320bf1516b025a13426e1b8bcebe97712033a103fb12056276"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-history-check-green.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "release-deployment-guards",
+      "status": "passed",
+      "commandScope": "pnpm test:release-guards",
+      "counts": {
+        "node": 16
+      },
+      "scope": "Unchanged guard sources; no registry publication or deployment.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/release-guards.log",
+        "bytes": 1639,
+        "sha256": "0a1695e84c8535faeb7b0835432e952a4b3b9211432123e876d36c8e0974bf20"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-release-guards.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "public-package-smoke",
+      "status": "passed",
+      "commandScope": "pnpm check:packages",
+      "counts": {},
+      "scope": "Unchanged public package sources; local @visonaut/playwright@0.4.0 and visonaut@0.4.0 archive/install smoke.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/package-smoke.log",
+        "bytes": 668,
+        "sha256": "ab59922bd2d70688150467f53a0e2adac51119a0e1a014693ad89856d1d13072"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-package-smoke.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "diagnostic-container-server",
+      "status": "passed",
+      "commandScope": "pnpm test:container",
+      "counts": {
+        "node": 3
+      },
+      "scope": "Unchanged diagnostic source; native server only. Docker image check is unrun.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/container-server.log",
+        "bytes": 407,
+        "sha256": "217822b5bfe8163f185553cef1e43206f92c5f5f80cb72ec046b5aa3d8968265"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-container-tests.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "current-native-routes",
+      "status": "passed",
+      "commandScope": "on-demand local-routes.mjs + run-routes.mjs",
+      "counts": {
+        "paths": 12
+      },
+      "scope": "Dated native writable route measurement before formal gate repairs; signed local session, ephemeral native D1/R2, real save and Undo, fixture GitHub responses. No rerun against the full current build is claimed.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/routes-after.log",
+        "bytes": 340,
+        "sha256": "dc78707a6aa796477e965347b47b7c2dc7288436673c4cc02e8f72aa498a5a65"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-history-routes-perf.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "synthetic-scale",
+      "status": "passed",
+      "commandScope": "on-demand production scale fixture",
+      "counts": {
+        "mounts": 9,
+        "excludedWarmups": 3,
+        "cachedTransitions": 36
+      },
+      "scope": "Predates history-only repair; all13 measured UI and fixture/probe inputs still match current source.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/scale-after.log",
+        "bytes": 1005,
+        "sha256": "de97f572a6477340912a0d2f3e0a5de9209dfa8f2f09596caf922f58a826d4ac"
+      },
+      "originalPrivatePath": "/tmp/visonaut-final-scale-perf.log",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    },
+    {
+      "id": "final-handoff-root-verification",
+      "status": "passed",
+      "validatedAt": "2026-09-29T21:17:31.198909+00:00",
+      "commandScope": "pnpm lint; git diff --check; source/evidence/decision/link validation",
+      "counts": {
+        "sourceFiles": 559,
+        "recordedHashEntries": 671,
+        "privateSnapshots": 10,
+        "selectedDecisionLabels": 45,
+        "localLinks": 273
+      },
+      "scope": "Root checked the final docs and evidence after integration. Source fingerprint and frozen audit are unchanged. This does not establish an external rollout or the unavailable Docker image build.",
+      "sourceFingerprint": "6586241656e57326ed6139e6d8903f2d843e004a6240adc1cb007cf4557f52de"
+    }
+  ]
+}

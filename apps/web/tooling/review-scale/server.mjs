@@ -12,7 +12,13 @@ const files = new Map([
 ]);
 for (const name of readdirSync(new URL("dist/assets/", import.meta.url))) {
   files.set(`/assets/${name}`, {
-    type: name.endsWith(".js") ? "text/javascript" : "text/css",
+    type: name.endsWith(".js")
+      ? "text/javascript"
+      : name.endsWith(".css")
+        ? "text/css"
+        : name.endsWith(".svg")
+          ? "image/svg+xml"
+          : "application/octet-stream",
     data: readFileSync(new URL(`dist/assets/${name}`, import.meta.url)),
   });
 }

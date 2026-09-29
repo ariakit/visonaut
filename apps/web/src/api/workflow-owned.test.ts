@@ -1,3 +1,5 @@
+import { nativeTestStorage } from "./test-storage.ts";
+import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { readFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
 import { validateImage } from "@visonaut/compare";
@@ -9,15 +11,13 @@ import {
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
-import { createGitHubClient, issueIngestCapability } from "@visonaut/security";
-import { archiveEligibilitySql, claimExpiredRun, closedRunRetentionMs } from "@visonaut/service";
+import { issueIngestCapability } from "@visonaut/security";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { apiContext, type ApiBindings } from "./context.js";
 import { handleApi } from "./index.js";
 import { integer, object } from "./input.js";
-import { settlePreRunWorkflow } from "./pre-run.js";
 import { recordEvent } from "../operations/common.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
@@ -34,12 +34,7 @@ import {
   materializeWorkflowRun,
   reconcileStagedWorkflows,
 } from "./workflow-materialize.js";
-import {
-  expireStagedAttempts,
-  stagedAttemptRetentionMs,
-  stagedMaterializationLeaseMs,
-} from "./workflow-retention.js";
-import carried from "./fixtures/failed-job-rerun.json";
+import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-retention.js";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -73,43 +68,7 @@ const strictPolicyDigest = "395f2b596a2e9cf4f8ce86b8643c48856f326773becf337cee6e
 let identity = 1000;
 
 beforeAll(async () => {
-  const sources = [
-    new URL(
-      "../../../apps/web/migrations/0001_service.sql",
-      import.meta.resolve("@visonaut/service"),
-    ),
-    new URL("../work-schema.sql", import.meta.resolve("@visonaut/service")),
-    new URL("../migrations/0001_auth.sql", import.meta.resolve("@visonaut/security")),
-    new URL("../../migrations/0004_ingest.sql", import.meta.url),
-    new URL(
-      "../../../apps/web/migrations/0006_acceptance.sql",
-      import.meta.resolve("@visonaut/service"),
-    ),
-    new URL("../../migrations/0005_operations.sql", import.meta.url),
-    new URL("../../migrations/0007_backup_inventory.sql", import.meta.url),
-    new URL("../../migrations/0008_capture_profiles.sql", import.meta.url),
-    new URL("../../migrations/0009_retention_history.sql", import.meta.url),
-    new URL("../../migrations/0010_run_history.sql", import.meta.url),
-    new URL("../../migrations/0011_backup_groups.sql", import.meta.url),
-    new URL("../../migrations/0012_historical_comparisons.sql", import.meta.url),
-    new URL("../../migrations/0013_promotion_scans.sql", import.meta.url),
-    new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
-    new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
-    new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
-    new URL("../../migrations/0019_staged_workflows.sql", import.meta.url),
-    new URL("../../migrations/0020_pre_run_checks.sql", import.meta.url),
-    new URL("../../migrations/0021_staged_image_reuse.sql", import.meta.url),
-  ];
-  for (const source of sources) {
-    const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
-    let query = "";
-    for (const line of sql.split("\n")) {
-      query += `${line}\n`;
-      if (!line.trimEnd().endsWith(";")) continue;
-      await database.prepare(query).run();
-      query = "";
-    }
-  }
+  await applyTestMigrations(database);
 });
 afterAll(async () => runtime.dispose());
 
@@ -119,7 +78,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
   const repositoryId = String(identity);
   const runId = crypto.randomUUID();
   const jobId = String(identity + 10_000);
-  const shardKey = shardKeyOverride ?? `custom-shard-${identity}`;
+  const shardKey = shardKeyOverride ?? "combined";
   const sourceHead = identity.toString(16).padStart(40, "d");
   const workflowOwned = {
     callerWorkflowPath: ".github/workflows/visonaut.yml",
@@ -143,8 +102,6 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
     forcedColors: "none",
     animationPolicy: "disabled",
     captureOptions: { fullPage: false },
-    comparisonPolicyDigest: strictPolicyDigest,
-    comparisonEngineVersion: "1",
   };
   const profileDigest = await digestJson(profile);
   const tests = [
@@ -193,6 +150,17 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
         },
       },
     ],
+    captureSources: [
+      {
+        shardKey: "linux",
+        workflowAttempt: 1,
+        jobId: String(Number(jobId) + 1),
+        jobName: `${workflowOwned.captureJobPrefix}linux`,
+        manifestDigest: "c".repeat(64),
+        artifactId: String(identity + 50000),
+        artifactName: `visonaut-capture-${identity}-1-linux`,
+      },
+    ],
     discovery: {
       executorDigest,
       configurationDigest: "b".repeat(64),
@@ -234,6 +202,12 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
         Date.now(),
       )
       .run();
+    await database
+      .prepare(
+        "UPDATE pre_run_checks SET plan_visual_required=1,plan_reported_at=?,plan_job_id='12345',plan_workflow_sha=? WHERE check_id=?",
+      )
+      .bind(Date.now(), workflowPin, checkId)
+      .run();
     githubResponses.set(`/repos/ariakit/ariakit/check-runs/${checkId}`, {
       id: Number(checkId),
       name: "Visonaut",
@@ -272,7 +246,9 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       jobId,
       jobId,
       shardKey,
-      `${workflowOwned.captureJobPrefix}${shardKey}`,
+      shardKey === "combined"
+        ? workflowOwned.submitJobName
+        : `${workflowOwned.captureJobPrefix}${shardKey}`,
       JSON.stringify(verified),
       Date.now(),
     )
@@ -315,12 +291,8 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       },
     },
     webhookSecret: "unused",
-    oidcAudience: "https://preview.example/ingest",
     repositoryOwnerId: "5",
-    trustedPlanPath: ".visonaut/plan.json",
     workflowOwned,
-    reusableWorkflowRef: workflowOwned.reusableWorkflowRef,
-    reusableWorkflowSha: workflowPin,
     trustedExecutorDigest: executorDigest,
     comparisonMaxAttempts: 3,
     limits: {
@@ -335,8 +307,8 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
   };
   const context = apiContext({
     database,
-    images,
-    quarantine,
+    images: nativeTestStorage(images),
+    quarantine: nativeTestStorage(quarantine),
     configuration,
     operations: { async send() {} },
     comparator: {
@@ -804,7 +776,7 @@ it("binds the reuse challenge to its staged run and manifest", async () => {
 
 async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifestDigest: string) {
   const base = `/repos/ariakit/ariakit/actions/runs/${test.manifest.run.workflowRunId}`;
-  const submitJobId = String(Number(test.jobId) + 1);
+  const submitJobId = test.shardKey === "combined" ? test.jobId : String(Number(test.jobId) + 1);
   const started = "2026-09-22T14:56:33Z";
   const run = {
     id: Number(test.manifest.run.workflowRunId),
@@ -816,8 +788,8 @@ async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifes
     path: test.context.configuration.workflowOwned?.callerWorkflowPath,
   };
   const capture = {
-    id: Number(test.jobId),
-    name: `${test.context.configuration.workflowOwned?.captureJobPrefix}${test.shardKey}`,
+    id: Number(test.jobId) + 1,
+    name: `${test.context.configuration.workflowOwned?.captureJobPrefix}linux`,
     run_id: Number(test.manifest.run.workflowRunId),
     run_attempt: 1,
     head_sha: test.verified.sourceHead,
@@ -832,6 +804,16 @@ async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifes
     name: test.context.configuration.workflowOwned?.submitJobName,
     started_at: "2026-09-22T14:58:00Z",
   };
+  const source = test.manifest.captureSources?.[0];
+  if (!source) {
+    throw new Error("Expected verified capture source");
+  }
+  test.githubResponses.set(`/repos/ariakit/ariakit/actions/artifacts/${source.artifactId}`, {
+    id: Number(source.artifactId),
+    name: source.artifactName,
+    expired: false,
+    workflow_run: { id: Number(test.manifest.run.workflowRunId) },
+  });
   test.githubResponses.set(base, run);
   test.githubResponses.set(`${base}/attempts/1`, run);
   test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
@@ -870,8 +852,8 @@ async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifes
 function retention(now: number, objectsPerStep: number) {
   return {
     database,
-    images,
-    quarantine,
+    images: nativeTestStorage(images),
+    quarantine: nativeTestStorage(quarantine),
     budget: { tasksPerStep: 10, objectsPerStep, leaseMilliseconds: 30_000 },
     now: () => now,
   };
@@ -946,275 +928,6 @@ describe("workflow-owned upload staging", () => {
     );
   });
 
-  it("limits a second workflow blob to Ariakit's direct app workflow", async () => {
-    const test = await fixture();
-    const configuration = test.context.configuration.workflowOwned;
-    if (!configuration) {
-      throw new Error("Expected workflow configuration.");
-    }
-    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
-    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
-    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
-    configuration.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
-    expect(workflowConfiguration(test.context)).toBe(configuration);
-    configuration.additionalTrustedWorkflowBlobSha = pin;
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.additionalTrustedWorkflowBlobSha = "not-a-sha";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
-    configuration.additionalTrustedExecutorDigest = "d".repeat(64);
-    expect(workflowConfiguration(test.context)).toBe(configuration);
-    configuration.additionalTrustedExecutorDigest = executorDigest;
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.additionalTrustedExecutorDigest = "invalid";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.additionalTrustedExecutorDigest = "d".repeat(64);
-    configuration.callerWorkflowPath = ".github/workflows/visonaut.yml";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
-    test.context.configuration.github.repository = "ariakit/other";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-  });
-
-  it("limits one successor blob to the approved direct workflow transition", async () => {
-    const test = await fixture();
-    const configuration = test.context.configuration.workflowOwned;
-    if (!configuration) {
-      throw new Error("Expected workflow configuration.");
-    }
-    const additionalBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
-    const successorBlob = "4aac43e3039b578913e8a603c10ca47009493ef5";
-    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
-    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
-    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
-    configuration.additionalTrustedWorkflowBlobSha = additionalBlob;
-    configuration.transitionTrustedWorkflowBlobSha = successorBlob;
-    expect(workflowConfiguration(test.context)).toBe(configuration);
-    configuration.transitionTrustedWorkflowBlobSha = pin;
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.transitionTrustedWorkflowBlobSha = additionalBlob;
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.transitionTrustedWorkflowBlobSha = "not-a-sha";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.transitionTrustedWorkflowBlobSha = successorBlob;
-    configuration.additionalTrustedWorkflowBlobSha = undefined;
-    expect(() => workflowConfiguration(test.context)).toThrow();
-    configuration.additionalTrustedWorkflowBlobSha = additionalBlob;
-    test.context.configuration.github.repository = "ariakit/other";
-    expect(() => workflowConfiguration(test.context)).toThrow();
-  });
-
-  it("redeems a combined transfer key in the named Submit job", async () => {
-    const test = await fixture("combined");
-    const configuration = test.context.configuration.workflowOwned;
-    if (!configuration) throw new Error("Expected workflow configuration.");
-    configuration.callerWorkflowPath = ".github/workflows/ci.yml";
-    configuration.trustedWorkflowPath = ".github/workflows/app.yml";
-    configuration.captureJobPrefix = "App / upload / ";
-    configuration.submitJobName = "App / Visual / Submit";
-    configuration.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${configuration.reusableWorkflowSha}`;
-    const testedSha = test.manifest.run.testedSha;
-    const runId = test.manifest.run.workflowRunId;
-    const base = `/repos/ariakit/ariakit/actions/runs/${runId}`;
-    const captureJobId = String(Number(test.jobId) + 1);
-    const run = {
-      id: Number(runId),
-      run_attempt: 1,
-      repository: { id: Number(test.manifest.run.repositoryId), owner: { id: 5 } },
-      event: "push",
-      path: configuration.callerWorkflowPath,
-      status: "in_progress",
-      conclusion: null as string | null,
-      head_sha: testedSha,
-      head_branch: "main",
-    };
-    const jobs = [
-      {
-        id: Number(captureJobId),
-        run_id: Number(runId),
-        run_attempt: 1,
-        name: `${configuration.captureJobPrefix}linux`,
-        check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${captureJobId}`,
-        status: "in_progress",
-        conclusion: null as string | null,
-      },
-      {
-        id: Number(test.jobId),
-        run_id: Number(runId),
-        run_attempt: 1,
-        name: configuration.submitJobName,
-        check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
-        status: "in_progress",
-        conclusion: null as string | null,
-      },
-    ];
-    test.githubResponses.set(base, run);
-    test.githubResponses.set(`${base}/attempts/1`, run);
-    test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, { jobs });
-    test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
-      object: { sha: testedSha },
-    });
-    test.githubResponses.set(
-      `/repos/ariakit/ariakit/contents/${configuration.trustedWorkflowPath}?ref=${testedSha}`,
-      { type: "file", path: configuration.trustedWorkflowPath, sha: pin },
-    );
-    await test.context.database
-      .prepare(
-        "UPDATE pre_run_checks SET state='pending',check_id=NULL,workflow_run_id=NULL,workflow_attempt=NULL WHERE tested_sha=?",
-      )
-      .bind(testedSha)
-      .run();
-    const checkPath = "/repos/ariakit/ariakit/check-runs";
-    const checkId = String(Number(test.jobId) + 20_000);
-    const checkListPath = `/repos/ariakit/ariakit/commits/${testedSha}/check-runs?check_name=Visonaut&filter=all&per_page=100&page=1`;
-    test.githubResponses.set(checkListPath, { check_runs: [] });
-    const githubFetch = test.context.configuration.github.fetch;
-    let checkCreations = 0;
-    let createdCheck: Record<string, unknown> | undefined;
-    test.context.configuration.github.fetch = async (input, init) => {
-      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-      if (url.pathname === checkPath && init?.method === "POST") {
-        checkCreations += 1;
-        createdCheck = {
-          ...JSON.parse(String(init.body)),
-          id: Number(checkId),
-          app: { id: 123 },
-        };
-        test.githubResponses.set(`${checkPath}/${checkId}`, createdCheck);
-        test.githubResponses.set(checkListPath, { check_runs: [createdCheck] });
-        return Response.json(createdCheck, { status: 201 });
-      }
-      if (url.pathname === `${checkPath}/${checkId}` && init?.method === "PATCH") {
-        if (!createdCheck) throw new Error("The check was not created.");
-        Object.assign(createdCheck, JSON.parse(String(init.body)));
-        return Response.json(createdCheck);
-      }
-      if (!githubFetch) throw new Error("The GitHub fixture is unavailable.");
-      return githubFetch(input, init);
-    };
-    const keys = await generateKeyPair("RS256");
-    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "direct-key", alg: "RS256" };
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
-        throw new Error("Unexpected test network request");
-      }
-      return Response.json({ keys: [jwk] });
-    });
-    try {
-      test.context.transferPrivateKey = privateKey;
-      const signed = async (jobId: string) =>
-        new SignJWT({
-          repository: "ariakit/ariakit",
-          repository_id: test.manifest.run.repositoryId,
-          repository_owner_id: "5",
-          run_id: runId,
-          run_attempt: "1",
-          sha: testedSha,
-          check_run_id: jobId,
-          event_name: "push",
-          ref: "refs/heads/main",
-          workflow_ref: `ariakit/ariakit/${configuration.callerWorkflowPath}@refs/heads/main`,
-          job_workflow_ref: `ariakit/ariakit/${configuration.trustedWorkflowPath}@refs/heads/main`,
-          job_workflow_sha: testedSha,
-        })
-          .setProtectedHeader({ alg: "RS256", kid: "direct-key" })
-          .setIssuer("https://token.actions.githubusercontent.com")
-          .setAudience("https://preview.example/transfer-key")
-          .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
-          .setIssuedAt()
-          .setNotBefore("0s")
-          .setExpirationTime("5m")
-          .setJti(crypto.randomUUID())
-          .sign(keys.privateKey);
-      const captureToken = await signed(captureJobId);
-      const capture = await handleApi(
-        new Request("https://preview.example/v1/transfer/private-key", {
-          method: "POST",
-          headers: { authorization: `Bearer ${captureToken}`, "content-type": "application/json" },
-          body: JSON.stringify({
-            shardKey: "linux",
-            workflowRunId: runId,
-            workflowAttempt: 1,
-            testedSha,
-          }),
-        }),
-        test.context,
-        { waitUntil() {} },
-      );
-      expect(capture?.status).toBe(200);
-      expect(checkCreations).toBe(0);
-      const token = await signed(test.jobId);
-      const response = await handleApi(
-        new Request("https://preview.example/v1/transfer/private-key", {
-          method: "POST",
-          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-          body: JSON.stringify({
-            shardKey: test.shardKey,
-            workflowRunId: runId,
-            workflowAttempt: 1,
-            testedSha,
-          }),
-        }),
-        test.context,
-        { waitUntil() {} },
-      );
-      expect(response?.status).toBe(200);
-      expect(await response?.text()).toBe(privateKey);
-      expect(checkCreations).toBe(1);
-      expect(createdCheck).toMatchObject({
-        name: "Visonaut",
-        head_sha: testedSha,
-        status: "in_progress",
-      });
-      expect(
-        await test.context.database
-          .prepare("SELECT state,check_id,workflow_run_id FROM pre_run_checks WHERE tested_sha=?")
-          .bind(testedSha)
-          .first(),
-      ).toEqual({ state: "active", check_id: checkId, workflow_run_id: runId });
-      const retry = await handleApi(
-        new Request("https://preview.example/v1/transfer/private-key", {
-          method: "POST",
-          headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-          body: JSON.stringify({
-            shardKey: test.shardKey,
-            workflowRunId: runId,
-            workflowAttempt: 1,
-            testedSha,
-          }),
-        }),
-        test.context,
-        { waitUntil() {} },
-      );
-      expect(retry?.status).toBe(200);
-      expect(await retry?.text()).toBe(privateKey);
-      expect(checkCreations).toBe(1);
-      run.status = "completed";
-      run.conclusion = "failure";
-      const submitJob = jobs.find((job) => job.id === Number(test.jobId));
-      if (!submitJob) {
-        throw new Error("The Submit job is unavailable.");
-      }
-      submitJob.status = "completed";
-      submitJob.conclusion = "failure";
-      await settlePreRunWorkflow(
-        test.context,
-        await createGitHubClient(test.context.configuration.github),
-        {
-          deliveryId: crypto.randomUUID(),
-          event: "workflow_run",
-          payloadDigest: "digest",
-          payload: { action: "completed", workflow_run: run },
-          receivedAt: Date.now(),
-        },
-      );
-      expect(createdCheck).toMatchObject({ status: "completed", conclusion: "failure" });
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
   it("checks D1 admission once for a new signed attempt, while immutable replays stay available", async () => {
     const test = await fixture();
     let admissionChecks = 0;
@@ -1223,22 +936,57 @@ describe("workflow-owned upload staging", () => {
       if (admissionChecks === 2) throw new Error("D1 admission denied");
       return { maximumActiveRuns: 2 };
     };
-    const first = {
-      ...test.verified,
-      workflowRunId: String(Number(test.verified.workflowRunId) + 100_000),
-    };
+    const first = test.verified;
+    await database
+      .prepare("DELETE FROM ingest_staged_bundles WHERE run_id=?")
+      .bind(test.runId)
+      .run();
+    await database.prepare("DELETE FROM ingest_staged_runs WHERE id=?").bind(test.runId).run();
     const run = await reserveVerifiedStagedRun(test.context, first, sourceDigest);
     expect((await reserveVerifiedStagedRun(test.context, first, sourceDigest)).id).toBe(run.id);
     expect(admissionChecks).toBe(1);
+    const second = await fixture();
+    await database
+      .prepare("DELETE FROM ingest_staged_bundles WHERE run_id=?")
+      .bind(second.runId)
+      .run();
+    await database.prepare("DELETE FROM ingest_staged_runs WHERE id=?").bind(second.runId).run();
+    second.context.admission = test.context.admission;
     await expect(
-      reserveVerifiedStagedRun(
-        test.context,
-        { ...first, workflowRunId: String(Number(first.workflowRunId) + 1) },
-        sourceDigest,
-      ),
+      reserveVerifiedStagedRun(second.context, second.verified, sourceDigest),
     ).rejects.toThrow("D1 admission denied");
     expect(admissionChecks).toBe(2);
   });
+
+  it.each(["missing", "not-required", "failed"])(
+    "blocks staging and materialization after a %s trusted Plan",
+    async (kind) => {
+      const test = await fixture();
+      const { manifestDigest } = await stage(test);
+      await terminalGitHub(test, manifestDigest);
+      await database
+        .prepare("UPDATE pre_run_checks SET plan_visual_required=?,state=? WHERE workflow_run_id=?")
+        .bind(
+          kind === "missing" ? null : kind === "not-required" ? 0 : 1,
+          kind === "failed" ? "failed" : "active",
+          test.manifest.run.workflowRunId,
+        )
+        .run();
+      await expect(
+        reserveVerifiedStagedRun(test.context, test.verified, sourceDigest),
+      ).rejects.toMatchObject({ code: "plan_unverified", status: 409 });
+      await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toMatchObject({
+        code: "plan_unverified",
+        status: 409,
+      });
+      expect(
+        await database
+          .prepare("SELECT count(*) AS count FROM visonaut_runs WHERE id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual({ count: 0 });
+    },
+  );
 
   it("atomically caps unmaterialized originals across concurrent declarations and permits replay", async () => {
     const left = await fixture();
@@ -1359,65 +1107,11 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
-  it("materializes the second exact executor digest during the direct-workflow rollout", async () => {
+  const verifySignedSubmit = async () => {
     const test = await fixture();
-    const workflow = test.context.configuration.workflowOwned;
-    if (!workflow) throw new Error("Expected workflow configuration.");
-    workflow.callerWorkflowPath = ".github/workflows/ci.yml";
-    workflow.trustedWorkflowPath = ".github/workflows/app.yml";
-    workflow.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${pin}`;
-    workflow.additionalTrustedWorkflowBlobSha = "c86f2dc5370fe07030a27af87979072f86afa8de";
-    workflow.additionalTrustedExecutorDigest = "d".repeat(64);
-    await database
-      .prepare(
-        "UPDATE ingest_staged_runs SET caller_workflow_path = ?, reusable_workflow_ref = ? WHERE id = ?",
-      )
-      .bind(workflow.callerWorkflowPath, workflow.reusableWorkflowRef, test.runId)
-      .run();
-    const untrusted = structuredClone(test.manifest);
-    untrusted.discovery!.executorDigest = "f".repeat(64);
-    await expect(
-      declareStaged(test.post(untrusted), test.context, test.runId, test.shardKey),
-    ).rejects.toMatchObject({ code: "manifest_provenance", status: 403 });
-    test.manifest.discovery!.executorDigest = workflow.additionalTrustedExecutorDigest;
-    const { manifestDigest } = await stage(test);
-    await terminalGitHub(test, manifestDigest);
-    expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
-    const provenance = await database
-      .prepare("SELECT verified_json FROM ingest_run_provenance WHERE run_id = ?")
-      .bind(test.runId)
-      .first<{ verified_json: string }>();
-    expect(JSON.parse(provenance!.verified_json).executorDigest).toBe(
-      workflow.additionalTrustedExecutorDigest,
-    );
-  });
-
-  const verifySignedSubmit = async (directAppWorkflow: boolean) => {
-    const oldBlob = "01b78334223b47515b41f63f587308050a5dcdad";
-    const test = await fixture(undefined, directAppWorkflow ? oldBlob : pin);
     const workflowOwned = test.context.configuration.workflowOwned;
     if (!workflowOwned) {
       throw new Error("Expected workflow configuration.");
-    }
-    if (directAppWorkflow) {
-      const newBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
-      workflowOwned.callerWorkflowPath = ".github/workflows/ci.yml";
-      workflowOwned.trustedWorkflowPath = ".github/workflows/app.yml";
-      workflowOwned.reusableWorkflowRef = `ariakit/ariakit/.github/workflows/app.yml@${oldBlob}`;
-      workflowOwned.reusableWorkflowSha = oldBlob;
-      workflowOwned.additionalTrustedWorkflowBlobSha = newBlob;
-      await database
-        .prepare(
-          "UPDATE ingest_staged_runs SET caller_workflow_path=?, reusable_workflow_ref=? WHERE id=?",
-        )
-        .bind(workflowOwned.callerWorkflowPath, workflowOwned.reusableWorkflowRef, test.runId)
-        .run();
-      test.githubResponses.set(
-        `/repos/ariakit/ariakit/contents/${workflowOwned.trustedWorkflowPath}?ref=${test.manifest.run.testedSha}`,
-        { type: "file", path: workflowOwned.trustedWorkflowPath, sha: newBlob },
-      );
-      expect(test.manifest.run.planDigest).toBe(await workflowSourceDigest(oldBlob));
-      expect(test.manifest.run.planDigest).not.toBe(await workflowSourceDigest(newBlob));
     }
     const workflowRunId = test.manifest.run.workflowRunId;
     const submitJobId = String(Number(test.jobId) + 1);
@@ -1478,12 +1172,8 @@ describe("workflow-owned upload staging", () => {
           event_name: "push",
           ref: "refs/heads/main",
           workflow_ref: `ariakit/ariakit/${test.context.configuration.workflowOwned?.callerWorkflowPath}@refs/heads/main`,
-          job_workflow_ref: directAppWorkflow
-            ? `ariakit/ariakit/${workflowOwned.trustedWorkflowPath}@refs/heads/main`
-            : workflowOwned.reusableWorkflowRef,
-          job_workflow_sha: directAppWorkflow
-            ? test.manifest.run.testedSha
-            : workflowOwned.reusableWorkflowSha,
+          job_workflow_ref: workflowOwned.reusableWorkflowRef,
+          job_workflow_sha: workflowOwned.reusableWorkflowSha,
         })
           .setProtectedHeader({ alg: "RS256", kid: "submit-test" })
           .setIssuer("https://token.actions.githubusercontent.com")
@@ -1538,18 +1228,37 @@ describe("workflow-owned upload staging", () => {
         }
         return originalGitHubFetch(input, init);
       };
-      const oldCheck = await database
-        .prepare("SELECT check_id FROM pre_run_checks")
-        .first<{ check_id: string }>();
-      if (oldCheck) {
-        test.githubResponses.delete(`/repos/ariakit/ariakit/check-runs/${oldCheck.check_id}`);
-      }
-      await database.prepare("DELETE FROM pre_run_checks").run();
+      const begin = () =>
+        handleApi(
+          new Request(`https://preview.example/v1/runs/${workflowRunId}/begin`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${submitToken}`, "content-type": "application/json" },
+            body: JSON.stringify({
+              schemaVersion: "1.0",
+              workflowAttempt: 1,
+              testedSha: test.manifest.run.testedSha,
+            }),
+          }),
+          test.context,
+          { waitUntil() {} },
+        );
+      expect((await begin())?.status).toBe(200);
+      await database
+        .prepare("UPDATE pre_run_checks SET plan_visual_required=NULL WHERE workflow_run_id=?")
+        .bind(workflowRunId)
+        .run();
+      const missingPlan = await begin();
+      expect(missingPlan?.status).toBe(409);
+      expect(await missingPlan?.json()).toMatchObject({ error: { code: "plan_unverified" } });
+      await database
+        .prepare("UPDATE pre_run_checks SET plan_visual_required=1 WHERE workflow_run_id=?")
+        .bind(workflowRunId)
+        .run();
       const first = await send(submitToken);
       const replay = await send(submitToken);
       expect(first?.status).toBe(202);
       expect(replay?.status).toBe(202);
-      expect(createdChecks).toBe(1);
+      expect(createdChecks).toBe(0);
       const receipt = object(await first?.json());
       expect(receipt).toMatchObject({ runId: test.runId, state: "submitted" });
       expect(await replay?.json()).toEqual(receipt);
@@ -1571,10 +1280,7 @@ describe("workflow-owned upload staging", () => {
   };
 
   it("accepts a signed submit through the API, replays it, and rejects the capture job", () =>
-    verifySignedSubmit(false));
-
-  it("accepts Submit from the new app blob with the old source digest", () =>
-    verifySignedSubmit(true));
+    verifySignedSubmit());
 
   it("retains inherited upload bytes through the rerun window, then retires them in bounded pages", async () => {
     const test = await fixture();
@@ -1619,122 +1325,6 @@ describe("workflow-owned upload staging", () => {
     ).rejects.toThrow("not found");
   });
 
-  it("keeps materialized source originals until staged reruns expire without blocking history", async () => {
-    const test = await fixture();
-    const { manifestDigest } = await stage(test);
-    await terminalGitHub(test, manifestDigest);
-    const run = await materializeWorkflowRun(test.context, test.runId);
-    expect(run.sealed_at).not.toBeNull();
-    const pinOwner = `workflow-rerun:${test.runId}`;
-    expect(
-      await database
-        .prepare("SELECT reason FROM work_retention_pins WHERE run_id = ? AND owner = ?")
-        .bind(test.runId, pinOwner)
-        .first(),
-    ).toEqual({ reason: "comparison" });
-
-    const closedAt = Date.now();
-    await test.context.service.retireRun({ runId: test.runId, now: closedAt });
-    // This stage began before the other live fixtures in the shared test D1.
-    await database
-      .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")
-      .bind(closedAt - 60 * 60 * 1000, test.runId)
-      .run();
-    const archiveCandidate = await database
-      .prepare(
-        `SELECT id FROM visonaut_runs run WHERE run.id = ? AND ${archiveEligibilitySql("run")}`,
-      )
-      .bind(test.runId)
-      .first<{ id: string }>();
-    expect(archiveCandidate?.id).toBe(test.runId);
-
-    const afterNormalRetention = closedAt + closedRunRetentionMs + 1;
-    expect(
-      await claimExpiredRun(database, {
-        id: test.runId,
-        token: crypto.randomUUID(),
-        now: afterNormalRetention,
-        leaseMs: 30_000,
-      }),
-    ).toBeNull();
-    expect((await images.list({ prefix: `runs/${test.runId}/images/` })).objects).toHaveLength(1);
-
-    const afterRerunWindow = closedAt + stagedAttemptRetentionMs + 1;
-    const pendingRerunId = crypto.randomUUID();
-    await database
-      .prepare(`INSERT INTO ingest_staged_runs
-        (id, repository_id, workflow_run_id, workflow_attempt, tested_sha,
-          workflow_source_digest, caller_workflow_path, reusable_workflow_ref,
-          capture_job_prefix, submit_job_name, verified_json, submit_job_id,
-          submit_check_run_id, submit_verified_json, submitted_at, created_at)
-        SELECT ?, repository_id, workflow_run_id, workflow_attempt + 1, tested_sha,
-          workflow_source_digest, caller_workflow_path, reusable_workflow_ref,
-          capture_job_prefix, submit_job_name, verified_json, '9001', '9001',
-          verified_json, ?, ? FROM ingest_staged_runs WHERE id = ?`)
-      .bind(pendingRerunId, afterRerunWindow - 1, afterRerunWindow - 1, test.runId)
-      .run();
-    await expireStagedAttempts(retention(afterRerunWindow, 1));
-    expect(
-      await database
-        .prepare("SELECT retention_state FROM ingest_staged_runs WHERE id = ?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ retention_state: "live" });
-    expect(
-      await database
-        .prepare("SELECT owner FROM work_retention_pins WHERE run_id = ? AND owner = ?")
-        .bind(test.runId, pinOwner)
-        .first(),
-    ).toEqual({ owner: pinOwner });
-    await database
-      .prepare("UPDATE ingest_staged_runs SET retention_state = 'deleted' WHERE id = ?")
-      .bind(pendingRerunId)
-      .run();
-    let completed = false;
-    for (let page = 0; page < 6; page += 1) {
-      const result = await expireStagedAttempts(retention(afterRerunWindow, 1));
-      if (result.completed.includes(test.runId)) {
-        completed = true;
-        break;
-      }
-      expect(result.deferred).toContain(test.runId);
-    }
-    expect(completed).toBe(true);
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_images WHERE run_id = ?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_manifests WHERE run_id = ?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_bundles WHERE run_id = ?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
-    expect(
-      await database
-        .prepare("SELECT owner FROM work_retention_pins WHERE run_id = ? AND owner = ?")
-        .bind(test.runId, pinOwner)
-        .first(),
-    ).toBeNull();
-    expect((await images.list({ prefix: `runs/${test.runId}/images/` })).objects).toHaveLength(1);
-    expect(
-      await claimExpiredRun(database, {
-        id: test.runId,
-        token: crypto.randomUUID(),
-        now: afterRerunWindow,
-        leaseMs: 30_000,
-      }),
-    ).not.toBeNull();
-  });
-
   it("rejects a changed workflow source and a forged full profile", async () => {
     const test = await fixture();
     const changedSource = structuredClone(test.manifest);
@@ -1765,40 +1355,21 @@ describe("workflow-owned upload staging", () => {
       jobs: [github.capture, missing, github.submit],
     });
     await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
-      "did not stage its bundle",
+      "does not cover every required capture job",
     );
   });
 
-  it("accepts one signed Submit job that stages the combined capture bundle", async () => {
-    const test = await fixture("combined");
-    const configuration = test.context.configuration.workflowOwned;
-    if (!configuration) throw new Error("Expected workflow configuration.");
-    configuration.captureJobPrefix = "App / upload / ";
-    configuration.submitJobName = "App / Visual / Submit";
-    await database
-      .prepare("UPDATE ingest_staged_runs SET capture_job_prefix=?, submit_job_name=? WHERE id=?")
-      .bind(configuration.captureJobPrefix, configuration.submitJobName, test.runId)
-      .run();
-    await database
-      .prepare("UPDATE ingest_staged_bundles SET job_name=? WHERE run_id=?")
-      .bind(configuration.submitJobName, test.runId)
-      .run();
+  it("rejects Submit when the required visual job set disappears", async () => {
+    const test = await fixture();
     const { manifestDigest } = await stage(test);
     const github = await terminalGitHub(test, manifestDigest);
     test.githubResponses.set(`${github.base}/attempts/1/jobs?per_page=100&page=1`, {
       total_count: 1,
-      jobs: [{ ...github.capture, name: configuration.submitJobName }],
+      jobs: [github.submit],
     });
-    await database
-      .prepare(
-        "UPDATE ingest_staged_runs SET submit_job_id=?, submit_check_run_id=?, submit_verified_json=? WHERE id=?",
-      )
-      .bind(test.jobId, test.jobId, JSON.stringify(test.verified), test.runId)
-      .run();
-    const complete = await reconcileWorkflowJobSet(test.context, test.runId);
-    expect(complete.bundles.map(({ key, jobId }) => ({ key, jobId }))).toEqual([
-      { key: test.shardKey, jobId: test.jobId },
-    ]);
+    await expect(reconcileWorkflowJobSet(test.context, test.runId)).rejects.toThrow(
+      "no required capture jobs",
+    );
   });
 
   it("accepts a failed Gate only after pinned capture and submit jobs succeed", async () => {
@@ -1869,7 +1440,7 @@ describe("workflow-owned upload staging", () => {
         jobs.submit,
         {
           ...jobs.submit,
-          id: Number(jobs.submit.id) + 1,
+          id: Number(jobs.submit.id) + 2,
           name: "Gate",
           status: "in_progress",
           conclusion: null,
@@ -2516,156 +2087,4 @@ describe("workflow-owned upload staging", () => {
       ),
     ).toMatchObject({ status: 200 });
   });
-
-  it.each(["staged-only", "materialized"])(
-    "carries a proven %s source when only the submit job reruns",
-    async (sourceState) => {
-      const test = await fixture();
-      const { manifestDigest } = await stage(test);
-      const first = await terminalGitHub(test, manifestDigest);
-      if (sourceState === "materialized") {
-        expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
-        // Age only the closed-run clock so ordinary image expiry is due before
-        // the valid rerun tries to read the original.
-        await test.context.service.retireRun({
-          runId: test.runId,
-          now: Date.now() - closedRunRetentionMs - 1,
-        });
-        expect(
-          await claimExpiredRun(database, {
-            id: test.runId,
-            token: crypto.randomUUID(),
-            now: Date.now(),
-            leaseMs: 30_000,
-          }),
-        ).toBeNull();
-      }
-      const nextRunId = crypto.randomUUID();
-      const submitJobId = String(first.submit.id + 100);
-      const nextSubmit = {
-        ...test.verified,
-        workflowAttempt: 2,
-        shardKey: "submit",
-        jobId: submitJobId,
-        checkRunId: submitJobId,
-      };
-      const configuration = test.context.configuration.workflowOwned;
-      if (!configuration) throw new Error("Expected pinned workflow configuration.");
-      await database
-        .prepare(
-          "INSERT INTO ingest_staged_runs (id, repository_id, workflow_run_id, workflow_attempt, tested_sha, workflow_source_digest, caller_workflow_path, reusable_workflow_ref, capture_job_prefix, submit_job_name, verified_json, submit_job_id, submit_check_run_id, submit_verified_json, submitted_at, created_at) VALUES (?, ?, ?, 2, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(
-          nextRunId,
-          test.manifest.run.repositoryId,
-          test.manifest.run.workflowRunId,
-          test.manifest.run.testedSha,
-          test.manifest.run.planDigest,
-          configuration.callerWorkflowPath,
-          configuration.reusableWorkflowRef,
-          configuration.captureJobPrefix,
-          configuration.submitJobName,
-          JSON.stringify(nextSubmit),
-          submitJobId,
-          submitJobId,
-          JSON.stringify(nextSubmit),
-          Date.now(),
-          Date.now(),
-        )
-        .run();
-      const attempt = {
-        id: Number(test.manifest.run.workflowRunId),
-        run_attempt: 2,
-        head_sha: test.verified.sourceHead,
-        run_started_at: carried.attempt.run_started_at,
-        status: "completed",
-        conclusion: "success",
-        path: configuration.callerWorkflowPath,
-      };
-      const original = {
-        ...carried.original,
-        id: Number(test.jobId),
-        run_id: Number(test.manifest.run.workflowRunId),
-        name: first.capture.name,
-        head_sha: test.verified.sourceHead,
-      };
-      const alias = {
-        ...carried.alias,
-        id: first.capture.id + 200,
-        run_id: Number(test.manifest.run.workflowRunId),
-        name: first.capture.name,
-        head_sha: test.verified.sourceHead,
-      };
-      const submit = { ...first.submit, id: Number(submitJobId), run_attempt: 2 };
-      test.githubResponses.set(first.base, attempt);
-      test.githubResponses.set(`${first.base}/attempts/2`, attempt);
-      test.githubResponses.set(`${first.base}/attempts/2/jobs?per_page=100&page=1`, {
-        total_count: 1,
-        jobs: [submit],
-      });
-      test.githubResponses.set(`${first.base}/jobs?filter=latest&per_page=100&page=1`, {
-        total_count: 2,
-        jobs: [alias, submit],
-      });
-      test.githubResponses.set(`/repos/ariakit/ariakit/actions/jobs/${test.jobId}`, original);
-      const complete = await reconcileWorkflowJobSet(test.context, nextRunId);
-      expect(complete.bundles[0]).toMatchObject({
-        key: test.shardKey,
-        sourceRunId: test.runId,
-        sourceAttempt: 1,
-        jobId: test.jobId,
-      });
-      await test.registerPreRunCheck(2);
-      const sourceObjectKey = await stagedImageKey(test.runId);
-      const storage = test.context.images;
-      const get = vi.fn((key: string) => storage.get(key));
-      test.context.images = {
-        get,
-        head: (key) => storage.head(key),
-        list: (options) => storage.list(options),
-        put: (key, bytes, options) => storage.put(key, bytes, options),
-        delete: (key) => storage.delete(key),
-      };
-      const run = await materializeWorkflowRun(test.context, nextRunId);
-      expect(run.sealed_at).not.toBeNull();
-      expect(get).toHaveBeenCalledExactlyOnceWith(sourceObjectKey);
-      const copied = await images.list({ prefix: `runs/${nextRunId}/images/` });
-      expect(copied.objects).toHaveLength(1);
-      const copiedObject = copied.objects[0];
-      if (!copiedObject) throw new Error("Expected the inherited original copy.");
-      expect((await images.head(copiedObject.key))?.checksums.toJSON().sha256).toBe(image.digest);
-      const shard = await database
-        .prepare("SELECT source_attempt FROM visonaut_shards WHERE run_id = ?")
-        .bind(nextRunId)
-        .first<{ source_attempt: number }>();
-      expect(shard?.source_attempt).toBe(1);
-      const now = Date.now();
-      await database
-        .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")
-        .bind(now - stagedAttemptRetentionMs - 1, test.runId)
-        .run();
-      expect((await expireStagedAttempts(retention(now, 10))).completed).not.toContain(test.runId);
-      expect(
-        (await expireStagedAttempts(retention(now + stagedMaterializationLeaseMs + 1, 10)))
-          .completed,
-      ).toContain(test.runId);
-      expect((await images.list({ prefix: `runs/${test.runId}/images/` })).objects).toHaveLength(
-        sourceState === "materialized" ? 1 : 0,
-      );
-      expect((await images.list({ prefix: `runs/${nextRunId}/images/` })).objects).toHaveLength(1);
-      if (sourceState === "materialized") {
-        expect(
-          await quarantine.get(`manifests/${test.runId}/${manifestDigest}.json`),
-        ).not.toBeNull();
-      } else {
-        expect(await quarantine.get(`manifests/${test.runId}/${manifestDigest}.json`)).toBeNull();
-      }
-      expect(await quarantine.get(`manifests/${nextRunId}/${manifestDigest}.json`)).not.toBeNull();
-      const referenced = await database
-        .prepare("SELECT object_key FROM ingest_manifests WHERE run_id = ? AND shard_key = ?")
-        .bind(nextRunId, test.shardKey)
-        .first<{ object_key: string }>();
-      expect(referenced?.object_key).toBe(`manifests/${nextRunId}/${manifestDigest}.json`);
-    },
-  );
 });

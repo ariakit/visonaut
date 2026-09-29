@@ -3,6 +3,12 @@ import { createAuthClient } from "better-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { Badge, BadgeLabel } from "../components/ariakit/components/badge.ariakit.react.tsx";
+import {
+  Tabs,
+  TabList,
+  Tab,
+  TabPanel,
+} from "../components/ariakit/components/tabs.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
@@ -19,7 +25,6 @@ import {
 } from "../components/ariakit/components/table.ariakit.react.tsx";
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
 import "../review.css";
-import "./dashboard.css";
 
 export const Route = createFileRoute("/")({ component: Index });
 
@@ -30,12 +35,23 @@ interface DashboardRun {
   state: string;
   attempt: number;
   createdAt: string | number;
+  pullRequestNumber?: number;
+  title?: string;
+  pending: number;
+  rejected: number;
 }
 
 type DashboardState =
   | { status: "loading" | "guest" }
   | { status: "error" | "forbidden"; message: string }
-  | { status: "ready"; runs: DashboardRun[]; repository: string; baselineRevision: number };
+  | {
+      status: "ready";
+      runs: DashboardRun[];
+      actionable: DashboardRun[];
+      repository: string;
+      baselineRevision: number;
+      preview: boolean;
+    };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -45,7 +61,7 @@ function parseDashboard(value: unknown): Extract<DashboardState, { status: "read
   if (!isRecord(value) || !Array.isArray(value.runs) || !isRecord(value.project)) {
     throw new Error("The run list could not be read. Retry loading the page.");
   }
-  const runs = value.runs.map((run: unknown) => {
+  const parseRun = (run: unknown): DashboardRun => {
     if (
       !isRecord(run) ||
       typeof run.id !== "string" ||
@@ -64,8 +80,15 @@ function parseDashboard(value: unknown): Extract<DashboardState, { status: "read
       state: run.state,
       attempt: run.attempt,
       createdAt: run.createdAt,
+      pullRequestNumber:
+        typeof run.pullRequestNumber === "number" ? run.pullRequestNumber : undefined,
+      title: typeof run.title === "string" ? run.title : undefined,
+      pending: typeof run.pending === "number" ? run.pending : 0,
+      rejected: typeof run.rejected === "number" ? run.rejected : 0,
     };
-  });
+  };
+  const runs = value.runs.map(parseRun);
+  const actionable = Array.isArray(value.actionable) ? value.actionable.map(parseRun) : runs;
   if (
     typeof value.project.baselineRevision !== "number" ||
     typeof value.project.repository !== "string"
@@ -75,6 +98,8 @@ function parseDashboard(value: unknown): Extract<DashboardState, { status: "read
   return {
     status: "ready",
     runs,
+    actionable,
+    preview: value.preview === true,
     repository: value.project.repository,
     baselineRevision: value.project.baselineRevision,
   };
@@ -192,15 +217,20 @@ function Index() {
 
   if (state.status === "guest") {
     return (
-      <Frame $layer="canvas" render={<main />} className="dashboard-sign-in">
-        <div className="dashboard-brand">Visonaut</div>
-        <h1>Every detail, reviewed.</h1>
-        <p>Visual regression review for Ariakit maintainers.</p>
-        <Button className="review-control" disabled={action !== null} onClick={() => void signIn()}>
+      <Frame
+        $layer="canvas"
+        $p={6}
+        render={<main />}
+        className="max-w-xl mx-auto mt-[12dvh] text-sm"
+      >
+        <div className="text-base font-semibold">Visonaut</div>
+        <h1 className="text-3xl font-semibold my-6">Every detail, reviewed.</h1>
+        <p className="my-5 ak-ink-60">Visual regression review for Ariakit maintainers.</p>
+        <Button className="text-xs" disabled={action !== null} onClick={() => void signIn()}>
           {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
         </Button>
         {actionError && <p role="alert">{actionError}</p>}
-        <p className="dashboard-access-note">
+        <p className="text-xs ak-ink-60 mt-6">
           Access requires write permission to the configured repository.
         </p>
       </Frame>
@@ -208,29 +238,31 @@ function Index() {
   }
 
   return (
-    <Shell className="dashboard">
+    <Shell className="dashboard text-sm">
       <ShellHeader
         $height="lg"
         $stackCenter
-        className="dashboard-shell-header"
+        className="z-20"
         start={
-          <Link to="/" className="dashboard-brand">
+          <Link to="/" className="text-base font-semibold">
             Visonaut
           </Link>
         }
         center={
           <ShellHeaderCenter $shrink>
-            <span className="dashboard-repository">
+            <span className="block truncate max-w-[40vw] text-xs ak-ink-60">
               {state.status === "ready" ? state.repository : "Repository"}
             </span>
           </ShellHeaderCenter>
         }
         end={
-          <div className="dashboard-header-actions">
-            {state.status === "ready" && <OperationsAttention onAccessDenied={onAccessDenied} />}
-            {state.status !== "loading" && (
+          <div className="flex items-center gap-2">
+            {state.status === "ready" && !state.preview && (
+              <OperationsAttention onAccessDenied={onAccessDenied} />
+            )}
+            {state.status !== "loading" && !(state.status === "ready" && state.preview) && (
               <Button
-                className="review-control"
+                className="text-xs"
                 $kind="flat"
                 $rounded="lg"
                 disabled={action !== null}
@@ -245,20 +277,13 @@ function Index() {
       <ShellMain $maxWidth="80rem" $p="clamp(1rem, 2.5vw, 2rem)">
         <ShellMainBody className="dashboard-main">
           {actionError && (
-            <p className="dashboard-error" role="alert">
+            <p className="text-sm ak-ink-danger" role="alert">
               {actionError}
             </p>
           )}
           {state.status === "loading" && <p role="status">Checking access and loading runs…</p>}
           {(state.status === "error" || state.status === "forbidden") && (
-            <Frame
-              $layer
-              $lighten
-              $rounded="lg"
-              $border
-              render={<section />}
-              className="dashboard-empty"
-            >
+            <Frame $layer $lighten $rounded="lg" $border render={<section />} className="space-y-3">
               <h1>
                 {state.status === "forbidden"
                   ? "Repository access required"
@@ -266,7 +291,7 @@ function Index() {
               </h1>
               <p role="alert">{state.message}</p>
               <Button
-                className="review-control"
+                className="text-xs"
                 onClick={() => {
                   setState({ status: "loading" });
                   setReload((value) => value + 1);
@@ -278,24 +303,22 @@ function Index() {
           )}
           {state.status === "ready" && (
             <>
-              <div className="dashboard-heading">
+              <Frame $p={0} className="flex flex-wrap items-end justify-between gap-4 mb-5">
                 <div>
-                  <p className="dashboard-eyebrow">Visual regression review</p>
-                  <h1>
-                    Runs{" "}
-                    <Badge $layer>
-                      <BadgeLabel>{state.runs.length}</BadgeLabel>
-                    </Badge>
-                  </h1>
+                  <p className="text-xs ak-ink-60">
+                    {state.preview
+                      ? "Preview fixtures · GitHub login is disabled"
+                      : "Visual regression review"}
+                  </p>
+                  <h1 className="text-2xl font-semibold">Review work</h1>
                 </div>
-                <div className="dashboard-heading-actions">
+                <div className="flex flex-wrap items-center gap-3 text-xs ak-ink-60">
                   <span>
                     {state.baselineRevision > 0
                       ? `Baseline revision ${state.baselineRevision}`
                       : "No baseline yet"}
                   </span>
                   <Button
-                    className="review-control"
                     onClick={() => {
                       setState({ status: "loading" });
                       setReload((value) => value + 1);
@@ -304,77 +327,108 @@ function Index() {
                     Refresh runs
                   </Button>
                 </div>
-              </div>
-              {state.runs.length === 0 ? (
-                <Frame
-                  $layer
-                  $lighten
-                  $rounded="lg"
-                  $border
-                  render={<section />}
-                  className="dashboard-empty"
-                >
-                  <h2>No runs yet</h2>
-                  <p>The first complete capture run will appear here.</p>
-                </Frame>
-              ) : (
-                <Table
-                  className="dashboard-runs"
-                  caption={{ children: "Recent runs", className: "sr-only" }}
-                  container={{ $layer: true, $border: true, $rounded: "lg" }}
-                  $borderBlock
-                >
-                  <TableRowGroup group="head">
-                    <TableRow>
-                      <TableCell>Run</TableCell>
-                      <TableCell className="dashboard-run-secondary">Tested commit</TableCell>
-                      <TableCell className="dashboard-run-state">State</TableCell>
-                      <TableCell className="dashboard-run-secondary" numeric>
-                        Attempt
-                      </TableCell>
-                      <TableCell className="dashboard-run-secondary">Created</TableCell>
-                    </TableRow>
-                  </TableRowGroup>
-                  <TableRowGroup>
-                    {state.runs.map((run) => (
-                      <TableRow key={run.id}>
-                        <TableCell header="row">
-                          <Link to="/runs/$runId" params={{ runId: run.id }}>
-                            <strong>{kindLabel(run.kind)}</strong>
-                            <small>{run.id}</small>
-                            <span className="dashboard-run-mobile-meta">
-                              <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
-                              <span>{runDate(run.createdAt)}</span>
-                              <span>Attempt {run.attempt}</span>
-                            </span>
-                          </Link>
-                        </TableCell>
-                        <TableCell className="dashboard-run-secondary">
-                          <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
-                        </TableCell>
-                        <TableCell className="dashboard-run-state">
-                          <Badge
-                            $layer={stateColor(run.state) ?? true}
-                            className="dashboard-run-state-badge"
-                          >
-                            <BadgeLabel>{stateLabel(run.state)}</BadgeLabel>
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="dashboard-run-secondary" numeric>
-                          {run.attempt}
-                        </TableCell>
-                        <TableCell className="dashboard-run-secondary">
-                          {runDate(run.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableRowGroup>
-                </Table>
-              )}
+              </Frame>
+              <Tabs defaultSelectedId="review-work">
+                <TabList aria-label="Run views">
+                  <Tab id="review-work">Needs attention ({state.actionable.length})</Tab>
+                  <Tab id="run-history">History</Tab>
+                </TabList>
+                <TabPanel tabId="review-work">
+                  <RunTable
+                    runs={state.actionable}
+                    title="Review work"
+                    empty="No review work"
+                    description="All captures that need review or recovery appear here."
+                  />
+                </TabPanel>
+                <TabPanel tabId="run-history">
+                  <p className="text-xs ak-ink-60 my-3">
+                    Latest 100 runs. Older work that needs attention stays in the review list.
+                  </p>
+                  <RunTable
+                    runs={state.runs}
+                    title="Latest 100 runs"
+                    empty="No runs yet"
+                    description="The first complete capture run will appear here."
+                  />
+                </TabPanel>
+              </Tabs>
             </>
           )}
         </ShellMainBody>
       </ShellMain>
     </Shell>
+  );
+}
+
+function RunTable({
+  runs,
+  title,
+  empty,
+  description,
+}: {
+  runs: DashboardRun[];
+  title: string;
+  empty: string;
+  description: string;
+}) {
+  if (!runs.length) {
+    return (
+      <Frame $layer $border $rounded="lg" $p={5} render={<section />}>
+        <h2 className="text-lg font-semibold">{empty}</h2>
+        <p className="text-sm ak-ink-60 mt-2">{description}</p>
+      </Frame>
+    );
+  }
+  return (
+    <Table
+      caption={{ children: title, className: "sr-only" }}
+      container={{ $layer: true, $border: true, $rounded: "lg" }}
+      $borderBlock
+      className="w-full text-sm"
+    >
+      <TableRowGroup group="head">
+        <TableRow>
+          <TableCell>Review</TableCell>
+          <TableCell>State</TableCell>
+          <TableCell className="dashboard-run-secondary max-md:hidden">Created</TableCell>
+        </TableRow>
+      </TableRowGroup>
+      <TableRowGroup>
+        {runs.map((run) => (
+          <TableRow key={run.id}>
+            <TableCell header="row">
+              <Link
+                to="/runs/$runId"
+                params={{ runId: run.id }}
+                className="block min-w-0 max-w-[38rem]"
+              >
+                <strong className="block text-sm font-medium wrap-anywhere">
+                  {run.pullRequestNumber
+                    ? `#${run.pullRequestNumber} · ${run.title ?? "Pull request"}`
+                    : (run.title ?? kindLabel(run.kind))}
+                </strong>
+                <small className="block text-xs ak-ink-60 mt-1 wrap-anywhere">
+                  {run.pending} pending · {run.rejected} rejected ·{" "}
+                  <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code> · Attempt{" "}
+                  {run.attempt}
+                </small>
+                <small className="dashboard-run-mobile-meta block text-xs ak-ink-60 md:hidden">
+                  {runDate(run.createdAt)}
+                </small>
+              </Link>
+            </TableCell>
+            <TableCell>
+              <Badge className="dashboard-run-state-badge" $layer={stateColor(run.state) ?? true}>
+                <BadgeLabel className="whitespace-normal">{stateLabel(run.state)}</BadgeLabel>
+              </Badge>
+            </TableCell>
+            <TableCell className="dashboard-run-secondary max-md:hidden">
+              {runDate(run.createdAt)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableRowGroup>
+    </Table>
   );
 }

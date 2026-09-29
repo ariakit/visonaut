@@ -65,6 +65,9 @@ export interface HistoricalComparison {
 }
 
 export interface ReviewModel {
+  preview?: boolean;
+  evidenceState?: "summary";
+  imagesExpired?: boolean;
   run: {
     id: string;
     repository?: string;

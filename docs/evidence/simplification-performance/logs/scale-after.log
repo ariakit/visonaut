@@ -1,0 +1,13 @@
+{"count":3582,"sample":-1,"listMs":53.10000002384186,"imageMs":82.29999995231628}
+{"count":3582,"sample":0,"listMs":52,"imageMs":80.10000002384186}
+{"count":3582,"sample":1,"listMs":52.800000071525574,"imageMs":82.70000004768372}
+{"count":3582,"sample":2,"listMs":52.39999997615814,"imageMs":86.10000002384186}
+{"count":10580,"sample":-1,"listMs":54.5,"imageMs":87.20000004768372}
+{"count":10580,"sample":0,"listMs":52.89999997615814,"imageMs":83.39999997615814}
+{"count":10580,"sample":1,"listMs":53.5,"imageMs":81.60000002384186}
+{"count":10580,"sample":2,"listMs":54.09999990463257,"imageMs":85.29999995231628}
+{"count":35820,"sample":-1,"listMs":62.59999990463257,"imageMs":88}
+{"count":35820,"sample":0,"listMs":63.799999952316284,"imageMs":100.5}
+{"count":35820,"sample":1,"listMs":60.5,"imageMs":100.10000002384186}
+{"count":35820,"sample":2,"listMs":60.89999997615814,"imageMs":88.09999990463257}
+Saved /Users/diegohaz/.codex/worktrees/1de3/visonaut/artifacts/review-scale-after/measurements.json

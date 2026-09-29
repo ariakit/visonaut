@@ -25,10 +25,6 @@ export interface OidcConfiguration {
   reusableWorkflowSha: string;
   /** Approved Git blob for direct jobs in this repository's app workflow. */
   trustedWorkflowPath?: string;
-  /** One additional approved Git blob during a direct workflow transition. */
-  additionalTrustedWorkflowBlobSha?: string;
-  /** One approved successor blob while the prior direct workflow remains active. */
-  transitionTrustedWorkflowBlobSha?: string;
   planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
@@ -86,18 +82,9 @@ async function isMainAncestor(github: GitHubClient, baseSha: string, mainSha: st
 
 export function isTrustedWorkflowBlob(
   blob: unknown,
-  configuration: Pick<
-    OidcConfiguration,
-    "reusableWorkflowSha" | "additionalTrustedWorkflowBlobSha" | "transitionTrustedWorkflowBlobSha"
-  >,
+  configuration: Pick<OidcConfiguration, "reusableWorkflowSha">,
 ): boolean {
-  return (
-    blob === configuration.reusableWorkflowSha ||
-    (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
-      blob === configuration.additionalTrustedWorkflowBlobSha) ||
-    (configuration.transitionTrustedWorkflowBlobSha !== undefined &&
-      blob === configuration.transitionTrustedWorkflowBlobSha)
-  );
+  return blob === configuration.reusableWorkflowSha;
 }
 
 function attemptNumber(value: unknown): number {

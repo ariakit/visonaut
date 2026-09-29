@@ -95,6 +95,17 @@ function parseStatus(value: unknown): OperationsStatus {
 }
 
 function recovery(event: OperationEvent) {
+  if (event.kind === "upstream-webhook") {
+    return {
+      title: "GitHub webhook delivery needs attention",
+      action:
+        event.code === "production-receiver-mismatch"
+          ? "Set the GitHub App webhook URL to the production /v1/webhooks receiver after preview sessions are retired. Verify the signed ping and authorization revocation delivery."
+          : event.code === "redelivery-exhausted"
+            ? "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify its receipt in Visonaut."
+            : "Check GitHub App credentials and GitHub availability. The scheduler retries delivery recovery automatically.",
+    };
+  }
   if (event.kind === "database-capacity") {
     return {
       title: "Database capacity needs attention",
@@ -293,25 +304,32 @@ export function OperationsAttention({
       <PopoverDisclosure
         $kind="bevel"
         $rounded="sm"
-        className="dashboard-alert-trigger"
+        className="relative min-w-9 min-h-9 gap-1 [&_svg]:size-4"
         aria-label={alertLabel}
       >
         <ButtonSlot>
           <BellIcon aria-hidden="true" />
         </ButtonSlot>
         {alertCount > 0 && (
-          <Badge $layer="danger" className="dashboard-alert-count" aria-hidden="true">
+          <Badge
+            $layer="danger"
+            className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! text-[10px] leading-none"
+            aria-hidden="true"
+          >
             <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
           </Badge>
         )}
         {error && (
-          <span className="dashboard-alert-error-mark" aria-hidden="true">
+          <span className="dashboard-alert-error-mark ak-ink-danger font-bold" aria-hidden="true">
             !
           </span>
         )}
       </PopoverDisclosure>
-      <Popover className="dashboard-alert-popover" portal>
-        <div className="dashboard-alert-heading">
+      <Popover
+        className="flex flex-col gap-3 w-[min(460px,calc(100vw-24px))] max-h-[min(72dvh,var(--popover-available-height))] text-sm"
+        portal
+      >
+        <div className="flex items-center justify-between gap-3">
           <PopoverHeading>Service attention</PopoverHeading>
           <PopoverDismiss />
         </div>
@@ -319,8 +337,8 @@ export function OperationsAttention({
           Alerts refresh every minute while this dashboard is open. No external notifications are
           sent.
         </PopoverDescription>
-        <div className="dashboard-alert-toolbar">
-          <p className="dashboard-attention-summary">
+        <div className="flex max-md:flex-col items-start justify-between gap-3">
+          <p className="text-xs ak-ink-60">
             {status
               ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
               : loading
@@ -328,7 +346,7 @@ export function OperationsAttention({
                 : "No current alert data."}
           </p>
           <Button
-            className="review-control"
+            className="text-xs"
             disabled={loading}
             onClick={() => {
               setLoading(true);
@@ -338,15 +356,15 @@ export function OperationsAttention({
             {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
           </Button>
         </div>
-        <PopoverScroll className="dashboard-alert-scroll">
+        <PopoverScroll className="min-h-0 max-h-[50dvh] space-y-3">
           {error && (
-            <p className="dashboard-attention-error" role="alert">
+            <p className="ak-ink-danger" role="alert">
               {error}{" "}
               {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
             </p>
           )}
           {status?.capacity && (
-            <p className="dashboard-attention-meta">
+            <p className="text-xs ak-ink-60 mt-1">
               Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
               {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
               before new runs pause.
@@ -356,14 +374,14 @@ export function OperationsAttention({
             </p>
           )}
           {status && status.events.length > 0 && (
-            <ul className="dashboard-attention-list">
+            <ul className="list-none m-0 p-0 divide-y divide-(--ak-edge) [&>li]:py-3 [&>li]:wrap-anywhere [&_h3]:font-semibold [&_p]:mt-1">
               {status.events.map((event) => {
                 const help = recovery(event);
                 return (
                   <li key={`${event.kind}:${event.subject}:${event.code}`}>
                     <h3>{help.title}</h3>
                     <p>{help.action}</p>
-                    <p className="dashboard-attention-meta">
+                    <p className="text-xs ak-ink-60 mt-1">
                       {event.kind} · {event.code} · <code>{event.subject}</code>
                       <br />
                       First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}

@@ -5,7 +5,7 @@ import { deflateSync } from "node:zlib";
 import { digestJson } from "@visonaut/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import { issueReuseChallenge, issueUploadTicket } from "../../security/src/capabilities.js";
-import { runCli } from "../src/index.js";
+import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture } from "./fixture.js";
 
 const directories: string[] = [];

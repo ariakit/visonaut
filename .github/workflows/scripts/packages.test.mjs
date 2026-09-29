@@ -1,220 +1,182 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { resolve } from "node:path";
-import { after, test } from "node:test";
+import { test } from "node:test";
 import {
   assertRelease,
-  auditTarball,
+  checkRegistry,
+  packageContents,
   publicationNeeded,
-  selectedReleaseRecords,
-  verifyPackages,
+  releasePlan,
+  validateReleasePlan,
 } from "./packages.mjs";
+import { mkdtempDisposable, mkdir, writeFile, utimes } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 
-const temporary = mkdtempSync(resolve(tmpdir(), "visonaut-release-test-"));
-after(() => rmSync(temporary, { recursive: true, force: true }));
-let fixtureId = 0;
-const ciFiles = JSON.parse(readFileSync("packages/playwright/package.json", "utf8")).files.filter(
-  (file) => file.startsWith("ci/"),
-);
+const valid = {
+  GITHUB_REPOSITORY_ID: "1380751023",
+  GITHUB_REF: "refs/heads/main",
+  GITHUB_EVENT_NAME: "workflow_dispatch",
+  GITHUB_SHA: "a".repeat(40),
+  VISONAUT_RELEASE_COMMIT: "a".repeat(40),
+  VISONAUT_RELEASE_TAG: "next",
+};
 
-function packFixture(
-  name = "visonaut",
-  extraFiles = {},
-  dependencies = name === "visonaut" ? { "@visonaut/playwright": "1.2.3" } : {},
-  version = "1.2.3",
-) {
-  const directory = resolve(temporary, `fixture-${fixtureId++}`);
-  mkdirSync(resolve(directory, "dist"), { recursive: true });
-  if (name === "@visonaut/playwright") {
-    mkdirSync(resolve(directory, "ci"));
+test("publication requires manual main and the approved source commit", () => {
+  assert.doesNotThrow(() => assertRelease(valid));
+  for (const key of Object.keys(valid)) {
+    assert.throws(() => assertRelease({ ...valid, [key]: "untrusted" }));
   }
-  const packageDirectory = name === "visonaut" ? "packages/cli" : "packages/playwright";
-  const manifest = {
-    name,
-    version,
-    repository: { url: "https://github.com/ariakit/visonaut", directory: packageDirectory },
-    dependencies,
-    ...(name === "@visonaut/playwright" ? { bin: { "visonaut-capture": "./ci/bin.mjs" } } : {}),
-  };
-  const files = {
-    "package.json": JSON.stringify(manifest),
-    "README.md": "Public API",
-    LICENSE: "MIT",
-    "dist/index.js": "export const ready = true;",
-    "dist/index.d.ts": "export declare const ready: true;",
-    "dist/bin.js": "#!/usr/bin/env node\nconsole.log('visonaut');",
-    "dist/reporter.js": "export default class Reporter {}",
-    ...(name === "@visonaut/playwright"
-      ? Object.fromEntries(
-          ciFiles.map((file) => [file, readFileSync(resolve("packages/playwright", file))]),
-        )
-      : {}),
-    ...extraFiles,
-  };
-  for (const [name, contents] of Object.entries(files)) {
-    writeFileSync(resolve(directory, name), contents);
-  }
-  const results = JSON.parse(
-    execFileSync("npm", ["pack", "--json", "--ignore-scripts"], {
-      cwd: directory,
-      encoding: "utf8",
-      env: { ...process.env, npm_config_cache: resolve(temporary, "cache") },
-    }),
-  );
-  const [result] = Object.values(results);
+});
+
+function published(version, tag = "next") {
   return {
-    bytes: readFileSync(resolve(directory, result.filename)),
-    filename: result.filename,
-    expected: { name, version, directory: packageDirectory },
-  };
-}
-
-test("the public package audit accepts actual npm archives and rejects private files and imports", () => {
-  const good = packFixture();
-  assert.equal(auditTarball(good.bytes, good.expected).name, "visonaut");
-  const config = packFixture("visonaut", { "dist/wrangler.json": "{}" });
-  assert.throws(
-    () => auditTarball(config.bytes, config.expected),
-    /Unexpected public package file/,
-  );
-  const internal = packFixture("visonaut", {
-    "dist/index.d.ts": 'export { Secret } from "@visonaut/security";',
-  });
-  assert.throws(() => auditTarball(internal.bytes, internal.expected), /escaped bundling/);
-  const workspace = packFixture("visonaut", {}, { internal: "file:../server" });
-  assert.throws(
-    () => auditTarball(workspace.bytes, workspace.expected),
-    /Local runtime dependency/,
-  );
-  const extraCi = packFixture("@visonaut/playwright", {
-    "ci/private-review.mjs": "export const privateReview = true;",
-  });
-  assert.throws(
-    () => auditTarball(extraCi.bytes, extraCi.expected),
-    /Unexpected public package file/,
-  );
-  const rangedAdapter = packFixture("visonaut", {}, { "@visonaut/playwright": "^1.2.3" });
-  assert.throws(
-    () => auditTarball(rangedAdapter.bytes, rangedAdapter.expected),
-    /exact adapter version/,
-  );
-  const runtimeLock = JSON.parse(readFileSync("packages/playwright/ci/runtime-lock.json"));
-  runtimeLock.packages["node_modules/visonaut"].integrity = "";
-  const unlocked = packFixture("@visonaut/playwright", {
-    "ci/runtime-lock.json": JSON.stringify(runtimeLock),
-  });
-  assert.throws(() => auditTarball(unlocked.bytes, unlocked.expected));
-});
-
-test("artifact verification binds both tarballs and their hashes to one source commit", async () => {
-  const directory = resolve(temporary, "artifact");
-  mkdirSync(directory);
-  const packages = [
-    packFixture("@visonaut/playwright", {}, {}, "1.2.4"),
-    packFixture("visonaut", {}, { "@visonaut/playwright": "1.2.4" }),
-  ].map((fixture) => {
-    writeFileSync(resolve(directory, fixture.filename), fixture.bytes);
-    return {
-      name: fixture.expected.name,
-      version: fixture.expected.version,
-      filename: fixture.filename,
-      bytes: fixture.bytes.length,
-      sha256: createHash("sha256").update(fixture.bytes).digest("hex"),
-      integrity: `sha512-${createHash("sha512").update(fixture.bytes).digest("base64")}`,
-    };
-  });
-  const sourceCommit = "a".repeat(40);
-  writeFileSync(
-    resolve(directory, "manifest.json"),
-    JSON.stringify({ schemaVersion: 1, sourceCommit, packages }),
-  );
-  assert.equal((await verifyPackages(directory, sourceCommit)).length, 2);
-  const mismatchedCli = packFixture("visonaut", {}, { "@visonaut/playwright": "1.2.2" });
-  writeFileSync(resolve(directory, packages[1].filename), mismatchedCli.bytes);
-  packages[1].bytes = mismatchedCli.bytes.length;
-  packages[1].sha256 = createHash("sha256").update(mismatchedCli.bytes).digest("hex");
-  packages[1].integrity = `sha512-${createHash("sha512").update(mismatchedCli.bytes).digest("base64")}`;
-  writeFileSync(
-    resolve(directory, "manifest.json"),
-    JSON.stringify({ schemaVersion: 1, sourceCommit, packages }),
-  );
-  await assert.rejects(
-    verifyPackages(directory, sourceCommit),
-    /does not match the packed adapter/,
-  );
-  await assert.rejects(verifyPackages(directory, "b".repeat(40)), /source commit mismatch/);
-  writeFileSync(resolve(directory, packages[0].filename), "changed after CI");
-  await assert.rejects(verifyPackages(directory, sourceCommit), /byte count mismatch/);
-});
-
-test("publication requires the exact main commit with completed launch readiness", () => {
-  const environment = {
-    GITHUB_REPOSITORY_ID: "1380751023",
-    GITHUB_REF: "refs/heads/main",
-    GITHUB_EVENT_NAME: "workflow_dispatch",
-    GITHUB_SHA: "a".repeat(40),
-    VISONAUT_RELEASE_COMMIT: "a".repeat(40),
-    VISONAUT_RELEASE_TAG: "latest",
-    VISONAUT_RELEASE_PACKAGE: "both",
-  };
-  assert.doesNotThrow(() => assertRelease(environment));
-  for (const field of [
-    "GITHUB_REPOSITORY_ID",
-    "GITHUB_REF",
-    "GITHUB_EVENT_NAME",
-    "VISONAUT_RELEASE_COMMIT",
-    "VISONAUT_RELEASE_TAG",
-    "VISONAUT_RELEASE_PACKAGE",
-  ]) {
-    assert.throws(() => assertRelease({ ...environment, [field]: "untrusted" }));
-  }
-});
-
-test("a staged release publishes only the selected verified package", () => {
-  const records = [{ name: "visonaut" }, { name: "@visonaut/playwright" }];
-  assert.deepEqual(selectedReleaseRecords(records, "visonaut"), [records[0]]);
-  assert.deepEqual(selectedReleaseRecords(records, "@visonaut/playwright"), [records[1]]);
-  assert.deepEqual(selectedReleaseRecords(records, "both"), records);
-  assert.throws(() => selectedReleaseRecords(records, "untrusted"), /Invalid npm release package/);
-  assert.throws(
-    () => selectedReleaseRecords([records[0]], "@visonaut/playwright"),
-    /Selected npm package is missing/,
-  );
-});
-
-test("a partial publication can resume only when existing bytes and tags match", () => {
-  const record = { version: "1.2.3", integrity: "sha512-expected" };
-  assert.equal(publicationNeeded(record, null, "latest"), true);
-  const registry = {
     versions: {
-      "1.2.3": {
+      [version]: {
         dist: {
-          integrity: record.integrity,
+          integrity: `sha512-${Buffer.alloc(64, 1).toString("base64")}`,
           attestations: { provenance: { predicateType: "https://slsa.dev/provenance/v1" } },
         },
       },
     },
-    "dist-tags": { latest: "1.2.3" },
+    "dist-tags": { [tag]: version },
   };
-  assert.equal(publicationNeeded(record, registry, "latest"), false);
+}
+
+test("source publication permits different archives but requires the selected tag and provenance", () => {
+  const record = { version: "1.2.3" };
+  assert.equal(publicationNeeded(record, null, "next"), true);
+  assert.equal(publicationNeeded(record, published(record.version), "next"), false);
   assert.throws(
-    () => publicationNeeded({ ...record, integrity: "sha512-other" }, registry, "latest"),
-    /different bytes/,
+    () => publicationNeeded(record, published(record.version, "latest"), "next"),
+    /different requested npm tag/,
   );
   assert.throws(
     () =>
       publicationNeeded(
         record,
-        {
-          ...registry,
-          versions: { "1.2.3": { dist: { integrity: record.integrity } } },
-        },
-        "latest",
+        { versions: { "1.2.3": {} }, "dist-tags": { next: "1.2.3" } },
+        "next",
       ),
-    /no provenance attestation/,
+    /provenance/,
   );
-  assert.throws(() => publicationNeeded(record, registry, "next"), /tag must be set separately/);
+});
+
+test("all ready packages and partial reruns share one release plan", async () => {
+  const records = [
+    { name: "@visonaut/playwright", version: "1.2.3" },
+    { name: "visonaut", version: "2.0.0" },
+  ];
+  for (const count of [0, 1, 2]) {
+    const read = async (name) =>
+      records.slice(0, count).some((record) => record.name === name)
+        ? published(records.find((record) => record.name === name).version)
+        : null;
+    assert.equal(await checkRegistry({ records, tag: "next", published: false, read }), 2 - count);
+    if (count < 2)
+      await assert.rejects(
+        checkRegistry({ records, tag: "next", published: true, read }),
+        /not published/,
+      );
+    else assert.equal(await checkRegistry({ records, tag: "next", published: true, read }), 0);
+  }
+});
+
+const records = [
+  { name: "@visonaut/playwright", version: "1.2.3" },
+  { name: "visonaut", version: "2.0.0" },
+];
+
+test("eligible versions include new publications and verified partial reruns from this source", async () => {
+  for (const count of [0, 1, 2]) {
+    const read = async (name) =>
+      records.slice(0, count).some((record) => record.name === name)
+        ? published(records.find((record) => record.name === name).version)
+        : null;
+    const verify = async (selected, callback) => {
+      for (const record of selected)
+        assert.equal(
+          record.integrity,
+          published(record.version).versions[record.version].dist.integrity,
+        );
+      return callback(selected.map((record) => ({ ...record, sourceSha: valid.GITHUB_SHA })));
+    };
+    const plan = await releasePlan({
+      records,
+      sourceSha: valid.GITHUB_SHA,
+      tag: "next",
+      read,
+      verify,
+    });
+    assert.deepEqual(plan.packages, records);
+  }
+});
+
+test("unchanged old packages stay outside the source claim while stale versions fail", async () => {
+  const read = async (name) =>
+    name === records[0].name ? published(records[0].version, "latest") : null;
+  const verify = async (selected, callback) =>
+    callback(
+      selected.map((record) => ({ ...record, sourceSha: "b".repeat(40), directory: "/unused" })),
+    );
+  const unchanged = async () => {};
+  const plan = await releasePlan({
+    records,
+    sourceSha: valid.GITHUB_SHA,
+    tag: "next",
+    read,
+    verify,
+    unchanged,
+  });
+  assert.deepEqual(plan.packages, [records[1]]);
+  await assert.rejects(
+    releasePlan({
+      records,
+      sourceSha: valid.GITHUB_SHA,
+      tag: "next",
+      read,
+      verify,
+      unchanged: async () => {
+        throw new Error("changed without a version change");
+      },
+    }),
+    /version change/,
+  );
+  await assert.rejects(
+    releasePlan({
+      records: [records[0]],
+      sourceSha: valid.GITHUB_SHA,
+      tag: "next",
+      read,
+      verify,
+      unchanged,
+    }),
+    /No package version/,
+  );
+});
+
+test("receipts cannot change source, tag, selected version, or duplicate a package", () => {
+  const plan = { schemaVersion: 1, sourceSha: valid.GITHUB_SHA, tag: "next", packages: records };
+  validateReleasePlan(plan, records, valid.GITHUB_SHA, "next");
+  for (const changed of [
+    { ...plan, sourceSha: "b".repeat(40) },
+    { ...plan, tag: "latest" },
+    { ...plan, packages: [{ ...records[0], version: "9.9.9" }] },
+    { ...plan, packages: [records[0], records[0]] },
+  ])
+    assert.throws(() => validateReleasePlan(changed, records, valid.GITHUB_SHA, "next"));
+});
+
+test("unchanged eligibility compares public contents and ignores filesystem timestamps", async () => {
+  await using directory = await mkdtempDisposable(resolve(tmpdir(), "visonaut-content-proof-"));
+  const first = resolve(directory.path, "first");
+  const second = resolve(directory.path, "second");
+  for (const target of [first, second]) {
+    await mkdir(target);
+    await writeFile(resolve(target, "package.json"), '{"name":"visonaut"}\n');
+    await writeFile(resolve(target, "index.js"), "export const value = 1;\n");
+  }
+  await utimes(resolve(second, "index.js"), new Date(0), new Date(0));
+  assert.deepEqual(await packageContents(first), await packageContents(second));
+  await writeFile(resolve(second, "index.js"), "export const value = 2;\n");
+  assert.notDeepEqual(await packageContents(first), await packageContents(second));
 });

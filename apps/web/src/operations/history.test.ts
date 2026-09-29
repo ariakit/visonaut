@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { summarizeClosedRuns } from "./closed-summary.ts";
+import { nativeTestStorage } from "../api/test-storage.ts";
+import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { retentionPinStatement } from "@visonaut/service";
@@ -33,8 +35,10 @@ import {
 } from "./history-supplement.ts";
 import { publicImage } from "../api/images.ts";
 import { apiContext, type ApiContext } from "../api/context.ts";
-import { declareShard, finalize, uploadImage } from "../api/ingest.ts";
-import { issueIngestCapability } from "@visonaut/security";
+import { SCHEMA_VERSION, workflowSourceDigest } from "@visonaut/protocol";
+import { declareStaged, finalizeStaged, uploadStagedImage } from "../api/workflow-owned.ts";
+import { materializeWorkflowRun } from "../api/workflow-materialize.ts";
+import { issueIngestCapability, issueUploadTicket } from "@visonaut/security";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 
 let runtime: Miniflare;
@@ -48,38 +52,11 @@ beforeEach(async () => {
       script: "export default {fetch(){return new Response('ok')}}",
       compatibilityDate: "2026-09-22",
       d1Databases: ["DB"],
-      r2Buckets: ["IMAGES", "QUARANTINE", "BACKUPS"],
+      r2Buckets: ["IMAGES", "QUARANTINE"],
     }),
   );
   const database = await runtime.getD1Database("DB");
-  for (const name of [
-    "0001_service",
-    "0002_work",
-    "0003_auth",
-    "0004_ingest",
-    "0005_operations",
-    "0006_acceptance",
-    "0007_backup_inventory",
-    "0008_capture_profiles",
-    "0009_retention_history",
-    "0010_run_history",
-    "0011_backup_groups",
-    "0012_historical_comparisons",
-    "0013_promotion_scans",
-    "0014_visonaut_brand",
-    "0016_comparison_publication",
-  ]) {
-    const source = (
-      await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")
-    ).replace(/^--.*$/gm, "");
-    let query = "";
-    for (const line of source.split("\n")) {
-      query += `${line}\n`;
-      if (!line.trimEnd().endsWith(";")) continue;
-      await database.prepare(query).run();
-      query = "";
-    }
-  }
+  await applyTestMigrations(database);
   fixtureDatabase = new TestDatabase();
   fixture = context(fixtureDatabase);
   operations = {
@@ -88,7 +65,6 @@ beforeEach(async () => {
     // Miniflare returns the native binding through an RPC proxy type.
     images: (await runtime.getR2Bucket("IMAGES")) as ObjectStore,
     quarantine: (await runtime.getR2Bucket("QUARANTINE")) as ObjectStore,
-    backups: (await runtime.getR2Bucket("BACKUPS")) as ObjectStore,
   };
   operations.budget.objectsPerStep = 2;
 });
@@ -648,7 +624,7 @@ describe("verified closed history with native D1 and R2", () => {
     expect(await uploads("source")).toEqual([]);
   }, 30_000);
 
-  it("rejects stale declaration, upload, and finalization requests after compaction", async () => {
+  it("keeps a compacted run immutable across staged capture retries", async () => {
     const runId = "26e29ef3-cac4-4c4f-8f65-1e219a89f526";
     const service = await closed(runId);
     await operations.database
@@ -662,22 +638,62 @@ describe("verified closed history with native D1 and R2", () => {
       issuer: operations.origin,
       environment: "local" as const,
     };
+    const workflowOwned = {
+      callerWorkflowPath: ".github/workflows/app.yml",
+      trustedWorkflowPath: ".github/workflows/visual.yml",
+      captureJobPrefix: "App / Visual / Capture / ",
+      submitJobName: "App / Visual / Submit",
+      reusableWorkflowRef: `owner/repo/.github/workflows/visual.yml@${"b".repeat(40)}`,
+      reusableWorkflowSha: "b".repeat(40),
+    };
+    const sourceDigest = await workflowSourceDigest(workflowOwned.reusableWorkflowSha);
+    // The completed signed stage can outlive its service detail during a retry.
+    await operations.database
+      .prepare(
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json,submit_job_id,submit_check_run_id,submit_verified_json,submitted_at,created_at) VALUES(?,'123','456',1,?,?,?,?,?,?,'{}','789','789','{}',?,?)",
+      )
+      .bind(
+        runId,
+        "a".repeat(40),
+        sourceDigest,
+        workflowOwned.callerWorkflowPath,
+        workflowOwned.reusableWorkflowRef,
+        workflowOwned.captureJobPrefix,
+        workflowOwned.submitJobName,
+        operations.now(),
+        operations.now(),
+      )
+      .run();
+    await operations.database
+      .prepare(
+        "INSERT INTO ingest_staged_bundles(run_id,job_id,check_run_id,shard_key,job_name,verified_json,created_at) VALUES(?,'789','789','combined',?,'{}',?)",
+      )
+      .bind(runId, workflowOwned.submitJobName, operations.now())
+      .run();
     const token = await issueIngestCapability(capability, {
       runId,
       repositoryId: "123",
       workflowRunId: "456",
       workflowAttempt: 1,
       testedSha: "a".repeat(40),
-      planDigest: "plan",
-      shardKey: "chromium",
+      planDigest: sourceDigest,
+      shardKey: "combined",
       jobId: "789",
       maximumBytes: 1024,
       maximumImages: 1,
     });
+    const ticket = await issueUploadTicket(capability, {
+      runId,
+      shardKey: "combined",
+      objectKey: `quarantine/staged/${runId}/789/${"c".repeat(64)}`,
+      imageDigest: "c".repeat(64),
+      mediaType: "image/png",
+      maximumBytes: 1,
+    });
     const api = apiContext({
       database: await runtime.getD1Database("DB"),
-      images: await runtime.getR2Bucket("IMAGES"),
-      quarantine: await runtime.getR2Bucket("QUARANTINE"),
+      images: nativeTestStorage(await runtime.getR2Bucket("IMAGES")),
+      quarantine: nativeTestStorage(await runtime.getR2Bucket("QUARANTINE")),
       operations: {
         async send() {
           throw new Error("Unexpected operations continuation");
@@ -707,11 +723,8 @@ describe("verified closed history with native D1 and R2", () => {
           privateKey: "unused",
         },
         webhookSecret: "unused",
-        oidcAudience: operations.origin,
         repositoryOwnerId: "1",
-        trustedPlanPath: ".github/visonaut-plan.json",
-        reusableWorkflowRef: "unused",
-        reusableWorkflowSha: "b".repeat(40),
+        workflowOwned,
         comparisonMaxAttempts: 2,
         limits: {
           maximumImageBytes: 1024,
@@ -719,23 +732,61 @@ describe("verified closed history with native D1 and R2", () => {
           maximumManifestBytes: 1024,
           maximumPlanBytes: 1024,
           maximumCaptures: 1,
+          maximumStagedBytes: 1024,
         },
       },
     });
     const before = await service.run(runId);
-    const request = () =>
+    const historyBefore = await readHistoryManifest(operations, runId);
+    expect(historyBefore).not.toBeNull();
+    expect(await detailCount(runId)).toEqual({ count: 0 });
+    const request = (body = "{}") =>
       new Request(operations.origin, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: "{}",
+        headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body,
       });
     for (const invoke of [
-      () => declareShard(request(), api, runId, "chromium"),
-      () => uploadImage(request(), api, "unused-ticket"),
-      () => finalize(request(), api, runId),
-    ])
-      await expect(invoke()).rejects.toMatchObject({ code: "stale_capability", status: 409 });
+      () => declareStaged(request(), api, runId, "combined"),
+      () => uploadStagedImage(request(), api, ticket),
+      () =>
+        finalizeStaged(
+          request(
+            JSON.stringify({
+              schemaVersion: SCHEMA_VERSION,
+              shardKey: "combined",
+              manifestDigest: "c".repeat(64),
+            }),
+          ),
+          api,
+          runId,
+        ),
+    ]) {
+      await expect(invoke()).rejects.toMatchObject({ code: "closed_shard", status: 409 });
+    }
+    // Even a previously sealed run needs current authenticated Plan evidence.
+    await expect(materializeWorkflowRun(api, runId)).rejects.toMatchObject({
+      code: "plan_unverified",
+      status: 409,
+    });
+    await operations.database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at,plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha) VALUES(?,0,'123',?,?,'pull_request','refs/pull/1/merge',1,0,'visonaut:pre:456','active','456',1,?,?,1,?,'788',?)",
+      )
+      .bind(
+        before.tested_sha,
+        before.tested_sha,
+        "d".repeat(40),
+        operations.now(),
+        operations.now(),
+        operations.now(),
+        workflowOwned.reusableWorkflowSha,
+      )
+      .run();
+    expect(await materializeWorkflowRun(api, runId)).toEqual(before);
     expect(await service.run(runId)).toEqual(before);
+    expect(await detailCount(runId)).toEqual({ count: 0 });
+    expect(await readHistoryManifest(operations, runId)).toEqual(historyBefore);
     expect(await uploads(runId)).toEqual([]);
     expect(
       await operations.database
@@ -788,6 +839,11 @@ describe("verified closed history with native D1 and R2", () => {
     expect((await expireRunImages(operations)).completed).toEqual([]);
     expect((await operations.images.get("runs/run/original"))?.size).toBeGreaterThan(0);
     await finish();
+    for (let pass = 0; pass < 100; pass++) {
+      const report = await summarizeClosedRuns(operations);
+      expect(report.attention).toEqual([]);
+      if (report.completed.includes("run")) break;
+    }
     expect((await expireRunImages(operations)).completed).toEqual(["run"]);
     expect(
       await operations.database

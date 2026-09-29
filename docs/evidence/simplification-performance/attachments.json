@@ -1,0 +1,241 @@
+{
+  "scope": "Preserved audit and implementation screenshots. Media stay outside Git; original local paths and raw records are unchanged. Local hashes identify the original files; attachment URLs identify the corresponding uploaded media.",
+  "attachments": [
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/desktop-reload-capture-anomaly.png",
+      "bytes": 60102,
+      "sha256": "694b79459ba001689a5a368818cefedc44bd8c308e33c7408c817ec901a799f3",
+      "url": "https://github.com/user-attachments/assets/5181d53b-a5d3-42de-9d5f-390ccb58040f"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/desktop-review-viewport.png",
+      "bytes": 67858,
+      "sha256": "afa0414ef32495f65810f84d7f703416f2206bba86da6a1d5fffa38da99e165b",
+      "url": "https://github.com/user-attachments/assets/ad5bb0b1-d8c8-462a-8722-6c49739159fe"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/narrow-review-viewport.png",
+      "bytes": 45249,
+      "sha256": "1e6d8aef2419450551f0cbd2164c8b9933fe82c0723e9bb3528cefc40a320886",
+      "url": "https://github.com/user-attachments/assets/33f9dcc0-935e-49f9-b1d0-3bc44f875467"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/pre-history-identity/iab-verified-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444",
+      "url": "https://github.com/user-attachments/assets/b53cd23e-8227-4402-b08f-eda47f2a3e06"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/built-preview/pre-history-identity/iab-verified-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5",
+      "url": "https://github.com/user-attachments/assets/b7179cf1-2b20-4b93-9863-28924414fa60"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-desktop.jpg",
+      "bytes": 58410,
+      "sha256": "2ee679c930515da07789dedd58e7bd0af292a2495ff79adeb54d5290b0f3731b",
+      "url": "https://github.com/user-attachments/assets/4732663d-9e9d-4725-b295-9483b0218027"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-final-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444",
+      "url": "https://github.com/user-attachments/assets/4e8adac8-be83-4178-825b-3cb0686605ae"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-final-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5",
+      "url": "https://github.com/user-attachments/assets/7283cc38-8f9b-4e6c-b2f2-1a4ba5b7f030"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-implemented-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444",
+      "url": "https://github.com/user-attachments/assets/67ec6e4a-5c1d-419f-8849-f63ba78344cd"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-implemented-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "ca17876f127f552fce5c7005f1cf9a21408d17981666f091310a35398a2ad7d5",
+      "url": "https://github.com/user-attachments/assets/16008522-0660-4b66-a9ba-b92970fcb1bd"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-narrow.jpg",
+      "bytes": 67049,
+      "sha256": "19fee189aa8c7300e2f5dcfd90cae51c7ca9ad491c74faa49c075f674ca26b1f",
+      "url": "https://github.com/user-attachments/assets/4f091fb4-2b26-4f1b-a79f-84f23bf40ec4"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-verified-desktop.jpg",
+      "bytes": 74594,
+      "sha256": "4e890368c56413735eb8e827b90a999bbb6ad2fa707b29851535058ff82d5444",
+      "url": "https://github.com/user-attachments/assets/b388b7fc-99ff-470b-b7ec-ca805d088c53"
+    },
+    {
+      "file": "docs/evidence/simplification-performance/iab-verified-narrow.jpg",
+      "bytes": 67111,
+      "sha256": "5704b6f969f24cc9a1cad1c32cf07cc9942914d1ddd806c3966d68dffedbd349",
+      "url": "https://github.com/user-attachments/assets/4f03d0bc-418a-4d40-99e7-6b72a04aef6d"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O10-alternative-r4.png",
+      "bytes": 51566,
+      "sha256": "db07fada595a4fad0c156067e066975d190bb4b8c57acba30d1f3eed23279714",
+      "url": "https://github.com/user-attachments/assets/ee678105-661a-4771-803a-51b8c2e54768"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O10-narrow-r4.png",
+      "bytes": 102293,
+      "sha256": "6df21ab59d7043d83be74044219e6ec9bfea4cdb803abc57fbbc0ad3ad8b72aa",
+      "url": "https://github.com/user-attachments/assets/550df75a-dcd7-47c2-9aa8-148a23cb18ae"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O10-r3.png",
+      "bytes": 105356,
+      "sha256": "5b1bc251583c20840b8aa1545d2df037866544b658e4ad7188a5a427210d357b",
+      "url": "https://github.com/user-attachments/assets/71a5974d-fd9f-4a8b-b924-c8c8b4bb1ad0"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O10-r4.png",
+      "bytes": 108439,
+      "sha256": "dac160d3bcef886faf20315e7261d4f9b8cc3865f996b5e8a88aad58a4a1696b",
+      "url": "https://github.com/user-attachments/assets/8925f259-3eb9-4e0a-a7d5-79bb20671340"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O11-narrow-r5.png",
+      "bytes": 101350,
+      "sha256": "afb93874c9ad2296ecd5016472480b52ea6d22101255fd0ef58afe35e7e47823",
+      "url": "https://github.com/user-attachments/assets/4be13d7a-ccfe-48f1-94ea-c66768237865"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O11-narrow-r6.png",
+      "bytes": 105993,
+      "sha256": "eb8a9717df8432187ccecb2847ae47f16ebe03c18d72133135e56448017efcfc",
+      "url": "https://github.com/user-attachments/assets/49b193c3-9f4d-4cbf-97a0-2798071069a1"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O11-r5.png",
+      "bytes": 100184,
+      "sha256": "47481bcc010cd4ed1b3d0a707231996d1a38599fa92e441f460058b0ecb6dcfb",
+      "url": "https://github.com/user-attachments/assets/b93a2b10-bea8-4db0-bfc8-ed8ea8ab468d"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-O11-r6.png",
+      "bytes": 109327,
+      "sha256": "a468ddebc83f5d06259ba33fbdac2751c713f95f90eae65692b399c14cab8f84",
+      "url": "https://github.com/user-attachments/assets/a6bf86be-1f75-426a-b8f4-84499227ad41"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-U06-r3.png",
+      "bytes": 71028,
+      "sha256": "c1c77901bf042d673b15049cb9dbc6470571584848c28a270de5d4044a389635",
+      "url": "https://github.com/user-attachments/assets/b58e5cbb-d5b5-497e-89ce-5b45dd803a9b"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop-r2.png",
+      "bytes": 134795,
+      "sha256": "faaa1c9e15589a90ec3ac9fb0d0cf8f8f7b6012cd1bef22a67145b40ce6f331e",
+      "url": "https://github.com/user-attachments/assets/00ca45de-b0bd-4d84-9ca7-aee4f5cb550f"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop-r3.png",
+      "bytes": 131619,
+      "sha256": "5d652b9ec6aafcb4fea9436696a47236d4fffa98db59149cbae5f96fea75db22",
+      "url": "https://github.com/user-attachments/assets/5e7122ea-e73b-47c2-8b27-a49439c09f0f"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop-r4.png",
+      "bytes": 130014,
+      "sha256": "26c57965d9f221fd0652daeff8173bf85f1019a0770f97802e74fab9f6b91119",
+      "url": "https://github.com/user-attachments/assets/07cee434-3920-4203-a84e-1697482023bb"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop-r5.png",
+      "bytes": 132807,
+      "sha256": "e4feb3e20253d18161a1df3ae1810309518d1109a4dbfaa1c0bceb69afdac3c0",
+      "url": "https://github.com/user-attachments/assets/df46af3f-9138-4753-814e-ab792a3d30e4"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop-r6.png",
+      "bytes": 137201,
+      "sha256": "beb3092e37e75d63f258dc2f0d3e94ebf93a408c5b6b52b88cf2ce8c35b205d3",
+      "url": "https://github.com/user-attachments/assets/c79dc8c1-ffd0-43c8-a0d3-c2a91d0db5e2"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-desktop.png",
+      "bytes": 128248,
+      "sha256": "fdf90dec19eb0b1d50dced576f77433580361c838b2b7afc236152d31d2dbf7b",
+      "url": "https://github.com/user-attachments/assets/86183e2c-d139-489a-bf06-6af1cf28d895"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow-r2.png",
+      "bytes": 62741,
+      "sha256": "663a1b432b3e02df855268da707b5b964a24cc3a4b8f1224503bf9146c736763",
+      "url": "https://github.com/user-attachments/assets/fb05b094-6329-4bc5-8c2b-733babe6cdb1"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow-r3.png",
+      "bytes": 62473,
+      "sha256": "93f7d6f188c571a7d83ce9148911bb53edca9868e0a0cd8649fdebd23ab4995b",
+      "url": "https://github.com/user-attachments/assets/5d20390c-3249-494c-a769-45f54d07f219"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow-r4.png",
+      "bytes": 64863,
+      "sha256": "5b04fa49802ec87ca28e12a595253dabb0a949fef7f204ba4df4a525db1b938f",
+      "url": "https://github.com/user-attachments/assets/35631373-1fdd-4d9b-8074-61676beb1f7c"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow-r5.png",
+      "bytes": 63396,
+      "sha256": "107ec1b11ff8d6ec94682ea158e425b1906fc71f0394d64208d229d4a3377ade",
+      "url": "https://github.com/user-attachments/assets/1407f31f-dc05-474c-9143-e4c3c1562769"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow-r6.png",
+      "bytes": 63434,
+      "sha256": "4baf3c7f4d78facbe23f1a0d8dc2f0312dbec0472d31aac541c9f5928bcb0603",
+      "url": "https://github.com/user-attachments/assets/6ca2fac4-a598-4d8c-913e-2951674977b5"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-narrow.png",
+      "bytes": 60772,
+      "sha256": "688826b3a444a595d4b1e86beb5a58f80f80237fdc9ef0b994895090fe8c6d1d",
+      "url": "https://github.com/user-attachments/assets/d072436a-74d4-4f81-9ac8-7364277e5dc7"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-prototype-r2.png",
+      "bytes": 71816,
+      "sha256": "80bea54d02d1af4c952539d09e4569530ca8fe4f620a67b7f25d7054a747dd01",
+      "url": "https://github.com/user-attachments/assets/8f3970fb-b418-47de-9a20-9961694d64d7"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/document-prototype.png",
+      "bytes": 70094,
+      "sha256": "00c756c81d7d549b32bebc1c6ddc481754783b5d2d41df685afa1c260f0ab7af",
+      "url": "https://github.com/user-attachments/assets/9d0ec4fb-74fd-4124-9a5d-6c8a7c7de002"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/visonaut-ui-desktop.png",
+      "bytes": 123193,
+      "sha256": "f3f1924802bbd7c33c359d04df3ed1798c28be290323804e9ddbdbdc73d7a0a9",
+      "url": "https://github.com/user-attachments/assets/b7a8c211-84ad-4ed2-80fa-50fcd7a1f71d"
+    },
+    {
+      "file": "docs/simplification-audit/evidence/visonaut-ui-narrow-fit.png",
+      "bytes": 58170,
+      "sha256": "03d8c08b375aa7b683a4fe806d753bda328c226ce513a9871c891f70b6ff0671",
+      "url": "https://github.com/user-attachments/assets/dadb6ba8-9fd7-4ee9-846b-9b4a5a3d26af"
+    }
+  ],
+  "interactionRecording": {
+    "url": "https://github.com/user-attachments/assets/8adb4fd0-4563-41fd-8a60-b76d6ce15ee3",
+    "originalLocalPath": "/tmp/visonaut-pr-interactions/review.mp4",
+    "bytes": 153485,
+    "sha256": "d6146506ae00130fb8369b0df13177fb122b59853bf30ba85ee557da04d24578",
+    "durationSeconds": 13.95,
+    "scope": "Read-only local built preview. Screenshot sampling preserves the interaction sequence with action captions; no performance timing or write claim."
+  }
+}

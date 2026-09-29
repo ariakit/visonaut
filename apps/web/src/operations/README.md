@@ -1,54 +1,82 @@
 # Operations integration
 
-Apply the numbered web D1 migrations, including the history, retention, and grouped-backup migrations through `0012_historical_comparisons.sql`. Call `runOperations(context)` after authenticated ingest reconciliation. Schedule it at least every five minutes. If `hasMore` is true, publish an operations continuation instead of waiting for the next cron tick. Queue consumers can repeat delivery; D1 task identities and leases control all durable effects.
+Apply all numbered web D1 migrations in order. Preserve applied migrations as history. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery; the compare Worker consumes work and publishes a status wakeup.
+
+Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs checks, review links, and promotion without scanning closed history or retention.
 
 ```ts
-const result = await runOperations(context);
-if (result.hasMore) await operationsQueue.send({ kind: "continue" });
+await operationsQueue.send({ kind: "status", comparisonId });
+await operationsQueue.send({ kind: "maintenance", family: "history" });
 ```
 
-Set every `OperationsBudget` field from measured deployment limits. Keep the lease longer than a page of verified copies. `maximumExportEntries` limits one archive. Set the web Worker's `limits.subrequests` above this limit plus authentication and metadata overhead. The download prefetches at most four objects and cancels readers when the client disconnects. A local fixture is not evidence of remote R2 download performance: measure the full 10,580-capture export with references and derived images before launch.
+D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. Set each budget field from measured deployment limits. `maximumObjectBytes` bounds one image or metadata page. `maximumMetadataBytes` bounds total manual-export metadata. `maximumExportEntries` bounds the exported payload. These limits are separate from database-capacity admission.
 
-Database history survives image expiry. The scheduler samples physical database bytes from D1 `meta.size_after` and counts uploading or comparing runs. The private dashboard shows the sample time, physical usage, admission headroom, and active capture count. Configure `databaseWarningBytes`, `databaseAdmissionBytes`, and `maximumActiveRuns` in `VISONAUT_API_LIMITS`. Physical admission must remain below D1's hard database limit. Select thresholds with measured headroom for concurrent capture work.
+## Baselines and closed history
 
-New run identities are refused when a fresh physical sample reaches the admission threshold. A missing physical sample also refuses new admission. The active upload/comparison count is checked again inside the run reservation transaction. Ready reviews do not use a capture slot, so later full main captures can proceed while older reviews wait. Replays of an existing workflow attempt remain available. Capacity warnings clear after a healthy sample falls below the warning threshold. This is a pause safeguard, not a strict byte quota or a promise of sustained throughput. It does not delete permanent identity, decision, or review history.
+New accepted snapshots point to immutable source originals. Promotion reads and hashes each distinct original once per bounded page. It writes no protected image copy. Before promotion starts, D1 pins the snapshot's run and every inherited image owner. A missing or corrupt original blocks promotion. Promotion closes the review at the promotion time. The final GitHub check remains passed. A promoted review is read-only. A correction requires a new complete main capture.
 
-`POST /api/runs/:runId/export` calls `createRunExport(context, { runId, actorId })` and returns `{ exportId, downloadPath }`. `GET /api/exports/:exportId` calls `streamRunExport`. Both routes must require a current maintainer session and live repository authorization. The GET response is a private TAR stream. A sealed, ready comparison is required. It includes current and inherited candidate images, protected reference originals, profiles, provenance, raw manifests and plans, decisions, commands, audit metadata, and a final `complete.json` integrity marker. Keep metadata private even when validated image routes are public. Exports expire after 24 hours; an active download can finish within its one-hour lease. A truncated archive has no valid completion marker. A failed operation does not release unrelated review, manual, or baseline pins.
+Each new run owns its verified approval. A copied approval records its source decision ID, actor, and exact tuple. Verification still requires the allowed lineage and the exact reference, candidate, rendering identity, policy, engine, and codec. A later edit to the source decision does not revoke a downstream copy. Migration `0024` converts valid active links and clears invalid active links. It preserves closed links as historical evidence.
 
-Export format 2 stores a small `metadata.json` root and immutable pages. The root lists each page's TAR name, byte count, and SHA-256. Metadata pages contain `{ version: 2, runId, section, rows }`; capture rows contain their full profiles. Entry pages use the same envelope with `section: "entries"` and list the image or source files that follow. The writer reads about one MiB of SQL records at a time and writes at most 100 rows per page. A larger single row must fit the configured object limit. The root is limited to two MiB, and total metadata and object counts remain subject to deployment budgets.
+Rendering identity excludes comparison policy and engine. The converter verifies the original stored profile digest before saving its rendering digest. Required old tuples retain their original JSON beside the converted tuple. Comparison policy, engine, and codec remain in the acceptance tuple; conversion does not change the selected policy.
 
-The provisional 200,000-entry bound covers four image objects for each of 40,000 admitted captures: original, thumbnail, mask, and protected reference, with room for history documents. The 35,820-capture inventory alone can contain 143,280 such image entries. The web Worker allows 250,000 subrequests so the download can read those objects and its bounded metadata pages. Cloudflare permits a configurable paid-plan limit above the default. These are finite shape bounds; complete hosted export time, CPU, and cost remain launch gates. [Worker subrequest limits](https://developers.cloudflare.com/workers/platform/limits/#subrequests).
+Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. Before this boundary, a non-promoted closed run can create a read-only comparison from its retained native D1 captures. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
 
-During download, the service verifies each page and each source object before it emits completion. Checksum pages at `checksums/000000.json`, for example, map exported file names to SHA-256 values. The final format-2 `complete.json` lists the exact checksum-page names, sizes, and digests, plus the payload entry count. A reader must verify those pages and all listed files; the presence of a completion filename alone is insufficient. Expiry removes private export pages in bounded steps before it releases export-owned pins.
+## Conversion before deployment
 
-[D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) remains available for an emergency database rollback. Scheduled SQL-plus-R2 backups and their retention collectors are retired. The web Worker has no backup bucket binding or D1 export token. Existing backup buckets can be removed after verifying that no backup is in progress and no live export depends on their `exports/` prefix. Time Travel rewinds D1 in place within Cloudflare's retention window; it does not restore missing R2 images or provide an independent copy. A run export remains available for important visual evidence while its source images are retained.
+Drain or cancel old workflow attempts before switching to the combined Submit path. Release their obsolete `workflow-rerun:` retention pins only after those attempts are terminal. Do not discard an unfinished attempt merely because its old writer was removed.
 
-Before the first deployment without `BACKUPS`, run this read-only query against both production and preview D1 immediately before cutover. Require three zeros. A live export created by the old Worker still has its metadata in the old bucket; wait for it to expire before switching. An unfinished backup or its recovery pin must be settled before switching.
+Required old protected snapshots must pass `convertSourceBaselines`. It installs pins for live owners, verifies an existing source original or restores it from the protected copy, and verifies destination readback. An already deleted source owner can become live only with a one-use verified baseline-conversion receipt. The receipt, source pins, and snapshot switch settle in one transaction. A run being deleted cannot be restored. Normal byte resurrection remains prohibited. Old protected objects are not deleted by this conversion.
+
+Old ready history archives must pass `summarizeClosedRuns`. The converter verifies each archive page and saves resumable progress. It joins saved metadata and decisions only after all pages pass. Row counts, the source revision, decision evidence, and foreign keys must agree before the compact reader is enabled. An incomplete or corrupt conversion retains its source evidence and reports attention. Candidate cursors let later valid records proceed.
+
+Check these counts after conversion and before removing the remaining conversion helpers. Require zero required protected snapshots, zero unconverted expired closed records, and no unresolved conversion failures. Run the checks in both environments. A nonzero count is a cutover gate, not permission to delete the source.
 
 ```sql
-SELECT
-  (SELECT COUNT(*) FROM operations_backups WHERE state IN ('exporting', 'copying')) AS unfinished_backups,
-  (SELECT COUNT(*) FROM operations_exports WHERE state IN ('building', 'ready')
-    AND (expires_at > CAST(strftime('%s', 'now') AS INTEGER) * 1000
-      OR active_until > CAST(strftime('%s', 'now') AS INTEGER) * 1000)) AS live_exports,
-  (SELECT COUNT(*) FROM work_retention_pins WHERE owner LIKE 'backup:%'
-    AND reason = 'recovery') AS backup_recovery_pins;
+SELECT COUNT(*) AS required_protected_snapshots
+FROM visonaut_snapshots snapshot
+WHERE storage_mode='protected'
+  AND (reference_eligible=1 OR EXISTS (
+    SELECT 1 FROM visonaut_pins WHERE snapshot_id=snapshot.id));
+
+SELECT COUNT(*) AS unconverted_closed_records
+FROM visonaut_runs run
+WHERE active=0 AND closed_at<=unixepoch()*1000-2592000000
+  AND NOT EXISTS (SELECT 1 FROM visonaut_closed_summaries summary
+    WHERE summary.run_id=run.id AND summary.state='ready');
+
+SELECT kind,subject_id,code FROM operations_events
+WHERE resolved_at IS NULL AND kind IN ('baseline-conversion','history');
+PRAGMA foreign_key_check;
 ```
 
-Repeat the query after all old Worker versions stop receiving traffic and before deleting the buckets. An export created in the short interval between the first query and deployment may have an old-bucket URL; the caller can create a new export from the run page after cutover. Keep the old bucket until any such export and active download expire. This internal cutover does not preserve an old export URL across storage changes.
+Legacy backup inventory was read without writes on 2026-09-29. Production retained 12 completed backup metadata sets and 260 ready groups; preview retained 14 completed zero-object sets. The account inventory contained current image/quarantine buckets and unrelated buckets, with no legacy backup bucket. Private metadata exports were saved with restrictive permissions and verified SHA-256 receipts before retiring the backup and restore source. The exports do not recreate missing image objects. Keep these private receipts outside Git. Applied tables and migrations, as well as remote data, remain intact.
 
-Private run-export metadata and pages now use the `exports/` prefix in IMAGES. The public image route requires a database image ID, so these objects are not served through it. Newly created exports expire after 24 hours; an active download can finish within its one-hour lease. The historical backup and restore modules remain for offline work with retained legacy sets. They are not invoked by the live scheduler.
+## Manual evidence export
 
-Required plans and manifests are copied from QUARANTINE while their live database pointers exist. Closed-run archives preserve their exact original bytes in the private `documents` section. Ready run and comparison archives live under IMAGES `history/`. The historical restore code removes unfinished archive pointers and keeps verified ready archives. Do not apply upload lifecycle expiry to live `plans/` and `manifests/` prefixes.
+`POST /api/runs/:runId/export` creates a private evidence export. `GET /api/exports/:exportId` streams it. Both require a current maintainer session and current repository authorization. Export pages use the private `exports/` prefix in IMAGES. They cannot be served through the public image-ID route.
 
-Schedule `expireComparisonReferences(context)` before `expireSnapshotImages(context)`. The first phase releases expired outgoing comparison references. The second revokes an unrooted snapshot's reference eligibility, waits the guarded grace, then deletes only its unique `baselines/<snapshot>/` prefix. Current and rollback baselines, active comparisons and reviews, exports, manual pins, and recovery work block the relevant transitions. Original byte settlement must use `completeRetiredRunDeletion`; it releases inherited owners only after dependent bytes are gone. Archive readiness gates detail and byte cleanup. The collectors use bounded pages and saved cursors so blocked old records do not starve later candidates.
+A sealed ready comparison is required. An export includes still-retained original, reference, and derived images with available profiles, provenance, decisions, and metadata. Pages and source objects are verified before the final `complete.json` integrity marker is emitted. Exports expire after 24 hours; an active download has its one-hour lease. A truncated download has no valid completion marker. Metadata and object bounds are finite. Local fixtures do not prove hosted latency, CPU, or cost for the full capture inventory.
 
-The private dashboard displays unresolved attention items; this module sends no external messages. Exhausted comparison work appears in the service's failed status. A failed or ambiguous GitHub POST/PATCH stays fenced. An ambiguous creation can reconcile by its exact App/SHA/external identity. Never clear an ambiguous PATCH solely because its lease expired or because a GET currently looks correct.
+The reader verifies the checksum pages and every listed file. The presence of a completion filename alone is insufficient. Cleanup removes private export pages in bounded steps before releasing its own pins. It does not release unrelated baseline, review, or manual ownership.
 
-To restore a legacy set while its source bucket is retained, call `restoreBackup(backupStore, backupId, isolatedTarget, limits)` with its exact identifier. The target must reject a nonempty database or bucket, import the SQL into an isolated database, apply current rules, and verify every database reference before activation. `sanitizeRestoredDatabase` supplies the default session/token cleanup and fences old work; old runs are inactive, incomplete snapshots are revoked, and saved external deliveries cannot restart. Rotate Better Auth and ingest capability secrets in the restored environment before activation. The restore event remains unresolved until that deployment step is complete. Keep the original database and buckets untouched during the drill.
+## Native database recovery
 
-A D1 Time Travel rewind is not a complete Visonaut restore. It leaves R2, GitHub checks, queues, and Worker secrets at their current state while D1 moves backward. Stop service traffic and queue consumers before a rewind. This repository has no tested procedure to reactivate an in-place restored database. Keep the service offline afterward until sessions and stored account tokens are invalidated, pending work and external GitHub deliveries are fenced or reconciled, D1 references and foreign keys are checked against retained R2 bytes, and application secrets are rotated. Do not run `sanitizeRestoredDatabase` on live D1: it is designed for an isolated target and deletes backup records and pins.
+The recovery promise is D1 recovery plus originals that still exist in R2. It does not recreate expired image bytes. Cloudflare Time Travel is automatic, restores D1 in place, and does not clone a database; paid retention is 30 days and free retention is 7 days. See [Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/) and [Wrangler commands](https://developers.cloudflare.com/d1/wrangler-commands/).
 
-A rewound D1 row can refer to an R2 object that has since expired; D1 alone cannot reconstruct that visual evidence.
+Use this runbook first with a separate diagnostic D1 database and diagnostic R2 storage. Do not point a rehearsal at production. A hosted Time Travel drill requires its own resource and restore authorization.
 
-The tests use real SQLite transactions and the native Worker/R2 runtime, stream original bytes through TAR, restore a SQL snapshot into an empty SQLite database, and inject storage and GitHub failures. They cover missing protected originals, corrupt bytes, lost POST/PATCH responses, revised intents, exhausted leases, owner pins for inherited captures, and exact retention prefixes. The offline native grouped-backup test also removes all live source bytes, restores into new D1/R2 bindings, checks foreign keys and byte digests, and measures cold versus warm operation counts. Its optional 1000-object inventory fixture uses small synthetic bodies; it does not prove hosted latency or a full capture workload. Large download drills remain deployment checks; the legacy restore tests cover retained sets only.
+1. Verify the exact account, environment, D1 UUID, and R2 bindings. Stop HTTP writes, cron, and queue consumers for the target. Save its current bookmark privately.
+2. Create a known record in the diagnostic target, save its bookmark, change that record, then restore the saved bookmark. Verify that the record returns. Use a fresh diagnostic database for this sequence; copying production D1 does not copy its bookmark history.
+3. Keep the target offline. Apply the current numbered migrations if the rewind precedes them. Run `sanitizeRestoredDatabase` only against this isolated target. It invalidates sessions and account tokens, makes unfinished tasks terminal, and fences old GitHub deliveries. It does not replay external effects.
+4. Page through `inspectRecoveryImages`, retaining each `nextAfterId` until `hasMore` is false. Record missing and corrupt originals. Required baseline images must be present and verified; expired historical evidence must show an explicit missing or expired state. Run `PRAGMA foreign_key_check`.
+5. Rotate authentication and ingest capability secrets in the target. Keep checks with ambiguous prior external writes fenced until their requests are proven settled. Capture a new complete main run when the old baseline cannot be verified.
+6. Verify private login, a new capture, a manual evidence export, and terminal old command links. Reactivate only the verified target. Keep the previous bookmark and the drill receipt private.
+
+Example commands for the independently selected diagnostic database:
+
+```sh
+pnpm exec wrangler d1 time-travel info DIAGNOSTIC_DATABASE
+pnpm exec wrangler d1 time-travel restore DIAGNOSTIC_DATABASE --bookmark=VERIFIED_DIAGNOSTIC_BOOKMARK
+```
+
+The local recovery test restores an actual SQLite snapshot into a separate database, proves access and work fencing, and detects missing and corrupt R2 originals. Native D1/R2 tests also cover archive conversion and image streams. These tests establish the application procedure. They do not claim a completed hosted Time Travel rewind or a tested in-place production reactivation.

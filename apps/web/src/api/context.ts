@@ -6,7 +6,7 @@ import {
   type GitHubAppConfiguration,
   type MaintainerIdentity,
 } from "@visonaut/security";
-import { Service, type CommandResult } from "@visonaut/service";
+import { Service, type CommandResult, type OperationsMessage } from "@visonaut/service";
 import type { ArchivedRunHistory } from "../operations/history-format.ts";
 import { object, string } from "./input.js";
 
@@ -17,10 +17,8 @@ export interface ApiConfiguration {
   github: GitHubAppConfiguration;
   capability: CapabilityConfiguration;
   webhookSecret: string;
-  oidcAudience: string;
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
-  trustedPlanPath: string;
   /** Names and immutable source of the workflow-owned upload and submit jobs. */
   workflowOwned?: {
     callerWorkflowPath: string;
@@ -29,12 +27,7 @@ export interface ApiConfiguration {
     reusableWorkflowRef: string;
     reusableWorkflowSha: string;
     trustedWorkflowPath?: string;
-    additionalTrustedWorkflowBlobSha?: string;
-    transitionTrustedWorkflowBlobSha?: string;
-    additionalTrustedExecutorDigest?: string;
   };
-  reusableWorkflowRef: string;
-  reusableWorkflowSha: string;
   trustedExecutorDigest?: string;
   comparisonMaxAttempts: number;
   limits: {
@@ -54,15 +47,15 @@ export function isTrustedWorkflowExecutor(
   digest: string | undefined,
 ): digest is string {
   if (!digest) return false;
-  return (
-    digest === configuration.trustedExecutorDigest ||
-    (configuration.workflowOwned !== undefined &&
-      digest === configuration.workflowOwned.additionalTrustedExecutorDigest)
-  );
+  return digest === configuration.trustedExecutorDigest;
 }
 
 export interface ObjectStorage {
-  get(key: string): Promise<{ size: number; arrayBuffer(): Promise<ArrayBuffer> } | null>;
+  get(key: string): Promise<{
+    size: number;
+    body: ReadableStream<Uint8Array>;
+    arrayBuffer(): Promise<ArrayBuffer>;
+  } | null>;
   head(key: string): Promise<{ size: number; checksums: { sha256?: ArrayBuffer } } | null>;
   list(options: { prefix: string; limit: number; cursor?: string }): Promise<{
     objects: Array<{ key: string; size: number; checksums: { sha256?: ArrayBuffer } }>;
@@ -82,9 +75,8 @@ export interface ApiBindings {
   database: D1Database;
   images: ObjectStorage;
   quarantine: ObjectStorage;
-  transferPrivateKey?: string;
   comparator: { fetch: typeof fetch };
-  operations: { send(message: { kind: "continue" }): Promise<void> };
+  operations: { send(message: OperationsMessage): Promise<void> };
   configuration: ApiConfiguration;
   admission?: (identity: {
     projectId: string;
@@ -136,7 +128,10 @@ export async function loadVerifiedMergeGroup(context: ApiContext, testedSha: str
   };
 }
 
-export async function assertConfiguredProject(context: ApiContext) {
+export async function assertConfiguredProject(context: {
+  service: Service;
+  configuration: { projectId: string; github: { repositoryId: string } };
+}) {
   const project = await context.service.project(context.configuration.projectId);
   if (project.repository_id !== context.configuration.github.repositoryId) {
     throw new SecurityError(

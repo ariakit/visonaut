@@ -1,0 +1,1251 @@
+diff --git a/.github/workflows/app.yml b/.github/workflows/app.yml
+index 4aac43e30..b6893ee39 100644
+--- a/.github/workflows/app.yml
++++ b/.github/workflows/app.yml
+@@ -6,11 +6,6 @@ on:
+ permissions:
+   contents: read
+ 
+-env:
+-  VISONAUT_SERVER: https://visonaut.com
+-  VISONAUT_COMPARISON_POLICY_DIGEST: 6a97812c0ad3a5e8e006904995e75f8f15671260fb2ee53d31a1527c7d990fd1
+-  VISONAUT_PACKAGE_SHA256: 5d29257230b1d822b846af7670741e3195a58fddbe7c8cac61dedd3a8a403179
+-
+ jobs:
+   build:
+     name: Build app
+@@ -151,131 +146,13 @@ jobs:
+           retention-days: 7
+ 
+   visual:
+-    name: ${{ matrix.name }}
++    name: Visual
+     needs: [build, build-nextjs]
+-    runs-on: ${{ matrix.os }}
+-    timeout-minutes: 120
+-    permissions:
+-      contents: read
+-    strategy:
+-      fail-fast: false
+-      matrix:
+-        include:
+-          - os: ubuntu-latest
+-            name: Visual
+-            engines: chromium firefox
+-            projects: chrome firefox
+-            test: xvfb-run pnpm -F app run test-visual
+-          - os: macos-latest
+-            name: Visual (Safari)
+-            engines: webkit
+-            projects: safari
+-            test: pnpm -F app run test-visual
+-    steps:
+-      - name: Checkout repository
+-        uses: actions/checkout@v7
+-        with:
+-          persist-credentials: false
+-
+-      - name: Set up environment
+-        uses: ./.github/workflows/setup
+-        with:
+-          filters: |
+-            app...
+-            root
+-
+-      - name: Install Playwright
+-        uses: ./.github/workflows/install-playwright
+-        with:
+-          engines: ${{ matrix.engines }}
+-          workspace: app
+-
+-      - name: Download app artifact
+-        uses: actions/download-artifact@v8
+-        with:
+-          name: app-build
+-          path: app
+-
+-      - name: Download Next.js artifact
+-        uses: actions/download-artifact@v8
+-        with:
+-          name: nextjs-dist
+-          path: nextjs/.open-next
+-
+-      - name: Test visual
+-        run: ${{ matrix.test }} --project ${{ matrix.projects }} --grep @visual --output test-results/test-visual
+-
+-      - name: Encrypt captures
+-        run: pnpm exec visonaut pack --dir "${{ runner.temp }}/visonaut" --output "${{ runner.temp }}/visonaut-${{ runner.os }}.enc"
+-
+-      - name: Upload encrypted captures
+-        uses: actions/upload-artifact@v7
+-        with:
+-          name: visonaut-transfer-${{ runner.os }}
+-          path: ${{ runner.temp }}/visonaut-${{ runner.os }}.enc
+-          if-no-files-found: error
+-          retention-days: 1
+-
+-      - name: Upload test results to GitHub
+-        if: ${{ !cancelled() }}
+-        uses: actions/upload-artifact@v7
+-        with:
+-          name: app-test-results-${{ matrix.os }}
+-          path: app/test-results
+-          if-no-files-found: ignore
+-          retention-days: 7
+-
+-  submit:
+-    name: Visual / Submit
+-    needs: visual
+-    runs-on: ubuntu-latest
+-    timeout-minutes: 30
+     permissions:
+       actions: read
+       contents: read
+       id-token: write
+-    env:
+-      VISONAUT_WORKFLOW_SOURCE_SHA: ${{ vars.VISONAUT_WORKFLOW_SOURCE_SHA }}
+-    steps:
+-      - name: Checkout trusted toolchain
+-        uses: actions/checkout@v7
+-        with:
+-          ref: main
+-          persist-credentials: false
+-
+-      - name: Set up environment
+-        uses: ./.github/workflows/setup
+-        with:
+-          install: "false"
+-
+-      - name: Install Visonaut
+-        run: |
+-          mkdir -p "$RUNNER_TEMP/visonaut-tools"
+-          visonaut_version="$(node -p 'require("./package.json").devDependencies.visonaut')"
+-          [[ "$visonaut_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+-          pnpm --dir "$RUNNER_TEMP/visonaut-tools" add --ignore-scripts --save-exact "visonaut@$visonaut_version"
+-          echo "$RUNNER_TEMP/visonaut-tools/node_modules/.bin" >> "$GITHUB_PATH"
+-
+-      - name: Download captures
+-        uses: actions/download-artifact@v8
+-        with:
+-          pattern: visonaut-transfer-*
+-          path: ${{ runner.temp }}/visonaut-transfer
+-          merge-multiple: true
+-
+-      - name: Submit captures
+-        id: submit
+-        env:
+-          GH_TOKEN: ${{ github.token }}
+-        run: visonaut submit --bundle "linux=$RUNNER_TEMP/visonaut-transfer/visonaut-Linux.enc" --bundle "safari=$RUNNER_TEMP/visonaut-transfer/visonaut-macOS.enc"
+-
+-      - name: Upload receipt
+-        uses: actions/upload-artifact@v7
+-        with:
+-          name: ${{ steps.submit.outputs.name }}
+-          path: ${{ steps.submit.outputs.path }}
+-          if-no-files-found: error
+-          retention-days: 7
++    uses: ./.github/workflows/visual.yml
+ 
+   deploy-preview:
+     # Keep PR previews and the existing main deployment; merge-queue runs only test.
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0e3da44b..a913dfea8 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -16,36 +16,13 @@ concurrency:
+ jobs:
+   plan:
+     name: Plan
+-    if: github.event_name != 'push'
+-    runs-on: ubuntu-latest
+-    outputs:
+-      main: ${{ steps.plan.outputs.main }}
+-      app: ${{ steps.plan.outputs.app }}
+-      perf: ${{ steps.plan.outputs.perf }}
+-      plus: ${{ steps.plan.outputs.plus }}
+-      release_preview: ${{ steps.plan.outputs.release_preview }}
+-      docs: ${{ steps.plan.outputs.docs }}
+-      og_images: ${{ steps.plan.outputs.og_images }}
+-      plan: ${{ steps.plan.outputs.plan }}
+-    steps:
+-      - name: Checkout repository
+-        uses: actions/checkout@v7
+-        with:
+-          fetch-depth: 0
+-          persist-credentials: false
+-
+-      - name: Set up Node
+-        uses: actions/setup-node@v7
+-        with:
+-          node-version-file: package.json
+-
+-      - name: Plan CI
+-        id: plan
+-        env:
+-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+-          BASE_REF: ${{ github.event.pull_request.base.ref }}
+-        run: node packages/ariakit-scripts/src/ci-run.ts plan
++    permissions:
++      actions: read
++      contents: read
++      id-token: write
++    uses: ./.github/workflows/visual.yml
++    with:
++      report-plan: true
+ 
+   main:
+     name: Main
+@@ -59,7 +36,7 @@ jobs:
+   app:
+     name: App
+     needs: plan
+-    if: ${{ !cancelled() && (github.event_name == 'push' || needs.plan.outputs.app == 'true') }}
++    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.app == 'true' }}
+     permissions:
+       actions: read
+       contents: read
+@@ -130,8 +107,6 @@ jobs:
+     runs-on: ubuntu-latest
+     timeout-minutes: 15
+     permissions:
+-      actions: read
+-      checks: read
+       contents: read
+     steps:
+       - name: Checkout repository
+@@ -149,63 +124,3 @@ jobs:
+           CI_PLAN: ${{ needs.plan.outputs.plan }}
+           CI_RESULTS: ${{ toJSON(needs) }}
+         run: node packages/ariakit-scripts/src/ci-run.ts gate
+-
+-      - name: Verify Visonaut review
+-        if: needs.app.result == 'success'
+-        env:
+-          GH_TOKEN: ${{ github.token }}
+-        shell: bash
+-        run: |
+-          set -euo pipefail
+-          jobs="$(gh api --method GET -f filter=latest -f per_page=100 \
+-            "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs")"
+-          submit_job="$(jq -c --argjson run "$GITHUB_RUN_ID" '
+-            if .total_count > 100 then error("CI job list exceeds one page") else
+-              [.jobs[] | select(.name == "App / Visual / Submit" and .run_id == $run and
+-                .status == "completed" and .conclusion == "success")]
+-              | if length == 1 then .[0] else error("Successful submit job is unavailable") end
+-            end
+-          ' <<< "$jobs")"
+-          submit_attempt="$(jq -r '.run_attempt' <<< "$submit_job")"
+-          submit_started="$(jq -r '.started_at' <<< "$submit_job")"
+-          test "$submit_started" != "null"
+-          attempt_start="$(gh api \
+-            "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$submit_attempt" \
+-            --jq '.created_at')"
+-          test "$attempt_start" != "null"
+-          # A Gate-only rerun gives reused jobs a new run_attempt but retains
+-          # their original started_at. Use the attempt that actually ran submit.
+-          while [[ "$submit_started" < "$attempt_start" ]]; do
+-            (( submit_attempt > 1 )) || exit 1
+-            submit_attempt=$((submit_attempt - 1))
+-            attempt_start="$(gh api \
+-              "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$submit_attempt" \
+-              --jq '.created_at')"
+-            test "$attempt_start" != "null"
+-          done
+-
+-          for ((poll = 0; poll < 65; poll += 1)); do
+-            checks="$(gh api --method GET -f check_name=Visonaut -f app_id=5028451 \
+-              -f per_page=100 "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs")"
+-            result="$(jq -r --arg sha "$GITHUB_SHA" --arg started "$attempt_start" '
+-              if .total_count > 100 then error("Visonaut check list exceeds one page") else
+-                [.check_runs[] | select(.name == "Visonaut" and .app.id == 5028451 and
+-                  .head_sha == $sha and
+-                  ((.external_id // "") | . == "visonaut:pre:" + $sha or
+-                    startswith("visonaut:pre:" + $sha + ":")) and
+-                  ((.started_at // "") >= $started))]
+-                | (max_by(.id) // {})
+-                | if .status != "completed" then "pending"
+-                  elif .conclusion == "success" then "success"
+-                  else "failure" end
+-              end
+-            ' <<< "$checks")"
+-            case "$result" in
+-              success) echo "Visonaut review passed for this capture attempt."; exit 0 ;;
+-              failure) echo "Visonaut review failed for this capture attempt."; exit 1 ;;
+-            esac
+-            sleep 12
+-          done
+-
+-          echo "Visonaut review is still pending. Review it, then rerun Gate."
+-          exit 1
+diff --git a/app/package.json b/app/package.json
+index 76fd78147..e92d96db5 100644
+--- a/app/package.json
++++ b/app/package.json
+@@ -107,7 +107,7 @@
+     "@types/react": "19.3.0",
+     "@types/react-dom": "19.3.0",
+     "@types/textarea-caret": "3.0.4",
+-    "@visonaut/playwright": "0.3.2",
++    "@visonaut/playwright": "0.4.0",
+     "clava": "0.7.0",
+     "concurrently": "10.0.5",
+     "cross-env": "10.1.0",
+diff --git a/app/playwright.config.ts b/app/playwright.config.ts
+index ced3fc777..b36f6fa07 100644
+--- a/app/playwright.config.ts
++++ b/app/playwright.config.ts
+@@ -1,6 +1,6 @@
+ import path from "node:path";
+ import { defineConfig, devices } from "@playwright/test";
+-import { measureEnvironment } from "@visonaut/playwright/ci";
++import { createVisualReporter } from "./src/test-utils/visual-reporter.ts";
+ 
+ if (process.argv.includes("--headed")) {
+   process.env.PWHEADED = "true";
+@@ -30,30 +30,26 @@ const visualShard =
+       ? "safari"
+       : "linux"
+     : undefined;
+-
+-function requiredEnv(name: string) {
+-  const value = process.env[name];
+-  if (!value) throw new Error(`${name} is required for Visonaut capture`);
+-  return value;
+-}
+-
+ const visualProjects =
+   visualShard === "linux" ? ["chrome", "firefox"] : ["safari"];
+-const captureDirectory = visualShard
+-  ? path.join(requiredEnv("RUNNER_TEMP"), "visonaut")
+-  : undefined;
+-const captureEnvironment = captureDirectory
+-  ? await measureEnvironment({
++const visualCapture = visualShard
++  ? await createVisualReporter({
++      shard: visualShard,
++      projects: visualProjects,
+       appPackageFile: path.join(process.cwd(), "package.json"),
++      repositoryRoot: path.resolve(process.cwd(), ".."),
+       applicationFontPackage: "@fontsource-variable/inter",
+-      comparisonPolicyDigest: requiredEnv("VISONAUT_COMPARISON_POLICY_DIGEST"),
+-      comparisonEngineVersion: "rgba-visible-1",
+-      outputDirectory: captureDirectory,
++      invocation: [
++        "--project",
++        ...visualProjects,
++        "--grep",
++        "@visual",
++        "--output",
++        "test-results/test-visual",
++      ],
+     })
+   : undefined;
+-const visualMetadata = captureEnvironment
+-  ? { visonaut: { profile: captureEnvironment.profile } }
+-  : undefined;
++const visualMetadata = visualCapture?.metadata;
+ 
+ function inspectorPortArg(port: number) {
+   if (!port) return "";
+@@ -72,43 +68,12 @@ export default defineConfig({
+   workers: HEADED || PERF ? 1 : CI ? "100%" : "80%",
+   forbidOnly: CI,
+   reportSlowTests: null,
+-  reporter: visualShard
++  reporter: visualCapture
+     ? [
+         ["github"],
+         ["dot"],
+         ["./src/test-utils/visual-duration-reporter.ts"],
+-        [
+-          "@visonaut/playwright/reporter",
+-          {
+-            outputFile: path.join(captureDirectory!, "manifest.json"),
+-            run: {
+-              repository: requiredEnv("GITHUB_REPOSITORY"),
+-              repositoryId: requiredEnv("GITHUB_REPOSITORY_ID"),
+-              workflowRunId: requiredEnv("GITHUB_RUN_ID"),
+-              workflowAttempt: Number(requiredEnv("GITHUB_RUN_ATTEMPT")),
+-              testedSha: requiredEnv("GITHUB_SHA"),
+-              planDigest: requiredEnv("VISONAUT_PACKAGE_SHA256"),
+-            },
+-            shard: {
+-              key: visualShard,
+-              jobId: "1",
+-              sourceAttempt: Number(requiredEnv("GITHUB_RUN_ATTEMPT")),
+-            },
+-            discovery: {
+-              executorDigest: requiredEnv("VISONAUT_PACKAGE_SHA256"),
+-              repositoryRoot: path.resolve(process.cwd(), ".."),
+-              expectedProjects: visualProjects,
+-              expectedInvocation: [
+-                "--project",
+-                ...visualProjects,
+-                "--grep",
+-                "@visual",
+-                "--output",
+-                "test-results/test-visual",
+-              ],
+-            },
+-          },
+-        ],
++        ["@visonaut/playwright/reporter", visualCapture.reporter],
+       ]
+     : CI
+       ? [["github"], ["dot"]]
+diff --git a/package.json b/package.json
+index 8a2380185..2892dcae2 100644
+--- a/package.json
++++ b/package.json
+@@ -82,7 +82,6 @@
+     "tsup": "8.5.1",
+     "typescript": "npm:@typescript/typescript6@6.0.2",
+     "typescript-7": "npm:typescript@7.0.2",
+-    "visonaut": "0.3.6",
+     "vite": "8.3.1",
+     "vite-plugin-solid": "2.11.14",
+     "vitest": "5.0.2",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index a78096453..757ae1ac9 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -298,9 +298,6 @@ importers:
+       typescript-7:
+         specifier: npm:typescript@7.0.2
+         version: typescript@7.0.2
+-      visonaut:
+-        specifier: 0.3.6
+-        version: 0.3.6(@playwright/test@1.63.0)
+       vite:
+         specifier: 8.3.1
+         version: 8.3.1(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0)
+@@ -10512,11 +10509,6 @@ packages:
+   vfile@6.0.3:
+     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
+ 
+-  visonaut@0.3.6:
+-    resolution: {integrity: sha512-7ZTgclpTd4VAGqBAuzo0s8EMO4sF25ZpWcIoVvZtaaTMhGpfHKvN6bvh0dVrrk01jaUwwsOkmMOuE7EwBNfbLg==}
+-    engines: {node: '>=24.18.0 <25'}
+-    hasBin: true
+-
+   vite-plugin-solid@2.11.14:
+     resolution: {integrity: sha512-7ZVBt8rpoyqmlwin2kRIUveaHoF6/kulY7gsnD+qFh4nS29V4OPAnw+ojoAspXIjObiL9o1xh9a/nTuYHm02Rw==}
+     peerDependencies:
+@@ -20933,12 +20925,6 @@ snapshots:
+       '@types/unist': 3.0.3
+       vfile-message: 4.0.3
+ 
+-  visonaut@0.3.6(@playwright/test@1.63.0):
+-    dependencies:
+-      '@visonaut/playwright': 0.3.2(@playwright/test@1.63.0)
+-    transitivePeerDependencies:
+-      - '@playwright/test'
+-
+   vite-plugin-solid@2.11.14(@testing-library/jest-dom@7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.2))(solid-js@1.9.15)(supports-color@10.2.2)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.0)):
+     dependencies:
+       '@babel/core': 7.29.0(supports-color@10.2.2)
+diff --git a/.github/workflows/visual.yml b/.github/workflows/visual.yml
+new file mode 100644
+index 000000000..46d0794e6
+--- /dev/null
++++ b/.github/workflows/visual.yml
+@@ -0,0 +1,318 @@
++name: Visual
++
++on:
++  workflow_call:
++    inputs:
++      report-plan:
++        type: boolean
++        default: false
++
++    outputs:
++      main:
++        value: ${{ jobs.plan.outputs.main }}
++      app:
++        value: ${{ jobs.plan.outputs.app }}
++      perf:
++        value: ${{ jobs.plan.outputs.perf }}
++      plus:
++        value: ${{ jobs.plan.outputs.plus }}
++      release_preview:
++        value: ${{ jobs.plan.outputs.release_preview }}
++      docs:
++        value: ${{ jobs.plan.outputs.docs }}
++      og_images:
++        value: ${{ jobs.plan.outputs.og_images }}
++      plan:
++        value: ${{ jobs.plan.outputs.plan }}
++
++permissions:
++  contents: read
++
++env:
++  VISONAUT_SERVER: https://visonaut.com
++  VISONAUT_PACKAGE_VERSION: 0.4.0
++  VISONAUT_ADAPTER_PACKAGE_VERSION: 0.4.0
++  VISONAUT_PACKAGE_SHA256: PENDING_RELEASE_SHA256
++  VISONAUT_CAPTURE_JOB_PREFIX: "App / Visual / Capture / "
++  VISONAUT_SUBMIT_JOB_NAME: "App / Visual / Submit"
++
++jobs:
++  plan:
++    name: Plan
++    if: inputs.report-plan
++    runs-on: ubuntu-latest
++    timeout-minutes: 5
++    outputs:
++      main: ${{ steps.plan.outputs.main }}
++      app: ${{ steps.plan.outputs.app }}
++      perf: ${{ steps.plan.outputs.perf }}
++      plus: ${{ steps.plan.outputs.plus }}
++      release_preview: ${{ steps.plan.outputs.release_preview }}
++      docs: ${{ steps.plan.outputs.docs }}
++      og_images: ${{ steps.plan.outputs.og_images }}
++      plan: ${{ steps.plan.outputs.plan }}
++    steps:
++      - name: Checkout trusted planner
++        uses: actions/checkout@v7
++        with:
++          ref: main
++          fetch-depth: 0
++          persist-credentials: false
++
++      - name: Set up Node
++        uses: actions/setup-node@v7
++        with:
++          node-version-file: package.json
++
++      - name: Fetch tested commits
++        if: github.event_name == 'pull_request'
++        env:
++          BASE_SHA: ${{ github.event.pull_request.base.sha }}
++          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
++        shell: bash
++        run: |
++          set -euo pipefail
++          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]]
++          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
++          git fetch --no-tags origin "$BASE_SHA" "$HEAD_SHA"
++
++      - name: Calculate trusted Plan
++        id: plan
++        env:
++          BASE_SHA: ${{ github.event.pull_request.base.sha }}
++          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
++          BASE_REF: ${{ github.event.pull_request.base.ref }}
++        run: |
++          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
++            node --input-type=module <<'NODE_MAIN_PLAN'
++          import { appendFileSync } from "node:fs";
++          if (process.env.GITHUB_REF !== "refs/heads/main") {
++            throw new Error("The main Plan requires the main branch");
++          }
++          // Preserve the existing main App pipeline with an explicit Plan.
++          const workflows = {
++            main: false,
++            app: true,
++            perf: false,
++            plus: false,
++            release_preview: false,
++            docs: false,
++            og_images: false,
++          };
++          for (const [name, selected] of Object.entries(workflows)) {
++            appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${selected}\n`);
++          }
++          appendFileSync(process.env.GITHUB_OUTPUT,
++            `plan=${JSON.stringify({version: 1, workflows})}\n`);
++          NODE_MAIN_PLAN
++          else
++            node packages/ariakit-scripts/src/ci-run.ts plan
++          fi
++
++  report:
++    name: Report
++    needs: plan
++    if: inputs.report-plan
++    runs-on: ubuntu-latest
++    timeout-minutes: 5
++    permissions:
++      contents: read
++      id-token: write
++    steps:
++      - name: Set up Node
++        uses: actions/setup-node@v7
++        with:
++          node-version: "24.18.0"
++
++      - name: Report trusted Plan
++        env:
++          VISUAL_REQUIRED: ${{ needs.plan.outputs.app }}
++        run: |
++          node --input-type=module <<'NODE'
++          const origin = process.env.VISONAUT_SERVER;
++          const actual = process.env.VISUAL_REQUIRED;
++          if (actual !== "true" && actual !== "false") {
++            throw new Error("The trusted Plan did not produce a visual decision");
++          }
++          const tokenURL = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
++          tokenURL.searchParams.set("audience", `${origin}/plan-report`);
++          const tokenResponse = await fetch(tokenURL, {
++            headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
++            redirect: "error",
++            signal: AbortSignal.timeout(30_000),
++          });
++          if (!tokenResponse.ok) {
++            throw new Error("GitHub could not issue the Plan identity token");
++          }
++          const identity = await tokenResponse.json();
++          if (typeof identity.value !== "string" || !identity.value) {
++            throw new Error("GitHub returned an invalid Plan identity token");
++          }
++          const payload = {
++            schemaVersion: 1,
++            workflowRunId: process.env.GITHUB_RUN_ID,
++            workflowAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
++            testedSha: process.env.GITHUB_SHA,
++            visualRequired: actual === "true",
++            planResult: "success",
++          };
++          for (let attempt = 0; attempt < 3; attempt++) {
++            const response = await fetch(`${origin}/v1/plan`, {
++              method: "POST",
++              headers: {
++                Authorization: `Bearer ${identity.value}`,
++                "Content-Type": "application/json",
++              },
++              body: JSON.stringify(payload),
++              redirect: "error",
++              signal: AbortSignal.timeout(30_000),
++            });
++            await response.body?.cancel();
++            if (response.ok) break;
++            if (attempt === 2 || ![429, 502, 503, 504].includes(response.status)) {
++              throw new Error(`Visonaut rejected the trusted Plan (HTTP ${response.status})`);
++            }
++            await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 1000));
++          }
++          console.log("Visonaut recorded the trusted Plan.");
++          NODE
++
++  capture:
++    if: ${{ !inputs.report-plan }}
++    name: Capture / ${{ matrix.shard }}
++    runs-on: ${{ matrix.os }}
++    timeout-minutes: 120
++    permissions:
++      contents: read
++    strategy:
++      fail-fast: false
++      matrix:
++        include:
++          - os: ubuntu-latest
++            shard: linux
++            engines: chromium firefox
++            projects: chrome firefox
++            test: xvfb-run pnpm -F app run test-visual
++          - os: macos-latest
++            shard: safari
++            engines: webkit
++            projects: safari
++            test: pnpm -F app run test-visual
++    env:
++      VISONAUT_SHARD: ${{ matrix.shard }}
++    steps:
++      - name: Checkout repository
++        uses: actions/checkout@v7
++        with:
++          persist-credentials: false
++
++      - name: Set up environment
++        uses: ./.github/workflows/setup
++        with:
++          filters: |
++            app...
++            root
++
++      - name: Verify capture package
++        run: |
++          [[ "$VISONAUT_PACKAGE_SHA256" =~ ^[a-f0-9]{64}$ ]] || {
++            echo "Set the reviewed CLI release digest before this workflow runs."
++            exit 1
++          }
++          pnpm -F app exec node --input-type=module <<'NODE_ADAPTER_VERSION'
++          import { readFile } from "node:fs/promises";
++          const entry = import.meta.resolve("@visonaut/playwright");
++          const manifest = JSON.parse(await readFile(new URL("../package.json", entry), "utf8"));
++          if (manifest.version !== process.env.VISONAUT_ADAPTER_PACKAGE_VERSION) {
++            throw new Error("Install the pinned Visonaut adapter and refresh the lockfile before capture");
++          }
++          NODE_ADAPTER_VERSION
++
++      - name: Install Playwright
++        uses: ./.github/workflows/install-playwright
++        with:
++          engines: ${{ matrix.engines }}
++          workspace: app
++
++      - name: Download app artifact
++        uses: actions/download-artifact@v8
++        with:
++          name: app-build
++          path: app
++
++      - name: Download Next.js artifact
++        uses: actions/download-artifact@v8
++        with:
++          name: nextjs-dist
++          path: nextjs/.open-next
++
++      - name: Test visual
++        run: ${{ matrix.test }} --project ${{ matrix.projects }} --grep @visual --output test-results/test-visual
++
++      - name: Upload captures
++        uses: actions/upload-artifact@v7
++        with:
++          name: visonaut-capture-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
++          path: ${{ runner.temp }}/visonaut
++          if-no-files-found: error
++          retention-days: 1
++
++      - name: Upload diagnostics
++        if: ${{ !cancelled() }}
++        uses: actions/upload-artifact@v7
++        with:
++          name: app-visual-${{ matrix.shard }}-test-results
++          path: app/test-results
++          if-no-files-found: ignore
++          retention-days: 7
++
++  submit:
++    if: ${{ !inputs.report-plan }}
++    name: Submit
++    needs: capture
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    permissions:
++      actions: read
++      contents: read
++      id-token: write
++    env:
++      GH_TOKEN: ${{ github.token }}
++      VISONAUT_WORKFLOW_SOURCE_SHA: ${{ vars.VISONAUT_WORKFLOW_SOURCE_SHA }}
++    steps:
++      - name: Checkout trusted toolchain
++        uses: actions/checkout@v7
++        with:
++          ref: main
++          persist-credentials: false
++
++      - name: Set up environment
++        uses: ./.github/workflows/setup
++        with:
++          install: "false"
++
++      - name: Install Visonaut
++        run: |
++          set -euo pipefail
++          mkdir -p "$RUNNER_TEMP/visonaut-tools"
++          [[ "$VISONAUT_PACKAGE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
++          [[ "$VISONAUT_PACKAGE_SHA256" =~ ^[a-f0-9]{64}$ ]]
++          archive="$RUNNER_TEMP/visonaut-$VISONAUT_PACKAGE_VERSION.tgz"
++          curl --fail --silent --show-error --proto '=https' --max-time 60 \
++            --max-filesize 16777216 --output "$archive" \
++            "https://registry.npmjs.org/visonaut/-/visonaut-$VISONAUT_PACKAGE_VERSION.tgz"
++          printf '%s  %s\n' "$VISONAUT_PACKAGE_SHA256" "$archive" | sha256sum --check --strict -
++          pnpm --dir "$RUNNER_TEMP/visonaut-tools" add --ignore-scripts --save-exact "$archive"
++          echo "$RUNNER_TEMP/visonaut-tools/node_modules/.bin" >> "$GITHUB_PATH"
++
++      - name: Submit verified captures
++        id: submit
++        run: visonaut submit --shard linux --shard safari
++
++      - name: Upload receipt
++        uses: actions/upload-artifact@v7
++        with:
++          name: ${{ steps.submit.outputs.name }}
++          path: ${{ steps.submit.outputs.path }}
++          if-no-files-found: error
++          retention-days: 1
+diff --git a/app/src/test-utils/visual-reporter.ts b/app/src/test-utils/visual-reporter.ts
+new file mode 100644
+index 000000000..0e7307d3c
+--- /dev/null
++++ b/app/src/test-utils/visual-reporter.ts
+@@ -0,0 +1,73 @@
++import path from "node:path";
++import { measureEnvironment } from "@visonaut/playwright/environment";
++import type { ReporterOptions } from "@visonaut/playwright/reporter";
++
++interface CreateVisualReporterParams {
++  shard: "linux" | "safari";
++  projects: string[];
++  appPackageFile: string;
++  repositoryRoot: string;
++  applicationFontPackage: string;
++  invocation: string[];
++}
++
++function requiredEnvironment(name: string) {
++  const value = process.env[name];
++  if (!value) {
++    throw new Error(`${name} is required for Visonaut capture`);
++  }
++  return value;
++}
++
++/** Keeps transport wiring local while page preparation stays in visual(). */
++export async function createVisualReporter({
++  shard,
++  projects,
++  appPackageFile,
++  repositoryRoot,
++  applicationFontPackage,
++  invocation,
++}: CreateVisualReporterParams) {
++  if (requiredEnvironment("VISONAUT_SHARD") !== shard) {
++    throw new Error("The visual project does not match its workflow shard");
++  }
++  const outputDirectory = path.join(
++    requiredEnvironment("RUNNER_TEMP"),
++    "visonaut",
++  );
++  const workflowAttempt = Number(requiredEnvironment("GITHUB_RUN_ATTEMPT"));
++  if (!Number.isSafeInteger(workflowAttempt) || workflowAttempt < 1) {
++    throw new Error("Visonaut capture needs a positive workflow attempt");
++  }
++  const measured = await measureEnvironment({
++    appPackageFile,
++    applicationFontPackage,
++    outputDirectory,
++  });
++  const packageDigest = requiredEnvironment("VISONAUT_PACKAGE_SHA256");
++  const reporter: ReporterOptions = {
++    outputFile: path.join(outputDirectory, "manifest.json"),
++    run: {
++      repository: requiredEnvironment("GITHUB_REPOSITORY"),
++      repositoryId: requiredEnvironment("GITHUB_REPOSITORY_ID"),
++      workflowRunId: requiredEnvironment("GITHUB_RUN_ID"),
++      workflowAttempt,
++      testedSha: requiredEnvironment("GITHUB_SHA"),
++      planDigest: packageDigest,
++    },
++    shard: {
++      key: shard,
++      // Candidate capture has no signed job identity. Submit replaces this
++      // placeholder only after GitHub proves the completed source job.
++      jobId: "1",
++      sourceAttempt: workflowAttempt,
++    },
++    discovery: {
++      executorDigest: packageDigest,
++      repositoryRoot,
++      expectedProjects: projects,
++      expectedInvocation: invocation,
++    },
++  };
++  return { reporter, metadata: { visonaut: { profile: measured.profile } } };
++}
+diff --git a/docs/visonaut.md b/docs/visonaut.md
+new file mode 100644
+index 000000000..77b626b18
+--- /dev/null
++++ b/docs/visonaut.md
+@@ -0,0 +1,37 @@
++# Visual review
++
++[`.github/workflows/visual.yml`](../.github/workflows/visual.yml) owns the complete capture and signed submission path. Pin that file's Git blob in Visonaut and in `VISONAUT_WORKFLOW_SOURCE_SHA`. Changes to app builds and deployment do not change this pin. Keep the exact CLI and adapter versions beside the digest in the pinned workflow. The adapter also belongs in the app manifest and lockfile. Signed Submit downloads its exact CLI version from the fixed HTTPS npm registry URL, verifies the tarball SHA256 before installation, and installs that local archive with scripts disabled in an isolated tools directory; the root no longer needs a CLI dependency. Update the reviewed CLI package digest with a package release.
++
++Ariakit owns page preparation, project selection, viewport and style variants, font readiness, and clip geometry. [`visual-reporter.ts`](../app/src/test-utils/visual-reporter.ts) keeps the repeated environment and reporter wiring in one local helper. Rendering identity contains measured operating system and font identity. The service owns comparison policy. Keep the bounded font and stable-pixel checks before capture.
++
++The `linux` job captures Chrome and Firefox. The `safari` job captures Safari. Each successful job uploads `manifest.json`, `environment.json`, and `images/` as `visonaut-capture-<run>-<attempt>-<shard>` for one day. Screenshots and retry traces used for failure diagnosis remain ordinary seven-day artifacts. Successful image attachment files stay outside that diagnostics folder.
++
++The candidate jobs have no OIDC or review authority. The signed Submit job checks out the trusted main toolchain and runs:
++
++```sh
++visonaut submit --shard linux --shard safari
++```
++
++Submit starts a pending App check before artifact work. It verifies the workflow, tested commit, real GitHub jobs, source attempts, expected artifacts, complete manifests, environment profiles, and image bytes. It forms a new complete bundle. A successful visual job that GitHub did not rerun can supply its verified source-attempt artifact. A rerun shard must supply fresh evidence. If an inherited one-day artifact expired, rerun the full visual set. The signed receipt also stays in CI for one day.
++
++The `Plan / Plan` job uses the same pinned workflow and runs the reviewed main planner for the tested base and head commits. The separate signed `Plan / Report` job waits for that successful job and reports its own exact output. An absent or invalid output fails before identity exchange. A caller cannot supply the visual decision. The service also verifies the successful Plan job, repository, exact run and attempt, tested commit, and approved workflow blob.
++
++Main pushes run a real Plan with `app=true` and all other workflow flags false. Its signed report completes before the existing main App pipeline starts. Pull requests retain the reviewed change planner. A verified `app=false` result completes the Visonaut App check promptly. A verified `app=true` result keeps it pending until complete signed evidence and review are available. An absent or failed Plan cannot pass. Gate checks ordinary CI. Its Plan dependency also includes the trusted report, so a failed report cannot pass Gate. Gate no longer polls for human review.
++
++## Coordinated cutover
++
++1. Publish and install the reviewed CLI and Playwright adapter versions that contain this protocol. Both planned pins are `0.4.0`. Test their packed contents, replace `PENDING_RELEASE_SHA256` with the actual reviewed CLI digest, and refresh the adapter lockfile from the published registry version. No registry resolution or integrity for the unpublished adapter is invented in this patch. The old encrypted-transfer package cannot run this workflow.
++2. Configure Visonaut to trust the new small workflow blob and the exact `Plan / Plan`, `Plan / Report`, `App / Visual / Capture / linux`, `App / Visual / Capture / safari`, and `App / Visual / Submit` jobs. Apply the Plan-check schema and handler before the consumer workflow starts.
++3. Require the `Visonaut` check from the Visonaut GitHub App beside `Gate`. Apply that rule with Gate's polling removal. Verify visual, no-visual, missing Plan, failure, cancellation, partial rerun, expired artifact, and same-commit rerun paths before closing the cutover.
++4. Read back the source pin, package digest, App rule, and a complete successful capture. Remove transfer secrets and obsolete endpoints only after no live reader needs them.
++
++This file defines the source contract. A source patch alone does not change a GitHub rule, publish a package, or update production configuration.
++
++Until the reviewed release exists, the adapter manifest and retained registry lock entry differ. A frozen install must fail. After publication is authorized and complete, run the following in the integration checkout, review the new registry integrity, and then run the normal frozen install and checks:
++
++```sh
++pnpm install --lockfile-only --ignore-scripts --no-runtime
++pnpm install --frozen-lockfile --ignore-scripts --no-runtime
++```
++
++The capture job also checks the installed adapter version before tests. The Plan report uses inline Node and installs no CLI archive. Signed Submit does not follow registry redirects, and a changed archive fails before package installation. Do not approve the source blob or start this workflow while the release digest marker or old adapter resolution remains.
+diff --git a/scripts/visonaut-workflow.test.ts b/scripts/visonaut-workflow.test.ts
+new file mode 100644
+index 000000000..3ef29c92a
+--- /dev/null
++++ b/scripts/visonaut-workflow.test.ts
+@@ -0,0 +1,352 @@
++import { execFileSync, spawnSync } from "node:child_process";
++import { createHash } from "node:crypto";
++import {
++  existsSync,
++  mkdirSync,
++  mkdtempSync,
++  readFileSync,
++  rmSync,
++  writeFileSync,
++} from "node:fs";
++import { tmpdir } from "node:os";
++import path from "node:path";
++import { runInNewContext } from "node:vm";
++import { gzipSync } from "node:zlib";
++import { expect, test, vi } from "vitest";
++
++const workflow = readFileSync(".github/workflows/visual.yml", "utf8");
++const script = workflow.match(
++  /node --input-type=module <<'NODE'\n([\s\S]*?)\n\s+NODE/,
++)?.[1];
++if (!script) {
++  throw new Error("The visual workflow must contain the trusted Plan report");
++}
++
++interface ExecuteReportParams {
++  actual?: string;
++  statuses?: number[];
++  token?: unknown;
++}
++
++function executeReport({
++  actual = "false",
++  statuses = [200],
++  token = "identity-token",
++}: ExecuteReportParams = {}) {
++  const requests: { url: string; body: string }[] = [];
++  const fetch = vi.fn(async (url: string | URL, options: RequestInit = {}) => {
++    if (requests.length === 0) {
++      requests.push({ url: String(url), body: "" });
++      return Response.json({ value: token });
++    }
++    if (typeof options.body !== "string") {
++      throw new Error("The Plan body must be serialized JSON");
++    }
++    requests.push({ url: String(url), body: options.body });
++    return new Response(null, {
++      status: statuses[requests.length - 2] ?? 200,
++    });
++  });
++  const result = runInNewContext(`(async () => {\n${script}\n})()`, {
++    process: {
++      env: {
++        VISONAUT_SERVER: "https://visonaut.com",
++        VISUAL_REQUIRED: actual,
++        ACTIONS_ID_TOKEN_REQUEST_URL:
++          "https://token.actions.githubusercontent.com/token",
++        ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-token",
++        GITHUB_RUN_ID: "123",
++        GITHUB_RUN_ATTEMPT: "2",
++        GITHUB_SHA: "a".repeat(40),
++      },
++    },
++    URL,
++    AbortSignal,
++    fetch,
++    console: { log: vi.fn() },
++    setTimeout: (callback: () => void) => callback(),
++  });
++  return { result, requests, fetch };
++}
++
++test.each(["true", "false"])(
++  "reports the independently verified %s Plan",
++  async (actual) => {
++    const report = executeReport({ actual });
++    await report.result;
++    expect(report.requests).toEqual([
++      {
++        url: "https://token.actions.githubusercontent.com/token?audience=https%3A%2F%2Fvisonaut.com%2Fplan-report",
++        body: "",
++      },
++      {
++        url: "https://visonaut.com/v1/plan",
++        body: JSON.stringify({
++          schemaVersion: 1,
++          workflowRunId: "123",
++          workflowAttempt: 2,
++          testedSha: "a".repeat(40),
++          visualRequired: actual === "true",
++          planResult: "success",
++        }),
++      },
++    ]);
++  },
++);
++
++test.each(["", "unknown", "False", "null"])(
++  "rejects absent or invalid trusted Plan output before identity exchange: %j",
++  async (actual) => {
++    const report = executeReport({ actual });
++    await expect(report.result).rejects.toThrow(/Plan/);
++    expect(report.fetch).not.toHaveBeenCalled();
++  },
++);
++
++test("retries transient delivery without changing the Plan", async () => {
++  const report = executeReport({ statuses: [503, 429, 200] });
++  await report.result;
++  expect(report.requests).toHaveLength(4);
++  expect(
++    new Set(report.requests.slice(1).map((request) => request.body)).size,
++  ).toBe(1);
++});
++
++test.each([{ statuses: [503, 503, 503] }, { statuses: [403] }])(
++  "fails closed on undeliverable Plan reports: %j",
++  async ({ statuses }) => {
++    const report = executeReport({ statuses });
++    await expect(report.result).rejects.toThrow(
++      "Visonaut rejected the trusted Plan",
++    );
++    expect(report.requests).toHaveLength(statuses.length + 1);
++  },
++);
++
++test("rejects an invalid identity token before delivery", async () => {
++  const report = executeReport({ token: false });
++  await expect(report.result).rejects.toThrow("invalid Plan identity token");
++  expect(report.requests).toHaveLength(1);
++});
++
++const mainPlanScript = workflow.match(
++  /node --input-type=module <<'NODE_MAIN_PLAN'\n([\s\S]*?)\n\s+NODE_MAIN_PLAN/,
++)?.[1];
++const adapterVersionScript = workflow.match(
++  /node --input-type=module <<'NODE_ADAPTER_VERSION'\n([\s\S]*?)\n\s+NODE_ADAPTER_VERSION/,
++)?.[1];
++if (!mainPlanScript || !adapterVersionScript) {
++  throw new Error(
++    "The workflow must define a main Plan and adapter version gate",
++  );
++}
++
++test("the actual main Plan preserves the App-only pipeline", () => {
++  const directory = mkdtempSync(path.join(tmpdir(), "visonaut-main-plan-"));
++  const output = path.join(directory, "outputs");
++  try {
++    execFileSync(
++      process.execPath,
++      ["--input-type=module", "-e", mainPlanScript],
++      {
++        env: {
++          ...process.env,
++          GITHUB_REF: "refs/heads/main",
++          GITHUB_OUTPUT: output,
++        },
++        stdio: "pipe",
++        timeout: 5000,
++      },
++    );
++    const values = Object.fromEntries(
++      readFileSync(output, "utf8")
++        .trim()
++        .split("\n")
++        .map((line) => {
++          const separator = line.indexOf("=");
++          return [line.slice(0, separator), line.slice(separator + 1)];
++        }),
++    );
++    expect(values).toEqual({
++      main: "false",
++      app: "true",
++      perf: "false",
++      plus: "false",
++      release_preview: "false",
++      docs: "false",
++      og_images: "false",
++      plan: JSON.stringify({
++        version: 1,
++        workflows: {
++          main: false,
++          app: true,
++          perf: false,
++          plus: false,
++          release_preview: false,
++          docs: false,
++          og_images: false,
++        },
++      }),
++    });
++  } finally {
++    rmSync(directory, { recursive: true, force: true });
++  }
++});
++
++test("the main Plan cannot run on another branch", () => {
++  expect(() =>
++    execFileSync(
++      process.execPath,
++      ["--input-type=module", "-e", mainPlanScript],
++      {
++        env: { ...process.env, GITHUB_REF: "refs/heads/untrusted" },
++        stdio: "pipe",
++        timeout: 5000,
++      },
++    ),
++  ).toThrow("The main Plan requires the main branch");
++});
++
++test("the capture package gate rejects an unexpected installed adapter", () => {
++  expect(() =>
++    execFileSync(
++      process.execPath,
++      ["--input-type=module", "-e", adapterVersionScript],
++      {
++        cwd: path.resolve("app"),
++        env: { ...process.env, VISONAUT_ADAPTER_PACKAGE_VERSION: "0.0.0" },
++        stdio: "pipe",
++        timeout: 5000,
++      },
++    ),
++  ).toThrow("Install the pinned Visonaut adapter");
++});
++
++const installStep = workflow.match(
++  /      - name: Install Visonaut\n        run: \|\n([\s\S]*?)\n      - name: Submit verified captures/,
++)?.[1];
++if (!installStep) {
++  throw new Error("The workflow must define the signed package installer");
++}
++const installScript = installStep.replace(/^          /gm, "");
++
++function executePackageInstall(altered = false) {
++  const directory = mkdtempSync(
++    path.join(tmpdir(), "visonaut-package-install-"),
++  );
++  const bin = path.join(directory, "bin");
++  const archive = path.join(directory, "fixture.tgz");
++  const downloadLog = path.join(directory, "download.log");
++  const installLog = path.join(directory, "install.log");
++  const githubPath = path.join(directory, "github-path");
++  const candidate = process.env.VISONAUT_TEST_PACKAGE_ARCHIVE;
++  const bytes = candidate
++    ? readFileSync(candidate)
++    : gzipSync(Buffer.alloc(1024));
++  const expectedDigest = createHash("sha256").update(bytes).digest("hex");
++  const first = bytes[0];
++  if (first === undefined) {
++    throw new Error("The package fixture cannot be empty");
++  }
++  if (altered) {
++    bytes[0] = first ^ 1;
++  }
++  try {
++    mkdirSync(bin);
++    writeFileSync(archive, bytes);
++    writeFileSync(
++      path.join(bin, "curl"),
++      [
++        "#!/bin/bash",
++        "set -eu",
++        'printf "%s\\n" "$@" > "$VISONAUT_DOWNLOAD_LOG"',
++        'output=""',
++        'while [[ "$#" -gt 0 ]]; do',
++        '  if [[ "$1" == "--output" ]]; then',
++        '    output="$2"',
++        "    shift 2",
++        "  else",
++        "    shift",
++        "  fi",
++        "done",
++        'cp "$VISONAUT_DOWNLOAD_FIXTURE" "$output"',
++      ].join("\n"),
++      { mode: 0o755 },
++    );
++    writeFileSync(
++      path.join(bin, "pnpm"),
++      '#!/bin/bash\nset -eu\nprintf "%s\\n" "$@" > "$VISONAUT_INSTALL_LOG"\n',
++      { mode: 0o755 },
++    );
++    const result = spawnSync("bash", ["-c", installScript], {
++      env: {
++        ...process.env,
++        PATH: `${bin}${path.delimiter}${process.env.PATH}`,
++        RUNNER_TEMP: directory,
++        GITHUB_PATH: githubPath,
++        VISONAUT_PACKAGE_VERSION: "0.4.0",
++        VISONAUT_PACKAGE_SHA256: expectedDigest,
++        VISONAUT_DOWNLOAD_FIXTURE: archive,
++        VISONAUT_DOWNLOAD_LOG: downloadLog,
++        VISONAUT_INSTALL_LOG: installLog,
++      },
++      encoding: "utf8",
++      timeout: 5000,
++    });
++    return {
++      result,
++      directory,
++      downloaded: existsSync(downloadLog)
++        ? readFileSync(downloadLog, "utf8").trim().split("\n")
++        : undefined,
++      installed: existsSync(installLog)
++        ? readFileSync(installLog, "utf8").trim().split("\n")
++        : undefined,
++      githubPath: existsSync(githubPath)
++        ? readFileSync(githubPath, "utf8").trim()
++        : undefined,
++    };
++  } finally {
++    rmSync(directory, { recursive: true, force: true });
++  }
++}
++
++test("the signed installer installs only the verified local archive", () => {
++  const install = executePackageInstall();
++  expect(install.result.error).toBeUndefined();
++  expect(install.result.status).toBe(0);
++  expect(install.downloaded).toEqual([
++    "--fail",
++    "--silent",
++    "--show-error",
++    "--proto",
++    "=https",
++    "--max-time",
++    "60",
++    "--max-filesize",
++    "16777216",
++    "--output",
++    path.join(install.directory, "visonaut-0.4.0.tgz"),
++    "https://registry.npmjs.org/visonaut/-/visonaut-0.4.0.tgz",
++  ]);
++  expect(install.installed).toEqual([
++    "--dir",
++    path.join(install.directory, "visonaut-tools"),
++    "add",
++    "--ignore-scripts",
++    "--save-exact",
++    path.join(install.directory, "visonaut-0.4.0.tgz"),
++  ]);
++  expect(install.githubPath).toBe(
++    path.join(install.directory, "visonaut-tools/node_modules/.bin"),
++  );
++});
++
++test("the signed installer rejects an altered archive before installation", () => {
++  const install = executePackageInstall(true);
++  expect(install.result.error).toBeUndefined();
++  expect(install.result.status).not.toBe(0);
++  expect(install.result.stdout).toContain("FAILED");
++  expect(install.installed).toBeUndefined();
++  expect(install.githubPath).toBeUndefined();
++});

@@ -7,6 +7,7 @@ import {
 } from "./hash.js";
 import type {
   CaptureProfile,
+  ComparisonPolicy,
   Manifest,
   TrustedCollection,
   TrustedPlan,
@@ -142,11 +143,17 @@ function validateViewport(value: unknown) {
 export function validateProfile(value: unknown): asserts value is CaptureProfile {
   object(value, "profile");
   member(field(value, "browser"), ["chromium", "firefox", "webkit"], "browser");
-  for (const key of ["browserVersion", "locale", "timezone", "comparisonEngineVersion"]) {
+  for (const key of ["browserVersion", "locale", "timezone"]) {
     string(field(value, key), key);
   }
-  for (const key of ["osImageDigest", "fontsDigest", "comparisonPolicyDigest"]) {
+  for (const key of ["osImageDigest", "fontsDigest"]) {
     validateDigest(field(value, key), key);
+  }
+  if (Object.hasOwn(value, "comparisonPolicyDigest")) {
+    validateDigest(value.comparisonPolicyDigest, "comparisonPolicyDigest");
+  }
+  if (Object.hasOwn(value, "comparisonEngineVersion")) {
+    string(value.comparisonEngineVersion, "comparisonEngineVersion");
   }
   validateViewport(field(value, "viewport"));
   const scale = field(value, "deviceScaleFactor");
@@ -315,6 +322,28 @@ function assertManifest(value: unknown): asserts value is Manifest {
     validateKey(field(image, "path"), "image.path");
   }
   unique(identities, "item/variant identity");
+  if (Object.hasOwn(value, "captureSources")) {
+    const sources = field(value, "captureSources");
+    list(sources, "captureSources", 1, 16);
+    const keys: string[] = [];
+    for (const source of sources) {
+      object(source, "capture source");
+      required(source, "shardKey", validateKey);
+      keys.push(source.shardKey);
+      integer(field(source, "workflowAttempt"), "source workflowAttempt", 1);
+      for (const key of ["jobId", "artifactId"]) {
+        const identifier = field(source, key);
+        string(identifier, key, 32);
+        if (!/^[1-9][0-9]*$/.test(identifier)) {
+          fail(`${key} must be a positive decimal ID`);
+        }
+      }
+      string(field(source, "jobName"), "jobName", 256);
+      string(field(source, "artifactName"), "artifactName", 256);
+      validateDigest(field(source, "manifestDigest"), "manifestDigest");
+    }
+    unique(keys, "capture source shard");
+  }
   if (Object.hasOwn(value, "discovery")) {
     const discovery = field(value, "discovery");
     object(discovery, "discovery");
@@ -574,5 +603,27 @@ export async function validateShardAgainstPlan(
     evidence.manifestDigest !== (await digestJson(manifest))
   ) {
     fail("Candidate discovery requires server-verified successful trusted-job evidence");
+  }
+}
+
+export function validateComparisonPolicy(value: unknown): asserts value is ComparisonPolicy {
+  object(value, "comparison policy");
+  string(field(value, "id"), "comparison policy id", 256);
+  const threshold = field(value, "channelThreshold");
+  const ratio = field(value, "maxChangedRatio");
+  if (
+    typeof threshold !== "number" ||
+    !Number.isFinite(threshold) ||
+    threshold < 0 ||
+    threshold > 255 ||
+    typeof ratio !== "number" ||
+    !Number.isFinite(ratio) ||
+    ratio < 0 ||
+    ratio > 1
+  ) {
+    fail("Comparison policy threshold or ratio is invalid");
+  }
+  if (Object.hasOwn(value, "maxChangedPixels")) {
+    integer(value.maxChangedPixels, "maxChangedPixels");
   }
 }

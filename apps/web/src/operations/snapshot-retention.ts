@@ -88,7 +88,7 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
   const cursor = "snapshot-byte-retention";
   const rows = await context.database
     .prepare(`SELECT snapshot.id,snapshot.prefix,retention.byte_state FROM visonaut_snapshots snapshot
-    JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id>? AND (
+    JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.storage_mode='protected' AND snapshot.id>? AND (
       (retention.byte_state='live' AND snapshot.state!='copying') OR (retention.byte_state='retiring' AND retention.delete_after<=?)
       OR (retention.byte_state='deleting' AND retention.lease_until<=?)) ORDER BY snapshot.id LIMIT ?`)
     .bind(
@@ -187,5 +187,58 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
       : processed,
   );
   report.hasMore ||= candidates.length === context.budget.tasksPerStep && progress > 0;
+  return report;
+}
+
+/** Source snapshots retire metadata and pins; the run collector owns their only byte lifetime. */
+export async function retireSourceBaselines(context: OperationsContext): Promise<OperationReport> {
+  const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
+  const cursor = "source-baseline-retention";
+  const rows = await context.database
+    .prepare(`SELECT snapshot.id FROM visonaut_snapshots snapshot JOIN visonaut_runs run ON run.id=snapshot.run_id
+    WHERE snapshot.storage_mode='source' AND snapshot.reference_eligible=1 AND snapshot.id>? AND run.closed_at<=?
+    AND NOT EXISTS(SELECT 1 FROM visonaut_projects WHERE snapshot_id=snapshot.id)
+    ORDER BY snapshot.id LIMIT ?`)
+    .bind(
+      await afterCursor(context, cursor),
+      context.now() - closedRunRetentionMs,
+      context.budget.tasksPerStep,
+    )
+    .all<{ id: string }>();
+  const candidates = rows.results ?? [];
+  for (const row of candidates) {
+    try {
+      await retireSnapshot(context.database, {
+        snapshotId: row.id,
+        now: context.now(),
+        graceMs: 0,
+      });
+      await atomic(context.database, [
+        assertion(
+          context.database,
+          "EXISTS(SELECT 1 FROM visonaut_snapshots WHERE id=? AND storage_mode='source' AND reference_eligible=0)",
+          [row.id],
+        ),
+        context.database
+          .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
+          .bind(row.id),
+        context.database
+          .prepare(
+            "UPDATE visonaut_snapshot_retention SET byte_state='deleted',deleted_at=? WHERE snapshot_id=?",
+          )
+          .bind(context.now(), row.id),
+      ]);
+      report.completed.push(row.id);
+    } catch (error) {
+      if (error instanceof ConflictError) report.deferred.push(row.id);
+      else report.attention.push(row.id);
+    }
+  }
+  await saveCursor(
+    context,
+    cursor,
+    candidates.length === context.budget.tasksPerStep ? (candidates.at(-1)?.id ?? "") : "",
+  );
+  report.hasMore = candidates.length === context.budget.tasksPerStep;
   return report;
 }

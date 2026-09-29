@@ -1,5 +1,4 @@
 import { ImageValidationError } from "@visonaut/compare";
-import { Container } from "@cloudflare/containers";
 import {
   ConflictError,
   IncompleteError,
@@ -8,21 +7,13 @@ import {
   Service,
 } from "@visonaut/service";
 import { codecsReady } from "./codecs.ts";
-import { processComparisonTaskInContainer } from "./container.ts";
 import { processComparisonTask } from "./process.ts";
 import { CodecBusyError, withCodecCapacity } from "./capacity.ts";
-import { runScheduledComparisons } from "./scheduled.ts";
 import { validateRequest } from "./validate.ts";
 
 interface ComparisonMessage {
   taskId: string;
   publicationAttempt?: number;
-}
-
-export class ComparisonContainer extends Container<Env> {
-  defaultPort = 8080;
-  sleepAfter = "30s";
-  enableInternet = false;
 }
 
 function validMessage(value: unknown): value is ComparisonMessage {
@@ -88,7 +79,7 @@ async function finishComparison(
   }
   if (!reviewReadyTransitioned) return;
   try {
-    await operations.send({ kind: "continue" });
+    await operations.send({ kind: "status", comparisonId });
   } catch {
     // The status outbox remains available to the five-minute scheduler.
     console.error(JSON.stringify({ event: "comparison-status-wakeup-failed", comparisonId }));
@@ -124,18 +115,11 @@ async function consume(message: Message<unknown>, env: Env) {
       }
       return;
     }
-    const { result, artifacts } =
-      String(env.VISONAUT_CODEC_BACKEND) === "container"
-        ? await processComparisonTaskInContainer({
-            task,
-            images: env.IMAGES,
-            container: env.CODEC_CONTAINER.getByName("comparison"),
-          })
-        : await processComparisonTask({
-            task,
-            images: env.IMAGES,
-            codecs: await codecsReady,
-          });
+    const { result, artifacts } = await processComparisonTask({
+      task,
+      images: env.IMAGES,
+      codecs: await codecsReady,
+    });
     await service.commitComparisonResult({
       taskId,
       leaseOwner: owner,
@@ -190,14 +174,5 @@ export default {
         message.retry({ delaySeconds: 60 });
       }
     }
-  },
-  async scheduled(_controller: ScheduledController, env: Env) {
-    await runScheduledComparisons(
-      env.DB,
-      async (taskId, publicationAttempt) => {
-        await env.COMPARISONS.send({ taskId, publicationAttempt });
-      },
-      Date.now,
-    );
   },
 } satisfies ExportedHandler<Env>;

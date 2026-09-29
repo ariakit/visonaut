@@ -1,0 +1,697 @@
+{
+  "area": "Ariakit integration, capture client, CLI and trusted workflow",
+  "status": "Draft audit; all new decisions OPEN. No product or GitHub changes.",
+  "repositories": {
+    "visonaut": {
+      "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut",
+      "sha": "7e23173d11b1081f55021ef498e4c5c6d6a08131"
+    },
+    "ariakit": {
+      "path": "/Users/diegohaz/Developer/ariakit",
+      "sha": "fe73331c833108a7ce18e0df6ba04af9e83776b9"
+    }
+  },
+  "scope": "Read-only source, history, public issue and primary-document research. One isolated local Playwright attachment-lifetime probe. No hosted credentials or production data inspected.",
+  "preservedContract": [
+    "Explicit stable item and variant keys (r9 D06, D32).",
+    "Ariakit owns page preparation (D27).",
+    "Only full successful capture runs can pass (D37).",
+    "Final successful test attempts are used (D58).",
+    "Verified successful shards can survive a failed-job-only rerun (D38).",
+    "Upload identity is separate from human approval (D40, D51).",
+    "Stable pixels remain required (D44)."
+  ],
+  "coverage": {
+    "files": "packages/playwright/src, packages/playwright/ci, packages/cli/src, packages/protocol; Ariakit app/playwright.config.ts, app/src/test-utils/visual.ts, .github/workflows/app.yml and ci.yml; relevant service trust checks.",
+    "limits": [
+      "Did not run Ariakit full capture CI or measure its wall time.",
+      "Did not read live branch rules: GitHub API connection failed. Do not assume the current required check list.",
+      "No full inventory of external consumers of public legacy CLI paths.",
+      "The historical r9 design uses former product names; preserve its policies without treating obsolete names as current."
+    ]
+  },
+  "decisions": [
+    {
+      "id": "A01",
+      "title": "Keep Visonaut setup in one small Playwright helper",
+      "question": "How much Visonaut setup should Ariakit own?",
+      "status": "OPEN",
+      "priority": "high",
+      "recommendation": "Use a small setup helper that returns reporter and project metadata. Keep the app test configuration and page preparation in Ariakit.",
+      "finding": "Ariakit copies Visonaut run identity, expected CLI arguments, profile metadata, digest variables and output paths into its main Playwright configuration. Those values are part of Visonaut transport, so each format change forces client edits. The app also reads page media and font readiness before the adapter reads them again. Some font checks must remain before clip measurement; remove duplicate implementation only after checking that sequence.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/app/playwright.config.ts",
+          "line": 27,
+          "claim": "Shard selection, environment measurement and metadata wiring span lines 27\u201356."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/app/playwright.config.ts",
+          "line": 75,
+          "claim": "The reporter setup contains run provenance, placeholder jobId, expected projects and literal command arguments through line 110."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/app/src/test-utils/visual.ts",
+          "line": 434,
+          "claim": "Wrapper waits for DOM and fonts, then calculates clip geometry before calling the adapter."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/app/src/test-utils/visual.ts",
+          "line": 464,
+          "claim": "Wrapper reads media conditions to build explicit variant metadata."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/visual.ts",
+          "line": 132,
+          "claim": "Adapter reads viewport, browser, locale, timezone and media again to validate the prepared page."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/visual.ts",
+          "line": 298,
+          "claim": "Adapter separately waits for DOM and font faces."
+        }
+      ],
+      "options": [
+        {
+          "id": "preset",
+          "label": "Small setup helper",
+          "detail": "Return the reporter options and measured profile from one call. The caller still supplies shard, selected projects, font package and trusted policy. Derive GitHub run fields internally and retain explicit expected-suite checks. This reduces copied transport configuration and keeps the existing Playwright command.",
+          "recommended": true
+        },
+        {
+          "id": "local",
+          "label": "Keep explicit setup in Ariakit",
+          "detail": "Smallest package change. Extract a local module and keep the current contracts. All protocol changes still need edits in both repositories.",
+          "recommended": false
+        },
+        {
+          "id": "fixture",
+          "label": "One Visonaut fixture owns the whole test setup",
+          "detail": "Move variants, page preparation, clipping and project construction into the package. Client code gets shorter, but the package gains Ariakit-specific behavior and a larger compatibility contract. This reopens D27 and is not recommended.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D27",
+          "D32",
+          "D39",
+          "D44",
+          "D50"
+        ],
+        "reopensIfSelected": {
+          "fixture": [
+            "D27"
+          ]
+        }
+      },
+      "before": {
+        "language": "typescript",
+        "code": "const environment = await measureEnvironment({\n  appPackageFile, applicationFontPackage,\n  comparisonPolicyDigest, comparisonEngineVersion, outputDirectory,\n});\n// Copy GitHub run fields, shard identity, expected CLI arguments,\n// reporter paths and profile metadata into defineConfig(...)."
+      },
+      "after": {
+        "language": "typescript",
+        "code": "// Proposed API; not implemented.\nconst capture = await visonautSetup({\n  shard: visualShard, projects: visualProjects,\n  fontPackage: \"@fontsource-variable/inter\",\n  policy: trustedPolicy,\n});\nexport default defineConfig({\n  reporter: [[\"github\"], [\"dot\"], capture.reporter],\n  projects: projects.map(p => ({ ...p, metadata: { ...p.metadata, ...capture.metadata } })),\n});"
+      },
+      "counterexample": "A second client needs a different test selection, output location or font source. A helper that hides those choices would add special cases. Keep the helper small and make those inputs explicit.",
+      "invalidation": "Reject the shared helper if it cannot represent the current Linux and Safari jobs without reading private Playwright fields or replacing normal project configuration.",
+      "migration": "Add the helper without removing the current reporter options. Migrate Ariakit once, then compare canonical manifests before removing copied setup. Do not silently change item or variant keys.",
+      "tests": [
+        "Type-check installed-package usage.",
+        "Match before/after inventory and profile digests on Linux and macOS.",
+        "Keep unsupported invocation, extra project, missing profile and stale manifest rejection tests.",
+        "Test delayed fonts before clip measurement and the Firefox font-ready workaround."
+      ],
+      "performance": "Duplicate source reads are verified. No time saving is claimed. Do not remove bounded stable-pixel checks to shorten setup.",
+      "accessibility": "No product UI behavior changes. Keep existing browser, contrast and forced-colors capture variants.",
+      "reversibility": "High. The existing explicit reporter API remains available during migration.",
+      "interactiveModel": "Toggle explicit setup, setup helper and full fixture. Show which repository owns each of 8 responsibilities, an exact proposed config snippet, and the policy contracts each option changes."
+    },
+    {
+      "id": "A02",
+      "title": "Trust a small visual workflow file",
+      "question": "What source should the service pin for the visual workflow?",
+      "status": "OPEN",
+      "priority": "high",
+      "recommendation": "Extract the visual capture and Submit jobs into one small Ariakit reusable workflow. Keep its required matrix and credential boundary explicit. Trust that file, not the whole app workflow.",
+      "finding": "The current trust boundary hashes Ariakit app.yml, which also contains app builds, ordinary browser tests and preview deployment. An unrelated app workflow edit can need a Visonaut server configuration rollout. Server validation has Ariakit-specific additional and transition blob fields for these rollouts. The signed submission boundary is useful; its source file is too broad.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 15,
+          "claim": "The trusted file includes build jobs, ordinary browser tests, visual jobs, Submit and deployment."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 153,
+          "claim": "Unprivileged visual capture matrix begins here."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 228,
+          "claim": "Only Submit has id-token:write."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 238,
+          "claim": "Submit needs a separately managed VISONAUT_WORKFLOW_SOURCE_SHA repository variable."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/security/src/oidc.ts",
+          "line": 156,
+          "claim": "TrustedWorkflowPath mode fetches the claimed workflow file and checks its Git blob hash."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/apps/web/src/api/workflow-owned.ts",
+          "line": 114,
+          "claim": "Additional and transition blob allowances are hard-coded to Ariakit app.yml through line 136."
+        }
+      ],
+      "options": [
+        {
+          "id": "small-file",
+          "label": "Pin one small visual workflow",
+          "detail": "Move capture and Submit jobs into a dedicated file and keep required shard names, commands, package pin and receipt upload there. Unrelated app/deploy edits stop changing the trusted file. Retain the existing blob-verification model.",
+          "recommended": true
+        },
+        {
+          "id": "whole-file",
+          "label": "Keep the app workflow pin",
+          "detail": "No migration. Retain complete workflow review and rollout fields whenever the app workflow changes.",
+          "recommended": false
+        },
+        {
+          "id": "identity-only",
+          "label": "Trust repository and successful jobs only",
+          "detail": "Remove workflow-source pins and rollouts. This is the smallest mechanism, but it lets candidate workflow changes control the set that can pass. It explicitly reopens D39 and requires a new completeness policy before adoption.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D10",
+          "D39",
+          "D40",
+          "D58"
+        ],
+        "reopensIfSelected": {
+          "identity-only": [
+            "D39"
+          ]
+        }
+      },
+      "before": {
+        "language": "yaml",
+        "code": "# Visonaut verifies the blob of this broad file.\n# .github/workflows/app.yml\njobs:\n  build: ...\n  test: ...\n  visual: ...\n  submit: ...\n  deploy-preview: ..."
+      },
+      "after": {
+        "language": "yaml",
+        "code": "# Proposed app.yml shape.\njobs:\n  build: ...\n  visual:\n    needs: [build, build-nextjs]\n    uses: ./.github/workflows/visonaut.yml\n  deploy-preview: ...\n# Pin and validate visonaut.yml, which owns capture + Submit.\n# Candidate tests still receive no id-token permission."
+      },
+      "counterexample": "A visual file that merely calls a mutable local action can move the real trusted logic outside the pin. The dedicated file must own critical commands or pin the referenced trusted code too. Candidate capture code can already supply false pixels; do not claim screenshot truth.",
+      "invalidation": "Reject the extraction if GitHub identity claims for the nested workflow do not bind the intended file, or if it removes proof of required capture jobs, selected attempt or exact receipt.",
+      "migration": "Change the configured trusted path and expected job names together. Allow a short, explicit old/new workflow transition for in-flight runs. Remove the old blob allowances after those runs finish. No approval reuse may cross an incompatible plan silently.",
+      "tests": [
+        "Verify OIDC claims on the actual nested reusable workflow.",
+        "Reject modified trusted file, wrong repository, wrong attempt and wrong SHA.",
+        "Exercise failed-job rerun with reused Linux/Safari bundles.",
+        "Verify receipts and required shard inventory before and after extraction."
+      ],
+      "performance": "Expected reduction is rollout and maintenance work, not measured runtime speed.",
+      "accessibility": "No user interface effect.",
+      "reversibility": "High while old workflow acceptance is kept for a bounded migration window.",
+      "sources": [
+        {
+          "title": "GitHub OIDC reference",
+          "url": "https://docs.github.com/en/actions/reference/security/oidc",
+          "claim": "GitHub exposes job_workflow_ref and job_workflow_sha for reusable workflows. Those claims can identify the smaller trusted file.",
+          "checked": "2026-09-29"
+        }
+      ],
+      "interactiveModel": "Edit a simulated workflow section: ordinary test, preview deploy, capture matrix, Submit. Show which option needs trust rollout and which credentials each job receives. Mark this as a contract model, not a live GitHub verifier."
+    },
+    {
+      "id": "A03",
+      "title": "Retire the second capture toolchain",
+      "question": "Which capture and upload paths should remain supported?",
+      "status": "OPEN",
+      "priority": "medium",
+      "recommendation": "Keep existing Playwright jobs plus pack, one signed submit, and status. Deprecate the old owned runner and per-shard signed upload after inventorying consumers. Move transport internals into the CLI package without creating another public package.",
+      "finding": "The public adapter still ships a second Playwright config, renderer CLI, runtime lock, dependency bootstrap, config/environment bridge and upload code. Its README calls this the older path and says new apps should use their normal Playwright jobs. The CLI imports encryption and signed-job helpers from the Playwright package, so installing the CLI also pulls in the capture adapter and its exact Playwright peer contract.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/README.md",
+          "line": 100,
+          "claim": "Older visonaut-capture render remains for pinned diagnostic workflows; new integrations use existing Playwright jobs."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/package.json",
+          "line": 11,
+          "claim": "The package publishes a second binary and many ci runtime files."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/ci/index.mjs",
+          "line": 1,
+          "claim": "Public ci entry exports encryption, private-key transport, signed-job binding, config construction and environment measurement."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/ci/bin.mjs",
+          "line": 5,
+          "claim": "Renderer command carries a long parallel configuration API."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/cli/src/workflow.ts",
+          "line": 92,
+          "claim": "Legacy upload --bundle still creates per-shard signed uploads."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/cli/src/bundle-submit.ts",
+          "line": 76,
+          "claim": "Current combined Submit imports transport internals from the adapter."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/cli/package.json",
+          "line": 35,
+          "claim": "CLI depends on @visonaut/playwright."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 209,
+          "claim": "Ariakit already uses normal tests, pack and combined submit."
+        }
+      ],
+      "options": [
+        {
+          "id": "one-path",
+          "label": "One current path with a short deprecation window",
+          "detail": "Keep capture in normal Playwright tests and use pack \u2192 signed submit \u2192 status. Retain legacy entry points only until diagnostics and known consumers migrate. Move shared transport code into existing internal modules.",
+          "recommended": true
+        },
+        {
+          "id": "document-only",
+          "label": "Keep both paths; document one",
+          "detail": "Minimal code change and full backward compatibility. The second runner, versions, tests and transport paths remain maintenance work.",
+          "recommended": false
+        },
+        {
+          "id": "single-public-package",
+          "label": "Merge capture and CLI into one public package",
+          "detail": "One install name, but browser capture and CLI dependencies stay coupled. Reopens the separate public client package choice and offers no direct trust simplification.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D18",
+          "D27",
+          "D32",
+          "D40"
+        ],
+        "reopens": [
+          "D51 exact command scope, which predates pack/submit naming"
+        ],
+        "reopensIfSelected": {
+          "single-public-package": [
+            "D18",
+            "D61"
+          ]
+        }
+      },
+      "before": {
+        "language": "sh",
+        "code": "visonaut-capture render --repository-root ... --test-dir ... \\\n  --test-patterns ... --project ... --browser ... --device ... \\\n  --base-url ... --shard ... --bundle-sha256 ... --output ...\nvisonaut upload --bundle shard.enc\nvisonaut submit --run run-id"
+      },
+      "after": {
+        "language": "sh",
+        "code": "# Proposed supported path; these commands already exist.\npnpm test-visual\nvisonaut pack --dir captures --output shard.enc\n# In one trusted job:\nvisonaut submit --bundle linux=linux.enc --bundle safari=safari.enc\nvisonaut status --run run-id"
+      },
+      "counterexample": "Pinned diagnostic workflows still use the old executor and may test a stronger immutable-suite contract. Removing it without a replacement loses evidence or breaks published clients. Repository search does not prove there are no external users.",
+      "invalidation": "Keep the old path if an active required workflow cannot migrate without losing a documented trust guarantee. Do not preserve it merely because historical evidence files reference it.",
+      "migration": "Inventory current diagnostic repository workflows and published consumers; migrate them; publish a clear deprecation; remove in a release with an explicit compatibility boundary. Keep historical docs as history. Do not add a new public transport package.",
+      "tests": [
+        "Installed CLI works without a Playwright browser install or peer dependency after decoupling.",
+        "Installed adapter captures with its declared supported Playwright version.",
+        "Encrypted bundle corruption, wrong shard, wrong attempt, replay and receipt tests pass.",
+        "Legacy commands produce an actionable deprecation during the transition."
+      ],
+      "performance": "This reduces support paths and dependency coupling. No measured bundle or CI duration reduction is claimed.",
+      "accessibility": "No product UI effect.",
+      "reversibility": "Keep the last old package version and workflow pin available. Server protocol compatibility is a separate promise from the CLI surface.",
+      "interactiveModel": "Choose a workflow mode and number of shards. Show package installs, command steps, credential-bearing jobs and supported entry points. Display measured values only for source counts; label the simplified path as proposed."
+    },
+    {
+      "id": "A04",
+      "title": "Stop waiting for a person inside CI",
+      "question": "Who should wait for visual approval?",
+      "status": "OPEN",
+      "priority": "high",
+      "recommendation": "Use the Visonaut GitHub App check as the required visual check only after explicitly revising the current Gate-only, path-selected policy. Docs-only changes need a deliberate no-visual-needed success or an equivalent conditional rule. Prove exact-SHA rerun behavior first. Keep Ariakit Gate for ordinary CI results.",
+      "finding": "Ariakit Gate implements a second client for Visonaut status. It finds the Submit job, reconstructs its actual attempt from timestamps, repeatedly selects the latest check, waits up to 65 \u00d7 12 seconds, and asks the maintainer to rerun Gate if review takes longer. That is 13 minutes of configured polling before API overhead, not a measured run duration. Review completion already belongs to the Visonaut check. The current Gate runs its Visonaut verification only when the app workflow succeeds. A direct, unconditional App check changes this path-selected behavior. It must not leave docs-only changes waiting for a visual run that will never start.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/ci.yml",
+          "line": 153,
+          "claim": "Visonaut Gate step spans lines 153\u2013211."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/ci.yml",
+          "line": 176,
+          "claim": "Gate repairs reused job attempt metadata using started_at."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/ci.yml",
+          "line": 187,
+          "claim": "65 polls separated by 12-second sleeps."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/ci.yml",
+          "line": 210,
+          "claim": "Maintainer must review then rerun Gate after polling expires."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/cli/README.md",
+          "line": 50,
+          "claim": "Submit returns before verified completion and does not wait for a person."
+        }
+      ],
+      "options": [
+        {
+          "id": "app-check",
+          "label": "Require the App check directly",
+          "detail": "Explicitly revise the Gate-only, path-selected rule, then remove human-review waiting from the runner after a check lifecycle probe passes. Bind the rule to the intended GitHub App. For docs-only or other no-visual-needed changes, emit a deliberate verified success or use an equivalent conditional rule. The service must create or reset the pending result for applicable visual runs and never report neutral/skipped for an incomplete visual run.",
+          "recommended": true
+        },
+        {
+          "id": "owned-wait",
+          "label": "Keep Gate; move the wait into the CLI",
+          "detail": "Replace shell duplication with a tested visonaut wait command that binds run and attempt. This retains runner timeouts and requires a public CLI addition; use it if repository rules cannot express the intended gate.",
+          "recommended": false
+        },
+        {
+          "id": "unchanged",
+          "label": "Keep the current Gate script",
+          "detail": "No migration. Keep timestamp reconstruction, polling and manual Gate reruns.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D20",
+          "D38",
+          "D51 human approval is separate from capture completion"
+        ],
+        "reopensIfSelected": {
+          "owned-wait": [
+            "D51 public CLI operation scope"
+          ]
+        },
+        "reopens": [
+          "Issue #1 current Gate-only, path-selected required-check semantics. Direct App-check enforcement requires an explicit policy choice for docs-only and other no-visual-needed changes."
+        ]
+      },
+      "before": {
+        "language": "sh",
+        "code": "for ((poll = 0; poll < 65; poll += 1)); do\n  # Fetch jobs, recover the actual Submit attempt, select App check.\n  sleep 12\ndone\necho \"Visonaut review is still pending. Review it, then rerun Gate.\"\nexit 1"
+      },
+      "after": {
+        "language": "json",
+        "code": "{\n  \"requiredChecks\": [\n    { \"name\": \"Gate\", \"source\": \"GitHub Actions\" },\n    {\n      \"name\": \"Visonaut\",\n      \"source\": \"Ariakit Visonaut\",\n      \"noVisualNeeded\": \"verified success or equivalent conditional rule\"\n    }\n  ]\n}\n// Proposed policy illustration, not a GitHub API request.\n// Current live branch rules are unknown. Merge-group scope is deferred."
+      },
+      "counterexample": "A previous success on the same commit can satisfy the rule before a new attempt invalidates it. Docs-only changes can omit the app workflow and never create a Visonaut check, so an unconditional rule could block them forever. GitHub also accepts neutral and skipped conclusions for required checks. Removing Gate is unsafe until the selected scope has explicit outcomes for these states.",
+      "invalidation": "Retain Gate if a real same-SHA rerun, late webhook, missing Submit or cancelled run can merge while the applicable visual run is incomplete, or if a docs-only change waits forever. The exact current branch rules remain unknown: the read-only GitHub API request failed. Merge-group integration is deferred; test it before adding that future scope, rather than treating it as a prerequisite for the present scope.",
+      "migration": "First settle the revision to Issue #1 Gate-only/path-selected semantics. Prove the selected check behavior in the authorized test venue, including a deliberate no-visual-needed success or an equivalent conditional rule. Add and verify the App-specific required rule, then remove only the visual wait from Gate. Do not create an optional merge window or change D20. Keep merge-group support deferred until explicitly included and verified.",
+      "tests": [
+        "Full currently supported PR lifecycle.",
+        "New attempt for the same SHA invalidates old success before it can pass.",
+        "Docs-only and other no-visual-needed changes finish through a deliberate verified success or the chosen equivalent conditional rule.",
+        "Missing jobs, cancelled Submit, failed receipt and service outage keep applicable visual work blocked.",
+        "Approval and rejection after CI is complete; no Gate rerun needed.",
+        "If merge-group integration is later included in scope, verify its exact commit and check lifecycle before enabling it."
+      ],
+      "performance": "Configured maximum sleep is 780 seconds. Potential runner saving depends on review time; not measured here.",
+      "accessibility": "Check detail link must still open the same keyboard-review page. No app interaction changes.",
+      "reversibility": "High: retain the old Gate script during the validation window and restore it if the required-check proof fails.",
+      "sources": [
+        {
+          "title": "Troubleshooting required status checks",
+          "url": "https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks",
+          "claim": "GitHub distinguishes head and test-merge commits; merge queues require merge_group handling, and expected App source can be required. Neutral and skipped results count as successful checks.",
+          "checked": "2026-09-29"
+        },
+        {
+          "title": "GitHub discussion: required checks when workflows are skipped",
+          "url": "https://github.com/orgs/community/discussions/57334",
+          "claim": "A reported path-filtered workflow left a required check waiting. It is evidence for the skipped-path probe, not proof of current Visonaut behavior.",
+          "checked": "2026-09-29"
+        }
+      ],
+      "interactiveModel": "Change review delay, retry attempt and whether the change needs visual tests. Compare the current path-selected Gate with a proposed required App check. Show docs-only completion through the chosen no-visual-needed policy and whether merge is blocked. Mark same-SHA correctness unproved until a hosted probe passes. Keep merge-group mode marked deferred."
+    },
+    {
+      "id": "A05",
+      "title": "Keep image bodies out of the whole test suite",
+      "question": "How should the adapter hand images to its reporter?",
+      "status": "OPEN",
+      "priority": "high",
+      "recommendation": "Use file-backed image attachments in a private capture output directory. Keep small metadata attachments and the existing final-successful-attempt reporter logic.",
+      "finding": "The adapter attaches each PNG as a Buffer body. The reporter retains collected TestCase objects until onEnd, when their result attachments still contain those bodies. Its one-image-at-a-time disk loop does not bound these retained buffers. A local Playwright 1.63.0 probe confirmed that 80 one-MiB body attachments remain as 80 MiB of referenced Buffer payload at onEnd. The same probe with path attachments retained zero attachment-body bytes and 80 file references.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/visual.ts",
+          "line": 472,
+          "claim": "PNG is attached through TestInfo.attach({ body: bytes })."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/reporter.ts",
+          "line": 99,
+          "claim": "Reporter stores TestCase references from suite.allTests()."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/reporter.ts",
+          "line": 133,
+          "claim": "Image selection and copying happen only at onEnd."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/reporter.ts",
+          "line": 218,
+          "claim": "One-at-a-time write loop does not release the existing TestResult attachment bodies."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/src/reporter.ts",
+          "line": 43,
+          "claim": "attachmentBytes already supports file paths."
+        }
+      ],
+      "options": [
+        {
+          "id": "files",
+          "label": "Use private files for image attachments",
+          "detail": "Write the final stable PNG to an attempt-owned file and attach its path. The reporter already reads paths. Keep metadata in memory and keep the final attempt rule. Ensure the output directory is not uploaded as plaintext diagnostics.",
+          "recommended": true
+        },
+        {
+          "id": "stream",
+          "label": "Process and discard each test result early",
+          "detail": "Add onTestEnd spooling and cleanup. This can reduce lifetime, but it changes retry selection and still needs an explicit policy for the Playwright-owned result buffers. More lifecycle code than file attachments.",
+          "recommended": false
+        },
+        {
+          "id": "bodies",
+          "label": "Keep Buffer bodies",
+          "detail": "Smallest code change and no extra local image write. Retained payload grows with all capture attachments. Accept it only after a representative memory budget is measured.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D27",
+          "D32",
+          "D44",
+          "D58"
+        ],
+        "reopens": []
+      },
+      "before": {
+        "language": "typescript",
+        "code": "await info.attach(imageAttachment, {\n  body: bytes,\n  contentType: \"image/png\",\n});"
+      },
+      "after": {
+        "language": "typescript",
+        "code": "// Proposed private output path; not implemented.\nconst imagePath = info.outputPath(`${attemptToken}.png`);\nawait writeFile(imagePath, bytes, { mode: 0o600 });\nawait info.attach(imageAttachment, {\n  path: imagePath,\n  contentType: \"image/png\",\n});"
+      },
+      "experiment": {
+        "question": "Do Playwright result objects retain image-like Buffer payloads until onEnd, and does the path form avoid it?",
+        "environment": "Node 24.18.0, Playwright 1.63.0, local macOS; 80 tests, one synthetic 1 MiB payload per test. No browser or production input.",
+        "result": {
+          "body": {
+            "attachmentBodies": 80,
+            "retainedPayloadBytes": 83886080,
+            "fileAttachments": 0
+          },
+          "path": {
+            "attachmentBodies": 0,
+            "retainedPayloadBytes": 0,
+            "fileAttachments": 80
+          }
+        },
+        "limits": "Not real PNG decoding, not production RSS, not throughput, and not a claim that all runner memory disappears. The file path form can duplicate disk writes because Playwright copies attachments.",
+        "source": "/tmp/visonaut-playwright-attachment-probe/capture.spec.mjs",
+        "reporter": "/tmp/visonaut-playwright-attachment-probe/reporter.mjs",
+        "results": [
+          "/tmp/visonaut-playwright-attachment-probe/body-result.json",
+          "/tmp/visonaut-playwright-attachment-probe/path-result.json"
+        ]
+      },
+      "counterexample": "A local disk can run out of space or the general test-results upload can expose the newly written PNGs. File-backed capture must use an explicit private directory and bounded cleanup. For very small suites, extra disk work can be unnecessary.",
+      "invalidation": "Reconsider if real-suite measurements show disk cost exceeds the memory benefit or if the reporter cannot read files before Playwright removes them. Do not replace the reporter final-attempt rule to gain memory savings.",
+      "migration": "Keep protocol and final manifest identical. Change image attachment payload shape internally. Move visual output away from general diagnostics uploads in the same change. Delete attempt files only after pack and failure handling complete.",
+      "tests": [
+        "Retry captures blue then green: manifest still contains only green.",
+        "A later failure deletes stale manifest and cannot reuse old image paths.",
+        "Caught capture failures and missing attachment paths still fail.",
+        "Run a representative full-suite memory and disk measurement.",
+        "Compare all output image hashes before and after."
+      ],
+      "performance": "The retained attachment payload comparison is measured. Production memory, CPU and time remain unmeasured.",
+      "accessibility": "No change to the page capture variants or review UI.",
+      "reversibility": "High. Both attachment forms are already supported by the reporter.",
+      "sources": [
+        {
+          "title": "Playwright TestInfo.attach",
+          "url": "https://playwright.dev/docs/api/class-testinfo#test-info-attach",
+          "claim": "The supported API accepts either body or path. It copies path attachments to a reporter-accessible location.",
+          "checked": "2026-09-29"
+        }
+      ],
+      "interactiveModel": "Change capture count and average encoded MiB. Show body-retention payload versus file-reference handoff, with the 80 MiB probe as the measured anchor. Label all scaled totals as arithmetic estimates, not measured RSS. Add a reset button."
+    },
+    {
+      "id": "A06",
+      "title": "Give diagnostic files an explicit privacy policy",
+      "question": "Where should failed screenshots and retry traces be stored?",
+      "status": "OPEN",
+      "priority": "high",
+      "recommendation": "Keep failure evidence private and encrypted, with a short lifetime. Use the current encrypted transfer mechanism if it can carry a bounded diagnostic pack without new infrastructure.",
+      "finding": "Ariakit uploads the visual test-results directory as a normal GitHub artifact after every non-cancelled run and keeps it for seven days. Playwright config emits failure screenshots and first-retry traces into that directory. This is separate from the encrypted capture pack and conflicts with the earlier policy that diagnostics stay private. Buffer capture attachments do not themselves prove every original PNG is written to that directory. Validated image URLs were explicitly allowed to be public in r9 D13; raw diagnostic traces are a different contract.",
+      "evidence": [
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/.github/workflows/app.yml",
+          "line": 219,
+          "claim": "Visual diagnostic artifact uses !cancelled(), app/test-results and retention-days:7."
+        },
+        {
+          "path": "/Users/diegohaz/Developer/ariakit/app/playwright.config.ts",
+          "line": 139,
+          "claim": "screenshot:only-on-failure and trace:on-first-retry emit diagnostics."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/playwright/README.md",
+          "line": 96,
+          "claim": "Client guidance says to keep plaintext screenshots out of GitHub artifacts."
+        },
+        {
+          "path": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/docs/design-r9.json",
+          "line": 999,
+          "claim": "D40 keeps manifests and diagnostics private; D13 at line 306 permits validated image URLs; D58 at line 1556 keeps failed attempts private."
+        }
+      ],
+      "options": [
+        {
+          "id": "private-pack",
+          "label": "Private encrypted diagnostic pack",
+          "detail": "Keep useful screenshots and traces, but encrypt and separate them from the successful capture manifest. Reuse existing transfer keys and private access where possible; set a short explicit lifetime. This preserves the earlier policy.",
+          "recommended": true
+        },
+        {
+          "id": "metadata-only",
+          "label": "Keep text errors only",
+          "detail": "Smallest operational surface. Stop uploading image and trace files. This loses the evidence needed to diagnose some Firefox flakes; retain local console errors with the real failure step.",
+          "recommended": false
+        },
+        {
+          "id": "github-artifact",
+          "label": "Allow ordinary GitHub diagnostic artifacts",
+          "detail": "Keep the current setup and explicitly accept its access scope and seven-day lifetime. This changes the earlier privacy decision for traces and failed images. Do not imply that public validated images already authorize this.",
+          "recommended": false
+        }
+      ],
+      "priorDecisions": {
+        "preserves": [
+          "D13 public validated image bytes",
+          "D40 private diagnostics",
+          "D58 final successful attempt"
+        ],
+        "reopensIfSelected": {
+          "github-artifact": [
+            "D13",
+            "D40",
+            "D58"
+          ]
+        },
+        "note": "The example uses an internal helper. A public diagnostics CLI command would reopen D51 and is outside this recommendation."
+      },
+      "before": {
+        "language": "yaml",
+        "code": "- name: Upload test results to GitHub\n  if: ${{ !cancelled() }}\n  uses: actions/upload-artifact@v7\n  with:\n    path: app/test-results\n    retention-days: 7"
+      },
+      "after": {
+        "language": "yaml",
+        "code": "# Proposed internal helper; not implemented.\n- name: Encrypt private diagnostics\n  if: ${{ !cancelled() }}\n  run: node tooling/pack-private-diagnostics.mjs private-test-results diagnostics.enc\n- uses: actions/upload-artifact@<pinned-sha>\n  with:\n    path: diagnostics.enc\n    retention-days: 1\n# Reuse internal transfer code; add no public CLI command."
+      },
+      "counterexample": "Earlier Ariakit timeouts could only be diagnosed from retry traces, and green flaky runs need those traces too. Removing all files is simpler but has a documented debugging cost. A new diagnostics service would defeat the simplification goal; reuse a bounded existing path or choose text-only deliberately.",
+      "invalidation": "Do not build encrypted diagnostics if the existing transfer and private download path cannot support them without a separate subsystem. Return to the explicit metadata-only vs ordinary-artifact choice.",
+      "migration": "Separate visual capture, diagnostic and successful manifest directories first. Stop the broad app/test-results upload in the same revision. Verify archive contents; do not delete useful traces before the chosen replacement is tested. Use an internal helper for the illustrative packaging step. A new public pack-diagnostics command would expand D51 and requires a separate explicit decision; this recommendation does not add that command.",
+      "tests": [
+        "Failed and recovered retry captures keep the true stop point.",
+        "No raw trace, PNG, manifest or environment file is present in ordinary uploaded artifacts.",
+        "Diagnostic archive is bounded, rejects unsafe paths and cannot count as run completeness evidence.",
+        "Authorized download and expiry behavior; no approval capability in diagnostics."
+      ],
+      "performance": "No timing claim. Encrypting diagnostics adds bounded IO; fewer broad uploads may remove unnecessary artifact bytes, which needs measurement.",
+      "accessibility": "No review UI change. Diagnostic access controls must preserve clear keyboard-accessible download/error actions if exposed in the app.",
+      "reversibility": "Changing storage is reversible. Once plaintext artifacts are published, that exposure cannot be undone retroactively.",
+      "sources": [
+        {
+          "title": "Playwright test-use output options",
+          "url": "https://playwright.dev/docs/test-use-options",
+          "claim": "Playwright writes trace, screenshot and video output to its test output directory.",
+          "checked": "2026-09-29"
+        },
+        {
+          "title": "Ariakit issue 7601",
+          "url": "https://github.com/ariakit/ariakit/issues/7601",
+          "claim": "The report explains that lost retry traces hid the real Firefox timeout step. Source now keeps true stop points and retains diagnostic results.",
+          "checked": "2026-09-29"
+        },
+        {
+          "title": "Ariakit issue 7597",
+          "url": "https://github.com/ariakit/ariakit/issues/7597",
+          "claim": "Reported Firefox hangs involved document.fonts.ready. Source now checks individual font faces. Closed status alone is not evidence of performance.",
+          "checked": "2026-09-29"
+        },
+        {
+          "title": "GitHub downloading workflow artifacts",
+          "url": "https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts",
+          "claim": "Signed-in users with repository read access can download workflow artifacts. That scope differs from Visonaut current-maintainer access.",
+          "checked": "2026-09-29"
+        }
+      ],
+      "interactiveModel": "Choose a failed run or recovered retry and a storage policy. Show which files leave the runner, who can read them, when they expire and which evidence remains for debugging. Do not display real diagnostic data."
+    }
+  ],
+  "additionalResearch": [
+    {
+      "report": "https://github.com/microsoft/playwright/issues/35200",
+      "affected": "Reported Playwright 1.50.0/1.51.1 on Windows with repeated browser connections.",
+      "outcome": "Closed in favor of #33330; maintainers said the submitted failure was not specifically font-related. A comment documents PW_TEST_SCREENSHOT_NO_FONTS_READY.",
+      "effect": "Use this as evidence that the workaround exists, not proof of the exact Ariakit Firefox bug. The Ariakit #7597 report and current source provide the relevant local context.",
+      "workaround": "Keep the current bounded per-font-face readiness check unless a focused browser probe invalidates its need."
+    }
+  ],
+  "auditNotes": [
+    "No live deployment, Infisical, Cloudflare or GitHub mutation was performed.",
+    "The six recommendations remain choices. A recommendation is not a maintainer selection.",
+    "Source search found no current Ariakit use of visonaut-capture render. It did find published documentation and tests for that legacy path; external users remain unknown.",
+    "The capture helper deliberately keeps exact browser/media checks and bounded stable screenshots. Removing these checks merely to cut lines is not supported by this audit."
+  ]
+}

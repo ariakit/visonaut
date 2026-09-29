@@ -1,3 +1,4 @@
+import { operationsMessage } from "@visonaut/service";
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import {
   createAuth,
@@ -6,6 +7,8 @@ import {
   securePrivateResponse,
   SecurityError,
 } from "@visonaut/security";
+import { logOperationFailure } from "./operations/failure.ts";
+import { previewFixtureResponse } from "./review/preview-fixtures.ts";
 import { handleApi } from "./api/index.ts";
 import {
   apiBindings,
@@ -49,6 +52,8 @@ function privateFailure(error: unknown) {
 
 export default {
   async fetch(request: Request, env: Env, lifetime: ExecutionContext) {
+    const startedAt = Date.now();
+    const correlationId = crypto.randomUUID();
     const url = new URL(request.url);
     if (url.pathname === "/health") {
       return Response.json(
@@ -56,11 +61,21 @@ export default {
           service: "visonaut",
           status: launchEnabled(env.VISONAUT_LAUNCH_ENABLED) ? "ready" : "setup",
           launchEnabled: launchEnabled(env.VISONAUT_LAUNCH_ENABLED),
+          environment: env.VISONAUT_ENVIRONMENT,
+          fixtureMode: env.VISONAUT_ENVIRONMENT === "preview",
         },
         { headers: { "Cache-Control": "no-store" } },
       );
     }
     try {
+      if (env.VISONAUT_ENVIRONMENT === "preview") {
+        if (url.origin !== env.VISONAUT_ORIGIN) {
+          return securePrivateResponse(new Response(null, { status: 403 }));
+        }
+        const fixture = previewFixtureResponse(request);
+        if (fixture) return securePrivateResponse(fixture);
+        return await render(request);
+      }
       if (url.pathname.startsWith("/api/auth/")) {
         if (url.origin !== env.VISONAUT_ORIGIN)
           return securePrivateResponse(new Response(null, { status: 403 }));
@@ -74,7 +89,13 @@ export default {
           );
         const auth = createAuth(authConfiguration(env));
         const github = await createGitHubClient(githubConfiguration(env));
-        const identity = await requireMaintainer({ request, auth, database: env.DB, github });
+        const identity = await requireMaintainer({
+          request,
+          auth,
+          database: env.DB,
+          github,
+          access: "read",
+        });
         return securePrivateResponse(
           Response.json({ userId: identity.userId }, { headers: identity.sessionHeaders }),
         );
@@ -90,22 +111,35 @@ export default {
       }
       return await render(request);
     } catch (error) {
+      logOperationFailure({
+        operation: url.pathname.startsWith("/api/auth/") ? "auth" : "http",
+        code: error instanceof SecurityError ? error.code : "service_unavailable",
+        correlationId,
+        startedAt,
+      });
       return privateFailure(error);
     }
   },
   async scheduled(_controller: ScheduledController, env: Env) {
+    if (env.VISONAUT_ENVIRONMENT === "preview") return;
     try {
       // Frequent cron triggers have a 30-second CPU limit; the queue runs the work.
-      await env.OPERATIONS.send({ kind: "continue" } satisfies OperationsMessage);
+      await env.OPERATIONS.send({ kind: "recovery" } satisfies OperationsMessage);
     } catch {
       await reportSchedulerFailure(env);
       throw new Error("Scheduled operations failed.");
     }
   },
   async queue(batch: MessageBatch<unknown>, env: Env) {
+    if (env.VISONAUT_ENVIRONMENT === "preview") {
+      for (const message of batch.messages) {
+        message.ack();
+      }
+      return;
+    }
     const valid = batch.messages.filter((message) => {
       const body = message.body;
-      if (!body || typeof body !== "object" || !("kind" in body) || body.kind !== "continue") {
+      if (!operationsMessage(body)) {
         console.error(JSON.stringify({ event: "invalid-operations-message" }));
         message.ack();
         return false;
@@ -114,8 +148,12 @@ export default {
     });
     if (!valid.length) return;
     try {
-      await runScheduledOperations(env);
-      for (const message of valid) message.ack();
+      for (const message of valid) {
+        const parsed = operationsMessage(message.body);
+        if (!parsed) continue;
+        await runScheduledOperations(env, parsed);
+        message.ack();
+      }
     } catch {
       await reportSchedulerFailure(env);
       for (const message of valid) message.retry({ delaySeconds: 60 });

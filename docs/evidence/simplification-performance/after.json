@@ -1,0 +1,910 @@
+{
+  "measuredAt": "2026-09-29T20:05:40.133Z",
+  "environment": {
+    "os": "darwin",
+    "osRelease": "25.6.0",
+    "architecture": "arm64",
+    "cpu": "Apple M4 Pro",
+    "logicalCpus": 14,
+    "memoryBytes": 51539607552,
+    "node": "v24.18.0",
+    "chrome": "154.0.8037.92",
+    "headless": true,
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    },
+    "deviceScaleFactor": 1,
+    "cpuThrottling": "none",
+    "networkThrottling": "none; localhost",
+    "reactBuild": "production",
+    "source": "apps/web/src/review/review-workspace.tsx",
+    "sourceSha256": "2c403f0fc666b845907cbad82f0937baa85b59d92a2dba3442328f2b8200e149",
+    "sourceFiles": {
+      "review/review-workspace.tsx": "2c403f0fc666b845907cbad82f0937baa85b59d92a2dba3442328f2b8200e149",
+      "review/item-list.tsx": "304ae2f2a21549cabdf0f1abd08a73a7422a94b2f16d4f831f511ce55ff4db1c",
+      "review/use-evidence.ts": "f70a4abb79a78d6b82f6b0ecf1df66c39c2e2cfd1abaa7898e39fd62b4f18d0e",
+      "components/screenshot-viewer.tsx": "d7cfa3ad79d4d402ebbe87149fb180e886718b78f5acab985b4543b6111910b3",
+      "review.css": "81d0f93c558eec41d8e1778ea6ff2baafe3d423f0c5ecf104a1bb653ae96b18c",
+      "styles.css": "50793b1ac008664883543604d9a29b55dd6862b2da757393f3e1f886c0072a3b",
+      "components/ariakit/components/shell.ariakit.react.tsx": "68a5364b8546450334341b3e323b365a1e5b1c40e95df7ffe7bc0b85b3aa30cd"
+    },
+    "fixtureFiles": {
+      "fixture.jsx": "1af68a999c9ff38795d803b6bd53619a2fee08aa7fa73d8b8f393ffaad0dce27",
+      "fixtures.mjs": "e7dcef078368918755894926a807710ec6797054882507964a61a9bbed7e3b60",
+      "run.mjs": "fc52c87e6c88b5f5f41f1bba23706f7d6358cdc186b63ba1c56342d5c585e400",
+      "server.mjs": "61520492ad429b5082b446313aa53c6a33f31e524d5aec492c59dcb9ad18d30a",
+      "vite.config.mjs": "db3cbc89ccad96a90f2b828f65454c646f59511b0a562b4c514e6c0e33281dd5",
+      "index.html": "afb1583e9f7623dc73d8c2dd0a8d9f148a02404570e163140779a2ddb38951a7"
+    },
+    "buildFiles": [
+      {
+        "file": "dist/index.html",
+        "bytes": 411,
+        "sha256": "a5061b6cdcefdee803a86ee6171ce141d6d282e34906e7e33218ff2d76d63a8a"
+      },
+      {
+        "file": "dist/assets/firefox-B8Bz3Pw-.svg",
+        "bytes": 38092,
+        "sha256": "029a7e6f1163f76de4c5d488216524264c25154bc659d7a7d3ea26e1d5181b1f"
+      },
+      {
+        "file": "dist/assets/index-CFvzxrF_.css",
+        "bytes": 30259,
+        "sha256": "65a90b45cc90b0933ac122b22a48605345ea9ee0d7c8bb26c179b9f5f9ba1a83"
+      },
+      {
+        "file": "dist/assets/index-Qx9vwFsJ.js",
+        "bytes": 471841,
+        "sha256": "07dbd2d153cf026f88828306229d114b09b8d2683b4df37ac690447bb8914741"
+      }
+    ]
+  },
+  "samplesPerSize": 3,
+  "excludedWarmupsPerSize": 1,
+  "cases": [
+    {
+      "count": 3582,
+      "warmups": [
+        {
+          "sample": -1,
+          "captures": 3582,
+          "items": 597,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 3156970,
+          "documentToListMs": 88.89999997615814,
+          "documentToImageMs": 118.09999990463257,
+          "fixtureStartToModelMs": 9.100000023841858,
+          "responseBodyAndParseMs": 7.700000047683716,
+          "modelReadyToListMs": 55.39999997615814,
+          "renderToListCommitMs": 41.700000047683716,
+          "renderToListPaintOpportunityMs": 53.10000002384186,
+          "renderToImageReadyCommitMs": 64.79999995231628,
+          "renderToImagePaintOpportunityMs": 82.29999995231628,
+          "longTasks": []
+        }
+      ],
+      "samples": [
+        {
+          "sample": 0,
+          "captures": 3582,
+          "items": 597,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 3156970,
+          "documentToListMs": 87.5,
+          "documentToImageMs": 115.60000002384186,
+          "fixtureStartToModelMs": 8.700000047683716,
+          "responseBodyAndParseMs": 7.300000071525574,
+          "modelReadyToListMs": 54.5,
+          "renderToListCommitMs": 41.199999928474426,
+          "renderToListPaintOpportunityMs": 52,
+          "renderToImageReadyCommitMs": 64.39999997615814,
+          "renderToImagePaintOpportunityMs": 80.10000002384186,
+          "longTasks": []
+        },
+        {
+          "sample": 1,
+          "captures": 3582,
+          "items": 597,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 3156970,
+          "documentToListMs": 87,
+          "documentToImageMs": 116.89999997615814,
+          "fixtureStartToModelMs": 8.699999928474426,
+          "responseBodyAndParseMs": 7.199999928474426,
+          "modelReadyToListMs": 55.40000009536743,
+          "renderToListCommitMs": 41.700000047683716,
+          "renderToListPaintOpportunityMs": 52.800000071525574,
+          "renderToImageReadyCommitMs": 64.70000004768372,
+          "renderToImagePaintOpportunityMs": 82.70000004768372,
+          "longTasks": []
+        },
+        {
+          "sample": 2,
+          "captures": 3582,
+          "items": 597,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 3156970,
+          "documentToListMs": 87.79999995231628,
+          "documentToImageMs": 121.5,
+          "fixtureStartToModelMs": 9.600000023841858,
+          "responseBodyAndParseMs": 8.199999928474426,
+          "modelReadyToListMs": 55,
+          "renderToListCommitMs": 41.39999997615814,
+          "renderToListPaintOpportunityMs": 52.39999997615814,
+          "renderToImageReadyCommitMs": 63.89999997615814,
+          "renderToImagePaintOpportunityMs": 86.10000002384186,
+          "longTasks": []
+        }
+      ],
+      "navigation": [
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 216.69999992847443,
+          "readyCommitMs": 10.600000023841858,
+          "paintOpportunityMs": 32.200000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 249.89999997615814,
+          "readyCommitMs": 9.399999976158142,
+          "paintOpportunityMs": 32.299999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 285.5,
+          "readyCommitMs": 9.699999928474426,
+          "paintOpportunityMs": 30,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 316.39999997615814,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.39999997615814,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 218.09999990463257,
+          "readyCommitMs": 9.200000047683716,
+          "paintOpportunityMs": 32.40000009536743,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 251.29999995231628,
+          "readyCommitMs": 8.600000023841858,
+          "paintOpportunityMs": 32.60000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 285.09999990463257,
+          "readyCommitMs": 9.400000095367432,
+          "paintOpportunityMs": 31.700000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 317.5,
+          "readyCommitMs": 9.899999976158142,
+          "paintOpportunityMs": 33,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 205.39999997615814,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.700000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 238.89999997615814,
+          "readyCommitMs": 8.799999952316284,
+          "paintOpportunityMs": 32.5,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 272.1999999284744,
+          "readyCommitMs": 9.100000023841858,
+          "paintOpportunityMs": 32.40000009536743,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 305.5,
+          "readyCommitMs": 9.799999952316284,
+          "paintOpportunityMs": 32.5,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        }
+      ],
+      "errors": [],
+      "browserEnvironment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "hardwareConcurrency": 14,
+        "deviceMemory": 32,
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "dpr": 1,
+        "colorScheme": "light"
+      },
+      "summary": {
+        "documentToListMs": {
+          "n": 3,
+          "p50": 87.5,
+          "p95": 87.79999995231628,
+          "max": 87.79999995231628
+        },
+        "documentToImageMs": {
+          "n": 3,
+          "p50": 116.89999997615814,
+          "p95": 121.5,
+          "max": 121.5
+        },
+        "fixtureStartToModelMs": {
+          "n": 3,
+          "p50": 8.700000047683716,
+          "p95": 9.600000023841858,
+          "max": 9.600000023841858
+        },
+        "renderToListCommitMs": {
+          "n": 3,
+          "p50": 41.39999997615814,
+          "p95": 41.700000047683716,
+          "max": 41.700000047683716
+        },
+        "renderToListPaintOpportunityMs": {
+          "n": 3,
+          "p50": 52.39999997615814,
+          "p95": 52.800000071525574,
+          "max": 52.800000071525574
+        },
+        "renderToImageReadyCommitMs": {
+          "n": 3,
+          "p50": 64.39999997615814,
+          "p95": 64.70000004768372,
+          "max": 64.70000004768372
+        },
+        "renderToImagePaintOpportunityMs": {
+          "n": 3,
+          "p50": 82.70000004768372,
+          "p95": 86.10000002384186,
+          "max": 86.10000002384186
+        },
+        "navigationReadyCommitMs": {
+          "n": 12,
+          "p50": 9.400000095367432,
+          "p95": 10.600000023841858,
+          "max": 10.600000023841858
+        },
+        "navigationPaintOpportunityMs": {
+          "n": 12,
+          "p50": 32.40000009536743,
+          "p95": 33,
+          "max": 33
+        },
+        "nextVariantReadyCommitMs": {
+          "n": 6,
+          "p50": 9.400000095367432,
+          "p95": 10.600000023841858,
+          "max": 10.600000023841858
+        },
+        "nextVariantPaintOpportunityMs": {
+          "n": 6,
+          "p50": 32.200000047683716,
+          "p95": 32.700000047683716,
+          "max": 32.700000047683716
+        }
+      }
+    },
+    {
+      "count": 10580,
+      "warmups": [
+        {
+          "sample": -1,
+          "captures": 10580,
+          "items": 1764,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 9356222,
+          "documentToListMs": 105.79999995231628,
+          "documentToImageMs": 138.5,
+          "fixtureStartToModelMs": 21.799999952316284,
+          "responseBodyAndParseMs": 20.600000023841858,
+          "modelReadyToListMs": 61.10000002384186,
+          "renderToListCommitMs": 41.200000047683716,
+          "renderToListPaintOpportunityMs": 54.5,
+          "renderToImageReadyCommitMs": 64.20000004768372,
+          "renderToImagePaintOpportunityMs": 87.20000004768372,
+          "longTasks": []
+        }
+      ],
+      "samples": [
+        {
+          "sample": 0,
+          "captures": 10580,
+          "items": 1764,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 9356222,
+          "documentToListMs": 107.29999995231628,
+          "documentToImageMs": 137.79999995231628,
+          "fixtureStartToModelMs": 24.899999976158142,
+          "responseBodyAndParseMs": 23.5,
+          "modelReadyToListMs": 59.60000002384186,
+          "renderToListCommitMs": 41,
+          "renderToListPaintOpportunityMs": 52.89999997615814,
+          "renderToImageReadyCommitMs": 64,
+          "renderToImagePaintOpportunityMs": 83.39999997615814,
+          "longTasks": []
+        },
+        {
+          "sample": 1,
+          "captures": 10580,
+          "items": 1764,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 9356222,
+          "documentToListMs": 106.10000002384186,
+          "documentToImageMs": 134.20000004768372,
+          "fixtureStartToModelMs": 24,
+          "responseBodyAndParseMs": 22.600000023841858,
+          "modelReadyToListMs": 60.39999997615814,
+          "renderToListCommitMs": 40.60000002384186,
+          "renderToListPaintOpportunityMs": 53.5,
+          "renderToImageReadyCommitMs": 64.20000004768372,
+          "renderToImagePaintOpportunityMs": 81.60000002384186,
+          "longTasks": []
+        },
+        {
+          "sample": 2,
+          "captures": 10580,
+          "items": 1764,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 9356222,
+          "documentToListMs": 106.29999995231628,
+          "documentToImageMs": 137.5,
+          "fixtureStartToModelMs": 23.799999952316284,
+          "responseBodyAndParseMs": 22.5,
+          "modelReadyToListMs": 60.799999952316284,
+          "renderToListCommitMs": 41,
+          "renderToListPaintOpportunityMs": 54.09999990463257,
+          "renderToImageReadyCommitMs": 64.5,
+          "renderToImagePaintOpportunityMs": 85.29999995231628,
+          "longTasks": []
+        }
+      ],
+      "navigation": [
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 238.79999995231628,
+          "readyCommitMs": 10.399999976158142,
+          "paintOpportunityMs": 32.200000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 272.2999999523163,
+          "readyCommitMs": 12.299999952316284,
+          "paintOpportunityMs": 32.200000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 305.6999999284744,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.10000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 338.6999999284744,
+          "readyCommitMs": 10.399999976158142,
+          "paintOpportunityMs": 32.39999997615814,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 218.30000007152557,
+          "readyCommitMs": 10.399999976158142,
+          "paintOpportunityMs": 32.39999997615814,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 251.60000002384186,
+          "readyCommitMs": 10,
+          "paintOpportunityMs": 32.5,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 285.2000000476837,
+          "readyCommitMs": 12.899999976158142,
+          "paintOpportunityMs": 32.299999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 318.2000000476837,
+          "readyCommitMs": 10.399999976158142,
+          "paintOpportunityMs": 32.60000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 221.70000004768372,
+          "readyCommitMs": 9.199999928474426,
+          "paintOpportunityMs": 32.5,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 254.89999997615814,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.60000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 288.60000002384186,
+          "readyCommitMs": 9.100000023841858,
+          "paintOpportunityMs": 32.199999928474426,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 321.60000002384186,
+          "readyCommitMs": 13.5,
+          "paintOpportunityMs": 32.5,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        }
+      ],
+      "errors": [],
+      "browserEnvironment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "hardwareConcurrency": 14,
+        "deviceMemory": 32,
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "dpr": 1,
+        "colorScheme": "light"
+      },
+      "summary": {
+        "documentToListMs": {
+          "n": 3,
+          "p50": 106.29999995231628,
+          "p95": 107.29999995231628,
+          "max": 107.29999995231628
+        },
+        "documentToImageMs": {
+          "n": 3,
+          "p50": 137.5,
+          "p95": 137.79999995231628,
+          "max": 137.79999995231628
+        },
+        "fixtureStartToModelMs": {
+          "n": 3,
+          "p50": 24,
+          "p95": 24.899999976158142,
+          "max": 24.899999976158142
+        },
+        "renderToListCommitMs": {
+          "n": 3,
+          "p50": 41,
+          "p95": 41,
+          "max": 41
+        },
+        "renderToListPaintOpportunityMs": {
+          "n": 3,
+          "p50": 53.5,
+          "p95": 54.09999990463257,
+          "max": 54.09999990463257
+        },
+        "renderToImageReadyCommitMs": {
+          "n": 3,
+          "p50": 64.20000004768372,
+          "p95": 64.5,
+          "max": 64.5
+        },
+        "renderToImagePaintOpportunityMs": {
+          "n": 3,
+          "p50": 83.39999997615814,
+          "p95": 85.29999995231628,
+          "max": 85.29999995231628
+        },
+        "navigationReadyCommitMs": {
+          "n": 12,
+          "p50": 10.399999976158142,
+          "p95": 13.5,
+          "max": 13.5
+        },
+        "navigationPaintOpportunityMs": {
+          "n": 12,
+          "p50": 32.39999997615814,
+          "p95": 32.60000002384186,
+          "max": 32.60000002384186
+        },
+        "nextVariantReadyCommitMs": {
+          "n": 6,
+          "p50": 10.100000023841858,
+          "p95": 12.899999976158142,
+          "max": 12.899999976158142
+        },
+        "nextVariantPaintOpportunityMs": {
+          "n": 6,
+          "p50": 32.200000047683716,
+          "p95": 32.5,
+          "max": 32.5
+        }
+      }
+    },
+    {
+      "count": 35820,
+      "warmups": [
+        {
+          "sample": -1,
+          "captures": 35820,
+          "items": 5970,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 31972612,
+          "documentToListMs": 162.79999995231628,
+          "documentToImageMs": 188.20000004768372,
+          "fixtureStartToModelMs": 51.799999952316284,
+          "responseBodyAndParseMs": 50.10000002384186,
+          "modelReadyToListMs": 85.79999995231628,
+          "renderToListCommitMs": 50.199999928474426,
+          "renderToListPaintOpportunityMs": 62.59999990463257,
+          "renderToImageReadyCommitMs": 73.59999990463257,
+          "renderToImagePaintOpportunityMs": 88,
+          "longTasks": [
+            {
+              "start": 48,
+              "duration": 52
+            },
+            {
+              "start": 100.89999997615814,
+              "duration": 54
+            }
+          ]
+        }
+      ],
+      "samples": [
+        {
+          "sample": 0,
+          "captures": 35820,
+          "items": 5970,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 31972612,
+          "documentToListMs": 163.29999995231628,
+          "documentToImageMs": 200,
+          "fixtureStartToModelMs": 52.5,
+          "responseBodyAndParseMs": 50.90000009536743,
+          "modelReadyToListMs": 88.59999990463257,
+          "renderToListCommitMs": 50.39999997615814,
+          "renderToListPaintOpportunityMs": 63.799999952316284,
+          "renderToImageReadyCommitMs": 75.60000002384186,
+          "renderToImagePaintOpportunityMs": 100.5,
+          "longTasks": [
+            {
+              "start": 46,
+              "duration": 53
+            },
+            {
+              "start": 100.29999995231628,
+              "duration": 54
+            }
+          ]
+        },
+        {
+          "sample": 1,
+          "captures": 35820,
+          "items": 5970,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 31972612,
+          "documentToListMs": 160,
+          "documentToImageMs": 199.60000002384186,
+          "fixtureStartToModelMs": 54.39999997615814,
+          "responseBodyAndParseMs": 53,
+          "modelReadyToListMs": 82.89999997615814,
+          "renderToListCommitMs": 47.700000047683716,
+          "renderToListPaintOpportunityMs": 60.5,
+          "renderToImageReadyCommitMs": 72.20000004768372,
+          "renderToImagePaintOpportunityMs": 100.10000002384186,
+          "longTasks": [
+            {
+              "start": 48.40000009536743,
+              "duration": 51
+            },
+            {
+              "start": 100.30000007152557,
+              "duration": 51
+            }
+          ]
+        },
+        {
+          "sample": 2,
+          "captures": 35820,
+          "items": 5970,
+          "domNodes": 339,
+          "shellDisplay": "grid",
+          "jsonBytes": 31972612,
+          "documentToListMs": 156.70000004768372,
+          "documentToImageMs": 183.89999997615814,
+          "fixtureStartToModelMs": 51.5,
+          "responseBodyAndParseMs": 50.10000002384186,
+          "modelReadyToListMs": 82.39999997615814,
+          "renderToListCommitMs": 48.59999990463257,
+          "renderToListPaintOpportunityMs": 60.89999997615814,
+          "renderToImageReadyCommitMs": 71.5,
+          "renderToImagePaintOpportunityMs": 88.09999990463257,
+          "longTasks": [
+            {
+              "start": 45.5,
+              "duration": 50
+            },
+            {
+              "start": 96.60000002384186,
+              "duration": 52
+            }
+          ]
+        }
+      ],
+      "navigation": [
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 284.89999997615814,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.200000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 317.89999997615814,
+          "readyCommitMs": 10.700000047683716,
+          "paintOpportunityMs": 32.60000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowRight",
+          "start": 351.2999999523163,
+          "readyCommitMs": 10.200000047683716,
+          "paintOpportunityMs": 32.10000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 0,
+          "key": "ArrowLeft",
+          "start": 384.10000002384186,
+          "readyCommitMs": 10.5,
+          "paintOpportunityMs": 33.10000002384186,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 300.2000000476837,
+          "readyCommitMs": 13.799999952316284,
+          "paintOpportunityMs": 32.799999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 333.8000000715256,
+          "readyCommitMs": 9.899999976158142,
+          "paintOpportunityMs": 32.199999928474426,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowRight",
+          "start": 366.8000000715256,
+          "readyCommitMs": 10.100000023841858,
+          "paintOpportunityMs": 32.799999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 1,
+          "key": "ArrowLeft",
+          "start": 400.40000009536743,
+          "readyCommitMs": 11.5,
+          "paintOpportunityMs": 32.59999990463257,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 267.2000000476837,
+          "readyCommitMs": 9.600000023841858,
+          "paintOpportunityMs": 33.299999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 301.3000000715256,
+          "readyCommitMs": 9.399999976158142,
+          "paintOpportunityMs": 31.799999952316284,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowRight",
+          "start": 333.89999997615814,
+          "readyCommitMs": 10.200000047683716,
+          "paintOpportunityMs": 33.300000071525574,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-1"
+        },
+        {
+          "sample": 2,
+          "key": "ArrowLeft",
+          "start": 368,
+          "readyCommitMs": 10.200000047683716,
+          "paintOpportunityMs": 31.700000047683716,
+          "resourceEntriesAdded": 0,
+          "selected": "capture-0"
+        }
+      ],
+      "errors": [],
+      "browserEnvironment": {
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+        "hardwareConcurrency": 14,
+        "deviceMemory": 32,
+        "viewport": {
+          "width": 1280,
+          "height": 900
+        },
+        "dpr": 1,
+        "colorScheme": "light"
+      },
+      "summary": {
+        "documentToListMs": {
+          "n": 3,
+          "p50": 160,
+          "p95": 163.29999995231628,
+          "max": 163.29999995231628
+        },
+        "documentToImageMs": {
+          "n": 3,
+          "p50": 199.60000002384186,
+          "p95": 200,
+          "max": 200
+        },
+        "fixtureStartToModelMs": {
+          "n": 3,
+          "p50": 52.5,
+          "p95": 54.39999997615814,
+          "max": 54.39999997615814
+        },
+        "renderToListCommitMs": {
+          "n": 3,
+          "p50": 48.59999990463257,
+          "p95": 50.39999997615814,
+          "max": 50.39999997615814
+        },
+        "renderToListPaintOpportunityMs": {
+          "n": 3,
+          "p50": 60.89999997615814,
+          "p95": 63.799999952316284,
+          "max": 63.799999952316284
+        },
+        "renderToImageReadyCommitMs": {
+          "n": 3,
+          "p50": 72.20000004768372,
+          "p95": 75.60000002384186,
+          "max": 75.60000002384186
+        },
+        "renderToImagePaintOpportunityMs": {
+          "n": 3,
+          "p50": 100.10000002384186,
+          "p95": 100.5,
+          "max": 100.5
+        },
+        "navigationReadyCommitMs": {
+          "n": 12,
+          "p50": 10.200000047683716,
+          "p95": 13.799999952316284,
+          "max": 13.799999952316284
+        },
+        "navigationPaintOpportunityMs": {
+          "n": 12,
+          "p50": 32.59999990463257,
+          "p95": 33.300000071525574,
+          "max": 33.300000071525574
+        },
+        "nextVariantReadyCommitMs": {
+          "n": 6,
+          "p50": 10.100000023841858,
+          "p95": 13.799999952316284,
+          "max": 13.799999952316284
+        },
+        "nextVariantPaintOpportunityMs": {
+          "n": 6,
+          "p50": 32.799999952316284,
+          "p95": 33.300000071525574,
+          "max": 33.300000071525574
+        }
+      }
+    }
+  ]
+}

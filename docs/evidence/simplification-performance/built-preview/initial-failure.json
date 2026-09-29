@@ -1,0 +1,43 @@
+{
+  "scope": "Initial actual built read-only preview smoke, before favicon correction",
+  "build": {
+    "server": "c023f645d4dd83927e73b3d7079c972a19bf1a309a8eeb12b293671e9e7f532d",
+    "manifest": "9b78bbc971df4140d7b0bcf7275f8125017cd2eac261bc4647aaba87c685bcd5"
+  },
+  "result": {
+    "passed": 1,
+    "failed": 2
+  },
+  "failure": "The desktop and narrow paths completed their functional assertions, then the strict zero-console-error assertion failed on favicon.ico 404.",
+  "consoleErrors": [
+    {
+      "test": "smoke.browser-narrow-built-257f8-oad-Back-and-decoded-images",
+      "message": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://localhost:4184/favicon.ico",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    },
+    {
+      "test": "smoke.browser-desktop-buil-02851-oad-Back-and-decoded-images",
+      "message": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "location": {
+        "url": "http://localhost:4184/favicon.ico",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    }
+  ],
+  "traces": [
+    "/tmp/visonaut-built-preview-smoke/initial-failed-test-results/smoke.browser-narrow-built-257f8-oad-Back-and-decoded-images/trace.zip",
+    "/tmp/visonaut-built-preview-smoke/initial-failed-test-results/smoke.browser-desktop-buil-02851-oad-Back-and-decoded-images/trace.zip"
+  ],
+  "screenshots": [
+    "/tmp/visonaut-built-preview-smoke/initial-desktop-review.png",
+    "/tmp/visonaut-built-preview-smoke/initial-narrow-review.png"
+  ],
+  "fix": "Declare a static /favicon.svg icon in the document head. Root authorized this narrow fix after the failure was reported.",
+  "manualIABAvailable": false,
+  "actualSaveAttempted": false
+}

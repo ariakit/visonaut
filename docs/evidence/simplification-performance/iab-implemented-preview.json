@@ -1,0 +1,51 @@
+{
+  "checkedAt": "2026-09-29T20:14:14.639Z",
+  "method": "cua_repl in-app browser; final built preview after diff pan and route loading fixes",
+  "runtimeRestart": {
+    "checkedAt": "2026-09-29T20:10:43.695Z",
+    "afterBuild": true,
+    "sourceCheckLog": "/tmp/visonaut-final-pending-check.log",
+    "serverSession": 42407,
+    "command": "wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+    "workerSha256": "40d9c92c0b01a55064c4cef945f3da2573c6ddcb900c2957490c27e161fbb625",
+    "localApiStatus": 200
+  },
+  "checks": {
+    "dashboardToReview": true,
+    "arrowFocusImmediatelySelectedDark": true,
+    "reloadPreservedDark": true,
+    "backPreservedDark": true,
+    "desktop": {
+      "width": 1280,
+      "height": 900,
+      "sidebarRight": 256,
+      "mainX": 256,
+      "headerX": 256,
+      "bodyX": 256,
+      "documentScrollWidth": 1280
+    },
+    "narrow": {
+      "width": 390,
+      "height": 844,
+      "documentScrollWidth": 390,
+      "referenceDecoded": true,
+      "candidateDecoded": true
+    },
+    "diffPan": {
+      "before": {
+        "left": 189,
+        "top": 236.5
+      },
+      "after": {
+        "left": 189,
+        "top": 236.5
+      },
+      "retained": true
+    },
+    "viewportReset": true,
+    "previewReadOnly": true
+  },
+  "consoleWarningsAndErrors": [],
+  "screenshots": ["iab-implemented-desktop.jpg", "iab-implemented-narrow.jpg"],
+  "limits": "Synthetic read-only preview; in-app console log capture and DOM inspection, not forced server-denial or production OAuth proof. Save/Undo is covered separately by the writable local native D1/R2 route probe. HTTP does not attest the recorded Worker disk hash."
+}

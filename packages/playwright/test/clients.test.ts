@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
 import { digestJson, parseManifest, sha256 } from "@visonaut/protocol";
+import { zip } from "../../cli/test/archive-fixture.js";
+import { extractCaptureArchive } from "../../cli/src/artifact-archive.js";
 
 const require = createRequire(import.meta.url);
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
@@ -18,8 +20,6 @@ const metadata = {
     profile: {
       osImageDigest: "a".repeat(64),
       fontsDigest: "b".repeat(64),
-      comparisonPolicyDigest: "c".repeat(64),
-      comparisonEngineVersion: "1",
     },
   },
 };
@@ -450,3 +450,61 @@ it("fails an incomplete capture even when the test catches the capture error", a
   expect(fixture.output).toContain("required capture started but did not complete");
   await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
 }, 20000);
+
+it("stores capture bytes in private attempt files outside diagnostic results", async () => {
+  await using fixture = await runFixture(`
+    import { stat } from 'node:fs/promises';
+    test('file attachment', async ({ page }, info) => {
+      await page.setContent('<div style="width:16px;height:16px;background:red"></div>');
+      await visual(page, { item: 'file-backed', variant: { key: 'chromium', browser: 'chromium' } });
+      const image = info.attachments.find((entry) => entry.name.startsWith('visonaut-image-'));
+      expect(image?.body).toBeUndefined();
+      expect(image?.path).toContain('visonaut-attachment-');
+      expect(image?.path.startsWith(info.outputDir)).toBe(false);
+      expect((await stat(image.path)).mode & 0o777).toBe(0o600);
+    });
+  `);
+  expect(fixture.code, fixture.output).toBe(0);
+  expect((await manifestAt(fixture.directory)).captures).toHaveLength(1);
+}, 20000);
+
+it("produces a capture bundle that passes bounded ordinary ZIP extraction", async () => {
+  await using fixture = await runFixture(
+    `test('ordinary bundle', async ({ page }) => {
+    await page.setContent('<button>Capture</button>');
+    await visual(page, { item: 'ordinary/bundle', variant: { key: 'light', browser: 'chromium' } });
+  });`,
+    { discovery: true },
+  );
+  expect(fixture.code, fixture.output).toBe(0);
+  const manifest = await manifestAt(fixture.directory);
+  const output = path.join(fixture.directory, "evidence");
+  await writeFile(path.join(output, "environment.json"), "{}");
+  const names = [
+    "manifest.json",
+    "environment.json",
+    "receipt.json",
+    ...new Set(manifest.captures.map((capture) => capture.image.path)),
+  ];
+  const archive = path.join(fixture.directory, "capture.zip");
+  await writeFile(
+    archive,
+    zip(
+      await Promise.all(
+        names.map(async (name) => ({ name, bytes: await readFile(path.join(output, name)) })),
+      ),
+    ),
+  );
+  const extracted = path.join(fixture.directory, "extracted");
+  await extractCaptureArchive(archive, extracted);
+  expect(JSON.parse(await readFile(path.join(extracted, "manifest.json"), "utf8"))).toEqual(
+    manifest,
+  );
+  expect(JSON.parse(await readFile(path.join(extracted, "receipt.json"), "utf8"))).toMatchObject({
+    manifestDigest: await digestJson(manifest),
+  });
+  for (const capture of manifest.captures)
+    expect(await sha256(await readFile(path.join(extracted, capture.image.path)))).toBe(
+      capture.image.digest,
+    );
+});

@@ -1,0 +1,66 @@
+
+ RUN  v5.0.1 /Users/diegohaz/.codex/worktrees/1de3/visonaut
+
+stdout | apps/web/src/operations/core-storage.test.ts > permanent closed decision summaries > keeps exact actor and acceptance evidence, then expires only unpinned bytes after 30 days
+{"event":"comparison_ready_timing","runId":"closed","comparisonId":"comparison-closed","runKind":"pull_request","sealToComparisonMs":0,"comparisonToReadyMs":684845095,"sealToReadyMs":684845095}
+
+stdout | apps/web/src/operations/core-storage.test.ts > permanent closed decision summaries > prepares bounded command receipts before removing closed detail
+{"event":"comparison_ready_timing","runId":"closed","comparisonId":"comparison-closed","runKind":"pull_request","sealToComparisonMs":0,"comparisonToReadyMs":684845179,"sealToReadyMs":684845179}
+
+ ❯ apps/web/src/operations/core-storage.test.ts (16 tests | 2 failed) 815ms
+   ❯ permanent closed decision summaries (3)
+     × keeps exact actor and acceptance evidence, then expires only unpinned bytes after 30 days 37ms
+     × prepares bounded command receipts before removing closed detail 34ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/operations/core-storage.test.ts > permanent closed decision summaries > keeps exact actor and acceptance evidence, then expires only unpinned bytes after 30 days
+AssertionError: expected { reference_capture_id: null, …(2) } to deeply equal { reference_capture_id: null, …(2) }
+
+- Expected
++ Received
+
+  {
+-   "candidate_capture_id": null,
++   "candidate_capture_id": "capture-closed",
+    "reference_capture_id": null,
+    "result_json": null,
+  }
+
+ ❯ apps/web/src/operations/core-storage.test.ts:161:7
+    159|         )
+    160|         .get(),
+    161|     ).toEqual({ reference_capture_id: null, candidate_capture_id: null…
+       |       ^
+    162|     expect(database.connection.prepare("SELECT id FROM visonaut_captur…
+    163|     expect(database.connection.prepare("SELECT id FROM visonaut_images…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  apps/web/src/operations/core-storage.test.ts > permanent closed decision summaries > prepares bounded command receipts before removing closed detail
+AssertionError: expected [] to deeply equal [ 'closed' ]
+
+- Expected
++ Received
+
+- [
+-   "closed",
+- ]
++ []
+
+ ❯ apps/web/src/operations/core-storage.test.ts:256:67
+    254|     fixture.state.time += closedRunRetentionMs + 1;
+    255|     fixture.context.budget.tasksPerStep = 1;
+    256|     expect((await summarizeClosedRuns(fixture.context)).deferred).toEq…
+       |                                                                   ^
+    257|     expect(await readClosedSummary(database, "closed")).toBeNull();
+    258|     expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 14 passed (16)
+   Start at  19:14:04
+   Duration  1.01s (tests 85%, transform 12%, import 3%)
+

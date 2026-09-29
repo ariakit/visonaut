@@ -1,0 +1,290 @@
+{
+  "revision": "5",
+  "decisions": 45,
+  "cases": [
+    {
+      "name": "fresh",
+      "progress": "44 / 45 answered",
+      "open": [
+        "O11"
+      ],
+      "o11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "mergedRevision": "5",
+      "baselineO11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "emptyPrompt": true,
+      "checkedO11": [],
+      "changedIds": []
+    },
+    {
+      "name": "r4-reconstructed-baseline",
+      "progress": "44 / 45 answered",
+      "open": [
+        "O11"
+      ],
+      "o11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "mergedRevision": "5",
+      "baselineO11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "emptyPrompt": true,
+      "checkedO11": [],
+      "changedIds": []
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "options": [
+    {
+      "name": "fixtures-only",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "fixtures-only",
+        "notes": "QA note: fixtures-only"
+      },
+      "mergedRevision": "5",
+      "baselineO11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "emptyPrompt": false,
+      "checkedO11": [
+        "fixtures-only"
+      ],
+      "changedIds": [
+        "O11"
+      ],
+      "promptHasAnswer": true,
+      "promptHasNote": true,
+      "reload": {
+        "name": "fixtures-only-reload",
+        "progress": "45 / 45 answered",
+        "open": [],
+        "o11": {
+          "optionId": "fixtures-only",
+          "notes": "QA note: fixtures-only"
+        },
+        "mergedRevision": "5",
+        "baselineO11": {
+          "optionId": null,
+          "notes": ""
+        },
+        "emptyPrompt": false,
+        "checkedO11": [
+          "fixtures-only"
+        ],
+        "changedIds": [
+          "O11"
+        ]
+      }
+    },
+    {
+      "name": "test-app",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "test-app",
+        "notes": "QA note: test-app"
+      },
+      "mergedRevision": "5",
+      "baselineO11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "emptyPrompt": false,
+      "checkedO11": [
+        "test-app"
+      ],
+      "changedIds": [
+        "O11"
+      ],
+      "promptHasAnswer": true,
+      "promptHasNote": true,
+      "reload": {
+        "name": "test-app-reload",
+        "progress": "45 / 45 answered",
+        "open": [],
+        "o11": {
+          "optionId": "test-app",
+          "notes": "QA note: test-app"
+        },
+        "mergedRevision": "5",
+        "baselineO11": {
+          "optionId": null,
+          "notes": ""
+        },
+        "emptyPrompt": false,
+        "checkedO11": [
+          "test-app"
+        ],
+        "changedIds": [
+          "O11"
+        ]
+      }
+    }
+  ],
+  "copy": {
+    "matchesPreview": true,
+    "repeatMatches": true,
+    "storageUnchanged": true,
+    "baselineO11": {
+      "optionId": null,
+      "notes": ""
+    }
+  },
+  "cleared": {
+    "name": "cleared-open",
+    "progress": "44 / 45 answered",
+    "open": [
+      "O11"
+    ],
+    "o11": {
+      "optionId": null,
+      "notes": "QA note: test-app"
+    },
+    "mergedRevision": "5",
+    "baselineO11": {
+      "optionId": null,
+      "notes": ""
+    },
+    "emptyPrompt": false,
+    "checkedO11": [],
+    "changedIds": [
+      "O11"
+    ],
+    "promptHasOpen": true,
+    "reload": {
+      "name": "cleared-reload",
+      "progress": "44 / 45 answered",
+      "open": [
+        "O11"
+      ],
+      "o11": {
+        "optionId": null,
+        "notes": "QA note: test-app"
+      },
+      "mergedRevision": "5",
+      "baselineO11": {
+        "optionId": null,
+        "notes": ""
+      },
+      "emptyPrompt": false,
+      "checkedO11": [],
+      "changedIds": [
+        "O11"
+      ]
+    }
+  },
+  "returnedToBaseline": {
+    "name": "open-no-notes",
+    "progress": "44 / 45 answered",
+    "open": [
+      "O11"
+    ],
+    "o11": {
+      "optionId": null,
+      "notes": ""
+    },
+    "mergedRevision": "5",
+    "baselineO11": {
+      "optionId": null,
+      "notes": ""
+    },
+    "emptyPrompt": true,
+    "checkedO11": [],
+    "changedIds": []
+  },
+  "models": {
+    "initialOption": "fixtures-only",
+    "initialResult": "One live App; preview uses fixtures\n\nProduction receives the real App events. Preview has no GitHub sign-in or production App sessions. Fixtures exercise review behavior, while focused auth checks run separately.",
+    "alternativeResult": "Two isolated Apps\n\nPreview keeps real GitHub sign-in and revocation through its own test App. Production uses its existing App. Each has separate credentials, receiver, installation, and data.",
+    "recordedSelectionAfterAlternative": null,
+    "storageUnchanged": true,
+    "resetOption": "fixtures-only",
+    "recordedSelectionAfterReset": null,
+    "resetStorageUnchanged": true
+  },
+  "keyboardMenu": {
+    "index": 40,
+    "focused": {
+      "role": "menuitem",
+      "href": "#O11",
+      "text": "O11How should preview authenticate after production owns the GitHub App webhook?Open"
+    },
+    "hash": "#O11",
+    "menuClosed": true,
+    "geometry": {
+      "x": 100,
+      "y": 200.34375,
+      "width": 1240,
+      "height": 558.890625
+    },
+    "header": {
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 72
+    }
+  },
+  "terms": [
+    {
+      "name": "GitHub App",
+      "hoverMatches": true,
+      "focusMatches": true,
+      "clickMatches": true,
+      "describedBy": true,
+      "escapeClosed": true,
+      "outsideClosed": true
+    }
+  ],
+  "narrow": {
+    "innerWidth": 390,
+    "documentWidth": 390,
+    "o11": {
+      "left": 16,
+      "right": 374,
+      "width": 358
+    }
+  },
+  "touch": {
+    "device": "Chromium touch emulation,390x844",
+    "hash": "#O11",
+    "menuClosed": true,
+    "firstTapMatches": true,
+    "tooltipWithinViewport": true,
+    "outsideTapClosed": true,
+    "progress": "44 / 45 answered",
+    "o11Checked": 0,
+    "pageErrors": []
+  },
+  "uniqueIds": true,
+  "checkedAt": "2026-09-29T17:35:22.665310+00:00",
+  "url": "http://127.0.0.1:4319/",
+  "method": "playwright-cli, isolated local Chromium session; portable index.html served over HTTP",
+  "artifactSha256": "c06e8a3da6ef1ad6c37c21230d0fa36b46219be493fc6ecdd791594aa5c41d90",
+  "recordSha256": "389a6cb35b57639233016cca65be12ba47d31b924dfe1bf3d5a979402ea47bc6",
+  "screenshots": [
+    "document-desktop-r5.png",
+    "document-narrow-r5.png",
+    "document-O11-r5.png",
+    "document-O11-narrow-r5.png"
+  ],
+  "findings": [],
+  "limits": [
+    "No file:// browser test. Local HTTP only, per the prior browser-policy block.",
+    "The revision4 saved-feedback seed is reconstructed from the prior incorporated baseline with44 decisions and mergedRevision4. It is not a capture of the user browser profile.",
+    "Touch behavior uses Chromium emulation, not a physical device or screen reader.",
+    "This check covers the revision5 audit document and O11 model, not live GitHub authentication or production behavior.",
+    "The initial open reported a404 for /favicon.ico from the local static server. Instrumented reloads and interactions reported no page or console errors."
+  ]
+}
