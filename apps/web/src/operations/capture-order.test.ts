@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { summarizeClosedRuns, readClosedSummary } from "./closed-summary.ts";
+import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
@@ -9,7 +10,6 @@ import {
 } from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
 import { archiveClosedRuns, readRunHistory } from "./history.ts";
-import { prepareHistoricalCaptures } from "./historical-captures.ts";
 import type { OperationsContext } from "./types.ts";
 
 let runtime: Miniflare;
@@ -26,34 +26,7 @@ beforeEach(async () => {
     }),
   );
   const database = await runtime.getD1Database("DB");
-  for (const name of [
-    "0001_service",
-    "0002_work",
-    "0003_auth",
-    "0004_ingest",
-    "0005_operations",
-    "0006_acceptance",
-    "0007_backup_inventory",
-    "0008_capture_profiles",
-    "0009_retention_history",
-    "0010_run_history",
-    "0011_backup_groups",
-    "0012_historical_comparisons",
-    "0013_promotion_scans",
-    "0014_visonaut_brand",
-    "0016_comparison_publication",
-  ]) {
-    const source = (
-      await readFile(new URL(`../../migrations/${name}.sql`, import.meta.url), "utf8")
-    ).replace(/^--.*$/gm, "");
-    let query = "";
-    for (const line of source.split("\n")) {
-      query += `${line}\n`;
-      if (!line.trimEnd().endsWith(";")) continue;
-      await database.prepare(query).run();
-      query = "";
-    }
-  }
+  await applyTestMigrations(database);
   local = new TestDatabase();
   operations = { ...context(local).context, database };
   service = new Service(database);
@@ -244,7 +217,7 @@ describe("full-run declared capture order with native D1", () => {
     );
   });
 
-  it("preserves the same order in immutable history and restored historical comparisons", async () => {
+  it("preserves capture order in the converted closed summary and refuses historical recomparison", async () => {
     await reserve("run");
     for (const key of ["a-second", "z-first"]) await commit("run", key, await captures("run", key));
     await service.sealRun({ runId: "run", now: operations.now() });
@@ -263,24 +236,25 @@ describe("full-run declared capture order with native D1", () => {
         ?.sort((a, b) => Number(a.ordinal) - Number(b.ordinal))
         .map((row) => row.variant_key),
     ).toEqual(expected);
-    const count = await prepareHistoricalCaptures(operations, {
-      runId: "run",
-      comparisonId: "historical",
-      referenceSnapshotId: null,
-      maximumCaptures: 10,
-    });
-    await service.createComparison({
-      id: "historical",
-      runId: "run",
-      referenceSnapshotId: null,
-      purpose: "historical",
-      expectedCaptureCount: count,
-      now: operations.now(),
-      maxAttempts: 2,
-    });
-    expect((await service.comparisonRows("historical")).map((row) => row.variant_key)).toEqual(
-      expected,
-    );
+    operations.now = () => Date.now() + 31 * 86400000;
+    for (let pass = 0; pass < 100; pass++) {
+      const report = await summarizeClosedRuns(operations);
+      expect(report.attention).toEqual([]);
+      if (report.completed.includes("run")) break;
+    }
+    const summary = await readClosedSummary(operations.database, "run");
+    expect(summary?.sections.comparisonRows?.map((row) => row.variant_key)).toEqual(expected);
+    await expect(
+      service.createComparison({
+        id: "historical",
+        runId: "run",
+        referenceSnapshotId: null,
+        purpose: "historical",
+        expectedCaptureCount: expected.length,
+        now: operations.now(),
+        maxAttempts: 2,
+      }),
+    ).rejects.toThrow("read-only summary");
   });
 
   it("refuses duplicate local ordinals before staging ambiguous captures", async () => {

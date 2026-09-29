@@ -1,88 +1,25 @@
 # visonaut
 
-The Visonaut CLI stages a capture shard, submits a trusted GitHub workflow run, and reads the run's status. It does not control pages or grant visual approval. Use `@visonaut/playwright` to capture prepared pages.
+Submit verified visual captures from a pinned GitHub Actions workflow and inspect review status.
 
 ```sh
-pnpm add -D visonaut @visonaut/playwright
-# In each OIDC-free visual job:
-visonaut pack --dir visonaut-linux --output visonaut-linux.enc
-visonaut pack --dir visonaut-safari --output visonaut-safari.enc
-# After both encrypted files reach the signed Submit job:
-visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
+visonaut begin --run "$GITHUB_RUN_ID"
+visonaut submit --shard linux --shard safari
+visonaut status --run <service-run-id> --json
 ```
 
-Set `VISONAUT_SERVER` to the service origin. You can also pass `--server https://your-service.example`. The origin must use HTTPS. Local development can use HTTP on `localhost`, `127.0.0.1`, or `::1`. Redirects are refused. The CLI sends all image bytes through the service.
+`submit` calls `begin` before any artifact download. The `begin` command verifies the current signed Submit job and starts the Visonaut App check before downloads and image staging. It does not approve a review.
 
-## GitHub Actions submission
+`submit --shard` is the only capture entry point. Each required shard must be unique. The CLI checks the complete GitHub job inventory, requires each visual job to succeed, and downloads its exact ordinary capture artifact. The artifact name is `visonaut-capture-<run-id>-<source-attempt>-<shard-key>`. A visual job that GitHub did not rerun can keep its proven successful source execution at the same tested commit. A rerun job needs fresh evidence. A missing or expired artifact requires a full visual rerun.
 
-Packing needs no GitHub OIDC permission. Give only the trusted Submit job `id-token: write`; run candidate tests in separate visual jobs without OIDC. Submit requests GitHub identity for the transfer key, upload, and final submit. The service verifies the pinned workflow, job, run, attempt, and tested commit before it accepts the run.
+Download and ZIP extraction enforce encoded byte, expanded byte, entry count, path, and per-file limits before extracting candidate files. No external archive tool is required.
 
-The capture jobs report their own OS and font profile in each pack. Submit checks that profile data is well formed and keeps it with the images, but does not measure those machines again. The pinned workflow controls which capture jobs can feed Submit.
+Each capture artifact contains `manifest.json`, `environment.json`, and digest-named image files. Submit checks their hashes, sizes, test inventory, rendering profiles, repository, tested commit, package digest, and source attempt. It forms a fresh combined manifest, records every verified source, uploads private service data, and submits only from the signed trusted job. Candidate code cannot choose its upload authority.
 
-```yaml
-jobs:
-  visual-linux:
-    permissions:
-      contents: read
-    steps:
-      # Run the visual tests and produce the reporter's capture directory.
-      - run: visonaut pack --dir visonaut-linux --output visonaut-linux.enc
-      # Upload the encrypted file as a short-lived Actions artifact.
-  visual-safari:
-    permissions:
-      contents: read
-    steps:
-      - run: visonaut pack --dir visonaut-safari --output visonaut-safari.enc
-      # Upload the encrypted file as a short-lived Actions artifact.
-  submit:
-    needs: [visual-linux, visual-safari]
-    permissions:
-      actions: read
-      id-token: write
-    steps:
-      # Download both encrypted artifacts from the visual jobs.
-      - run: visonaut submit --bundle linux=visonaut-linux.enc --bundle safari=visonaut-safari.enc
-      # Upload the generated receipt as an Actions artifact.
-```
+The pinned workflow supplies `GH_TOKEN`, GitHub Actions OIDC, `VISONAUT_SERVER`, `VISONAUT_PACKAGE_SHA256`, `VISONAUT_WORKFLOW_SOURCE_SHA`, `VISONAUT_CAPTURE_JOB_PREFIX`, and `VISONAUT_SUBMIT_JOB_NAME`. GitHub supplies repository, run, attempt, and tested-commit fields. `RUNNER_TEMP` holds isolated downloaded and combined files. `GITHUB_OUTPUT` receives the signed discovery receipt name and path. Upload that receipt as an ordinary one-day artifact.
 
-Set `VISONAUT_SERVER` in the visual and trusted jobs. The example shows the dependency, not a complete workflow. The pinned workflow owns the capture matrix and job names. `pack` requires the reporter's `manifest.json`, `environment.json`, and images in the same directory. `submit --bundle` decrypts every named pack, checks its contents, combines the captures into one manifest, uploads them, and records submit intent. The Submit job must publish the generated receipt artifact named by its `name` output. Image paths must stay inside the directory and cannot contain symbolic links. Each image must match its declared byte count and SHA-256 digest. The service checks the actual format and decoded content again. A client manifest cannot prove that a run is complete.
+The small visual workflow owns the required shard set, commands, package pin, and receipt upload. The service pins its exact Git blob. Unrelated build and deployment workflow changes do not alter that pin. The server verifies signed identity and REST evidence independently.
 
-`submit --run` remains available for workflows with separate signed upload jobs. `submit --bundle` is for one signed job that receives all encrypted packs. Both return before the service verifies the completed Submit job and its receipt. The surrounding CI workflow may still be running while Gate waits for Visonaut review. A successful upload or submit does not grant visual approval. Neither command waits for a person.
+`status` requires `VISONAUT_TOKEN` with a valid maintainer session. Capture capabilities cannot read private review state. Exit codes are `0` for command success, `1` for operation failure, `2` for invalid arguments, `3` for a run that has not passed, and `4` for authentication or trust failure. A successful submission is not visual approval.
 
-To retry an interrupted upload, use the same manifest. The service accepts identical shard replays and can omit tickets for images it already has. Changed files, conflicting shard data, or a superseded attempt fail. For image uploads and status reads, the CLI retries an explicit temporary `503` response with a valid `Retry-After` header within one 30-second deadline. It makes up to five total attempts, or up to 25 for image PUTs that receive `validation_busy`. The CLI resends the same validated image bytes. It does not retry authentication failures, invalid images, conflicts, network failures, or other commands.
-
-During a long upload, the CLI obtains a fresh capability and repeats the same declaration before fewer than 45 seconds remain on the current capability. The service returns fresh tickets for images that are still incomplete. Renewal must keep the same run and manifest, and successful uploads must occur between renewals. Completed images are counted once. A failed renewal stops the command; use the same upload command to resume.
-
-## Private status
-
-Status requires `VISONAUT_TOKEN`, a current Better Auth maintainer session token. The service checks current repository access. An upload capability or GitHub OIDC token cannot read private status. Set the token through your environment or secret manager; do not put it in a command argument.
-
-```sh
-# VISONAUT_SERVER and VISONAUT_TOKEN are already set in the environment.
-pnpm exec visonaut status --run run-id
-pnpm exec visonaut status --run run-id --json
-# Set VISONAUT_RUN to omit --run.
-pnpm exec visonaut status
-```
-
-Text status output reports the state, shard progress, errors, and review URL. Status JSON contains `schemaVersion`, `runId`, `state`, `reviewUrl`, `completedShards`, `expectedShards`, and `errors`. Upload JSON reports the staged shard, its manifest digest and image count, and `visualApproval: false`. Submit JSON reports `state: "submitted"`, the internal run ID, submission time, and `visualApproval: false`. With `--json`, errors are JSON on stderr; successful command output is on stdout.
-
-| Exit code | Meaning                                                                                |
-| --------- | -------------------------------------------------------------------------------------- |
-| 0         | Upload/submit completed, status is `passed`, or help was shown.                        |
-| 1         | Local data, protocol, network, or service operation failed.                            |
-| 2         | Arguments or service origin are invalid.                                               |
-| 3         | Status was read, but the run is not `passed`. This includes pending and failed states. |
-| 4         | Credentials are missing, invalid, expired, or lack permission.                         |
-
-`pack`, `upload`, `submit`, and `status` are supported. Use `--help` for exact flags. Recompare and export are web app operations.
-
-## Supported environment and defensive limits
-
-Release validation uses Node.js 24.18.0, pnpm 12.5.1, TypeScript 6.0.2, and Playwright 1.63.0. Broader runtime support is not claimed. The package bundles its protocol code and depends on the matching `@visonaut/playwright` package for encrypted workflow transfers. It contains no server code or credentials.
-
-The CLI limits manifests to 8 MiB, individual encoded images to 20 MiB, total encoded images per shard to 1 GiB, and each request to 30 seconds. JSON responses have a 2 MiB limit, except successful shard declarations. Their limit is 8 KiB plus 4,352 bytes per unique image in the validated local shard: a ticket can contain up to 4,096 ASCII characters, with room for its digest, byte count, and JSON syntax. Repeated images do not increase this limit. Both the declared content length and the bytes actually read must fit. The CLI also rejects excess, duplicate, or unknown image tickets before it uploads an image.
-
-These are defensive transport bounds, not measured performance or cost budgets. The service can enforce lower limits. For reuse proofs, the CLI processes at most four pages at a time. Each page has at most 32 images and normally at most 8 MiB of declared image bytes; one image up to 20 MiB can occupy a page. Thus at most 128 images or 80 MiB of declared image bytes are scheduled together. Each page reads its files one at a time. Unknown major protocol versions are refused; compatible optional fields remain part of the manifest digest.
-
-The OIDC request method follows [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc). Credentials remain in memory. The CLI does not write tokens to disk or print them in output.
+The old `pack`, `upload`, `upload --bundle`, `submit --bundle`, `submit --dir`, and `submit --run` commands are removed. Transfer encryption and key exchange are removed. The CLI no longer depends on the Playwright adapter or its exact peer runtime.

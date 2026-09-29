@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
 const check = `visonaut:pre:${"d".repeat(40)}`;
@@ -20,7 +21,7 @@ test("a pull-request check opens its current Visonaut review", async ({ page }) 
         },
       });
     }
-    return route.fulfill({ json: fixtureModel() });
+    return route.fulfill({ json: compactReviewModel(fixtureModel()) });
   });
   await page.goto(entry);
   await expect(page.getByLabel("Review workspace", { exact: true })).toBeVisible();

@@ -6,14 +6,15 @@ import {
   isTrustedWorkflowBlob,
   numericId,
   SecurityError,
+  verifyGitHubOidc,
   type GitHubClient,
   type VerifiedRun,
   type VerifiedWebhook,
 } from "@visonaut/security";
-import { workflowSourceDigest } from "@visonaut/protocol";
-import type { ApiContext } from "./context.js";
-import { object } from "./input.js";
-import { completeWorkflowJobs } from "./jobs.js";
+import { digestJson, workflowSourceDigest } from "@visonaut/protocol";
+import { assertConfiguredProject, loadVerifiedMergeGroup, type ApiContext } from "./context.js";
+import { integer, jsonBody, object, string } from "./input.js";
+import { completeWorkflowJobs, jobExecutedInAttempt, verifyCarriedExecution } from "./jobs.js";
 import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
 import { stagedAttemptRetentionMs } from "./workflow-retention.js";
 
@@ -37,6 +38,10 @@ interface PreRunCheck {
   ref: string;
   pull_request_number: number | null;
   docs_only: number;
+  plan_visual_required: number | null;
+  plan_reported_at: number | null;
+  plan_job_id: string | null;
+  plan_workflow_sha: string | null;
   external_id: string;
   check_id: string | null;
   state: "pending" | "creating" | "ambiguous" | "active" | "docs_complete" | "failed";
@@ -48,33 +53,6 @@ interface PreRunCheck {
 
 function sha(value: unknown): string | null {
   return typeof value === "string" && /^[a-f0-9]{40}$/.test(value) ? value : null;
-}
-
-function approvedDocsPath(path: unknown): boolean {
-  if (path === "README.md" || path === "CONTRIBUTING.md" || path === "CODE_OF_CONDUCT.md") {
-    return true;
-  }
-  return typeof path === "string" && /^\.github\/ISSUE_TEMPLATE\/[A-Za-z0-9_-]+\.md$/.test(path);
-}
-
-async function approvedComparison(github: GitHubClient, candidate: Candidate): Promise<boolean> {
-  const result = object(
-    await github.request(
-      `/repos/${github.repository}/compare/${candidate.baseSha}...${candidate.testedSha}`,
-    ),
-  );
-  if (result.status !== "ahead") return false;
-  // GitHub truncates compare.files at 300 entries. Exactly 300 is ambiguous.
-  if (!Array.isArray(result.files) || result.files.length === 0 || result.files.length >= 300) {
-    return false;
-  }
-  for (const value of result.files) {
-    const file = object(value);
-    if (!approvedDocsPath(file.filename)) return false;
-    if (file.status === "renamed" && !approvedDocsPath(file.previous_filename)) return false;
-    if (!["added", "modified", "removed", "renamed"].includes(String(file.status))) return false;
-  }
-  return true;
 }
 
 /** A signed webhook identifies the event; REST independently identifies its current commit. */
@@ -169,7 +147,6 @@ export async function candidateForWebhook(
       pullRequestNumber: number,
       docsOnly: false,
     };
-    candidate.docsOnly = await approvedComparison(github, candidate);
     return candidate;
   }
   if (webhook.event !== "merge_group" || webhook.payload.action !== "checks_requested") {
@@ -199,7 +176,6 @@ export async function candidateForWebhook(
     pullRequestNumber: null,
     docsOnly: false,
   };
-  candidate.docsOnly = await approvedComparison(github, candidate);
   return candidate;
 }
 
@@ -585,25 +561,11 @@ async function finishCreation(
   if (!(await stillCurrent())) {
     throw new SecurityError("stale_candidate", 503, "The candidate changed before check creation.");
   }
-  if (row.docs_only) {
-    await github.request(`/repos/${github.repository}/check-runs/${checkId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "completed",
-        conclusion: "neutral",
-        completed_at: new Date().toISOString(),
-        output: {
-          title: "Visual capture is not required",
-          summary: "Only approved documentation files changed.",
-        },
-      }),
-    });
-  }
   await context.database
     .prepare(
       "UPDATE pre_run_checks SET state=?,lease_until=NULL,updated_at=? WHERE external_id=? AND state='creating' AND check_id=?",
     )
-    .bind(row.docs_only ? "docs_complete" : "active", Date.now(), row.external_id, checkId)
+    .bind("active", Date.now(), row.external_id, checkId)
     .run();
 }
 
@@ -951,6 +913,26 @@ export async function findPreRunCheck(
     externalId: row.external_id,
     checkId: row.check_id,
   };
+}
+
+/** Capture admission and materialization require the current explicit Plan=true proof. */
+export async function requireVisualPlan(
+  context: ApiContext,
+  identity: { testedSha: string; workflowRunId: string; workflowAttempt: number },
+) {
+  const row = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
+  if (
+    !row ||
+    row.tested_sha !== identity.testedSha ||
+    row.plan_visual_required !== 1 ||
+    row.state !== "active"
+  ) {
+    throw new SecurityError(
+      "plan_unverified",
+      409,
+      "The current trusted Plan must select app=true.",
+    );
+  }
 }
 
 function referencedPullMergeSha(
@@ -1622,7 +1604,7 @@ async function bindWorkflowCheck(
   return (await attemptCheck(context, runId, attempt)) ?? next;
 }
 
-/** Bind the check when a signed Submit attempt requests its transfer key. */
+/** Bind the pending check before a signed Submit reads capture artifacts. */
 export async function ensureSignedAttemptCheck(
   context: ApiContext,
   github: GitHubClient,
@@ -1655,6 +1637,13 @@ export async function ensureSignedAttemptCheck(
   ) {
     throw new SecurityError("workflow_identity", 503, "The signed workflow attempt changed.");
   }
+  const reported = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
+  if (reported?.plan_visual_required === 0)
+    throw new SecurityError(
+      "visual_not_required",
+      409,
+      "The trusted Plan selected no visual capture.",
+    );
   if (
     identity.event === "pull_request" &&
     identity.pullRequestNumber &&
@@ -1747,7 +1736,8 @@ export async function ensureSignedAttemptCheck(
   if (!ready) {
     throw new SecurityError("check_pending", 503, "The signed submit check is unavailable.");
   }
-  await bindWorkflowCheck(context, github, run, ready);
+  const bound = await bindWorkflowCheck(context, github, run, ready);
+  await inheritVisualPlan(context, github, run, bound);
 }
 
 /** A terminal pinned workflow settles only a check started by signed submit. */
@@ -1832,17 +1822,25 @@ export async function settlePreRunWorkflow(
     }
     return "historical" as const;
   }
-  if (!candidate || candidate.docs_only || candidate.state === "docs_complete") return;
+  if (!candidate || candidate.docs_only) return;
+  if (
+    candidate.state === "docs_complete" &&
+    candidate.workflow_run_id === runId &&
+    candidate.workflow_attempt === run.run_attempt
+  )
+    return;
   if (!candidate.check_id) return;
   if (!(await attemptCheck(context, runId, run.run_attempt))) {
-    // A webhook may bind a legacy pending check, but only signed Submit can
-    // create a successor after a prior workflow attempt.
+    // A carried Gate job does not start a new visual attempt. Only an actual
+    // signed Plan report or Submit can supersede the earlier visual check.
     if (candidate.workflow_run_id !== null) return;
     const unbound = await verifiedCheck(github, candidate, candidate.check_id);
     if (unbound.status === "completed") return;
   }
-  const row = await bindWorkflowCheck(context, github, run, candidate);
-  if (webhook.payload.action !== "completed") return;
+  let row = await bindWorkflowCheck(context, github, run, candidate);
+  await inheritVisualPlan(context, github, run, row);
+  row = (await attemptCheck(context, runId, Number(run.run_attempt))) ?? row;
+  if (webhook.payload.action !== "completed" || row.state === "docs_complete") return;
   if (row.state === "failed") return;
   const materialized = await context.database
     .prepare(
@@ -1870,12 +1868,15 @@ export async function settlePreRunWorkflow(
   // A signed submit stays eligible while Gate waits for review, even if Gate
   // makes the enclosing workflow fail before reconciliation finishes.
   const submitted = await successfulSubmittedPinnedJobs(context, github, run, row);
-  if (submitted.successful) return;
-  const reason = submitted.submitted
-    ? "A pinned capture or submit job did not complete successfully."
-    : run.conclusion === "success"
-      ? "The capture workflow finished without a signed Visonaut submit job."
-      : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
+  if (submitted.successful && row.plan_visual_required === 1) return;
+  const reason =
+    row.plan_visual_required === null
+      ? "The trusted Plan report is missing. Missing Plan never means no visual work."
+      : submitted.submitted
+        ? "A pinned capture or submit job did not complete successfully."
+        : run.conclusion === "success"
+          ? "The capture workflow finished without a signed Visonaut submit job."
+          : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
   await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
     method: "PATCH",
     body: JSON.stringify({
@@ -1891,4 +1892,212 @@ export async function settlePreRunWorkflow(
     )
     .bind(Date.now(), row.external_id, row.check_id)
     .run();
+}
+
+/** Only the pinned workflow can report a recomputed, successful Plan result. */
+export async function reportVisualPlan(request: Request, context: ApiContext) {
+  await assertConfiguredProject(context);
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration)
+    throw new SecurityError("workflow_configuration", 503, "The trusted workflow is unavailable.");
+  const body = await jsonBody(request, 16_384);
+  if (
+    body.schemaVersion !== 1 ||
+    body.planResult !== "success" ||
+    typeof body.visualRequired !== "boolean"
+  ) {
+    throw new SecurityError(
+      "invalid_plan_report",
+      400,
+      "A successful, explicit Plan result is required.",
+    );
+  }
+  const testedSha = string(body.testedSha, 40);
+  if (!/^[a-f0-9]{40}$/.test(testedSha))
+    throw new SecurityError("invalid_plan_report", 400, "A full tested commit is required.");
+  const workflowRunId = numericId(body.workflowRunId);
+  const workflowAttempt = integer(body.workflowAttempt, 1);
+  const header = request.headers.get("authorization");
+  if (!header?.startsWith("Bearer "))
+    throw new SecurityError("invalid_oidc", 401, "A signed Plan report is required.");
+  const github = await createGitHubClient(context.configuration.github);
+  const planDigest = await digestJson(body);
+  const identity = await verifyGitHubOidc({
+    token: header.slice(7),
+    github,
+    request: {
+      repository: github.repository,
+      repositoryId: github.repositoryId,
+      workflowRunId,
+      workflowAttempt,
+      testedSha,
+      planDigest,
+      shardKey: "plan-report",
+    },
+    configuration: {
+      audience: `${context.configuration.origin}/plan-report`,
+      repositoryOwnerId: context.configuration.repositoryOwnerId,
+      workflowPath: configuration.callerWorkflowPath,
+      reusableWorkflowRef: configuration.reusableWorkflowRef,
+      reusableWorkflowSha: configuration.reusableWorkflowSha,
+      trustedWorkflowPath: configuration.trustedWorkflowPath,
+      planDigest,
+      shards: [{ key: "plan-report", jobName: "Plan / Report" }],
+      loadMergeGroup: (commit) => loadVerifiedMergeGroup(context, commit),
+    },
+  });
+  const jobs = await completeWorkflowJobs(github, workflowRunId, workflowAttempt);
+  const plans = jobs.filter((job) => job.name === "Plan / Plan");
+  const plan = plans[0];
+  if (
+    plans.length !== 1 ||
+    !plan ||
+    plan.status !== "completed" ||
+    plan.conclusion !== "success" ||
+    plan.run_attempt !== workflowAttempt
+  ) {
+    throw new SecurityError("plan_unverified", 409, "The current Plan job did not succeed.");
+  }
+  const existing = await attemptCheck(context, workflowRunId, workflowAttempt);
+  if (existing?.plan_visual_required !== null && existing?.plan_visual_required !== undefined) {
+    if (
+      existing.tested_sha !== testedSha ||
+      existing.plan_visual_required !== Number(body.visualRequired)
+    ) {
+      throw new SecurityError(
+        "plan_conflict",
+        409,
+        "This attempt already has a different Plan result.",
+      );
+    }
+    if (!body.visualRequired) await completeNoVisualPlan(context, github, existing);
+    return new Response(null, { status: 204 });
+  }
+  await ensureSignedAttemptCheck(context, github, identity);
+  const row = await attemptCheck(context, workflowRunId, workflowAttempt);
+  if (row?.plan_visual_required === 0 && !body.visualRequired) {
+    await completeNoVisualPlan(context, github, row);
+    return new Response(null, { status: 204 });
+  }
+  if (!row?.check_id || row.state !== "active")
+    throw new SecurityError("check_pending", 503, "The current App check is not ready.");
+  const recorded = await context.database
+    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,updated_at=?,plan_job_id=?,plan_workflow_sha=?
+    WHERE external_id=? AND state='active' AND (plan_visual_required IS NULL OR plan_visual_required=?) RETURNING external_id`)
+    .bind(
+      Number(body.visualRequired),
+      Date.now(),
+      Date.now(),
+      numericId(plan.id),
+      configuration.reusableWorkflowSha,
+      row.external_id,
+      Number(body.visualRequired),
+    )
+    .first();
+  if (!recorded)
+    throw new SecurityError("plan_conflict", 409, "The Plan result changed during verification.");
+  if (body.visualRequired) return new Response(null, { status: 204 });
+  await completeNoVisualPlan(context, github, row);
+  return new Response(null, { status: 204 });
+}
+
+async function completeNoVisualPlan(context: ApiContext, github: GitHubClient, row: PreRunCheck) {
+  const current = await storedExternalId(context, row.external_id);
+  if (!current || current.plan_visual_required !== 0 || !current.check_id) return;
+  if (current.state === "docs_complete") return;
+  await verifiedCheck(github, row, current.check_id);
+  const latest = await storedCheck(context, row.tested_sha);
+  if (latest?.external_id !== row.external_id)
+    throw new SecurityError("stale_plan", 409, "A newer attempt supersedes this Plan.");
+  await github.request(`/repos/${github.repository}/check-runs/${current.check_id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "completed",
+      conclusion: "success",
+      completed_at: new Date().toISOString(),
+      output: {
+        title: "Visual capture is not required",
+        summary: "The successful trusted Plan selected app=false for this attempt.",
+      },
+    }),
+  });
+  await context.database
+    .prepare(
+      "UPDATE pre_run_checks SET state='docs_complete',updated_at=? WHERE external_id=? AND state='active' AND plan_visual_required=0",
+    )
+    .bind(Date.now(), row.external_id)
+    .run();
+}
+
+/** A carried Plan must retain the execution already authenticated by a signed report. */
+async function inheritVisualPlan(
+  context: ApiContext,
+  github: GitHubClient,
+  run: Record<string, unknown>,
+  row: PreRunCheck,
+) {
+  if (
+    row.plan_visual_required !== null ||
+    !row.workflow_run_id ||
+    !row.workflow_attempt ||
+    row.workflow_attempt < 2
+  )
+    return;
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration) return;
+  const prior = await context.database
+    .prepare(`SELECT * FROM pre_run_checks WHERE tested_sha=? AND workflow_run_id=?
+    AND workflow_attempt<? AND plan_visual_required IS NOT NULL AND plan_job_id IS NOT NULL AND plan_workflow_sha=?
+    ORDER BY workflow_attempt DESC LIMIT 1`)
+    .bind(
+      row.tested_sha,
+      row.workflow_run_id,
+      row.workflow_attempt,
+      configuration.reusableWorkflowSha,
+    )
+    .first<PreRunCheck>();
+  if (
+    !prior ||
+    !prior.plan_job_id ||
+    prior.source_sha !== row.source_sha ||
+    run.head_sha !== row.source_sha
+  )
+    return;
+  const jobs = await completeWorkflowJobs(github, row.workflow_run_id, row.workflow_attempt);
+  const plans = jobs.filter((job) => job.name === "Plan / Plan");
+  const plan = plans[0];
+  if (plans.length !== 1 || !plan || plan.status !== "completed" || plan.conclusion !== "success")
+    return;
+  if (jobExecutedInAttempt(plan, run.run_started_at)) return;
+  const source = object(
+    await github.request(`/repos/${github.repository}/actions/jobs/${prior.plan_job_id}`),
+  );
+  if (
+    typeof source.run_attempt !== "number" ||
+    !Number.isSafeInteger(source.run_attempt) ||
+    source.run_attempt < 1 ||
+    source.run_attempt > Number(prior.workflow_attempt)
+  )
+    return;
+  await verifyCarriedExecution(github, prior.plan_job_id, plan, {
+    workflowRunId: row.workflow_run_id,
+    workflowAttempt: row.workflow_attempt,
+    sourceAttempt: source.run_attempt,
+    sourceHead: row.source_sha,
+    jobName: "Plan / Plan",
+    attemptStartedAt: run.run_started_at,
+  });
+  const inherited = await context.database
+    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,plan_job_id=?,plan_workflow_sha=?
+    WHERE external_id=? AND state='active' AND plan_visual_required IS NULL RETURNING external_id`)
+    .bind(
+      prior.plan_visual_required,
+      Date.now(),
+      prior.plan_job_id,
+      prior.plan_workflow_sha,
+      row.external_id,
+    )
+    .first();
+  if (inherited && prior.plan_visual_required === 0)
+    await completeNoVisualPlan(context, github, row);
 }

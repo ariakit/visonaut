@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeAll, expect, it } from "vitest";
-import { Service } from "@visonaut/service";
+import { Service, closedRunRetentionMs } from "@visonaut/service";
 import { validateImage, type ImageCodecs } from "@visonaut/compare";
 import { processComparisonTask } from "../../../compare/src/process.ts";
 import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
@@ -11,7 +11,7 @@ import { useEvidence } from "../review/use-evidence.ts";
 import type { ReviewVariant } from "../review/model.ts";
 import type { PrivateContext } from "./context.ts";
 import { reviewModel } from "./review.ts";
-import { archiveClosedRuns, readRunHistory } from "../operations/history.ts";
+import { readClosedSummary, summarizeClosedRuns } from "../operations/closed-summary.ts";
 
 let codecs: ImageCodecs;
 beforeAll(async () => {
@@ -147,7 +147,7 @@ for (const changedProfile of [false, true]) {
       database,
       configuration: {
         projectId: "project",
-        github: { repository: "ariakit/visonaut-diagnostics" },
+        github: { repository: "ariakit/visonaut-diagnostics", repositoryId: "123" },
       },
     });
     const comparing = parseReviewModel(await reviewModel(privateContext, "run"));
@@ -224,41 +224,54 @@ for (const changedProfile of [false, true]) {
         now: fixture.state.time,
       });
     }
-    await service.retireRun({ runId: "run", now: fixture.state.time });
-    for (let step = 0; step < 50; step++) {
-      const report = await archiveClosedRuns(fixture.context);
-      expect(report.attention).toEqual([]);
-      if (report.completed.includes("run")) break;
-    }
-    const archive = await readRunHistory(fixture.context, "run");
-    expect(archive).not.toBeNull();
-    privateContext.history = {
-      read: async () => archive,
-      readCommand: async () => {
-        throw new Error("No replay requested.");
-      },
-    };
-    const archived = parseReviewModel(await reviewModel(privateContext, "run"));
-    const archivedVariant = archived.items[0]?.variants[0];
-    expect(archived).toMatchObject({ archived: true, reviewReady: false });
-    expect(archivedVariant).toMatchObject({ maskExpected: false, changedPixels: 1, diff: null });
-    if (!archivedVariant) throw new Error("Missing archived variant.");
-    expect(evidence(archivedVariant)).toBe("loading");
-    const savedRow = archive?.sections.comparisonRows?.[0];
-    if (!savedRow || typeof savedRow.result_json !== "string") {
-      throw new Error("Missing archived result.");
-    }
-    const savedResult = JSON.parse(savedRow.result_json);
+    const committedResult = JSON.parse(committed?.result_json ?? "null");
     if (!changedProfile) {
-      savedRow.result_json = JSON.stringify({ ...savedResult, maskExpected: undefined });
+      database.connection
+        .prepare("UPDATE visonaut_comparison_rows SET result_json=? WHERE id=?")
+        .run(JSON.stringify({ ...committedResult, maskExpected: undefined }), row.id);
       const legacy = parseReviewModel(await reviewModel(privateContext, "run"));
       expect(legacy.items[0]?.variants[0]?.maskExpected).toBe(false);
     }
-    savedRow.result_json = JSON.stringify({ ...savedResult, maskImageId: "missing-mask" });
+    database.connection
+      .prepare("UPDATE visonaut_comparison_rows SET result_json=? WHERE id=?")
+      .run(JSON.stringify({ ...committedResult, maskImageId: "missing-mask" }), row.id);
     const missingMask = parseReviewModel(await reviewModel(privateContext, "run"));
     const missingVariant = missingMask.items[0]?.variants[0];
     if (!missingVariant) throw new Error("Missing review variant.");
     expect(missingVariant).toMatchObject({ maskExpected: true, diff: null });
     expect(evidence(missingVariant)).toContain("Required diff evidence");
+    database.connection
+      .prepare("UPDATE visonaut_comparison_rows SET result_json=? WHERE id=?")
+      .run(JSON.stringify(committedResult), row.id);
+    await service.retireRun({ runId: "run", now: fixture.state.time });
+    const retained = parseReviewModel(await reviewModel(privateContext, "run"));
+    expect(retained).toMatchObject({ archived: true, reviewReady: false });
+    expect(retained.evidenceState).toBeUndefined();
+    expect(retained.items[0]?.variants[0]).toMatchObject({
+      maskExpected: false,
+      changedPixels: 1,
+      diff: null,
+    });
+    fixture.state.time += closedRunRetentionMs + 1;
+    const report = await summarizeClosedRuns(fixture.context);
+    expect(report.attention).toEqual([]);
+    expect(report.completed).toContain("run");
+    const summary = await readClosedSummary(database, "run");
+    expect(summary?.sections.comparisonRows?.[0]?.result_json).toBe(
+      JSON.stringify(committedResult),
+    );
+    const archived = parseReviewModel(await reviewModel(privateContext, "run"));
+    expect(archived).toMatchObject({
+      archived: true,
+      reviewReady: false,
+      evidenceState: "summary",
+    });
+    expect(archived.items[0]?.variants[0]).toMatchObject({
+      maskExpected: false,
+      changedPixels: 1,
+      reference: null,
+      candidate: null,
+      diff: null,
+    });
   });
 }

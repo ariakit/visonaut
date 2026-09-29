@@ -11,7 +11,6 @@ import {
 import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
-import { trySealRun } from "./ingest.js";
 import { sameCurrentMergeTree } from "./merge.js";
 import {
   candidateForWebhook,
@@ -209,21 +208,6 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
       historical = (await settlePreRunWorkflow(context, github, webhook)) === "historical";
     }
     if (!historical) {
-      const runs = await context.database
-        .prepare(
-          "SELECT id FROM visonaut_runs WHERE project_id = ? AND external_run_id = ? AND active = 1",
-        )
-        .bind(context.configuration.projectId, runId)
-        .all<{ id: string }>();
-      for (const run of runs.results) {
-        const staged = context.configuration.workflowOwned
-          ? await context.database
-              .prepare("SELECT id FROM ingest_staged_runs WHERE id = ?")
-              .bind(run.id)
-              .first<{ id: string }>()
-          : null;
-        if (!staged) await trySealRun(context, run.id);
-      }
       if (
         context.configuration.workflowOwned &&
         workflow.status === "completed" &&

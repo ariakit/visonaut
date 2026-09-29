@@ -58,14 +58,13 @@ export interface OperationsBudget {
   leaseMilliseconds: number;
   maxAttempts: number;
   maximumObjectBytes: number;
-  maximumDatabaseBytes: number;
+  maximumMetadataBytes: number;
   maximumExportEntries: number;
 }
 
 export interface OperationsContext {
   database: Database;
   images: ObjectStore;
-  backups: ObjectStore;
   quarantine: ObjectStore;
   comparisons: { send(message: { taskId: string; publicationAttempt: number }): Promise<void> };
   github: GitHubClient;

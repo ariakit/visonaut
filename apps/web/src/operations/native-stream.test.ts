@@ -12,12 +12,10 @@ const directory = await mkdtemp(resolve(tmpdir(), "visonaut-native-stream-"));
 let runtime: Miniflare | undefined;
 beforeAll(async () => {
   const common = fileURLToPath(new URL("./common.ts", import.meta.url));
-  const streams = fileURLToPath(new URL("./object-stream.ts", import.meta.url));
   await writeFile(
     resolve(directory, "worker.mjs"),
     `
     import { copyVerifiedObject, putKnownLength } from ${JSON.stringify(common)};
-    import { putBoundedStream } from ${JSON.stringify(streams)};
     export default { async fetch(request, env) {
       const mode = new URL(request.url).pathname;
       try {
@@ -26,9 +24,7 @@ beforeAll(async () => {
           const body = new ReadableStream({ start(c) { c.enqueue(new Uint8Array(8)); }, cancel() { cancelled++; } });
           const operation = (async () => {
             try {
-              if (mode === '/failure/multipart-create') {
-                await putBoundedStream({ async createMultipartUpload() { throw new Error('setup failure'); } }, 'key', {body}, 16);
-              } else if (mode === '/failure/destination-get') {
+              if (mode === '/failure/destination-get') {
                 await copyVerifiedObject({ source: { async get() { return {body,size:8}; } },
                   destination: {async get() { throw new Error('setup failure'); }}, sourceKey:'source',destinationKey:'copy',maximum:16 });
               } else {
@@ -49,15 +45,7 @@ beforeAll(async () => {
             sourceKey:'source',destinationKey:'protected',maximum:65536,expectedBytes:65536});
           return Response.json(copied);
         }
-        let remaining = 9 * 1024 * 1024;
-        const body = new ReadableStream({ pull(controller) {
-          if (!remaining) { controller.close(); return; }
-          const size = Math.min(65536, remaining);
-          controller.enqueue(new Uint8Array(size).fill(3)); remaining -= size;
-        }});
-        const stored = await putBoundedStream(env.STORE, 'sql', {body},
-          mode === '/limit' ? 8 * 1024 * 1024 : 10 * 1024 * 1024);
-        return Response.json({...stored,size:(await env.STORE.head('sql')).size});
+        return new Response('not found',{status:404});
       } catch(error) { return Response.json({error:String(error)}, {status:500}); }
     }};
   `,
@@ -115,24 +103,7 @@ it("copies transformed originals through the real Worker fixed-length R2 boundar
   expect(await response.json()).toMatchObject({ bytes: 65536 });
 });
 
-it("stores unknown-length SQL through real multipart R2 parts with bounded buffers", async () => {
-  if (!runtime) throw new Error("Native runtime unavailable");
-  const response = await runtime.dispatchFetch("https://visonaut.test/multipart");
-  expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ bytes: 9 * 1024 * 1024, size: 9 * 1024 * 1024 });
-});
-
-it("rejects an oversized SQL stream without replacing an existing completed backup", async () => {
-  if (!runtime) throw new Error("Native runtime unavailable");
-  const response = await runtime.dispatchFetch("https://visonaut.test/limit");
-  expect(response.status).toBe(500);
-  expect(await response.json()).toMatchObject({
-    error: expect.stringContaining("configured bound"),
-  });
-  expect((await (await runtime.getR2Bucket("STORE")).head("sql"))?.size).toBe(9 * 1024 * 1024);
-});
-
-it.each(["early-reject", "early-null", "destination-get", "multipart-create"])(
+it.each(["early-reject", "early-null", "destination-get"])(
   "cancels and unlocks the source when %s fails before consumption",
   async (mode) => {
     if (!runtime) throw new Error("Native runtime unavailable");

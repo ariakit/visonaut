@@ -1,0 +1,107 @@
+{
+  "checkedAt": "2026-09-29T20:40:35.249Z",
+  "browser": "Codex in-app browser",
+  "origin": "http://localhost:4184",
+  "runtime": {
+    "checkedAt": "2026-09-29T20:35:11.497Z",
+    "afterBuild": true,
+    "sourceCheckLog": "/tmp/visonaut-final-integrated-check.log",
+    "serverSession": 75320,
+    "command": "wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+    "workerSha256": "2250e31d6fda0e6fcc58d452bf35b190bae628c220cce4d26d42de3324bdee25",
+    "localApiStatus": 200
+  },
+  "checks": {
+    "dashboard": "Review work with native Dialog review example link",
+    "arrowSelection": "ArrowRight focused and opened Dark variant",
+    "reload": "Dark selection persisted",
+    "back": {
+      "url": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+      "preservesDark": true
+    },
+    "diffPan": {
+      "before": {
+        "left": 304,
+        "top": 252
+      },
+      "after": {
+        "left": 304,
+        "top": 252
+      },
+      "retained": true
+    },
+    "desktop": {
+      "height": 900,
+      "images": [
+        {
+          "alt": "Reference",
+          "complete": true,
+          "height": 400,
+          "width": 640
+        },
+        {
+          "alt": "New image",
+          "complete": true,
+          "height": 400,
+          "width": 640
+        }
+      ],
+      "regions": [
+        {
+          "height": 828,
+          "role": null,
+          "tag": "ASIDE",
+          "width": 256,
+          "x": 0,
+          "y": 72
+        },
+        {
+          "height": 900,
+          "role": null,
+          "tag": "MAIN",
+          "width": 1024,
+          "x": 256,
+          "y": 72
+        },
+        {
+          "height": 105,
+          "role": null,
+          "tag": "HEADER",
+          "width": 1024,
+          "x": 256,
+          "y": 72
+        }
+      ],
+      "scrollWidth": 1280,
+      "width": 1280
+    },
+    "narrow": {
+      "height": 844,
+      "images": [
+        {
+          "alt": "Reference",
+          "complete": true,
+          "height": 400,
+          "width": 640
+        },
+        {
+          "alt": "New image",
+          "complete": true,
+          "height": 400,
+          "width": 640
+        }
+      ],
+      "scrollWidth": 390,
+      "width": 390
+    },
+    "console": []
+  },
+  "screenshots": {
+    "desktop": "iab-verified-desktop.jpg",
+    "narrow": "iab-verified-narrow.jpg"
+  },
+  "limits": [
+    "Read-only preview fixtures; writable save behavior is covered by the native API route harness.",
+    "DOM geometry and screenshots are observations at these two viewport sizes."
+  ]
+}

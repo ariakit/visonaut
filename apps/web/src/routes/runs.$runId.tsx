@@ -1,15 +1,20 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
-import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { loadReview } from "../review/client.ts";
+import {
+  Shell,
+  ShellHeader,
+  ShellMain,
+  ShellMainBody,
+} from "../components/ariakit/components/shell.ariakit.react.tsx";
+import { createReviewCommands, loadReviewModel } from "../review/client.ts";
 import { ReviewCommandError } from "../review/model.ts";
-import type { ReviewSelection } from "../review/model.ts";
+import type { ReviewModel, ReviewSelection } from "../review/model.ts";
 import { ReviewWorkspace } from "../review/review-workspace.tsx";
 import type { ReviewRoute } from "../review/review-workspace.tsx";
-import "./dashboard.css";
+import "../review.css";
 
 export const Route = createFileRoute("/runs/$runId")({
   validateSearch: (
@@ -19,18 +24,84 @@ export const Route = createFileRoute("/runs/$runId")({
     item: typeof search.item === "string" ? search.item : undefined,
     variant: typeof search.variant === "string" ? search.variant : undefined,
   }),
+  ssr: false,
+  // Do not hold the hydrated loading shell after the model is ready.
+  pendingMinMs: 0,
+  loaderDeps: ({ search }) => ({ comparison: search.comparison }),
+  gcTime: 0,
+  staleTime: Infinity,
+  loader: async ({ params, deps, abortController }) => {
+    try {
+      const model = await loadReviewModel(params.runId, deps.comparison, abortController.signal);
+      return { status: "ready" as const, model };
+    } catch (error) {
+      if (error instanceof ReviewCommandError && error.status === 401) {
+        return { status: "guest" as const };
+      }
+      throw error;
+    }
+  },
+  pendingComponent: () => <RunLoading />,
+  errorComponent: ({ error, reset }) => <RunError error={error} reset={reset} />,
   component: Run,
 });
 
-type RunState =
-  | { status: "loading" | "guest" }
-  | { status: "error"; message: string }
-  | { status: "ready"; review: Awaited<ReturnType<typeof loadReview>> };
+type RunState = { status: "guest" } | { status: "ready"; model: ReviewModel };
+
+function RunShell({ children }: { children: ReactNode }) {
+  return (
+    <Shell className="h-dvh gap-3 p-3">
+      <ShellHeader $layer="canvas" className="flex items-center justify-between gap-3">
+        <Link to="/" className="font-semibold">
+          Visonaut
+        </Link>
+        <Link to="/">All runs</Link>
+      </ShellHeader>
+      <ShellMain>
+        <ShellMainBody className="grid place-items-center p-6">{children}</ShellMainBody>
+      </ShellMain>
+    </Shell>
+  );
+}
+
+function RunLoading() {
+  return (
+    <RunShell>
+      <p role="status">Checking access and loading this run…</p>
+    </RunShell>
+  );
+}
+
+function RunError({ error, reset }: { error: unknown; reset(): void }) {
+  const router = useRouter();
+  const message =
+    error instanceof ReviewCommandError && error.status === 403
+      ? "Write access to this repository is required to open this run."
+      : error instanceof Error
+        ? error.message
+        : "The run could not be loaded. Please retry.";
+  return (
+    <RunShell>
+      <Frame $layer="canvas" $rounded="lg" $border className="grid max-w-lg gap-4 p-6">
+        <h1 className="text-xl font-semibold">This run could not be opened</h1>
+        <p role="alert">{message}</p>
+        <Button
+          onClick={() => {
+            void router.invalidate().then(reset);
+          }}
+        >
+          Retry
+        </Button>
+      </Frame>
+    </RunShell>
+  );
+}
 
 function Run() {
   const { runId } = Route.useParams();
   const { comparison, item, variant } = Route.useSearch();
   const navigate = useNavigate();
+  const state = Route.useLoaderData();
   const onSelect = useCallback(
     (selection: ReviewSelection) => {
       void navigate({
@@ -58,6 +129,7 @@ function Run() {
       runId={runId}
       comparisonId={comparison}
       route={route}
+      state={state}
     />
   );
 }
@@ -66,42 +138,16 @@ function RunPage({
   runId,
   comparisonId,
   route,
+  state,
 }: {
   runId: string;
   comparisonId?: string;
   route: ReviewRoute;
+  state: RunState;
 }) {
-  const [state, setState] = useState<RunState>({ status: "loading" });
-  const [reload, setReload] = useState(0);
+  const commands = useMemo(() => createReviewCommands(runId, comparisonId), [runId, comparisonId]);
   const [action, setAction] = useState<"sign-in" | "sign-out" | null>(null);
   const [actionError, setActionError] = useState("");
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const review = await loadReview(runId, comparisonId);
-        if (!controller.signal.aborted) setState({ status: "ready", review });
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        if (error instanceof ReviewCommandError && error.status === 401) {
-          setState({ status: "guest" });
-          return;
-        }
-        setState({
-          status: "error",
-          message:
-            error instanceof ReviewCommandError && error.status === 403
-              ? "Write access to this repository is required to open this run."
-              : error instanceof Error
-                ? error.message
-                : "The run could not be loaded. Please retry.",
-        });
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [runId, comparisonId, reload]);
 
   const signIn = async () => {
     setAction("sign-in");
@@ -138,73 +184,48 @@ function RunPage({
     }
   };
 
+  if (state.status === "ready") {
+    return (
+      <ReviewWorkspace
+        model={state.model}
+        commands={commands}
+        route={route}
+        headerEnd={
+          state.model.preview ? undefined : (
+            <>
+              {actionError && (
+                <p role="alert" className="text-sm text-red-400">
+                  {actionError}
+                </p>
+              )}
+              <Button
+                $kind="flat"
+                $rounded="lg"
+                disabled={action !== null}
+                onClick={() => void signOut()}
+              >
+                {action === "sign-out" ? "Signing out…" : "Sign out"}
+              </Button>
+            </>
+          )
+        }
+      />
+    );
+  }
   return (
-    <Frame $layer="canvas" className="dashboard-run-page">
-      <Layer $layer $lighten render={<header />} className="dashboard-header">
-        <Link to="/" className="dashboard-brand">
-          Visonaut
-        </Link>
-        <Link to="/">All runs</Link>
-        {state.status === "ready" && (
-          <Button
-            className="review-control"
-            $kind="flat"
-            $rounded="lg"
-            disabled={action !== null}
-            onClick={() => void signOut()}
-          >
-            {action === "sign-out" ? "Signing out…" : "Sign out"}
-          </Button>
+    <RunShell>
+      <Frame $layer="canvas" $rounded="lg" $border className="grid max-w-lg gap-4 p-6">
+        <h1 className="text-xl font-semibold">Sign in to review this run</h1>
+        <p>This review is available to Ariakit maintainers.</p>
+        {actionError && (
+          <p role="alert" className="text-red-400">
+            {actionError}
+          </p>
         )}
-      </Layer>
-      {actionError && (
-        <p className="dashboard-error" role="alert">
-          {actionError}
-        </p>
-      )}
-      {state.status === "loading" && (
-        <main className="dashboard-main">
-          <p role="status">Checking access and loading this run…</p>
-        </main>
-      )}
-      {state.status === "guest" && (
-        <Frame $layer="canvas" render={<main />} className="dashboard-sign-in">
-          <h1>Sign in to review this run</h1>
-          <p>This review is available to Ariakit maintainers.</p>
-          <Button
-            className="review-control"
-            disabled={action !== null}
-            onClick={() => void signIn()}
-          >
-            {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
-          </Button>
-        </Frame>
-      )}
-      {state.status === "error" && (
-        <main className="dashboard-main">
-          <Frame
-            $layer
-            $lighten
-            $rounded="lg"
-            $border
-            render={<section />}
-            className="dashboard-empty"
-          >
-            <h1>This run could not be opened</h1>
-            <p role="alert">{state.message}</p>
-            <Button
-              className="review-control"
-              onClick={() => {
-                setState({ status: "loading" });
-                setReload((value) => value + 1);
-              }}
-            >
-              Retry
-            </Button>
-          </Frame>
-        </main>
-      )}
-      {state.status === "ready" && <ReviewWorkspace {...state.review} route={route} />}
-    </Frame>
+        <Button disabled={action !== null} onClick={() => void signIn()}>
+          {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
+        </Button>
+      </Frame>
+    </RunShell>
   );
 }

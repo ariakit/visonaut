@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { join } from "node:path";
 import { digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runCli } from "../src/index.js";
+import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
 
 const directories: string[] = [];

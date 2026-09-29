@@ -15,7 +15,7 @@ export interface LocalManifest {
   manifest: Manifest;
 }
 
-async function readBounded(file: string, maximum: number): Promise<Buffer<ArrayBuffer>> {
+export async function readBounded(file: string, maximum: number): Promise<Buffer<ArrayBuffer>> {
   // O_NONBLOCK prevents a replaced regular file from blocking as a FIFO.
   await using handle = await open(
     file,

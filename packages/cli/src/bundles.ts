@@ -1,12 +1,13 @@
 import { copyFile, mkdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { digestJson, parseManifest, type Manifest } from "@visonaut/protocol";
+import { digestJson, parseManifest, type CaptureSource, type Manifest } from "@visonaut/protocol";
 import { CliError } from "./errors.js";
 import { loadCapture, validateImages } from "./files.js";
 
 interface BundleDirectory {
   shard: string;
   directory: string;
+  source?: CaptureSource;
 }
 
 interface CombineBundlesParams {
@@ -36,6 +37,7 @@ export async function combineBundles({
   const configurations: { shard: string; digest: string }[] = [];
   let first: Manifest | undefined;
   let sourceAttempt = 0;
+  const captureSources: CaptureSource[] = [];
   await mkdir(join(directory, "images"), { recursive: true, mode: 0o700 });
   for (const bundle of bundles) {
     const local = await loadCapture(bundle.directory);
@@ -65,6 +67,12 @@ export async function combineBundles({
       first = manifest;
     }
     sourceAttempt = Math.max(sourceAttempt, manifest.run.workflowAttempt);
+    if (bundle.source) {
+      if (bundle.source.manifestDigest !== (await digestJson(manifest))) {
+        throw new CliError("A source manifest changed after artifact verification.", 4);
+      }
+      captureSources.push(bundle.source);
+    }
     configurations.push({ shard: bundle.shard, digest: manifest.discovery.configurationDigest });
     for (const profile of manifest.profiles) {
       profiles.set(profile.digest, profile);
@@ -98,6 +106,7 @@ export async function combineBundles({
     run: { ...first.run, workflowAttempt: sourceAttempt },
     shard: { key: "combined", jobId: "pending", sourceAttempt },
     profiles: [...profiles.values()],
+    ...(captureSources.length ? { captureSources } : {}),
     tests,
     captures,
     discovery: {

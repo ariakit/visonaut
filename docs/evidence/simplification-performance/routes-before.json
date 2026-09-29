@@ -1,0 +1,3140 @@
+{
+  "measuredAt": "2026-09-29T18:46:30.267Z",
+  "sourceCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "workingDiffSha256": "65bb9a820ba7eff38f7aa15b27ca821ad778f6107d02164aa5cdff3ddebc7c8f",
+  "buildFiles": [
+    {
+      "file": "apps/web/dist/client/assets/dashboard-B5exmQOr.js",
+      "bytes": 3857,
+      "sha256": "5d65081444e2abea038391729ce698e508d2024df3b5f8dee91ac0bea700d656"
+    },
+    {
+      "file": "apps/web/dist/client/assets/dashboard-M2jHn_Kv.css",
+      "bytes": 321836,
+      "sha256": "31e15487caf552b2fdd922230916cd395fd099b4dc128e700149695b2ed5b6ae"
+    },
+    {
+      "file": "apps/web/dist/client/assets/index-CaJ_2b8I.css",
+      "bytes": 27,
+      "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+    },
+    {
+      "file": "apps/web/dist/client/assets/index-EGAjHwfr.js",
+      "bytes": 311080,
+      "sha256": "418f0a61202538bad861f514a5f3b192d88c6e6aa847f6f4c4d85aee68e18181"
+    },
+    {
+      "file": "apps/web/dist/client/assets/link-iKm759ZI.js",
+      "bytes": 19895,
+      "sha256": "8b84939560090db5b0c3e735f7968dbbbbe696e0b4df11602973e2c417ee869d"
+    },
+    {
+      "file": "apps/web/dist/client/assets/preload-helper-Di8VNXFW.js",
+      "bytes": 5668,
+      "sha256": "127bcb7dd42fcb177a503583343ee53cbd54156100dcef7299c9686d62d3c9a6"
+    },
+    {
+      "file": "apps/web/dist/client/assets/pulls._pullNumber-CjyAlUNr.js",
+      "bytes": 3957,
+      "sha256": "b6444544d87188a4194233d3ec0d00e442d43b468ee9539512e5322b41f9f621"
+    },
+    {
+      "file": "apps/web/dist/client/assets/routes-C16I0Q5S.js",
+      "bytes": 56271,
+      "sha256": "8b28d3330433395a3004811c02f9f02109dfc7fcee18f6f669b33a6ff9f55be1"
+    },
+    {
+      "file": "apps/web/dist/client/assets/runs._runId-BnFJ2DX9.js",
+      "bytes": 98767,
+      "sha256": "70a34c2cd517c87a5da4bcae318403b92bca1a1d2e95f31b06dda60de96e20c9"
+    },
+    {
+      "file": "apps/web/dist/client/assets/shell.ariakit.react-CMb1NUem.js",
+      "bytes": 116876,
+      "sha256": "c0c99b4430105a665c51786105ff5b6a00f7be6a3b346c134e82953f7fea1226"
+    },
+    {
+      "file": "apps/web/dist/client/assets/text-Cu1SN_Si.js",
+      "bytes": 38779,
+      "sha256": "cc4cd5fb4b805af0dd7a3a196cf2685c885ebbe9e13cc7160a7020cc0eb0c57e"
+    },
+    {
+      "file": "apps/web/dist/server/assets/Match-B-DjvQbR.js",
+      "bytes": 121914,
+      "sha256": "cca0035b77a57ad0e1f0cc28f104beb5dd21dafeca6b2b83cf9e06a14d087618"
+    },
+    {
+      "file": "apps/web/dist/server/assets/_tanstack-start-manifest_v-BjsTO11m.js",
+      "bytes": 1415,
+      "sha256": "5b6254f7c30f11eec459dc64798a5edd04c1cd32ea822e413eb2ece3d8f810a9"
+    },
+    {
+      "file": "apps/web/dist/server/assets/bun-sqlite-dialect-C7ftEUSI-Bp6p0SRw.js",
+      "bytes": 4767,
+      "sha256": "c7ef1dea12ce128a09fea0d148c9e9d8018118c203344618f469a12e462f275c"
+    },
+    {
+      "file": "apps/web/dist/server/assets/compiled-query-_mGjsD2B.js",
+      "bytes": 240424,
+      "sha256": "71407c7b36f24a055943a6193c2ad5d3691cf2e3992fef549e63a37c30349a0a"
+    },
+    {
+      "file": "apps/web/dist/server/assets/d1-sqlite-dialect-D4qp4-wW-DzPRg3U6.js",
+      "bytes": 5291,
+      "sha256": "8722c88eebbe8df63eb14dfc7b079ea17a7f664c16035ccd2fa20ec54ca40ecb"
+    },
+    {
+      "file": "apps/web/dist/server/assets/dashboard-M2jHn_Kv.css",
+      "bytes": 321836,
+      "sha256": "31e15487caf552b2fdd922230916cd395fd099b4dc128e700149695b2ed5b6ae"
+    },
+    {
+      "file": "apps/web/dist/server/assets/default-query-compiler-yv-WbDrw.js",
+      "bytes": 45427,
+      "sha256": "4a7679a5b45323a2b88688102c99704734b8ac0bcc765a71c365b7c92c002b76"
+    },
+    {
+      "file": "apps/web/dist/server/assets/dist-CNyf0Gus.js",
+      "bytes": 14709,
+      "sha256": "8edeadb7a6bbdac310f98b41bf38fbdb44259b95572991bcbc42e2222feae9d7"
+    },
+    {
+      "file": "apps/web/dist/server/assets/dist-CqnlLicC.js",
+      "bytes": 223131,
+      "sha256": "741c7128e3a85627ac8a2fa0fa7314a425bbd3490d8a5bbabb8f8eb8be0f896c"
+    },
+    {
+      "file": "apps/web/dist/server/assets/dist-nMw9w7mT.js",
+      "bytes": 43763,
+      "sha256": "07988584d2b9bb603bb00099ab19829c02ba9d02a44e61a940b67a86228e1f5c"
+    },
+    {
+      "file": "apps/web/dist/server/assets/empty-plugin-adapters-DETlmLN8.js",
+      "bytes": 288,
+      "sha256": "55fcde0632527eecaf70e95b4d47ab789de8561ece47f9fd868acbc4d56cd72e"
+    },
+    {
+      "file": "apps/web/dist/server/assets/error-CzdqHglb.js",
+      "bytes": 7160,
+      "sha256": "8fa4e40ae0452abb5fa5e5e90232b9f20eecc1000009bca7cee69afcd1694945"
+    },
+    {
+      "file": "apps/web/dist/server/assets/factory-Cak6yvme.js",
+      "bytes": 265164,
+      "sha256": "0f1646021bbf5aa9fafc592879d7012e21122b650ec128171c98e5ab2b2c190b"
+    },
+    {
+      "file": "apps/web/dist/server/assets/kysely-adapter-CvS2EsC0.js",
+      "bytes": 130,
+      "sha256": "0a89af3b16b8d03c006f9faaed19601fa40eaf96968e29b6fee04c87a2f0fd82"
+    },
+    {
+      "file": "apps/web/dist/server/assets/kysely-migration-tables-DFfmKhq--Dporn1Lm.js",
+      "bytes": 955,
+      "sha256": "c4051ca8850adbb2b3d8154de2506d8429c8bd8b41cc8c14ca55dd3b7db54b45"
+    },
+    {
+      "file": "apps/web/dist/server/assets/lazyRouteComponent-B--Uu6VK.js",
+      "bytes": 14051,
+      "sha256": "6d16ab47d6fffd23e05b9ff2ebe20f6282bfd914a2b061fd61fab956a272fe91"
+    },
+    {
+      "file": "apps/web/dist/server/assets/link-V1efuxwb.js",
+      "bytes": 6025,
+      "sha256": "0da57bb54e8385b621aa238975fb9f0a5252599458a4a4c8a65425bcbc35d261"
+    },
+    {
+      "file": "apps/web/dist/server/assets/matchContext-CTNlU-_r.js",
+      "bytes": 2919,
+      "sha256": "51147822a73749e3c845e285c4123ca8c1a05de4cb762cbd4aa3d702917a9ed5"
+    },
+    {
+      "file": "apps/web/dist/server/assets/node-sqlite-dialect-Bd9yS1Ka.js",
+      "bytes": 4769,
+      "sha256": "735e5b7b53c9a33941ea7d7a16eef53c0f1f47598c1481f1f4422e33d6484c61"
+    },
+    {
+      "file": "apps/web/dist/server/assets/pulls._pullNumber-CEWsL6Ng.js",
+      "bytes": 7098,
+      "sha256": "561dddee3eeede7a536db07e2d54ce777354bef6ea8d830519b90e04d34770cc"
+    },
+    {
+      "file": "apps/web/dist/server/assets/react-dom-CfTUq_hB.js",
+      "bytes": 7198,
+      "sha256": "fd569a718f0ebd5b6e9264e49cb868ac77aa957aa6868e05d5e2a0a6feb707f0"
+    },
+    {
+      "file": "apps/web/dist/server/assets/router-CaJ_2b8I.css",
+      "bytes": 27,
+      "sha256": "f5810fe353ef60ac59b2e8719ef8bf5b63a96e4e46f6cdd7efd666f7305464c3"
+    },
+    {
+      "file": "apps/web/dist/server/assets/router-DpHab1Lj.js",
+      "bytes": 19899,
+      "sha256": "e7a9c9e05056ed78fba9c1ba129005bb3d71efdc7da6d8ed476b62efba0a8635"
+    },
+    {
+      "file": "apps/web/dist/server/assets/routes-DL2MEv_T.js",
+      "bytes": 134429,
+      "sha256": "cd45f7fab9a9b4e0b1e1e66031f753bb2bb2dfb1ef33a6a4f4bf9052f0482e78"
+    },
+    {
+      "file": "apps/web/dist/server/assets/runs._runId-tmQ4jDE5.js",
+      "bytes": 195004,
+      "sha256": "9873968aa4db03acb277c1648165d2c0c3eda29fbcedba52c5f5291c3236ea48"
+    },
+    {
+      "file": "apps/web/dist/server/assets/shell.ariakit.react-DnkcdCZG.js",
+      "bytes": 247370,
+      "sha256": "c2839c75e3c209dca4e333a43fabe0165bccad99b7f5dd164284f3589ad8e6f6"
+    },
+    {
+      "file": "apps/web/dist/server/assets/sqlite-adapter-Du-VhHiM.js",
+      "bytes": 2240,
+      "sha256": "d649f9818e3aafbf1ff2a800b52dd894c8c7a7d550674afc33ae807a5cfc2d02"
+    },
+    {
+      "file": "apps/web/dist/server/assets/start-2Wma0rwj.js",
+      "bytes": 293,
+      "sha256": "9f38433b8789f71fc9dcebb6a24138174ee572bc627ebcdab3ed2e469b59bc07"
+    },
+    {
+      "file": "apps/web/dist/server/assets/string-Ckqmx2pZ.js",
+      "bytes": 697,
+      "sha256": "8826c3e11141697c3385394a90525acea148efe604a1b1b936042b77a2c08594"
+    },
+    {
+      "file": "apps/web/dist/server/assets/text-FA3b6rse.js",
+      "bytes": 118682,
+      "sha256": "0c492756ee41dfe997d59f95e662efdf28a8d5631c197420370cfbaba73052ee"
+    },
+    {
+      "file": "apps/web/dist/server/assets/useSelector-C8-FOAB0.js",
+      "bytes": 41652,
+      "sha256": "8d832ec80f47422b01b65399c121656d9ca08ec2c63ccaf1e32002dcd801253f"
+    },
+    {
+      "file": "apps/web/dist/server/index.js",
+      "bytes": 2050143,
+      "sha256": "dc59f047f06ac5406a2cc8496b5afc1fc0b9591073d698b3eba9f8f8b99a0b85"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "file": "apps/web/src/api/api.test.ts",
+      "bytes": 122206,
+      "sha256": "ca7ed0eafb01cf6c9704ce928288da2665530c1b4171628e0574682e4d2760bd"
+    },
+    {
+      "file": "apps/web/src/api/context.ts",
+      "bytes": 5066,
+      "sha256": "6585e958d29564363fccb48e6cc8010a4b6ebfd5d80672910ae94dadb133e240"
+    },
+    {
+      "file": "apps/web/src/api/history-review.test.ts",
+      "bytes": 12453,
+      "sha256": "8a3762dc7df38a92a9879652115c980adc5378d75cb67a60d1a8db3e78240d46"
+    },
+    {
+      "file": "apps/web/src/api/images.ts",
+      "bytes": 2210,
+      "sha256": "2287a2df7ad3764d4117eb0836602384349bfe3bd72e9be276658bfc79a417fb"
+    },
+    {
+      "file": "apps/web/src/api/index.ts",
+      "bytes": 7322,
+      "sha256": "95058158f9009f51ca2a3eb9a7bd178e3a4528e8351a6bab49f6265158f1d73b"
+    },
+    {
+      "file": "apps/web/src/api/ingest.ts",
+      "bytes": 38836,
+      "sha256": "d58938f795dbcc485719b3a52a042271cd5fce1b6c3cf89db93eb18a895d49c5"
+    },
+    {
+      "file": "apps/web/src/api/input.ts",
+      "bytes": 1868,
+      "sha256": "0fd7e64a9034c0b57039156b27027742f8e6d58c3b734af01ce3a5659fc63249"
+    },
+    {
+      "file": "apps/web/src/api/jobs-complete.test.ts",
+      "bytes": 2933,
+      "sha256": "4604c47fb455da2d1c97f3a572ebacc0dcfff7185b0e1c1bef32872c502a856c"
+    },
+    {
+      "file": "apps/web/src/api/jobs.ts",
+      "bytes": 16723,
+      "sha256": "3038aea8321251cf311b59ba225cff16b6ec57521aff86faf7f4a315bc845c76"
+    },
+    {
+      "file": "apps/web/src/api/lineage.test.ts",
+      "bytes": 18329,
+      "sha256": "d1c348481f119024653b17b5b064d6482153d410ee4011a698ce421e3599b3fe"
+    },
+    {
+      "file": "apps/web/src/api/lineage.ts",
+      "bytes": 26692,
+      "sha256": "bb1c3dd36f43f739091a822c371f947c9d5ab39aaa18ac939fa835df8b92568a"
+    },
+    {
+      "file": "apps/web/src/api/merge.ts",
+      "bytes": 2949,
+      "sha256": "ea920e5b4a5ed36a47998f4142fee13929ce2426c62b90464a4c7c7ed71c97d0"
+    },
+    {
+      "file": "apps/web/src/api/operations.test.ts",
+      "bytes": 2745,
+      "sha256": "6b30151fe0f42a658bd474486dd64e04ec8161dfffe9f504c8e52813a29d5d0c"
+    },
+    {
+      "file": "apps/web/src/api/operations.ts",
+      "bytes": 1562,
+      "sha256": "f970de1cfe74daecbaf6130488aa76432128aec0cbd3e7d5354bf62a355f5ebe"
+    },
+    {
+      "file": "apps/web/src/api/pre-run.ts",
+      "bytes": 80081,
+      "sha256": "5ff886ce998db1526a86ba91f1d42f7c72d31085b367a2d47dd0991d1cd27c26"
+    },
+    {
+      "file": "apps/web/src/api/receipts.ts",
+      "bytes": 2782,
+      "sha256": "6567acdb44b3d6377209a49303ad63fa2a7b02d61d05b16a461d2f16f48e3f53"
+    },
+    {
+      "file": "apps/web/src/api/review.ts",
+      "bytes": 35839,
+      "sha256": "c1084b8185fb99c62a883464e596b12fa4a45c45964db8c5a80f2699d99ee4a6"
+    },
+    {
+      "file": "apps/web/src/api/test-storage.ts",
+      "bytes": 984,
+      "sha256": "5101f59b4182d82f2f9b8de137fe157447e13c4c0614c5c5f7175c5d3a237b50"
+    },
+    {
+      "file": "apps/web/src/api/tolerated-mask.test.ts",
+      "bytes": 10783,
+      "sha256": "5f0afb296e68a2c45b794987b72c531609b006bde94fb54285e3793823320796"
+    },
+    {
+      "file": "apps/web/src/api/transfer-key.ts",
+      "bytes": 6343,
+      "sha256": "73739c48f20f94ac0653aa41a605c8676f8bcc00bc76ea5d247c8ff8f5b1a822"
+    },
+    {
+      "file": "apps/web/src/api/webhooks.test.ts",
+      "bytes": 134031,
+      "sha256": "4ac28ff26c2aa16e851e52f7494792ec219ad0c849668f2468e508fbfcb70782"
+    },
+    {
+      "file": "apps/web/src/api/webhooks.ts",
+      "bytes": 13769,
+      "sha256": "2c10d73cdde61dd00b0a9b40584e731d2e93256b9264f95acb954877d576b5a2"
+    },
+    {
+      "file": "apps/web/src/api/workflow-materialize.ts",
+      "bytes": 29251,
+      "sha256": "828c13f7a8d4bf0e86c2b93092694be361aa3a881dd51b0f71a2aa2e04912482"
+    },
+    {
+      "file": "apps/web/src/api/workflow-owned.test.ts",
+      "bytes": 105071,
+      "sha256": "cd1ba5098b09464bf9634a9b8d7da2e60491d025ac49c24036f99a76d2189343"
+    },
+    {
+      "file": "apps/web/src/api/workflow-owned.ts",
+      "bytes": 40774,
+      "sha256": "18659c64d899aac16e39cf511300549fc3036cc4df28bae5902d0dd89dd2a2d6"
+    },
+    {
+      "file": "apps/web/src/api/workflow-reconcile.ts",
+      "bytes": 13855,
+      "sha256": "4c42ad6fd943d833113d25d08e370977132ec70c12d107a45e27085503ca17fe"
+    },
+    {
+      "file": "apps/web/src/api/workflow-retention.ts",
+      "bytes": 10829,
+      "sha256": "8a10731c8b3ddb0b85a1c0ca39d4ad329b1c1847ca67d4688536da31d09a9ab1"
+    },
+    {
+      "file": "apps/web/src/capacity.test.ts",
+      "bytes": 6327,
+      "sha256": "0fca6bf55fec3d1050fa59a8a631e599c7e4391aab44b52ba164a1e5be5c7a48"
+    },
+    {
+      "file": "apps/web/src/capacity.ts",
+      "bytes": 3634,
+      "sha256": "8410648d6401c5c60afa5329a09ae94edbea293d51a252e2cb460d970e860a5f"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/badge.ariakit.react.tsx",
+      "bytes": 1424,
+      "sha256": "f82444cfd89cba49be220f29bff1256136827c7d713862836563704c5f397dc2"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/button.ariakit.react.tsx",
+      "bytes": 9152,
+      "sha256": "2085de55e3191eea5be11ae50b9c23bc978a754396969f806526c646356bcf56"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/disclosure.ariakit.react.tsx",
+      "bytes": 33551,
+      "sha256": "395d54a0840b17cdf09e64fb71aa180f3dc29c6f60c86d2a54bf0ba4469c52c8"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/frame.ariakit.react.tsx",
+      "bytes": 10271,
+      "sha256": "7914688c11aaac7bb600a14f1b49a40c3aee365235ef6c311f2ec245548fb5e3"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/kbd.ariakit.react.tsx",
+      "bytes": 4837,
+      "sha256": "ca54a3915756aa749c7344832e45272cb8dbdc732fbaa5920f805c46142803cf"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/layer.ariakit.react.tsx",
+      "bytes": 13678,
+      "sha256": "6d260c07afd193986ea268373fec5fc14c6260070b34d4b16a21f5e16fea30a4"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/nav.ariakit.react.tsx",
+      "bytes": 33478,
+      "sha256": "3326d02ce2ed26db9d300bcd41cf2f9f672240a0ac9b0528c6daffa8ea13d486"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/popover.ariakit.react.tsx",
+      "bytes": 4374,
+      "sha256": "195d2d520cd8690cf28b6f54082dafc2e477aadb347192963615f00d1a361b7b"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/shell.ariakit.react.tsx",
+      "bytes": 18016,
+      "sha256": "68a5364b8546450334341b3e323b365a1e5b1c40e95df7ffe7bc0b85b3aa30cd"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/table.ariakit.react.tsx",
+      "bytes": 17061,
+      "sha256": "cb25dd74fc6e9355d3b8a5b776d7bf11f631996329d46a5233485c3171e9d32a"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx",
+      "bytes": 38309,
+      "sha256": "6574b3359602250b4e3bbd7ac2ddb37e23164ae952915842a60291a34aa7676e"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/text-frame.ariakit.react.tsx",
+      "bytes": 2964,
+      "sha256": "680d667f6b1d42dc1b63144e7bd97be3442578503627958770b6b385276aaa7a"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/components/text.ariakit.react.tsx",
+      "bytes": 11303,
+      "sha256": "1a079249855dc366b36f2d039c03feb281c8e442ba1a4c0716f52c79646874a8"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/react-utils/create-render.react.ts",
+      "bytes": 1937,
+      "sha256": "350a1c4cdfa25f49bc8ee1e6361a9def942b3fb6c420c009d1180ddbc2025154"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/react-utils/is-iterable.ts",
+      "bytes": 225,
+      "sha256": "85c97f3f0f7df80a3996734572d7f4378fac4c98742ff8663c1767b6b7ab42af"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/active.ts",
+      "bytes": 2981,
+      "sha256": "18e1d15773b83f73825b6dcf2bdb211977e3e8a07528d5b35d1484ff022108fe"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/badge.ts",
+      "bytes": 4325,
+      "sha256": "6281bd056347a801e83253e0a573d1eface90155148e789ce8e38a72d340b746"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/button.ts",
+      "bytes": 77,
+      "sha256": "18e64153e1ee0ef4af804d57c3ff3b075377e172a8e91349e5ee5c19087fce6f"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/control.ts",
+      "bytes": 21594,
+      "sha256": "7158eb3b8e9c92bd596e4b84b7419011d7d4a1f97d9c000bf4f55994f4b1390d"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/edge.ts",
+      "bytes": 11307,
+      "sha256": "283ad74c59f790a355c66352d4054a6d9196e22c50c9b843bbcfd8dbe71fa157"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/focus.ts",
+      "bytes": 3116,
+      "sha256": "ea6ab490caaa391398b685d5279d4a88f523af36526d31984065a9c34b81ff8a"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/frame.ts",
+      "bytes": 176,
+      "sha256": "0ef2d0126e46c90a735b96795b3494da8501744106cb888fda126db85f17cd00"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/glider.ts",
+      "bytes": 12689,
+      "sha256": "928cb8f8001b0852c545295a0aa9073a8eee1d79563382da0cd1e45df61fda2d"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/hover.ts",
+      "bytes": 4202,
+      "sha256": "f71c723ae1c17a4a253b9fecfc01a73e21ab716fb9462fa8578f5aca829a64d6"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/layer.ts",
+      "bytes": 97,
+      "sha256": "146dd570d26ac27b4d2eb49e666c52212bfab508a85b5b0d1724296b75d80da6"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/popover.ts",
+      "bytes": 3487,
+      "sha256": "b44f96bed6729cecf2513a5a763c964f610ae7963553f1a114c4f6f39ea17e00"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/selected.ts",
+      "bytes": 2015,
+      "sha256": "b6849988f4dae7c8e46c9c6e47203dbde640181753addc3cea24cda114d3903f"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/shell.ts",
+      "bytes": 36493,
+      "sha256": "788bd024b51d2680702b80dd516c1cd3035157c4459670b7a42d0f0717e12a80"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/table.ts",
+      "bytes": 25756,
+      "sha256": "9ddcfaf6e59a4273582a2af38abd669a3e4b16ab97bc59c4e7f182d626f4fb6e"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/text-frame.ts",
+      "bytes": 72,
+      "sha256": "eddaeda42f58ce467fdf59a5fe63fd5b61b5c6ae9045df303cac7db20513d7d9"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/text.ts",
+      "bytes": 61,
+      "sha256": "98188dbfb59d5d03f874e5c2d487cc301eb1e7c57425975301b3e17bbb2d93cb"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/styles/ui.css",
+      "bytes": 50899,
+      "sha256": "3baf02c8c4eddcc317c33ed9f420321177eb8c854c8ab66e099bed487e6b3bca"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/utils/includes.ts",
+      "bytes": 118,
+      "sha256": "94abc31e4fb04ff47c2dc115703893fd6c886c24755ad50f4537fdea7f29994e"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/utils/is-current-page.ts",
+      "bytes": 1203,
+      "sha256": "a55911d3c4438929b8a2fb3e9ae7297a4f77ca1154490982bee01aa1984c3665"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/utils/keys.ts",
+      "bytes": 117,
+      "sha256": "16f7dbc42267600073305b0c49436123fb343098ebf7d4de0b0ac04538295df6"
+    },
+    {
+      "file": "apps/web/src/components/ariakit/utils/styles.ts",
+      "bytes": 3280,
+      "sha256": "4f8d9cf069b4cf5b33888d3936f074207c26860d214fa1669df40c88cccf4110"
+    },
+    {
+      "file": "apps/web/src/components/control-button.tsx",
+      "bytes": 269,
+      "sha256": "0ab5ca53c307b3027a9762d6f298e393edd3d81b3cbb108fd1e02a1b81f6ae59"
+    },
+    {
+      "file": "apps/web/src/components/operations-attention/__tests__/fixture.tsx",
+      "bytes": 653,
+      "sha256": "5deeb02e2f1fd2d9556fd4e7e2a500ef524cd1f545a2c9f1019e3c3bb8d8e33a"
+    },
+    {
+      "file": "apps/web/src/components/operations-attention/index.tsx",
+      "bytes": 14422,
+      "sha256": "db60aea4c2e0dcbee516582318181424124bfabf0f94b5b43e43c114c660c4f3"
+    },
+    {
+      "file": "apps/web/src/components/screenshot-viewer.tsx",
+      "bytes": 6549,
+      "sha256": "b94eb0ecd84ca74678e1091d7ca7d40ed1db55a7f8581b7e12e7be4343319607"
+    },
+    {
+      "file": "apps/web/src/operations/backup-cadence.test.ts",
+      "bytes": 12934,
+      "sha256": "1567feb181e89f43429e60e9004d71183bacd659293385d1f61316c1f2b3d141"
+    },
+    {
+      "file": "apps/web/src/operations/backup-format.ts",
+      "bytes": 7960,
+      "sha256": "5ddcabf94479705c0dd48818699f032815c49508ecc1ced33f888afdf011a943"
+    },
+    {
+      "file": "apps/web/src/operations/backup-groups.native.test.ts",
+      "bytes": 17864,
+      "sha256": "1d9701514233b833e147a51a8c533a485db273330a878ada05d3e297cdfe23fe"
+    },
+    {
+      "file": "apps/web/src/operations/backup-groups.test.ts",
+      "bytes": 34818,
+      "sha256": "43df96645f98b44b56e527111f7779907cadec3f786ca166cbe74628d118a84a"
+    },
+    {
+      "file": "apps/web/src/operations/backup-groups.ts",
+      "bytes": 21333,
+      "sha256": "73814cc9d8362457908fcb37ecb847773275602a69bc3140c0699de3e7e7a66b"
+    },
+    {
+      "file": "apps/web/src/operations/backup-objects.ts",
+      "bytes": 1881,
+      "sha256": "3c6379778897a4696b1a40423b889cd2cfb7ac8ba0ed97e06c32e4c84e139abe"
+    },
+    {
+      "file": "apps/web/src/operations/backups-v2.ts",
+      "bytes": 21637,
+      "sha256": "ee115a9a8d386fe9eb324dab3704ab99580fe776da4f38b5bc10a1a1a9384963"
+    },
+    {
+      "file": "apps/web/src/operations/backups.ts",
+      "bytes": 17188,
+      "sha256": "4893680d04d9bdf059daebe908a41385e350d1bb8b6c38a848c166acd3576683"
+    },
+    {
+      "file": "apps/web/src/operations/brand-migration.test.ts",
+      "bytes": 2527,
+      "sha256": "7ad7b590f75d17fa240061f834dab4c00ada3c19bf036575dde6e390a6b074dd"
+    },
+    {
+      "file": "apps/web/src/operations/capture-order.test.ts",
+      "bytes": 9476,
+      "sha256": "4caac8d1832e6903def9573cd2166674be2af8a3f40a2b1a38bc42bf41bdc248"
+    },
+    {
+      "file": "apps/web/src/operations/checks.ts",
+      "bytes": 12160,
+      "sha256": "94ebdf39d0493010252c4b5361b6429cc895d5af3407412ca7b5454fc53f6b40"
+    },
+    {
+      "file": "apps/web/src/operations/cloudflare-export.ts",
+      "bytes": 3922,
+      "sha256": "5d9fb85d0dbd711ab35b7d6c3be01bd2a81729e68111bee243d27349f4612100"
+    },
+    {
+      "file": "apps/web/src/operations/common.ts",
+      "bytes": 6970,
+      "sha256": "6500bf63dc479d68d64f63b74ce00b0b2ee30f5353bfff79953dd5ed1bfdf3f4"
+    },
+    {
+      "file": "apps/web/src/operations/comparison-alerts.test.ts",
+      "bytes": 42951,
+      "sha256": "461c977c782e70d4de3e5abda3703bfeefbe9aad1f704afda11927bd622b9510"
+    },
+    {
+      "file": "apps/web/src/operations/comparison-alerts.ts",
+      "bytes": 6014,
+      "sha256": "c52f5df780257787d9f53bea802772c9a481859c8afdc4193349eddf51f585b3"
+    },
+    {
+      "file": "apps/web/src/operations/export-pages.ts",
+      "bytes": 5638,
+      "sha256": "d39fd1dfdbbcf1a74535ea181b61e9db409b7b4457fac7a3447a4e21d05e5c7c"
+    },
+    {
+      "file": "apps/web/src/operations/export-scale-fixture.ts",
+      "bytes": 4343,
+      "sha256": "c892d2cf15caa1d0d7b22df71fd6dc622b2afe8a09551182d5d0d45e087d70ff"
+    },
+    {
+      "file": "apps/web/src/operations/export-scale-reader.ts",
+      "bytes": 10169,
+      "sha256": "1be7957766bc19bcc2726b4a1e1fff82ec9713f22840319e56a748103e5e8f14"
+    },
+    {
+      "file": "apps/web/src/operations/export-scale.test.ts",
+      "bytes": 9208,
+      "sha256": "1396c716fb144857741cd96a30fa2622c4e5057f28db7eb272d51aca00b58e43"
+    },
+    {
+      "file": "apps/web/src/operations/export-study.test.ts",
+      "bytes": 1888,
+      "sha256": "1dba9891f824418fb31637d81d98aabb93e836be559ba7635c56c6b35022b0b7"
+    },
+    {
+      "file": "apps/web/src/operations/export-study.ts",
+      "bytes": 2913,
+      "sha256": "bb9dc349999d8763687f795d20ecca774a26ec92283ed41ee6506de35c4f055b"
+    },
+    {
+      "file": "apps/web/src/operations/exports.ts",
+      "bytes": 24745,
+      "sha256": "33047c60de59af843ef354431d9a75497e61aa9fe19f70bd9ce5b6c31a9d6288"
+    },
+    {
+      "file": "apps/web/src/operations/historical-captures.test.ts",
+      "bytes": 6340,
+      "sha256": "1a4c5cb5d4a6a1722cac51c62482420bab9efe4e25ffde7c1c60403d9fa1e837"
+    },
+    {
+      "file": "apps/web/src/operations/historical-captures.ts",
+      "bytes": 5997,
+      "sha256": "6ed4a1873c8ef985eb4eb70b6239444d8e58f4dc29bf8a63d0ff376959ff2fe0"
+    },
+    {
+      "file": "apps/web/src/operations/history-export.ts",
+      "bytes": 9580,
+      "sha256": "dae50f5416903302657ca60755abe3d830861d42f949d863998ebea383f364b6"
+    },
+    {
+      "file": "apps/web/src/operations/history-format.test.ts",
+      "bytes": 2889,
+      "sha256": "7ee260ce0de80ecf235b30b4d0b77f20bdeb5da16b50193096594f7b62b5f75a"
+    },
+    {
+      "file": "apps/web/src/operations/history-format.ts",
+      "bytes": 5763,
+      "sha256": "dd140f05c8edf074e2bb4a3db49fe30f261ab16c6df7055711d8e1aff8adb17f"
+    },
+    {
+      "file": "apps/web/src/operations/history-packing.test.ts",
+      "bytes": 10601,
+      "sha256": "fe4b27e9541dad58b17703017ec9f7a250fa139568d0e5706b327b3fc2c16c6d"
+    },
+    {
+      "file": "apps/web/src/operations/history-supplement.ts",
+      "bytes": 8560,
+      "sha256": "2611f32e03418bae1fc9762bb117ef519d7122c7c07507dc8232baa9f8c6a1a9"
+    },
+    {
+      "file": "apps/web/src/operations/history.test.ts",
+      "bytes": 32053,
+      "sha256": "9ca70cf96e9e87fd60fc1d5a75bf8252c51b7863129b79d32d8f149f96ac5ea7"
+    },
+    {
+      "file": "apps/web/src/operations/history.ts",
+      "bytes": 39057,
+      "sha256": "d0362c904fff630cd74d678b73ee712a990b80d596c269aba3a93d53d6323d66"
+    },
+    {
+      "file": "apps/web/src/operations/index.ts",
+      "bytes": 4000,
+      "sha256": "6c360eba385c47e275b99c5bd0f1aaa05315ce77bbd0024dba59e624591e1cc2"
+    },
+    {
+      "file": "apps/web/src/operations/manual-restore.test.ts",
+      "bytes": 12283,
+      "sha256": "cdb0bb452da8c8ed6e9dbd9b88c61aa0be30b9d334bf04f53fb01b4c852af8c5"
+    },
+    {
+      "file": "apps/web/src/operations/manual-restore.ts",
+      "bytes": 15857,
+      "sha256": "bc5e5e779b0bbcdabf4bf689940b6f826adc7f357bc1f55e32f38a347d552841"
+    },
+    {
+      "file": "apps/web/src/operations/native-stream.test.ts",
+      "bytes": 6240,
+      "sha256": "02358cbcf30fa6c50a0186ef9dd3e7aacdf543ea8a5614fd715c9f16686395cb"
+    },
+    {
+      "file": "apps/web/src/operations/object-stream.ts",
+      "bytes": 2982,
+      "sha256": "1aece2d551a0dfa787053a20f7e2175671565a56ea3379208957ce9757a4535d"
+    },
+    {
+      "file": "apps/web/src/operations/operations.test.ts",
+      "bytes": 42897,
+      "sha256": "c21c0064baee6506a6ac724ed622b17a3a68fe01d351279a2d58a6356b25d924"
+    },
+    {
+      "file": "apps/web/src/operations/promotions.test.ts",
+      "bytes": 15638,
+      "sha256": "f53a6849c2cfd5f175cc76679a0b042d893f5b7fcff27d8e1bbd521159ef9115"
+    },
+    {
+      "file": "apps/web/src/operations/promotions.ts",
+      "bytes": 13530,
+      "sha256": "6a721f02b39345ed5bbece660a7eb1446a409b44c0fc2760d87a40d3b892f38f"
+    },
+    {
+      "file": "apps/web/src/operations/recovery.test.ts",
+      "bytes": 14139,
+      "sha256": "c5d784529b0e3c0961fa379b4d2efc23b31b39a7318cf82e1524bfb555a256c4"
+    },
+    {
+      "file": "apps/web/src/operations/recovery.ts",
+      "bytes": 3508,
+      "sha256": "0fe196f23c3638deae2cb17c5f9cbccc273f676142044f1008d5911809105a0b"
+    },
+    {
+      "file": "apps/web/src/operations/restore.native.test.ts",
+      "bytes": 11789,
+      "sha256": "9bfdee684805fc0e5e764a4d88bcca6c0803d1f31e6fac0ff03a20d20c15d206"
+    },
+    {
+      "file": "apps/web/src/operations/restore.ts",
+      "bytes": 2905,
+      "sha256": "f138954f3986f172b3a999debb44dc31eed811235009961ebb44ac2ccb19f25f"
+    },
+    {
+      "file": "apps/web/src/operations/retention.ts",
+      "bytes": 4461,
+      "sha256": "a6327e075e526ffc3e38a9ff6b2554ece72b9954999ff74ef075a3155edcdff2"
+    },
+    {
+      "file": "apps/web/src/operations/review-links.test.ts",
+      "bytes": 11240,
+      "sha256": "af99e8ea433e1d4e79f722740769e8ef9a9f2a0387d9830fcc646f58a9d78d13"
+    },
+    {
+      "file": "apps/web/src/operations/review-links.ts",
+      "bytes": 7486,
+      "sha256": "5ecd47fd7e854288844a6f301184bc2bb6c101700aadb61448eb035f23c476f4"
+    },
+    {
+      "file": "apps/web/src/operations/snapshot-retention.test.ts",
+      "bytes": 7867,
+      "sha256": "bfa2ee5c27b51b7461f9e6e9c9386064d78959f1cba12e517a5ae06e2227ec23"
+    },
+    {
+      "file": "apps/web/src/operations/snapshot-retention.ts",
+      "bytes": 7175,
+      "sha256": "54bdee9dd40d8a65b91e63bab332d0bb792d0fb93c859853fcd982dee2fc59f9"
+    },
+    {
+      "file": "apps/web/src/operations/test-fixtures.ts",
+      "bytes": 11765,
+      "sha256": "8703e44713af92c4ad4cb19c82094f9ee63ac50687545f4b95ef0fe849d1328f"
+    },
+    {
+      "file": "apps/web/src/operations/test-migrations.test.ts",
+      "bytes": 2454,
+      "sha256": "8121dfa70cb5266a04c1f93b1003b0567a9beaba5ae602dc6a446b66ea5c5e51"
+    },
+    {
+      "file": "apps/web/src/operations/types.ts",
+      "bytes": 2240,
+      "sha256": "d8112ef2f12b00e6243da36f6ca693f114d33d350233814e9a614e3b0c5666c4"
+    },
+    {
+      "file": "apps/web/src/profiles.test.ts",
+      "bytes": 10712,
+      "sha256": "bd7c04fb96e4c9213e5a57f76f4b2e4dff672f4c342bfdea6162db0a66851c52"
+    },
+    {
+      "file": "apps/web/src/profiles.ts",
+      "bytes": 6864,
+      "sha256": "bbedc6068391a86e880c038961c5ea65d8673653d26262e2b18599ae030b4a13"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/client.test.ts",
+      "bytes": 14338,
+      "sha256": "7a81ed09020274c6f6c4b0746350c5b1a291d3e8facf53b1f54774c8ab60f8bf"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/fixture-api.ts",
+      "bytes": 477,
+      "sha256": "66b582b9f391d0ee9269ab877168d0b89e8e0b2f0791278ed9191ab02b35f32e"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/fixture-model.ts",
+      "bytes": 2807,
+      "sha256": "1d7b9c631a59ab7bb7255fd4cab2f2ba81a4500190b6b07886d034d0ceb9b5ef"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/fixture.tsx",
+      "bytes": 7117,
+      "sha256": "0fd36c6d5073f1af0599f6264041e8b1c4a94065e0db29269bb3e5a1539327a0"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/operations.browser.test.ts",
+      "bytes": 8639,
+      "sha256": "45f02b71857138c9da8a4a21feee7df71accdde78fd148d77da7a52651a42fc3"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/playwright.config.ts",
+      "bytes": 734,
+      "sha256": "210795e933ba39d9ad9de661af5e0364297407dd2c72bbfc9c908a9537992625"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/pulls.browser.test.ts",
+      "bytes": 4839,
+      "sha256": "ae5349c8489a4ca6957dc83475d922ea0cfb79394e379cdf2ac5ff6978e6593a"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/review.browser.test.ts",
+      "bytes": 54960,
+      "sha256": "56a5064164ab405ddfc8cd38939294e5bc7b8505fd0b0c0fdefa12666b58f6b9"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/route-fixture.tsx",
+      "bytes": 618,
+      "sha256": "dbed9fb846e23c2ccc4f7cde1983050ea704a4cd40cf36f7148cb465bc9c0909"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/route.browser.test.ts",
+      "bytes": 14032,
+      "sha256": "7a1276fa56d0fdfa30c7546e630cdb921a861ecdea0918b11bf31ccc38121a08"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/scale.browser.test.ts",
+      "bytes": 16161,
+      "sha256": "3932a42ef592b8bba20ee9e4f70cd3145bdd23c41d9983dc385a8cbf12fc0e2a"
+    },
+    {
+      "file": "apps/web/src/review/__tests__/vite.config.ts",
+      "bytes": 581,
+      "sha256": "4de8769abb27145a3a63c1e0c1d3bf74c70b32016137f211b53a98d472bd429b"
+    },
+    {
+      "file": "apps/web/src/review/client.ts",
+      "bytes": 11154,
+      "sha256": "09db05e62a781576b6291e98ccfbfbfb65f0e796314eab640eca45e8600ab06d"
+    },
+    {
+      "file": "apps/web/src/review/item-list.tsx",
+      "bytes": 11674,
+      "sha256": "09af02bf91e724687f9ffe884bde8eb31a321e364353d497d555af7e29901757"
+    },
+    {
+      "file": "apps/web/src/review/model.ts",
+      "bytes": 4117,
+      "sha256": "5e5d191a656d742b87688d2e97a1e239cfe4f4941990701d1f81875c18801cdf"
+    },
+    {
+      "file": "apps/web/src/review/navigation.ts",
+      "bytes": 4543,
+      "sha256": "8f3c6e64f20d808313d17e607ba0f980dc458fe9b84b4b9e8ad47ecfc3d7a22d"
+    },
+    {
+      "file": "apps/web/src/review/review-workspace.tsx",
+      "bytes": 42977,
+      "sha256": "cb3b4e653a58a21d08a1a8294720bdb524a74dfa2a2e81e29e16fe69bf5ce28c"
+    },
+    {
+      "file": "apps/web/src/review/use-evidence.ts",
+      "bytes": 3659,
+      "sha256": "f70a4abb79a78d6b82f6b0ecf1df66c39c2e2cfd1abaa7898e39fd62b4f18d0e"
+    },
+    {
+      "file": "apps/web/src/review/variant-summary.tsx",
+      "bytes": 3185,
+      "sha256": "02259917badec53e1c1f2fce9f0bcba3c777f0952f0676444decd12e66b2a1d8"
+    },
+    {
+      "file": "apps/web/src/review.css",
+      "bytes": 11675,
+      "sha256": "1362f33ca7feffe69b819fc47b323b0dd18f924d03f7d861ae17ec5da1c48ec7"
+    },
+    {
+      "file": "apps/web/src/routeTree.gen.ts",
+      "bytes": 3219,
+      "sha256": "65cf53b56f00960f5eb82ec7ab165b1a4cdc49b3e5147b4a4a92a02a0adacc09"
+    },
+    {
+      "file": "apps/web/src/router.tsx",
+      "bytes": 478,
+      "sha256": "e36e08c05078aeb0d192400ef9c9c360fb700a03b1d8aa8c07f100631f821c58"
+    },
+    {
+      "file": "apps/web/src/routes/__root.tsx",
+      "bytes": 593,
+      "sha256": "c2260ba160c328462b1cdc878e42431909add745fd0d96a9fcf4071817afa81b"
+    },
+    {
+      "file": "apps/web/src/routes/dashboard.css",
+      "bytes": 6407,
+      "sha256": "970c53f88beb9faab302e87c6ee6c3dd6b61736dac410528b136d63b35b5d012"
+    },
+    {
+      "file": "apps/web/src/routes/index.tsx",
+      "bytes": 13513,
+      "sha256": "8bb46c63c24fef90e080dbc9b80a461e66634039ef77ab34c4d7ed7172d59fbf"
+    },
+    {
+      "file": "apps/web/src/routes/pulls.$pullNumber.tsx",
+      "bytes": 6986,
+      "sha256": "819eb98919d5702856f0d054eea4f386ffb63b71fb01e0333268032c875491d8"
+    },
+    {
+      "file": "apps/web/src/routes/runs.$runId.tsx",
+      "bytes": 6951,
+      "sha256": "99f48cf4b0dc8af11dc7158c96cfe8f6e33a3dba2d959a126a039447065fa78e"
+    },
+    {
+      "file": "apps/web/src/runtime.test.ts",
+      "bytes": 16166,
+      "sha256": "9957bbbef4ba0675715d0c9c6657188a7058026ed26fd98e7cd4f6466b036c60"
+    },
+    {
+      "file": "apps/web/src/runtime.ts",
+      "bytes": 16491,
+      "sha256": "2fa9e5ab1403447c6c89a3c85896f1712e4e9eff3847fce1bad33ad6c1effb52"
+    },
+    {
+      "file": "apps/web/src/server.ts",
+      "bytes": 4267,
+      "sha256": "00da45247e2ba926683689cf878c9f81cf74d1f9642c13b59839cd126adf6e94"
+    },
+    {
+      "file": "apps/web/src/styles.css",
+      "bytes": 34,
+      "sha256": "50793b1ac008664883543604d9a29b55dd6862b2da757393f3e1f886c0072a3b"
+    }
+  ],
+  "probeFiles": [
+    {
+      "file": "apps/web/tooling/review-scale/fixture.jsx",
+      "bytes": 4784,
+      "sha256": "1af68a999c9ff38795d803b6bd53619a2fee08aa7fa73d8b8f393ffaad0dce27"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/fixtures.mjs",
+      "bytes": 4604,
+      "sha256": "e7dcef078368918755894926a807710ec6797054882507964a61a9bbed7e3b60"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/local-routes.mjs",
+      "bytes": 12638,
+      "sha256": "037db096ecc898200eb2d0bbf04cd53af2fbcd4c53caa935553511c8bb0e22e4"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/run-routes.mjs",
+      "bytes": 9169,
+      "sha256": "0a34b2bbc08e86e565446d090da03477787ab5ed477849c8d10197928ffcd51f"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/run.mjs",
+      "bytes": 8927,
+      "sha256": "fc52c87e6c88b5f5f41f1bba23706f7d6358cdc186b63ba1c56342d5c585e400"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/server.mjs",
+      "bytes": 2079,
+      "sha256": "61520492ad429b5082b446313aa53c6a33f31e524d5aec492c59dcb9ad18d30a"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/table.mjs",
+      "bytes": 1203,
+      "sha256": "596c7f3982039f62ce8936ddf27faf2000822961069d33a2123af2affed06048"
+    },
+    {
+      "file": "apps/web/tooling/review-scale/vite.config.mjs",
+      "bytes": 334,
+      "sha256": "db3cbc89ccad96a90f2b828f65454c646f59511b0a562b4c514e6c0e33281dd5"
+    }
+  ],
+  "environment": {
+    "os": "darwin",
+    "architecture": "arm64",
+    "cpu": "Apple M4 Pro",
+    "node": "v24.18.0",
+    "browser": "154.0.8037.58",
+    "viewport": {
+      "width": 1280,
+      "height": 900
+    }
+  },
+  "route": "http://127.0.0.1:4183/runs/00000000-0000-4000-8000-000000000001",
+  "limits": "Local built Worker and isolated data; two-frame paint opportunity proxy. No production latency, physical display time, Core Web Vitals, or performance budget is established.",
+  "profiles": [
+    {
+      "name": "local",
+      "cpuRate": 1,
+      "latencyMs": 0,
+      "downloadBytesPerSecond": -1,
+      "uploadBytesPerSecond": -1
+    },
+    {
+      "name": "slow",
+      "cpuRate": 4,
+      "latencyMs": 150,
+      "downloadBytesPerSecond": 200000,
+      "uploadBytesPerSecond": 100000
+    }
+  ],
+  "samples": [
+    {
+      "profile": "local",
+      "sample": 0,
+      "cache": "cold",
+      "openRunToFirstImageMs": 155.01308400000016,
+      "saveToNextImageMs": 118.43483300000025,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 8.5,
+          "responseStart": 12.899999976158142,
+          "responseEnd": 15.899999976158142,
+          "duration": 7.399999976158142,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 8.599999904632568,
+          "responseStart": 17.299999952316284,
+          "responseEnd": 18,
+          "duration": 9.400000095367432,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 17.399999976158142,
+          "responseEnd": 22.299999952316284,
+          "duration": 13.600000023841858,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 25.699999928474426,
+          "responseEnd": 26.899999976158142,
+          "duration": 18.200000047683716,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 25.799999952316284,
+          "responseEnd": 27,
+          "duration": 18.300000071525574,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 25.699999928474426,
+          "responseEnd": 27.5,
+          "duration": 18.800000071525574,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 25.5,
+          "responseEnd": 28.699999928474426,
+          "duration": 20,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 8.699999928474426,
+          "responseStart": 25.59999990463257,
+          "responseEnd": 28.899999976158142,
+          "duration": 20.200000047683716,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 8.799999952316284,
+          "responseStart": 29.899999976158142,
+          "responseEnd": 30.5,
+          "duration": 21.700000047683716,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/favicon.ico",
+          "initiatorType": "other",
+          "startTime": 44.799999952316284,
+          "responseStart": 47.09999990463257,
+          "responseEnd": 47.299999952316284,
+          "duration": 2.5,
+          "transferSize": 1165,
+          "encodedBodySize": 865,
+          "decodedBodySize": 2326
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 53.89999997615814,
+          "responseStart": 65.79999995231628,
+          "responseEnd": 65.89999997615814,
+          "duration": 12,
+          "transferSize": 1131,
+          "encodedBodySize": 831,
+          "decodedBodySize": 2767
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 102.79999995231628,
+          "responseStart": 105.79999995231628,
+          "responseEnd": 106,
+          "duration": 3.200000047683716,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 182.79999995231628,
+          "responseStart": 192.5,
+          "responseEnd": 192.69999992847443,
+          "duration": 9.899999976158142,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 215.09999990463257,
+          "responseStart": 228.79999995231628,
+          "responseEnd": 229,
+          "duration": 13.900000095367432,
+          "transferSize": 560,
+          "encodedBodySize": 260,
+          "decodedBodySize": 358
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 240.79999995231628,
+          "responseStart": 243.39999997615814,
+          "responseEnd": 243.5,
+          "duration": 2.700000047683716,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "local",
+      "sample": 0,
+      "cache": "warm",
+      "openRunToFirstImageMs": 138.76791600000024,
+      "saveToNextImageMs": 102.79049999999961,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 15.899999976158142,
+          "responseStart": 17.700000047683716,
+          "responseEnd": 17.799999952316284,
+          "duration": 1.899999976158142,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 15.899999976158142,
+          "responseStart": 19.799999952316284,
+          "responseEnd": 19.799999952316284,
+          "duration": 3.899999976158142,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 15.899999976158142,
+          "responseStart": 19.799999952316284,
+          "responseEnd": 19.899999976158142,
+          "duration": 4,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 19.600000023841858,
+          "responseEnd": 19.700000047683716,
+          "duration": 3.700000047683716,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 19.700000047683716,
+          "responseEnd": 19.799999952316284,
+          "duration": 3.799999952316284,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 20.5,
+          "responseEnd": 20.5,
+          "duration": 4.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 20.5,
+          "responseEnd": 20.600000023841858,
+          "duration": 4.600000023841858,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 22.100000023841858,
+          "responseEnd": 22.100000023841858,
+          "duration": 6.100000023841858,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 16,
+          "responseStart": 22.100000023841858,
+          "responseEnd": 22.100000023841858,
+          "duration": 6.100000023841858,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 51.5,
+          "responseStart": 61.200000047683716,
+          "responseEnd": 61.299999952316284,
+          "duration": 9.799999952316284,
+          "transferSize": 1137,
+          "encodedBodySize": 837,
+          "decodedBodySize": 2767
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 68.60000002384186,
+          "responseStart": 68.60000002384186,
+          "responseEnd": 68.60000002384186,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 167.89999997615814,
+          "responseStart": 176.39999997615814,
+          "responseEnd": 176.60000002384186,
+          "duration": 8.700000047683716,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 181.29999995231628,
+          "responseStart": 195.20000004768372,
+          "responseEnd": 195.39999997615814,
+          "duration": 14.100000023841858,
+          "transferSize": 559,
+          "encodedBodySize": 259,
+          "decodedBodySize": 358
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 206.60000002384186,
+          "responseStart": 206.79999995231628,
+          "responseEnd": 207,
+          "duration": 0.3999999761581421,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "local",
+      "sample": 1,
+      "cache": "cold",
+      "openRunToFirstImageMs": 157.48066599999993,
+      "saveToNextImageMs": 121.9127499999995,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 6.5,
+          "responseStart": 9.899999976158142,
+          "responseEnd": 12.399999976158142,
+          "duration": 5.899999976158142,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 6.600000023841858,
+          "responseStart": 13.800000071525574,
+          "responseEnd": 14,
+          "duration": 7.399999976158142,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 16.399999976158142,
+          "responseEnd": 17.800000071525574,
+          "duration": 11.100000023841858,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 16.700000047683716,
+          "responseEnd": 17.700000047683716,
+          "duration": 11,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 16.600000023841858,
+          "responseEnd": 18.399999976158142,
+          "duration": 11.699999928474426,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 16.5,
+          "responseEnd": 20.100000023841858,
+          "duration": 13.399999976158142,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 16.600000023841858,
+          "responseEnd": 23,
+          "duration": 16.299999952316284,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 6.700000047683716,
+          "responseStart": 24.399999976158142,
+          "responseEnd": 26.700000047683716,
+          "duration": 20,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 6.800000071525574,
+          "responseStart": 24.5,
+          "responseEnd": 26.100000023841858,
+          "duration": 19.299999952316284,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 55.200000047683716,
+          "responseStart": 65.89999997615814,
+          "responseEnd": 66,
+          "duration": 10.799999952316284,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2768
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 104.20000004768372,
+          "responseStart": 106.39999997615814,
+          "responseEnd": 106.70000004768372,
+          "duration": 2.5,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 186.89999997615814,
+          "responseStart": 195.89999997615814,
+          "responseEnd": 196,
+          "duration": 9.100000023841858,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 217.60000002384186,
+          "responseStart": 229.20000004768372,
+          "responseEnd": 229.5,
+          "duration": 11.899999976158142,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 360
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 241.70000004768372,
+          "responseStart": 244.20000004768372,
+          "responseEnd": 244.39999997615814,
+          "duration": 2.6999999284744263,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "local",
+      "sample": 1,
+      "cache": "warm",
+      "openRunToFirstImageMs": 155.99995799999942,
+      "saveToNextImageMs": 89.53520800000024,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 17.09999990463257,
+          "responseStart": 18.5,
+          "responseEnd": 18.59999990463257,
+          "duration": 1.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 17.199999928474426,
+          "responseStart": 20.59999990463257,
+          "responseEnd": 20.59999990463257,
+          "duration": 3.399999976158142,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 17.199999928474426,
+          "responseStart": 20.799999952316284,
+          "responseEnd": 20.799999952316284,
+          "duration": 3.600000023841858,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 17.199999928474426,
+          "responseStart": 20.699999928474426,
+          "responseEnd": 20.699999928474426,
+          "duration": 3.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 17.199999928474426,
+          "responseStart": 20.799999952316284,
+          "responseEnd": 20.799999952316284,
+          "duration": 3.600000023841858,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 17.199999928474426,
+          "responseStart": 21.699999928474426,
+          "responseEnd": 21.699999928474426,
+          "duration": 4.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 17.199999928474426,
+          "responseStart": 21.899999976158142,
+          "responseEnd": 22.09999990463257,
+          "duration": 4.899999976158142,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 17.299999952316284,
+          "responseStart": 23.59999990463257,
+          "responseEnd": 23.699999928474426,
+          "duration": 6.399999976158142,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 17.299999952316284,
+          "responseStart": 23.799999952316284,
+          "responseEnd": 23.799999952316284,
+          "duration": 6.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 53.699999928474426,
+          "responseStart": 63.39999997615814,
+          "responseEnd": 63.59999990463257,
+          "duration": 9.899999976158142,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2768
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 70.59999990463257,
+          "responseStart": 70.59999990463257,
+          "responseEnd": 70.59999990463257,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 185.19999992847443,
+          "responseStart": 194.69999992847443,
+          "responseEnd": 194.79999995231628,
+          "duration": 9.600000023841858,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 197.89999997615814,
+          "responseStart": 208.79999995231628,
+          "responseEnd": 209,
+          "duration": 11.100000023841858,
+          "transferSize": 562,
+          "encodedBodySize": 262,
+          "decodedBodySize": 360
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 220.19999992847443,
+          "responseStart": 220.39999997615814,
+          "responseEnd": 220.5,
+          "duration": 0.30000007152557373,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "local",
+      "sample": 2,
+      "cache": "cold",
+      "openRunToFirstImageMs": 157.75,
+      "saveToNextImageMs": 122.98208299999988,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 6,
+          "responseStart": 9.399999976158142,
+          "responseEnd": 11.899999976158142,
+          "duration": 5.899999976158142,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 6.199999928474426,
+          "responseStart": 12.600000023841858,
+          "responseEnd": 12.699999928474426,
+          "duration": 6.5,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 6.199999928474426,
+          "responseStart": 14.699999928474426,
+          "responseEnd": 15.899999976158142,
+          "duration": 9.700000047683716,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 6.199999928474426,
+          "responseStart": 14.5,
+          "responseEnd": 15.899999976158142,
+          "duration": 9.700000047683716,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 6.199999928474426,
+          "responseStart": 14.699999928474426,
+          "responseEnd": 16.5,
+          "duration": 10.300000071525574,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 6.199999928474426,
+          "responseStart": 14.600000023841858,
+          "responseEnd": 18.299999952316284,
+          "duration": 12.100000023841858,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 6.199999928474426,
+          "responseStart": 14.600000023841858,
+          "responseEnd": 21.199999928474426,
+          "duration": 15,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 6.299999952316284,
+          "responseStart": 23.399999976158142,
+          "responseEnd": 25.100000023841858,
+          "duration": 18.800000071525574,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 6.299999952316284,
+          "responseStart": 23.399999976158142,
+          "responseEnd": 25.699999928474426,
+          "duration": 19.399999976158142,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 48.299999952316284,
+          "responseStart": 58.39999997615814,
+          "responseEnd": 58.60000002384186,
+          "duration": 10.300000071525574,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2768
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 96.19999992847443,
+          "responseStart": 98.39999997615814,
+          "responseEnd": 98.5,
+          "duration": 2.3000000715255737,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 187.79999995231628,
+          "responseStart": 196.79999995231628,
+          "responseEnd": 196.89999997615814,
+          "duration": 9.100000023841858,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 221.5,
+          "responseStart": 233,
+          "responseEnd": 233.10000002384186,
+          "duration": 11.600000023841858,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 360
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 245.29999995231628,
+          "responseStart": 247.5,
+          "responseEnd": 247.69999992847443,
+          "duration": 2.399999976158142,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "local",
+      "sample": 2,
+      "cache": "warm",
+      "openRunToFirstImageMs": 155.56120800000008,
+      "saveToNextImageMs": 89.71016700000018,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 18.399999976158142,
+          "responseStart": 20.299999952316284,
+          "responseEnd": 20.399999976158142,
+          "duration": 2,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 18.5,
+          "responseStart": 20.5,
+          "responseEnd": 20.59999990463257,
+          "duration": 2.0999999046325684,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 21.59999990463257,
+          "responseEnd": 21.699999928474426,
+          "duration": 3.1999999284744263,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 21.699999928474426,
+          "responseEnd": 21.699999928474426,
+          "duration": 3.1999999284744263,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 21.699999928474426,
+          "responseEnd": 21.799999952316284,
+          "duration": 3.299999952316284,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 24.699999928474426,
+          "responseEnd": 24.799999952316284,
+          "duration": 6.299999952316284,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 24.899999976158142,
+          "responseEnd": 25,
+          "duration": 6.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 25,
+          "responseEnd": 25,
+          "duration": 6.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 18.5,
+          "responseStart": 25.09999990463257,
+          "responseEnd": 25.199999928474426,
+          "duration": 6.699999928474426,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 53,
+          "responseStart": 64.09999990463257,
+          "responseEnd": 64.29999995231628,
+          "duration": 11.299999952316284,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 71.39999997615814,
+          "responseStart": 71.39999997615814,
+          "responseEnd": 71.39999997615814,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 185.19999992847443,
+          "responseStart": 193.59999990463257,
+          "responseEnd": 193.79999995231628,
+          "duration": 8.600000023841858,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 197.69999992847443,
+          "responseStart": 208.19999992847443,
+          "responseEnd": 208.5,
+          "duration": 10.800000071525574,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 220,
+          "responseStart": 220.09999990463257,
+          "responseEnd": 220.29999995231628,
+          "duration": 0.2999999523162842,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 0,
+      "cache": "cold",
+      "openRunToFirstImageMs": 2197.306208,
+      "saveToNextImageMs": 660.062833,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 173.29999995231628,
+          "responseStart": 177.20000004768372,
+          "responseEnd": 1263.8999999761581,
+          "duration": 1090.6000000238419,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 174.10000002384186,
+          "responseStart": 180.10000002384186,
+          "responseEnd": 341.5,
+          "duration": 167.39999997615814,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 174.10000002384186,
+          "responseStart": 182.5,
+          "responseEnd": 499.7999999523163,
+          "duration": 325.6999999284744,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 174.10000002384186,
+          "responseStart": 182.5,
+          "responseEnd": 1549.7999999523163,
+          "duration": 1375.6999999284744,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 174.20000004768372,
+          "responseStart": 182.5,
+          "responseEnd": 387.2999999523163,
+          "duration": 213.09999990463257,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 174.39999997615814,
+          "responseStart": 182.5,
+          "responseEnd": 393.89999997615814,
+          "duration": 219.5,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 394.7000000476837,
+          "responseEnd": 912.2999999523163,
+          "duration": 737.7999999523163,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 342.7000000476837,
+          "responseEnd": 1189.6000000238419,
+          "duration": 1015.1000000238419,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 388.5,
+          "responseEnd": 1293.5,
+          "duration": 1119,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 1630.8999999761581,
+          "responseStart": 1642.8999999761581,
+          "responseEnd": 1789,
+          "duration": 158.10000002384186,
+          "transferSize": 1139,
+          "encodedBodySize": 839,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 1951.1000000238419,
+          "responseStart": 1953.6000000238419,
+          "responseEnd": 2112.399999976158,
+          "duration": 161.29999995231628,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 2262.2000000476837,
+          "responseStart": 2278.899999976158,
+          "responseEnd": 2441.5,
+          "duration": 179.29999995231628,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 2443.2999999523163,
+          "responseStart": 2461.7000000476837,
+          "responseEnd": 2613.5,
+          "duration": 170.20000004768372,
+          "transferSize": 565,
+          "encodedBodySize": 265,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 2661.5,
+          "responseStart": 2664.2000000476837,
+          "responseEnd": 2824.7999999523163,
+          "duration": 163.29999995231628,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 0,
+      "cache": "warm",
+      "openRunToFirstImageMs": 949.8370419999992,
+      "saveToNextImageMs": 499.8438750000005,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 216.19999992847443,
+          "responseStart": 217.59999990463257,
+          "responseEnd": 369.7999999523163,
+          "duration": 153.60000002384186,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 216.29999995231628,
+          "responseStart": 219.39999997615814,
+          "responseEnd": 392.6999999284744,
+          "duration": 176.39999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 216.69999992847443,
+          "responseStart": 219.39999997615814,
+          "responseEnd": 377.2999999523163,
+          "duration": 160.60000002384186,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 216.69999992847443,
+          "responseStart": 219.39999997615814,
+          "responseEnd": 386,
+          "duration": 169.30000007152557,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 216.69999992847443,
+          "responseStart": 219.39999997615814,
+          "responseEnd": 401.09999990463257,
+          "duration": 184.39999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 216.69999992847443,
+          "responseStart": 219.89999997615814,
+          "responseEnd": 408.7999999523163,
+          "duration": 192.10000002384186,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 217,
+          "responseStart": 370.89999997615814,
+          "responseEnd": 527.0999999046326,
+          "duration": 310.09999990463257,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 217.09999990463257,
+          "responseStart": 378.1999999284744,
+          "responseEnd": 535.1999999284744,
+          "duration": 318.10000002384186,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 217.09999990463257,
+          "responseStart": 387,
+          "responseEnd": 542.7999999523163,
+          "duration": 325.7000000476837,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 577.8999999761581,
+          "responseStart": 589,
+          "responseEnd": 738.5999999046326,
+          "duration": 160.69999992847443,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 770.1999999284744,
+          "responseStart": 770.1999999284744,
+          "responseEnd": 770.1999999284744,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 1015.6999999284744,
+          "responseStart": 1031.6999999284744,
+          "responseEnd": 1187.0999999046326,
+          "duration": 171.39999997615814,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 1188.8999999761581,
+          "responseStart": 1201.5,
+          "responseEnd": 1353.2999999523163,
+          "duration": 164.39999997615814,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 1398.0999999046326,
+          "responseStart": 1398.3999999761581,
+          "responseEnd": 1398.5,
+          "duration": 0.40000009536743164,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 1,
+      "cache": "cold",
+      "openRunToFirstImageMs": 2186.627042,
+      "saveToNextImageMs": 664.288958000001,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 173,
+          "responseStart": 176.89999997615814,
+          "responseEnd": 1264.7000000476837,
+          "duration": 1091.7000000476837,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 173.60000002384186,
+          "responseStart": 181.60000002384186,
+          "responseEnd": 356.5,
+          "duration": 182.89999997615814,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 173.60000002384186,
+          "responseStart": 181.70000004768372,
+          "responseEnd": 499.39999997615814,
+          "duration": 325.7999999523163,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 173.60000002384186,
+          "responseStart": 181.60000002384186,
+          "responseEnd": 1550,
+          "duration": 1376.3999999761581,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 173.70000004768372,
+          "responseStart": 181.60000002384186,
+          "responseEnd": 386.5,
+          "duration": 212.79999995231628,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 173.70000004768372,
+          "responseStart": 181.60000002384186,
+          "responseEnd": 394.10000002384186,
+          "duration": 220.39999997615814,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 173.80000007152557,
+          "responseStart": 357.8000000715256,
+          "responseEnd": 1190,
+          "duration": 1016.1999999284744,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 173.80000007152557,
+          "responseStart": 388.89999997615814,
+          "responseEnd": 1293.8999999761581,
+          "duration": 1120.0999999046326,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 174.30000007152557,
+          "responseStart": 396.39999997615814,
+          "responseEnd": 920.1000000238419,
+          "duration": 745.7999999523163,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 1633.6000000238419,
+          "responseStart": 1645.2000000476837,
+          "responseEnd": 1788.5,
+          "duration": 154.89999997615814,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 1943.2000000476837,
+          "responseStart": 1945.7000000476837,
+          "responseEnd": 2104.399999976158,
+          "duration": 161.19999992847443,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 2268.8000000715256,
+          "responseStart": 2277.2000000476837,
+          "responseEnd": 2433.600000023842,
+          "duration": 164.79999995231628,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 2435.2000000476837,
+          "responseStart": 2449.2000000476837,
+          "responseEnd": 2598.8000000715256,
+          "duration": 163.60000002384186,
+          "transferSize": 565,
+          "encodedBodySize": 265,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 2649.3000000715256,
+          "responseStart": 2652.2000000476837,
+          "responseEnd": 2808.600000023842,
+          "duration": 159.29999995231628,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 1,
+      "cache": "warm",
+      "openRunToFirstImageMs": 983.7422909999987,
+      "saveToNextImageMs": 502.06829199999993,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 225.80000007152557,
+          "responseStart": 227.20000004768372,
+          "responseEnd": 381.3000000715256,
+          "duration": 155.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 225.90000009536743,
+          "responseStart": 229.30000007152557,
+          "responseEnd": 404.60000002384186,
+          "duration": 178.69999992847443,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 225.90000009536743,
+          "responseStart": 229.30000007152557,
+          "responseEnd": 412.8000000715256,
+          "duration": 186.89999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 226.60000002384186,
+          "responseStart": 229.30000007152557,
+          "responseEnd": 389.8000000715256,
+          "duration": 163.20000004768372,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 226.70000004768372,
+          "responseStart": 229.30000007152557,
+          "responseEnd": 396.2000000476837,
+          "duration": 169.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 226.70000004768372,
+          "responseStart": 229.60000002384186,
+          "responseEnd": 420.10000002384186,
+          "duration": 193.39999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 226.70000004768372,
+          "responseStart": 382.60000002384186,
+          "responseEnd": 539.1000000238419,
+          "duration": 312.39999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 226.90000009536743,
+          "responseStart": 390.90000009536743,
+          "responseEnd": 546.2000000476837,
+          "duration": 319.2999999523163,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 226.90000009536743,
+          "responseStart": 397.3000000715256,
+          "responseEnd": 554.5,
+          "duration": 327.59999990463257,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 596.3000000715256,
+          "responseStart": 608.6000000238419,
+          "responseEnd": 756.6000000238419,
+          "duration": 160.29999995231628,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 788.4000000953674,
+          "responseStart": 788.4000000953674,
+          "responseEnd": 788.4000000953674,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 1048.6000000238419,
+          "responseStart": 1065.5,
+          "responseEnd": 1221.3000000715256,
+          "duration": 172.70000004768372,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 1223.3000000715256,
+          "responseStart": 1235.4000000953674,
+          "responseEnd": 1386.4000000953674,
+          "duration": 163.10000002384186,
+          "transferSize": 565,
+          "encodedBodySize": 265,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 1434.2000000476837,
+          "responseStart": 1434.3000000715256,
+          "responseEnd": 1434.4000000953674,
+          "duration": 0.20000004768371582,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 2,
+      "cache": "cold",
+      "openRunToFirstImageMs": 2177.9683750000004,
+      "saveToNextImageMs": 631.2740830000002,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 173.80000007152557,
+          "responseStart": 177.20000004768372,
+          "responseEnd": 1264.3000000715256,
+          "duration": 1090.5,
+          "transferSize": 45479,
+          "encodedBodySize": 45179,
+          "decodedBodySize": 321836
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 174,
+          "responseStart": 180.70000004768372,
+          "responseEnd": 342.3000000715256,
+          "duration": 168.30000007152557,
+          "transferSize": 347,
+          "encodedBodySize": 47,
+          "decodedBodySize": 27
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 174,
+          "responseStart": 182.70000004768372,
+          "responseEnd": 1548.4000000953674,
+          "duration": 1374.4000000953674,
+          "transferSize": 98943,
+          "encodedBodySize": 98643,
+          "decodedBodySize": 311080
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 174.10000002384186,
+          "responseStart": 182.70000004768372,
+          "responseEnd": 498.8000000715256,
+          "duration": 324.7000000476837,
+          "transferSize": 8226,
+          "encodedBodySize": 7926,
+          "decodedBodySize": 19895
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 182.70000004768372,
+          "responseEnd": 386.90000009536743,
+          "duration": 212.40000009536743,
+          "transferSize": 1689,
+          "encodedBodySize": 1389,
+          "decodedBodySize": 3857
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 182.70000004768372,
+          "responseEnd": 393.60000002384186,
+          "duration": 219.10000002384186,
+          "transferSize": 2512,
+          "encodedBodySize": 2212,
+          "decodedBodySize": 5668
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 394.2000000476837,
+          "responseEnd": 910.9000000953674,
+          "duration": 736.4000000953674,
+          "transferSize": 14036,
+          "encodedBodySize": 13736,
+          "decodedBodySize": 38779
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 343.40000009536743,
+          "responseEnd": 1189.8000000715256,
+          "duration": 1015.3000000715256,
+          "transferSize": 31454,
+          "encodedBodySize": 31154,
+          "decodedBodySize": 98767
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 174.5,
+          "responseStart": 388,
+          "responseEnd": 1293.2000000476837,
+          "duration": 1118.7000000476837,
+          "transferSize": 35229,
+          "encodedBodySize": 34929,
+          "decodedBodySize": 116876
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 1630.6000000238419,
+          "responseStart": 1641.9000000953674,
+          "responseEnd": 1788.4000000953674,
+          "duration": 157.80000007152557,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 1943.9000000953674,
+          "responseStart": 1947.3000000715256,
+          "responseEnd": 2103.5,
+          "duration": 159.59999990463257,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 2242.5,
+          "responseStart": 2252.2000000476837,
+          "responseEnd": 2403.4000000953674,
+          "duration": 160.90000009536743,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 2405.3000000715256,
+          "responseStart": 2416.5,
+          "responseEnd": 2569.100000023842,
+          "duration": 163.79999995231628,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 2620.2000000476837,
+          "responseStart": 2623.3000000715256,
+          "responseEnd": 2778.8000000715256,
+          "duration": 158.60000002384186,
+          "transferSize": 394,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    },
+    {
+      "profile": "slow",
+      "sample": 2,
+      "cache": "warm",
+      "openRunToFirstImageMs": 940.2095829999998,
+      "saveToNextImageMs": 511.007625000002,
+      "saveStatus": 200,
+      "savedTargets": 1,
+      "openResources": [
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-M2jHn_Kv.css",
+          "initiatorType": "link",
+          "startTime": 212.10000002384186,
+          "responseStart": 213.80000007152557,
+          "responseEnd": 367.3000000715256,
+          "duration": 155.20000004768372,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/link-iKm759ZI.js",
+          "initiatorType": "other",
+          "startTime": 212.90000009536743,
+          "responseStart": 215.10000002384186,
+          "responseEnd": 375.10000002384186,
+          "duration": 162.19999992847443,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-CaJ_2b8I.css",
+          "initiatorType": "link",
+          "startTime": 212.90000009536743,
+          "responseStart": 215.10000002384186,
+          "responseEnd": 390.90000009536743,
+          "duration": 178,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/index-EGAjHwfr.js",
+          "initiatorType": "other",
+          "startTime": 212.90000009536743,
+          "responseStart": 215.20000004768372,
+          "responseEnd": 398.40000009536743,
+          "duration": 185.5,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/dashboard-B5exmQOr.js",
+          "initiatorType": "other",
+          "startTime": 213.20000004768372,
+          "responseStart": 215.10000002384186,
+          "responseEnd": 383.40000009536743,
+          "duration": 170.20000004768372,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/preload-helper-Di8VNXFW.js",
+          "initiatorType": "other",
+          "startTime": 213.20000004768372,
+          "responseStart": 215.40000009536743,
+          "responseEnd": 404.8000000715256,
+          "duration": 191.60000002384186,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/runs._runId-BnFJ2DX9.js",
+          "initiatorType": "other",
+          "startTime": 213.20000004768372,
+          "responseStart": 369.2000000476837,
+          "responseEnd": 525.1000000238419,
+          "duration": 311.89999997615814,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/shell.ariakit.react-CMb1NUem.js",
+          "initiatorType": "other",
+          "startTime": 213.40000009536743,
+          "responseStart": 375.7000000476837,
+          "responseEnd": 533.4000000953674,
+          "duration": 320,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/assets/text-Cu1SN_Si.js",
+          "initiatorType": "other",
+          "startTime": 213.40000009536743,
+          "responseStart": 384.10000002384186,
+          "responseEnd": 540.4000000953674,
+          "duration": 327,
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "decodedBodySize": 0
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/runs/00000000-0000-4000-8000-000000000001",
+          "initiatorType": "fetch",
+          "startTime": 577.9000000953674,
+          "responseStart": 588.2000000476837,
+          "responseEnd": 735.2000000476837,
+          "duration": 157.29999995231628,
+          "transferSize": 1138,
+          "encodedBodySize": 838,
+          "decodedBodySize": 2769
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/9d395711-3665-44db-bec8-9290992d4256",
+          "initiatorType": "img",
+          "startTime": 766,
+          "responseStart": 766,
+          "responseEnd": 766,
+          "duration": 0,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ],
+      "saveResources": [
+        {
+          "url": "http://127.0.0.1:4183/api/review-sessions",
+          "initiatorType": "fetch",
+          "startTime": 1012.7000000476837,
+          "responseStart": 1020.9000000953674,
+          "responseEnd": 1177.5,
+          "duration": 164.79999995231628,
+          "transferSize": 378,
+          "encodedBodySize": 78,
+          "decodedBodySize": 58
+        },
+        {
+          "url": "http://127.0.0.1:4183/api/comparisons/21d9994f-b499-494d-b9f2-198d804868ff/commands",
+          "initiatorType": "fetch",
+          "startTime": 1179.2000000476837,
+          "responseStart": 1190.4000000953674,
+          "responseEnd": 1343,
+          "duration": 163.79999995231628,
+          "transferSize": 564,
+          "encodedBodySize": 264,
+          "decodedBodySize": 361
+        },
+        {
+          "url": "http://127.0.0.1:4183/images/064fbbc6-9219-4861-bcab-c7b7047c8169",
+          "initiatorType": "img",
+          "startTime": 1389.1000000238419,
+          "responseStart": 1389.3000000715256,
+          "responseEnd": 1389.4000000953674,
+          "duration": 0.30000007152557373,
+          "transferSize": 0,
+          "encodedBodySize": 94,
+          "decodedBodySize": 94
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "local": {
+      "cold": {
+        "openRunToFirstImageMs": {
+          "n": 3,
+          "p50": 157.48066599999993,
+          "p95": 157.75,
+          "max": 157.75
+        },
+        "saveToNextImageMs": {
+          "n": 3,
+          "p50": 121.9127499999995,
+          "p95": 122.98208299999988,
+          "max": 122.98208299999988
+        }
+      },
+      "warm": {
+        "openRunToFirstImageMs": {
+          "n": 3,
+          "p50": 155.56120800000008,
+          "p95": 155.99995799999942,
+          "max": 155.99995799999942
+        },
+        "saveToNextImageMs": {
+          "n": 3,
+          "p50": 89.71016700000018,
+          "p95": 102.79049999999961,
+          "max": 102.79049999999961
+        }
+      }
+    },
+    "slow": {
+      "cold": {
+        "openRunToFirstImageMs": {
+          "n": 3,
+          "p50": 2186.627042,
+          "p95": 2197.306208,
+          "max": 2197.306208
+        },
+        "saveToNextImageMs": {
+          "n": 3,
+          "p50": 660.062833,
+          "p95": 664.288958000001,
+          "max": 664.288958000001
+        }
+      },
+      "warm": {
+        "openRunToFirstImageMs": {
+          "n": 3,
+          "p50": 949.8370419999992,
+          "p95": 983.7422909999987,
+          "max": 983.7422909999987
+        },
+        "saveToNextImageMs": {
+          "n": 3,
+          "p50": 502.06829199999993,
+          "p95": 511.007625000002,
+          "max": 511.007625000002
+        }
+      }
+    }
+  }
+}

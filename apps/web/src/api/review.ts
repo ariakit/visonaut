@@ -1,14 +1,17 @@
+import { compactReviewModel } from "../review/compact-model.ts";
+import type { ReviewModel, ComparisonState } from "../review/model.ts";
+import { dashboard } from "./dashboard.js";
 import { SecurityError } from "@visonaut/security";
 import {
   ArchivedCommandResultError,
-  cancelHistoricalPreparation,
+  closedRunRetentionMs,
   ConflictError,
-  IncompleteError,
   type CommandResult,
   type ReviewRow,
 } from "@visonaut/service";
+import { readClosedSummary } from "../operations/closed-summary.ts";
 import type { HistoryRow } from "../operations/history-format.ts";
-import { assertConfiguredProject, type PrivateContext } from "./context.js";
+import { type PrivateContext } from "./context.js";
 import { comparisonReference, startComparisonPublication } from "./ingest.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
 import { operationsStatus } from "./operations.js";
@@ -87,8 +90,6 @@ const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
 const historicalComparisonError =
   "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.";
-const obsoletePullRequestCapturePolicyReason =
-  "This pull request was captured under an older comparison policy. Refresh it against main and rerun CI to capture it again.";
 
 export async function reviewPollState(
   context: PrivateContext,
@@ -124,15 +125,16 @@ export async function reviewPollState(
         ? { error: historicalComparisonError }
         : {}),
     },
-    comparisonState: comparison?.state ?? "comparing",
+    comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
     reviewReady: Boolean(
       !historical &&
       run.active &&
+      run.state !== "accepted" &&
       run.sealed_at &&
       comparison?.state === "ready" &&
       !["needs-recompare", "failed", "superseded"].includes(status),
     ),
-    archived: historical || !run.active,
+    archived: historical || !run.active || run.state === "accepted",
   };
 }
 
@@ -227,11 +229,13 @@ export async function reviewModel(
   ) {
     throw new SecurityError("not_found", 404, "The historical comparison was not found.");
   }
-  const archive = selectedComparison
-    ? await context.history?.readComparison?.(run.id, selectedComparison.id)
-    : !run.active
-      ? await context.history?.read(run.id)
-      : null;
+  const archive = run.detail_archived ? await readClosedSummary(context.database, run.id) : null;
+  if (run.detail_archived && !archive)
+    throw new SecurityError(
+      "history_conversion_pending",
+      503,
+      "Closed history is being converted to a decision summary.",
+    );
   if (selectedComparison && !archive) {
     const archived = await context.database
       .prepare(
@@ -257,10 +261,14 @@ export async function reviewModel(
   if (archive && comparisonId && !savedComparison) {
     throw new Error("Archived comparison metadata is missing.");
   }
-  const [metadata, project, status, comparison, obsoleteCapturePolicy] = await Promise.all([
+  const pullRequestNumber =
+    run.kind === "pull_request" ? Number(/^pr:(\d+)$/.exec(run.lineage_key)?.[1]) || null : null;
+  const [metadata, project, status, comparison] = await Promise.all([
     context.database.batch([
       context.database
-        .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
+        .prepare(
+          "SELECT byte_state,EXISTS(SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=work_retained_runs.id) AS promoted FROM work_retained_runs WHERE id = ?",
+        )
         .bind(run.id),
       context.database
         .prepare(
@@ -272,6 +280,11 @@ export async function reviewModel(
           "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
         )
         .bind(run.id),
+      context.database
+        .prepare(
+          "SELECT json_extract(payload_json,'$.pull_request.title') AS title FROM github_webhook_delivery WHERE event='pull_request' AND CAST(json_extract(payload_json,'$.repository.id') AS TEXT)=? AND json_extract(payload_json,'$.pull_request.number')=? ORDER BY received_at DESC LIMIT 1",
+        )
+        .bind(context.configuration.github.repositoryId, pullRequestNumber),
     ]),
     context.service.project(run.project_id),
     context.service.status(run.id),
@@ -288,23 +301,23 @@ export async function reviewModel(
       : comparisonId
         ? context.service.comparison(comparisonId)
         : Promise.resolve(null),
-    run.active && run.sealed_at && run.kind === "pull_request"
-      ? context.service.hasObsoletePullRequestCapturePolicy(run.id)
-      : Promise.resolve(false),
   ]);
-  const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
+  const retained = batchRows<{ byte_state: string; promoted: number }>(metadata[0])[0];
   const pendingHistorical = batchRows<{ id: string }>(metadata[1])[0];
   const historicalComparisons = batchRows<{
     id: string;
     ordinal: number;
-    state: string;
+    state: ComparisonState;
     createdAt: number;
   }>(metadata[2]);
   const recompareAllowed = Boolean(
     run.sealed_at &&
     retained?.byte_state === "live" &&
     !pendingHistorical &&
-    !obsoleteCapturePolicy,
+    !run.detail_archived &&
+    !retained.promoted &&
+    (run.active || (run.closed_at !== null && Date.now() < run.closed_at + closedRunRetentionMs)) &&
+    run.state !== "accepted",
   );
   const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
     archive
@@ -340,11 +353,6 @@ export async function reviewModel(
           context.database
             .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
             .bind(comparison.id),
-          context.database
-            .prepare(
-              "SELECT id FROM visonaut_promotions WHERE id = ? AND comparison_id = ? AND revoked = 0",
-            )
-            .bind(project.promotion_id, comparison.id),
         ])
       : null,
     archive
@@ -380,7 +388,6 @@ export async function reviewModel(
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
   const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
-  const currentPromotion = liveMetadata ? batchRows<{ id: string }>(liveMetadata[5])[0] : null;
   const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
   const pixelLimit =
     typeof policy.maxChangedPixels === "number"
@@ -422,8 +429,7 @@ export async function reviewModel(
       (decision.verdict !== "approved" || eligibleApprovals.has(row.id))
         ? decision
         : null;
-    const oldHistory = Boolean(history && !currentPromotion);
-    const protectedAutomatic = Boolean(currentPromotion && effective?.kind === "automatic");
+    const promotedHistory = Boolean(history || run.state === "accepted");
     const item = items.get(row.item_key) ?? {
       key: row.item_key,
       name: typeof metadata.name === "string" ? metadata.name : row.item_key,
@@ -452,9 +458,9 @@ export async function reviewModel(
         ? "error"
         : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
           ? row.outcome
-          : !row.reference_capture_id
+          : (archive ? tuple.referenceDigest === null : !row.reference_capture_id)
             ? "added"
-            : !row.candidate_capture_id
+            : (archive ? tuple.candidateDigest === null : !row.candidate_capture_id)
               ? "removed"
               : "changed",
       revision: row.decision_revision,
@@ -496,27 +502,27 @@ export async function reviewModel(
             rejectDisabledReason: readOnlyReason,
             approveDisabledReason: readOnlyReason,
           }
-        : oldHistory
+        : promotedHistory
           ? {
               rejectDisabledReason:
-                "A later baseline is current. Capture a correction or use explicit recovery.",
-              approveDisabledReason: "A later baseline is current.",
+                "This run is already in the baseline. Capture a correction in a new complete main run.",
+              approveDisabledReason: "Promoted history is read-only.",
             }
-          : protectedAutomatic
-            ? {
-                rejectDisabledReason:
-                  "This automatic acceptance is already in the baseline. Capture a correction.",
-              }
-            : {}),
+          : {}),
     };
     item.variants.push(view);
     items.set(item.key, item);
   }
-  return {
+  const model: ReviewModel = {
     run: {
       id: run.id,
       repository: context.configuration.github.repository,
       kind: run.kind,
+      ...(pullRequestNumber
+        ? {
+            title: `#${pullRequestNumber} · ${batchRows<{ title: unknown }>(metadata[3])[0]?.title || "Pull request visual review"}`,
+          }
+        : {}),
       testedSha: run.tested_sha,
       attempt: run.attempt,
       status: historical
@@ -526,21 +532,22 @@ export async function reviewModel(
             ? "failed"
             : "comparing"
         : status.status,
-      ...(archive?.viewUnavailableReason
-        ? { error: archive.viewUnavailableReason }
-        : historical && comparison?.state === "invalidated"
-          ? {
-              error: historicalComparisonError,
-            }
-          : {}),
+      ...(historical && comparison?.state === "invalidated"
+        ? { error: historicalComparisonError }
+        : {}),
     },
-    ...(!run.active || historical || archive
+    ...(!run.active || run.state === "accepted" || historical || archive
       ? {
           archived: true,
           readOnlyReason: historical
             ? "This historical comparison is read-only. It does not affect the live review or required check."
-            : readOnlyReason,
+            : run.state === "accepted"
+              ? "This run is already in the baseline. Capture a correction in a new complete main run."
+              : readOnlyReason,
         }
+      : {}),
+    ...(archive
+      ? { evidenceState: "summary" as const, imagesExpired: retained?.byte_state !== "live" }
       : {}),
     recompareAllowed,
     recompareDisabledReason: recompareAllowed
@@ -549,17 +556,18 @@ export async function reviewModel(
         ? "This run has not sealed."
         : pendingHistorical
           ? "A historical comparison is still running."
-          : obsoleteCapturePolicy
-            ? obsoletePullRequestCapturePolicyReason
+          : !run.active || run.detail_archived || run.state === "accepted"
+            ? "This closed review is read-only. Capture a new complete run."
             : "The stored image bytes have expired.",
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
-    comparisonState: comparison?.state ?? "comparing",
+    comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
     comparisonRevision: selectedComparison?.ordinal ?? run.revision,
     reviewReady: Boolean(
       !historical &&
       !archive &&
       run.active &&
+      run.state !== "accepted" &&
       run.sealed_at &&
       comparison?.state === "ready" &&
       !["needs-recompare", "failed", "superseded"].includes(status.status),
@@ -568,6 +576,7 @@ export async function reviewModel(
     promotionId: project.promotion_id,
     items: [...items.values()],
   };
+  return compactReviewModel(model);
 }
 
 async function reviewSession(context: PrivateContext, id: unknown) {
@@ -594,7 +603,7 @@ async function commandResult(context: PrivateContext, result: CommandResult, run
 
 async function wakeReviewStatus(context: PrivateContext) {
   try {
-    await context.operations.send({ kind: "continue" });
+    await context.operations.send({ kind: "status" });
   } catch {
     // The saved outbox entry remains for the scheduled operations run.
     console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
@@ -605,12 +614,13 @@ async function archivedCommandResult(
   context: PrivateContext,
   error: ArchivedCommandResultError,
   runId: string,
-) {
-  if (error.runId !== runId || !context.history) throw error;
-  const result = await context.history.readCommand(runId, error.commandId);
-  if (result.commandId !== error.commandId)
-    throw new Error("Archived command identity is inconsistent.");
-  return commandResult(context, result, runId);
+): Promise<Response> {
+  if (error.runId !== runId) throw error;
+  throw new SecurityError(
+    "history_closed",
+    409,
+    "Command replay has ended. The permanent decision summary remains available.",
+  );
 }
 
 async function conflictResponse(context: PrivateContext, error: ConflictError, runId: string) {
@@ -664,22 +674,7 @@ export async function handleReview(
     return Response.json({ reviewSessionId: id }, { status: 201 });
   }
   if (path === "/api/runs" && request.method === "GET") {
-    const runs = await context.database
-      .prepare(
-        "SELECT id, kind, tested_sha AS testedSha, state, attempt, created_at AS createdAt, comparison_id AS comparisonId FROM visonaut_runs WHERE project_id = ? ORDER BY created_at DESC LIMIT 100",
-      )
-      .bind(context.configuration.projectId)
-      .all();
-    const project = await assertConfiguredProject(context);
-    return Response.json({
-      runs: runs.results,
-      project: {
-        repository: context.configuration.github.repository,
-        baselineRevision: project.baseline_revision,
-        snapshotId: project.snapshot_id,
-        promotionId: project.promotion_id,
-      },
-    });
+    return Response.json(await dashboard(context));
   }
   const pullMatch = /^\/api\/pulls\/([1-9][0-9]{0,9})$/.exec(path);
   if (pullMatch?.[1] && request.method === "GET") {
@@ -854,57 +849,44 @@ export async function handleReview(
   const recompareMatch = /^\/api\/runs\/([a-f0-9-]+)\/recompare$/.exec(path);
   if (recompareMatch?.[1] && request.method === "POST") {
     const run = await projectRun(context, uuid(recompareMatch[1]));
-    if (
-      run.active &&
-      run.kind === "pull_request" &&
-      (await context.service.hasObsoletePullRequestCapturePolicy(run.id))
-    ) {
-      throw new IncompleteError(obsoletePullRequestCapturePolicyReason);
-    }
-    const historical = !run.active;
-    const comparisonId = crypto.randomUUID();
-    try {
-      const reference = await comparisonReference(context, run, historical);
-      const expectedCaptureCount = historical
-        ? await context.history?.prepareComparison?.({
-            runId: run.id,
-            comparisonId,
-            referenceSnapshotId: reference.referenceSnapshotId,
-            maximumCaptures: context.configuration.limits.maximumCaptures,
-          })
-        : undefined;
-      if (historical && expectedCaptureCount === undefined) {
-        throw new SecurityError(
-          "history_unavailable",
-          503,
-          "Historical recomparison is temporarily unavailable.",
-        );
-      }
-      const comparison = await context.service.createComparison({
-        id: comparisonId,
-        ...(historical ? ({ purpose: "historical", expectedCaptureCount } as const) : {}),
-        requireCurrentCapturePolicy: !historical,
-        runId: run.id,
-        ...reference,
-        now: Date.now(),
-        maxAttempts: context.configuration.comparisonMaxAttempts,
-      });
-      await startComparisonPublication(context, comparison.id);
-      return Response.json(
-        await reviewModel(context, run.id, historical ? comparison.id : undefined),
-        { status: 202 },
+    const promoted = await context.database
+      .prepare(
+        "SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=? LIMIT 1",
+      )
+      .bind(run.id)
+      .first();
+    const expired =
+      !run.active && (run.closed_at === null || Date.now() >= run.closed_at + closedRunRetentionMs);
+    if (expired || run.detail_archived || run.state === "accepted" || promoted)
+      throw new SecurityError(
+        "history_closed",
+        409,
+        "Closed history is read-only. Capture a new complete run.",
       );
-    } catch (error) {
-      if (historical) await cancelHistoricalPreparation(context.database, comparisonId, Date.now());
-      if (
-        !historical &&
-        error instanceof ConflictError &&
-        (await context.service.hasObsoletePullRequestCapturePolicy(run.id))
-      ) {
-        throw new IncompleteError(obsoletePullRequestCapturePolicyReason);
-      }
-      throw error;
-    }
+    const comparisonId = crypto.randomUUID();
+    const historical = !run.active;
+    const reference = await comparisonReference(context, run, historical);
+    const count = historical
+      ? await context.database
+          .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+          .bind(run.id)
+          .first<{ count: number }>()
+      : null;
+    const comparison = await context.service.createComparison({
+      id: comparisonId,
+      ...(historical
+        ? { purpose: "historical" as const, expectedCaptureCount: count?.count ?? 0 }
+        : {}),
+      runId: run.id,
+      ...reference,
+      now: Date.now(),
+      maxAttempts: context.configuration.comparisonMaxAttempts,
+    });
+    await startComparisonPublication(context, comparison.id);
+    return Response.json(
+      await reviewModel(context, run.id, historical ? comparison.id : undefined),
+      { status: 202 },
+    );
   }
   const exportMatch = /^\/api\/runs\/([a-f0-9-]+)\/export$/.exec(path);
   if (exportMatch?.[1] && request.method === "POST") {

@@ -1,0 +1,723 @@
+{
+  "track": "core",
+  "title": "Comparison and review contract simplification",
+  "revision": 1,
+  "date": "2026-09-29",
+  "commit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "scope": "Read-only source and history audit of service state, image comparison, capture identity, and approval contracts. No implementation or live resource changes.",
+  "authority": {
+    "current": "https://github.com/ariakit/visonaut/issues/1",
+    "snapshot": "/tmp/visonaut-audit-issue-1.json",
+    "historical": "docs/design-r9.json",
+    "note": "The issue body supersedes parts of revision 9. All proposed policy changes below are OPEN and explicitly reopen settled choices. The current ratio policy was selected by the maintainer, not introduced by a comparator bug."
+  },
+  "goals": [
+    "Reduce the amount of state that one review action changes.",
+    "Keep screenshot capture independent from comparison settings.",
+    "Keep one supported production comparison path.",
+    "Remove work that does not affect a comparison result.",
+    "Preserve complete capture accounting and immutable original image evidence."
+  ],
+  "nonGoals": [
+    "No production migration in this audit.",
+    "No new state-machine framework or general repository layer.",
+    "No automatic relaxation of image validation, provenance, complete-run accounting, or byte limits.",
+    "No claim that file length proves slow code.",
+    "No claim that historical sampled memory proves hosted peak memory."
+  ],
+  "verifiedStrengths": [
+    {
+      "claim": "The service already skips pixel comparison for verified identical originals with compatible rendering profiles.",
+      "source": "packages/service/src/service.ts:990",
+      "detail": "createComparison creates an unchanged sha256-identical-1 result and queues only pending rows."
+    },
+    {
+      "claim": "Comparison work reads the trusted policy from service records, not the Queue message.",
+      "source": "packages/service/src/service.ts:1055",
+      "detail": "The Queue carries task identity; Service.getComparisonTask loads images and the immutable policy."
+    },
+    {
+      "claim": "The pure visible-pixel comparison algorithm is shared between Worker and Container.",
+      "source": "apps/compare/container/server.mjs:8",
+      "detail": "The duplicated parts are transport, artifact production/reuse, result validation, and lifecycle, not two independent pixel algorithms."
+    },
+    {
+      "claim": "Review, rollback, task commits, and promotion have transaction guards and targeted race tests.",
+      "source": "packages/service/src/database.ts:41",
+      "detail": "Removing those guards is not a simplification recommendation."
+    }
+  ],
+  "experiments": [
+    {
+      "id": "core-pixels-20260929",
+      "question": "Does the selected policy let the allowed pixel count grow with image area, and does an unchanged result still allocate a mask?",
+      "method": "Import the current pure compareImages implementation using Node v24.18.0, the repository's declared runtime. Compare synthetic opaque RGBA images with controlled red pixels.",
+      "expectedDiscriminator": "A 1,000 by 1,000 image with 500 changed pixels passes; 501 fails. An unchanged 1,400 by 1,500 image returns a full 8,400,000-byte mask if allocation is eager.",
+      "observed": "All expected thresholds were observed. A 16-pixel change on a 1,000 by 1,000 image passed with a 4,000,000-byte mask. At 67,392 pixels, 33 changes passed and 34 failed. A one-pixel change in 400 pixels failed. An equal 2.1-million-pixel pair returned an 8,400,000-byte mask.",
+      "classification": "measured local behavior",
+      "record": "/tmp/visonaut-core-probe.json",
+      "script": "/tmp/visonaut-core-probe.mjs",
+      "limits": "No codec, R2, D1, browser, Queue, or hosted isolate was exercised. No CPU/latency or peak-memory reduction is claimed."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "C01",
+      "status": "OPEN",
+      "area": "Review contract",
+      "priority": "high",
+      "title": "End ordinary Undo when main becomes the baseline",
+      "question": "After main becomes the baseline, should correction require a new run?",
+      "finding": "A normal Reject or Undo can change the project baseline, revoke a snapshot, invalidate other comparisons, and wake other runs. The UI therefore controls project history as well as the selected image.",
+      "classification": "Verified contract and code complexity; production latency effect unmeasured.",
+      "reopens": [
+        "D22: Undo current promotion",
+        "D26: Reject current human-approved promotion"
+      ],
+      "preserves": [
+        "D24 already protects automatic promoted history",
+        "Ordinary review and session Undo before promotion",
+        "Complete main captures and stale-promotion guards"
+      ],
+      "evidence": [
+        {
+          "source": "packages/service/src/service.ts:1814",
+          "claim": "rollbackStatements restores the previous snapshot, revokes the promotion, invalidates comparisons using the old snapshot, and inserts project-wide status outbox entries.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:1925",
+          "claim": "review rejects promoted history unless the expected promotion and baseline revision match, then can invoke rollback.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:2057",
+          "claim": "undo handles rolling back an approval and restoring a previously rejected promotion; these paths are separate from ordinary decision restoration.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.test.ts:1660",
+          "claim": "Tests cover mixed automatic/human snapshots, pending checks, invalidated work, and rollback races. This is deliberate behavior, not dead code.",
+          "kind": "verified"
+        },
+        {
+          "source": "docs/design-r9.json:538",
+          "claim": "The maintainer previously selected current-promotion Undo; D26 separately allowed another maintainer to reject current human approval.",
+          "kind": "historical settled choice, still in issue #1"
+        }
+      ],
+      "options": [
+        {
+          "id": "forward",
+          "label": "Make promoted history read-only",
+          "recommended": true,
+          "detail": "Keep Undo while review is open. Once a complete main run becomes the baseline, correct it through another full main run. Use the same rule for human and automatic acceptance.",
+          "consequences": "Removes ordinary review rollback, restore-promotion Undo, their UI states, and rollback-only baseline retention. A mistaken approval needs a new capture. This is the smallest product model."
+        },
+        {
+          "id": "current",
+          "label": "Keep current Reject and Undo rules",
+          "recommended": false,
+          "detail": "Retain the current contract and its guarded rollback behavior.",
+          "consequences": "Fast correction of the newest mistaken human approval. Keeps source revocation, dependent invalidation, rollback bytes, stale-command errors, and broad tests."
+        },
+        {
+          "id": "recovery",
+          "label": "Move rollback to an explicit recovery action",
+          "recommended": false,
+          "detail": "End ordinary Undo at promotion. Let a separate guarded administrator action restore the latest valid baseline.",
+          "consequences": "Simplifies routine review but retains most rollback implementation and an additional recovery surface. Use only if a real recovery requirement justifies it."
+        }
+      ],
+      "recommendationReason": "Unify promoted history under the forward-correction rule already selected for automatic acceptance. This deletes a product capability and its state transitions instead of wrapping them in another abstraction.",
+      "counterexample": "An accidental approval becomes the baseline moments before a new capture fails. Forward correction cannot immediately restore the old baseline through the UI.",
+      "invalidatedIf": "The maintainer needs baseline rollback to recover production work faster than a fresh main capture. Choose the explicit recovery option if this is a required use case.",
+      "migration": "Keep old commands and promotions as read-only audit records. Choose and document a cutover point. Existing snapshots remain valid; new server and UI checks must agree that promoted history is read-only. Do not erase audit records or rollback bytes until retention dependencies are proved absent.",
+      "testing": [
+        "Undo before promotion remains atomic and session-scoped.",
+        "Promotion racing with Undo has one winner and no partial writes.",
+        "Current and old promoted history refuse ordinary Reject/Undo consistently.",
+        "A correction run compares against the current baseline and can advance it.",
+        "Archived history remains readable; old idempotent command receipts remain interpretable."
+      ],
+      "reversibility": "High at the UI policy level while audit and old snapshots remain. Lower after rollback-only bytes expire; restoration would then need a new capture.",
+      "snippet": {
+        "language": "ts",
+        "label": "Proposed review rule",
+        "code": "if (comparison.promoted) {\n  return { readOnly: true, nextAction: 'Capture a correction' };\n}\nawait saveReview(command);"
+      },
+      "demo": {
+        "kind": "timeline",
+        "label": "Proposed behavior, not live state",
+        "controls": [
+          "Approve main",
+          "Promote",
+          "Undo",
+          "Capture correction",
+          "Reset"
+        ],
+        "visibleState": [
+          "Current baseline",
+          "Whether Undo is available",
+          "Other runs that need a new comparison"
+        ],
+        "scenario": "Start with a gray baseline. Approve blue, promote it, then try Undo under each option. Show the actual rule difference and affected runs."
+      }
+    },
+    {
+      "id": "C02",
+      "status": "OPEN",
+      "area": "Approval reuse",
+      "priority": "high",
+      "title": "Choose the lifetime of inherited approval",
+      "question": "Should a saved review remain linked to the approval in an older run?",
+      "finding": "The current service does not simply copy an earlier approval. Each result stays dependent on the source decision and on later replacements or rejections in verified related runs. Every status check must determine whether that approval is still valid.",
+      "classification": "Verified relational behavior; query cost at current and target scale unmeasured.",
+      "reopens": [
+        "D08 exact eligible approval reuse and source invalidation",
+        "D35 exact restored-identity approval reuse"
+      ],
+      "dependsOn": [
+        "C01: forward-only promoted history is required before simplifying source revocation"
+      ],
+      "evidence": [
+        {
+          "source": "packages/service/src/service.ts:1359",
+          "claim": "acceptanceValiditySql traverses source rows/runs, materialized lineage, and replacement edges to determine current eligibility.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:1983",
+          "claim": "Review creates replacement edges and copies earlier rejection replacement edges so a new decision cannot accidentally revive a revoked approval.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:1789",
+          "claim": "Review and Undo increment revisions and insert outbox records for all active project runs.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.test.ts:2476",
+          "claim": "Tests explicitly cover related rejection vetoes, intermediate Undo, fresh approvals, and protection of a promoted dependent.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.test.ts:2922",
+          "claim": "Exact approval reuse must keep working even after old capture detail is removed, so history retention participates in the same contract.",
+          "kind": "verified"
+        }
+      ],
+      "options": [
+        {
+          "id": "copy",
+          "label": "Copy verified approval into each new run",
+          "recommended": true,
+          "detail": "At run comparison, verify the exact image/profile/policy tuple and allowed source. Save a run-owned acceptance with source attribution. Later review changes apply to their own active run.",
+          "consequences": "Conditional on C01's forward-only rule. Preserves reuse across an unchanged PR-to-main transition, but removes later cross-run revocation. Keeps ancestry and exact-tuple verification; it does not make equal candidate pixels alone sufficient."
+        },
+        {
+          "id": "linked",
+          "label": "Keep live links to source approvals",
+          "recommended": false,
+          "detail": "Keep today's source-decision and replacement graph, including rejection propagation.",
+          "consequences": "A later rejection can invalidate related runs. Retains the current safety promise and its complexity. Required if the maintainer needs to revoke already inherited approvals."
+        },
+        {
+          "id": "fresh",
+          "label": "Require review for every tested commit",
+          "recommended": false,
+          "detail": "Use approvals only in the current tested commit. Never inherit human approval across commits.",
+          "consequences": "Smallest acceptance model, but an unchanged reviewed PR may need review again on main, rebase, or retry. This conflicts with the useful carry-forward workflow selected in D07/D08."
+        }
+      ],
+      "recommendationReason": "If C01 is accepted, copy approval once with full provenance and make current-run review local. Keep the exact tuple checks. If cross-run revocation remains required, retain the current graph rather than disguising it behind a new abstraction.",
+      "counterexample": "Run B copied approval from A. A maintainer then rejects A after noticing a defect. Under copied approval, B remains approved until explicitly reviewed or superseded.",
+      "invalidatedIf": "The maintainer expects a rejection to cancel already inherited approval in every active related run. The current linked option is the correct contract for that requirement.",
+      "migration": "Introduce a cutover version for new comparison acceptance. Old comparisons retain their old rules. Preserve source attribution and historical rejection records. Do not convert old live dependencies by deleting edges. End source-propagating UI actions only after C01 and this choice are settled.",
+      "testing": [
+        "Unrelated PRs cannot lend approval.",
+        "Reference, candidate, variant, profile, or comparison-policy changes require review.",
+        "PR-to-main, squash, rebase, and failed-job retry use only verified relationships.",
+        "Two concurrent reviewers cannot partially update one run.",
+        "Demonstrate and label that a later source rejection affects no copied downstream approval.",
+        "Old comparisons keep their original semantics through the cutover."
+      ],
+      "reversibility": "Medium. Source attribution permits later revalidation, but previously accepted copied approvals cannot silently be made revocable again.",
+      "snippet": {
+        "language": "ts",
+        "label": "Proposed stored acceptance",
+        "code": "const acceptance = {\n  runId,\n  tupleDigest,\n  sourceDecisionId,\n  verifiedAt,\n};\n// The new run owns this acceptance after verification."
+      },
+      "demo": {
+        "kind": "approval-graph",
+        "label": "Proposed policy simulation",
+        "controls": [
+          "Approve A",
+          "Create related B",
+          "Reject A",
+          "Choose unrelated B",
+          "Reset"
+        ],
+        "visibleState": [
+          "A verdict",
+          "B verdict",
+          "Whether B inherits",
+          "Which rows change on rejection"
+        ],
+        "scenario": "Two identical comparisons A and B share verified lineage. Copy or link A's approval into B; then reject A. A separate toggle makes B unrelated and must block reuse under every option."
+      }
+    },
+    {
+      "id": "C03",
+      "status": "OPEN",
+      "area": "Protocol and package boundary",
+      "priority": "high",
+      "title": "Separate rendering identity from comparison policy",
+      "question": "Should changing tolerance require a new capture profile?",
+      "finding": "The profile of how the browser produced an image contains the policy for comparing it. A tolerance-only change therefore changes capture identity. The service now has two special paths that ignore the policy field after verifying profile records.",
+      "classification": "Verified coupling and duplicate validation. Simplification benefit is a code-maintenance inference, not a measured speedup.",
+      "evidence": [
+        {
+          "source": "packages/protocol/src/types.ts:20",
+          "claim": "CaptureProfile contains rendering fields, comparisonPolicyDigest, and comparisonEngineVersion.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:981",
+          "claim": "The identical-original shortcut compares profiles through SQL json_remove of comparisonPolicyDigest.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:1178",
+          "claim": "sameRenderingProfileAcrossPolicies validates and hashes both stored profiles, removes comparisonPolicyDigest in JavaScript, and compares canonical JSON.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:36",
+          "claim": "A pull-request capture with an obsolete policy can be refused even though original pixels already exist.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:83",
+          "claim": "ComparisonPolicy and its validation are repeated in the service and compare packages (compare.ts:6 and :35; service.ts:197).",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.test.ts:690",
+          "claim": "Tests already preserve immutable old comparisons and permit policy-only recomparison without mass review while refusing stale or real rendering-profile changes.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/playwright/src/visual.ts:71",
+          "claim": "The adapter reads comparison policy and engine values into capture metadata; screenshot options are separately constructed at visual.ts:165. Separating identities must still preserve the independent stable-pixel capture rule.",
+          "kind": "verified"
+        }
+      ],
+      "options": [
+        {
+          "id": "split",
+          "label": "Store rendering and comparison identities separately",
+          "recommended": true,
+          "detail": "Keep browser, OS, fonts, viewport, locale, and capture settings in rendering identity. Keep policy and engine identity in the immutable comparison. Put their shared pure types and validators in the existing protocol boundary.",
+          "consequences": "A service tolerance change can recompare stored originals without an Ariakit capture-policy rollout. Approval still binds both identities. Introduces no new package; removes the two policy-exclusion comparisons after compatibility migration."
+        },
+        {
+          "id": "compat",
+          "label": "Keep the format; use one compatibility function",
+          "recommended": false,
+          "detail": "Preserve current profile digests and public manifests. Consolidate comparison compatibility rules into one tested definition and keep the current capture-policy handshake.",
+          "consequences": "Lowest migration cost. Retains coordinated client/service policy changes and the distinction between full profile digest and rendering compatibility."
+        },
+        {
+          "id": "pixel",
+          "label": "Ignore rendering profiles when pixels match",
+          "recommended": false,
+          "detail": "Let the image comparison alone decide equality across environments.",
+          "consequences": "Smallest equality rule but can silently accept a new font/browser/environment profile, which violates the current explicit environment-review promise. Reject unless that product promise is deliberately removed."
+        }
+      ],
+      "recommendationReason": "Comparison tolerance does not change browser pixels. Keep it in the comparison identity that already exists, rather than encoding it into capture identity and then removing it for equality.",
+      "counterexample": "A comparison-engine version can change interpretation of the same image. The split must still bind engine and codec metadata to the comparison and acceptance tuple; it must not erase that evidence.",
+      "invalidatedIf": "A named policy field actually controls screenshot creation or stability. Inspect each field and keep true capture-affecting settings in rendering identity.",
+      "migration": "Preserve every old profile digest and old comparison. Add a compatible rendering identity for new manifests, derived from validated legacy profiles when needed. Do not rewrite stored approval tuples. Let the service own comparison policy for new comparisons. Upgrade the trusted capture/Submit format without weakening provenance.",
+      "testing": [
+        "Changing only tolerance leaves rendering identity unchanged.",
+        "Font, browser, viewport, clipping, locale, animation, and device-scale changes remain visible.",
+        "Engine or policy changes create a new comparison identity and cannot silently reuse the old acceptance.",
+        "Old CLI/adapter manifests and stored history remain readable.",
+        "Identical-byte shortcut and decoded equality make the same profile-compatibility decision."
+      ],
+      "reversibility": "High while legacy digests and original profile JSON remain. Medium if published clients remove old fields before the service compatibility window ends.",
+      "snippet": {
+        "language": "ts",
+        "label": "Proposed internal identities",
+        "code": "const capture = { imageDigest, renderingProfileDigest };\nconst comparison = {\n  reference: capture,\n  candidate,\n  policyDigest,\n  engineVersion,\n};"
+      },
+      "demo": {
+        "kind": "identity",
+        "label": "Identity simulation",
+        "controls": [
+          "Change tolerance",
+          "Change browser",
+          "Change font",
+          "Change engine",
+          "Reset"
+        ],
+        "visibleState": [
+          "Rendering identity changed?",
+          "Comparison identity changed?",
+          "Need new capture?",
+          "Need review?"
+        ],
+        "scenario": "Start with identical pixels. Change one field and show which identity changes under each model. Do not imply that a policy change reuses a previous approval."
+      }
+    },
+    {
+      "id": "C04",
+      "status": "OPEN",
+      "area": "Comparison execution",
+      "priority": "medium",
+      "title": "Use one production comparison path",
+      "question": "Should the diagnostics Container remain in the production comparison service?",
+      "finding": "Both configured environments select the Worker codec, but production configuration and queue code retain a Container switch. The two paths share pixel comparison but use different transport, validation, thumbnail keys, and reuse behavior.",
+      "classification": "Verified configuration/source split. Live deployment and cost impact are not established by source alone.",
+      "reopens": [
+        "D45 Worker first; test a Container fallback"
+      ],
+      "evidence": [
+        {
+          "source": "apps/compare/wrangler.jsonc:24",
+          "claim": "Preview and production set VISONAUT_CODEC_BACKEND to worker while both define Container resources and a Durable Object binding.",
+          "kind": "verified source configuration"
+        },
+        {
+          "source": "apps/compare/src/index.ts:126",
+          "claim": "The queue chooses processComparisonTaskInContainer or processComparisonTask based on an environment string.",
+          "kind": "verified"
+        },
+        {
+          "source": "apps/compare/src/process.ts:118",
+          "claim": "Worker thumbnail identity is per-run original/image/codec and an existing thumbnail is verified and reused.",
+          "kind": "verified"
+        },
+        {
+          "source": "apps/compare/src/container.ts:87",
+          "claim": "Container artifact identity includes task id and artifact digest; its server always encodes a thumbnail, so it does not share Worker recomparison reuse semantics.",
+          "kind": "verified"
+        },
+        {
+          "source": "apps/compare/src/container.ts:157",
+          "claim": "A sentinel maximum pixel count exists only for the pinned Container request format.",
+          "kind": "verified"
+        },
+        {
+          "source": "docs/evidence/worker-memory/README.md:38",
+          "claim": "Saved evidence says the Container probe did not certify production Queue/R2/D1 behavior or peak memory; it is not a proven instant failover.",
+          "kind": "historical evidence limit"
+        },
+        {
+          "source": "docs/evidence/e07-final-source-compare-metrics-20260925.md:13",
+          "claim": "92.27 MiB was sampled invocation-time memory for a historical deployed version, not a hosted peak bound.",
+          "kind": "historical evidence limit"
+        }
+      ],
+      "options": [
+        {
+          "id": "worker",
+          "label": "Worker in production; Container as a separate probe",
+          "recommended": true,
+          "detail": "Keep the current Worker path. Move the alternate Container transport and resource configuration to the existing diagnostic scope, with an explicit migration if evidence later requires it.",
+          "consequences": "One production result and artifact contract. Removes an unqualified runtime switch without discarding fallback research. Does not establish that the Worker meets the open memory or throughput targets."
+        },
+        {
+          "id": "container",
+          "label": "Choose Container as the only production executor",
+          "recommended": false,
+          "detail": "Complete the Container parity, lifecycle, queue, memory, and cost evidence, then use it as the sole backend.",
+          "consequences": "Can provide a different memory envelope but adds a container lifecycle. No speed or cost advantage is established here. Remove Worker production codec work only after an actual migration."
+        },
+        {
+          "id": "dual",
+          "label": "Keep both production backends",
+          "recommended": false,
+          "detail": "Maintain and test both paths as supported production modes.",
+          "consequences": "Retains operational choice and doubles transport/artifact validation obligations. Thumbnail identity and reuse must have one intentional contract. There is currently no automatic fallback, so this option must not be described as high availability."
+        }
+      ],
+      "recommendationReason": "The alternate mode is not a certified fallback. Keep the evidence and disposable probe, but make production behavior explicit and singular.",
+      "counterexample": "A hosted Worker resource failure may make a ready alternate deployment valuable. Removing it from production configuration can increase recovery setup time.",
+      "invalidatedIf": "Current production evidence shows the Worker cannot meet the accepted workload or a measured recovery target requires a tested alternate. Choose and qualify Container before removing the working path.",
+      "migration": "Verify deployed backend and in-flight tasks first. Preserve original bytes and immutable existing results. Remove production bindings only through a reviewed deployment after confirming no active Container use. Keep the probe and evidence reproducible. Do not delete live resources during this audit.",
+      "testing": [
+        "PNG/WebP, alpha, metadata/profile, dimensions, and tolerance fixtures on the selected backend.",
+        "Repeated delivery and recomparison produce stable artifacts and do not replace originals.",
+        "Native Queue lease and dead-letter tests still pass.",
+        "Any future backend switch compares source/result identity and thumbnail/mask behavior on the same fixtures.",
+        "Hosted worst-case and representative workload measurements distinguish invocation samples from peak memory."
+      ],
+      "reversibility": "High when alternate code remains as a diagnostic fixture and all original images are retained. Resource recreation and pinned image availability need a runbook.",
+      "snippet": {
+        "language": "ts",
+        "label": "Proposed production path",
+        "code": "const result = await processComparisonTask({\n  task,\n  images: env.IMAGES,\n  codecs: await codecsReady,\n});"
+      },
+      "demo": {
+        "kind": "pipeline",
+        "label": "Source-derived execution model",
+        "controls": [
+          "Choose Worker",
+          "Choose Container",
+          "Recompare same original",
+          "Reset"
+        ],
+        "visibleState": [
+          "Decode stages",
+          "Transport stages",
+          "Thumbnail reuse key",
+          "Required runtime services"
+        ],
+        "scenario": "Walk one comparison and a recompare through each current path. Mark counts as structural source counts, not measured request time or live billing."
+      }
+    },
+    {
+      "id": "C05",
+      "status": "OPEN",
+      "area": "Visual policy",
+      "priority": "medium",
+      "title": "Confirm the deliberate small-change allowance",
+      "question": "Should the allowed changed-pixel count continue to grow with image area?",
+      "finding": "The selected ratio policy passes up to 500 changed visible pixels in a million-pixel screenshot, regardless of color strength. It can pass a missing 16-pixel stroke. This is the intended current policy, not a bug.",
+      "classification": "Current pure behavior measured locally; historical defect/noise results have limited corpus scope.",
+      "reopens": [
+        "D43 selected visible-ratio-v3, 0.0005 ratio, no pixel cap"
+      ],
+      "evidence": [
+        {
+          "source": "packages/compare/src/compare.ts:16",
+          "claim": "The current policy has channelThreshold 0, maxChangedRatio 0.0005, and no absolute changed-pixel limit.",
+          "kind": "verified"
+        },
+        {
+          "source": "/tmp/visonaut-core-probe.json",
+          "claim": "500 of 1,000,000 changed pixels pass; 501 fail. A strong 16-pixel red change passes. One changed pixel of 400 fails.",
+          "kind": "measured local current source"
+        },
+        {
+          "source": "docs/evidence/comparator-policy.md:1",
+          "claim": "The maintainer chose the ratio-only rule on September 27 after four edge pixels differed in a 67,392-pixel capture; production selection and Ariakit alignment are recorded.",
+          "kind": "documented accepted contract"
+        },
+        {
+          "source": "docs/evidence/comparator-policy.md:25",
+          "claim": "Historical controlled study: exact pixels missed 0/100 injected defects; ratio missed 98/100. The repeated historical matrix had 12 changed pairs under exact pixels and zero under ratio, out of 10,746 pairs. This does not establish today's false-positive or defect rate.",
+          "kind": "historical controlled evidence"
+        }
+      ],
+      "options": [
+        {
+          "id": "ratio",
+          "label": "Keep the selected 0.05% allowance",
+          "recommended": true,
+          "detail": "Keep current results stable. Accept that the tolerated pixel count grows with image area. Measure fresh repeated captures and meaningful defects before another policy change.",
+          "consequences": "No migration and less review noise under the observed historical sample. Small but important defects can remain below the threshold. The recommendation preserves an explicit recent decision; it does not claim optimal defect detection."
+        },
+        {
+          "id": "cap",
+          "label": "Add an absolute pixel cap",
+          "recommended": false,
+          "detail": "Require both the existing ratio and a small fixed pixel limit. Select the limit from a fresh defect/noise experiment.",
+          "consequences": "Prevents large captures from receiving a large error budget. Can add review noise. The value is OPEN; do not pick two, four, or another number only to pass one example."
+        },
+        {
+          "id": "exact",
+          "label": "Require exact visible pixels",
+          "recommended": false,
+          "detail": "Set the visible change allowance to zero while preserving alpha-aware comparison and capture stability.",
+          "consequences": "Simplest interpretation and no tolerated visible defects. Repeated environment noise can require more review. Historical data is not sufficient to promise an acceptable current review rate."
+        }
+      ],
+      "recommendationReason": "The current rule was selected with its tradeoff stated. Preserve it until the user chooses different sensitivity or new controlled evidence changes the recommendation. A simplification audit must not silently reset product tolerance.",
+      "counterexample": "A missing small icon stroke can be visually important and still fall below the current ratio. That is a valid reason to prefer an absolute cap or exact pixels.",
+      "invalidatedIf": "The user considers such small defects unacceptable or a fresh representative corpus shows exact/capped comparison adds acceptable review work.",
+      "migration": "A new choice needs a new immutable policy identity, a deliberate project switch, and new comparisons. Preserve old results and approvals with their old policy. C03 would simplify future switches but is not a prerequisite for a controlled switch.",
+      "testing": [
+        "Boundary values immediately below/at/above each limit.",
+        "Known visible defects at multiple image areas, not only random one-pixel edits.",
+        "Repeated real captures from the current browser/OS/font matrix.",
+        "Dimension changes and rendering-profile changes always preserve their explicit review behavior.",
+        "Keep small change allowance distinct from capture stability checks."
+      ],
+      "reversibility": "High for future comparisons using a new policy revision. Existing comparison outcomes must remain immutable.",
+      "snippet": {
+        "language": "ts",
+        "label": "Current policy",
+        "code": "const policy = {\n  channelThreshold: 0,\n  maxChangedRatio: 0.0005,\n};\n// 500 / 1_000_000 passes; 501 / 1_000_000 needs review."
+      },
+      "demo": {
+        "kind": "pixel-budget",
+        "label": "Exact arithmetic using the current rule",
+        "controls": [
+          "Image width",
+          "Image height",
+          "Changed pixels",
+          "Optional absolute cap",
+          "Exact pixels",
+          "Reset"
+        ],
+        "visibleState": [
+          "Allowed pixels",
+          "Changed ratio",
+          "Pass or needs review"
+        ],
+        "scenario": "Preset the documented 67,392-pixel case, a 1M-pixel image with a 16-pixel stroke, and a 20 by 20 icon. Show strong visible color changes so the tradeoff is clear."
+      }
+    },
+    {
+      "id": "C06",
+      "status": "OPEN",
+      "area": "Comparison allocations",
+      "priority": "medium",
+      "title": "Build a full mask only when the pair needs review",
+      "question": "Should an unchanged comparison allocate a full-size red mask?",
+      "finding": "compareImages creates a four-byte-per-pixel mask before it knows the outcome. The Worker discards it when the result is unchanged. The same-byte database shortcut already avoids this for byte-identical images, but decoded-equal and tolerated pairs still allocate it.",
+      "classification": "Verified source and measured byte length. Hosted performance improvement remains unmeasured.",
+      "evidence": [
+        {
+          "source": "packages/compare/src/compare.ts:83",
+          "claim": "A Uint8ClampedArray of candidate.data.length is allocated before the comparison loop and returned for every result.",
+          "kind": "verified"
+        },
+        {
+          "source": "apps/compare/src/process.ts:197",
+          "claim": "The unchanged branch returns counts and a thumbnail, without using or storing the mask.",
+          "kind": "verified"
+        },
+        {
+          "source": "/tmp/visonaut-core-probe.json",
+          "claim": "An unchanged 2.1-million-pixel pair returned an 8,400,000-byte mask; a tolerated 1M-pixel pair returned 4,000,000 bytes.",
+          "kind": "measured current local behavior"
+        },
+        {
+          "source": "apps/compare/container/server.mjs:119",
+          "claim": "The Container also only encodes a mask when outcome is changed, although the shared function allocated it either way.",
+          "kind": "verified"
+        },
+        {
+          "source": "packages/service/src/service.ts:990",
+          "claim": "Verified same-byte pairs already avoid comparison tasks. This proposal addresses the remaining decoded comparison path.",
+          "kind": "verified"
+        }
+      ],
+      "options": [
+        {
+          "id": "two-pass",
+          "label": "Count first; build a mask only for changed pairs",
+          "recommended": true,
+          "detail": "Keep one pixel comparison rule. Count differences first. For a changed pair, make a second pass that writes the full mask. Return no mask for unchanged pairs.",
+          "consequences": "Removes a verified allocation on unchanged pairs. Adds a second pixel pass on changed pairs. The simplest internal contract matches production's existing mask usage; benchmark both cases before claiming speed."
+        },
+        {
+          "id": "eager",
+          "label": "Keep one pass and the full mask",
+          "recommended": false,
+          "detail": "Retain current behavior.",
+          "consequences": "One pixel loop even when many images change. Pays full mask allocation for every decoded pair. Valid if a representative benchmark shows allocation is not the limiting cost."
+        },
+        {
+          "id": "bits",
+          "label": "Keep a compact difference bitmap",
+          "recommended": false,
+          "detail": "Record one bit per changed pixel, then expand it only when the result needs review.",
+          "consequences": "Can reduce stored intermediate bytes but adds bit addressing and another representation to validate. More complex than the two-pass option; choose only after measurement justifies it."
+        }
+      ],
+      "recommendationReason": "Match the pure function result to the artifact contract the Worker already uses. Prefer a small second loop over another compressed intermediate format.",
+      "counterexample": "A run where nearly every image changes will perform two pixel scans with the recommended option, which may increase CPU time enough to outweigh the allocation benefit.",
+      "invalidatedIf": "A representative hosted benchmark shows the second pass materially worsens required throughput while current peak memory is safely bounded.",
+      "migration": "Private compare-package API only. Make mask optional or use an outcome-discriminated result. Update Worker, Container probe, and tests together. No database, original-image, public manifest, or user policy migration.",
+      "testing": [
+        "Pixel counts, alpha handling, size changes, ratio outcomes, and masks remain byte-for-byte correct for changed pairs.",
+        "Unchanged pairs return no mask and production stores none.",
+        "Measure equal, tolerated, dense-change, sparse-change, and maximum-size images separately.",
+        "Record hosted CPU and memory scope; local byteLength is not a hosted peak."
+      ],
+      "reversibility": "High. Private implementation can return to a one-pass algorithm without changing saved outcomes or public behavior.",
+      "snippet": {
+        "language": "ts",
+        "label": "Proposed result shape",
+        "code": "type PixelResult =\n  | { outcome: 'unchanged'; changedPixels: number; mask: null }\n  | { outcome: 'changed'; changedPixels: number; mask: Pixels };"
+      },
+      "demo": {
+        "kind": "allocation",
+        "label": "Source-derived allocation model; not a timing benchmark",
+        "controls": [
+          "Image area",
+          "Percentage of changed pairs",
+          "Eager or two-pass",
+          "Reset"
+        ],
+        "visibleState": [
+          "Mask bytes on unchanged pair",
+          "Number of pixel passes",
+          "Whether a mask is stored"
+        ],
+        "scenario": "At 2.1M pixels, show 8.4 MB of avoidable unchanged-mask allocation under eager mode and no allocation under proposed two-pass mode; show two passes for a changed pair."
+      }
+    }
+  ],
+  "primaryResearch": [
+    {
+      "url": "https://www.chromatic.com/docs/branching-and-baselines/",
+      "date": "2026-09-29",
+      "claim": "Chromatic carries branch baselines through merges and documents correction via Git history. Its docs also warn that rewritten history can leave unexpected baselines; the comparison demonstrates real complexity around inherited approvals, not authority for Visonaut's policy.",
+      "appliesTo": [
+        "C01",
+        "C02"
+      ],
+      "limits": "Documentation, not a live Chromatic experiment. Keep any summary under the source's permitted word budget."
+    },
+    {
+      "url": "https://github.com/chromaui/chromatic-cli/issues/608",
+      "date": "2026-09-29",
+      "claim": "A 2022 missing-difference report was traced by its author to pull_request_target checking the base branch. --force-rebuild was an attempted workaround; the outcome was workflow diagnosis, not a baseline algorithm fix.",
+      "appliesTo": [
+        "C02"
+      ],
+      "limits": "Old version not specified. Does not establish a current Chromatic defect. Supports retaining exact tested-source evidence even while simplifying approval state."
+    },
+    {
+      "url": "https://playwright.dev/docs/api/class-pageassertions",
+      "date": "2026-09-29",
+      "claim": "Playwright documents ratio and absolute pixel limits as distinct settings, and waits for consecutive screenshots before checking the baseline.",
+      "appliesTo": [
+        "C05"
+      ],
+      "limits": "Playwright uses its own comparator semantics; its defaults are not a justified Visonaut policy."
+    },
+    {
+      "url": "https://github.com/microsoft/playwright/issues/30112",
+      "date": "2026-09-29",
+      "claim": "Playwright 1.42.1 report claimed screenshot assertions failed below the selected pixel limit; the author reported direct snapshot comparison as a workaround.",
+      "appliesTo": [
+        "C05"
+      ],
+      "limits": "Issue body read, comment retrieval unavailable through web and shell API. Closed status is not proof of resolution. No current 1.63.0 claim is made."
+    },
+    {
+      "url": "https://github.com/microsoft/playwright/issues/27945",
+      "date": "2026-09-29",
+      "claim": "Playwright 1.32.0 report showed recurring page-shift differences despite a 0.0005 ratio setting.",
+      "appliesTo": [
+        "C05"
+      ],
+      "limits": "Issue body read; outcome and current-version applicability unverified. Used only to motivate separate stability and baseline-sensitivity experiments."
+    }
+  ],
+  "verificationLimits": [
+    "No hosted source-of-truth reads, live comparisons, production D1 queries, resource mutation, or load test were performed in this track.",
+    "Existing targeted tests were inspected, not rerun in this track. The pure comparator probe ran successfully against the current source.",
+    "The pnpm shim returned empty output for version/exec probes in this environment. Node used by the pure probe exactly matched the repository's declared v24.18.0.",
+    "Historical measured evidence is retained with its original scope; sampled memory and old injected defects are not current production peak-memory or defect-rate measurements.",
+    "C01, C02, C03, C04, and C05 are decisions about policy or architecture, not claims that current code violates the existing contract. C06 is a verified removable allocation with a CPU tradeoff to measure."
+  ]
+}

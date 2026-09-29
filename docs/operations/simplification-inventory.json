@@ -1,0 +1,143 @@
+{
+  "checkedAt": "2026-09-29",
+  "method": "Read-only installed Wrangler and GitHub CLI; secret names only. No external mutation.",
+  "accountId": "b04f3af3f0f10a6b9481bc23ba974eca",
+  "databases": [
+    {
+      "name": "visonaut-production",
+      "id": "15fcd402-dccb-4359-a1ce-280ff67ca596",
+      "bytes": 680124416
+    },
+    {
+      "name": "visonaut-preview",
+      "id": "395b539c-c423-4ce4-887c-a5792792a63b",
+      "bytes": 538132480
+    }
+  ],
+  "buckets": [
+    "ariakit-nextjs-cache",
+    "ariakit-nextjs-cache-preview",
+    "benflix-thumbnails",
+    "benflix-videos",
+    "visonaut-preview-images",
+    "visonaut-preview-quarantine",
+    "visonaut-production-images",
+    "visonaut-production-quarantine"
+  ],
+  "queues": [
+    "visonaut-production-comparisons",
+    "visonaut-production-comparison-dead-letter",
+    "visonaut-production-operations",
+    "visonaut-production-dead-letter",
+    "visonaut-preview-comparisons",
+    "visonaut-preview-comparison-dead-letter",
+    "visonaut-preview-operations",
+    "visonaut-preview-dead-letter"
+  ],
+  "workerSecretNames": {
+    "visonaut": [
+      "BETTER_AUTH_SECRET",
+      "CAPABILITY_SECRET",
+      "GITHUB_APP_PRIVATE_KEY",
+      "GITHUB_CLIENT_SECRET",
+      "GITHUB_WEBHOOK_SECRET",
+      "VISONAUT_TRANSFER_PRIVATE_KEY"
+    ],
+    "visonaut-preview": [
+      "BETTER_AUTH_SECRET",
+      "CAPABILITY_SECRET",
+      "GITHUB_APP_PRIVATE_KEY",
+      "GITHUB_CLIENT_SECRET",
+      "GITHUB_WEBHOOK_SECRET",
+      "VISONAUT_TRANSFER_PRIVATE_KEY"
+    ]
+  },
+  "productionComparator": {
+    "versionId": "bb7a8ce6-e698-4dc4-b1e9-01e989e15406",
+    "codecBackend": "worker",
+    "durableObjectClass": "ComparisonContainer",
+    "namespaceId": "61dd9abc6ecb42858a068d5ad0c93838",
+    "containerLiveInstances": 1,
+    "limitation": "Worker backend configuration is verified. The live Container instance is not proof of recent traffic or proof that deletion is safe. Check active requests and recovery needs before deletion."
+  },
+  "previewComparator": {
+    "containerLiveInstances": 1,
+    "limitation": "Worker backend configuration is verified. The live Container instance does not establish recent traffic or safe deletion. Check active requests and recovery needs before deletion.",
+    "versionId": "fb6cba71-a747-4d12-8eb8-4f38232a935b",
+    "codecBackend": "worker",
+    "namespaceId": "ce5039e5f4664419a341fcef053b4b78"
+  },
+  "infisical": {
+    "domain": "https://eu.infisical.com",
+    "projectId": "2e3bd11a-10ca-40c1-b8a7-73d786340a4a",
+    "environment": "prod",
+    "identityId": "3ca08078-9e92-4625-bdf9-51b3668b7982",
+    "desiredPath": "/",
+    "desiredKeyNames": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_MIGRATIONS_API_TOKEN"],
+    "rootNamesAndGrantsVerified": true,
+    "blocker": "Read-only in-app inventory verified the dedicated project, only prod environment, exact two deployment key names at the old path, empty root, sole Viewer project membership, no-access organization role, and exact deploy OIDC claims. The external owner must coordinate the root path move with CI publication and credential readback. No secret values were retrieved and no grants were changed.",
+    "observedKeyPath": "/ci/visonaut-deploy",
+    "observedKeyNames": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_MIGRATIONS_API_TOKEN"],
+    "observedProjectRole": "Viewer",
+    "rootKeyNames": [],
+    "existingKeyPath": "/ci/visonaut-deploy",
+    "existingKeyNames": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_MIGRATIONS_API_TOKEN"],
+    "projectMemberships": [
+      {
+        "projectId": "2e3bd11a-10ca-40c1-b8a7-73d786340a4a",
+        "role": "Viewer"
+      }
+    ],
+    "organizationRole": "no-access",
+    "oidc": {
+      "issuer": "https://token.actions.githubusercontent.com",
+      "discoveryUrl": "https://token.actions.githubusercontent.com",
+      "audience": ["visonaut-deploy"],
+      "subject": "repo:ariakit@40200111/visonaut@1380751023:ref:refs/heads/main",
+      "claims": {
+        "ref": ["refs/heads/main"],
+        "ref_type": ["branch"],
+        "event_name": ["push", "workflow_dispatch"],
+        "repository": ["ariakit/visonaut"],
+        "workflow_ref": ["ariakit/visonaut/.github/workflows/deploy.yml@refs/heads/main"],
+        "repository_id": ["1380751023"],
+        "repository_owner_id": ["40200111"],
+        "repository_visibility": ["public"]
+      },
+      "tokenTtlSeconds": 300,
+      "tokenMaxTtlSeconds": 300,
+      "tokenMaxUses": 10
+    }
+  },
+  "legacyBackupMetadata": {
+    "production": {
+      "completedSets": 12,
+      "readyGroups": 260,
+      "setObjects": 262517,
+      "setImageBytes": 14455702536,
+      "groupObjects": 112424,
+      "groupObjectBytes": 6326482202,
+      "capturedAt": "2026-09-29T18:29:11.651190Z",
+      "privateExportSha256": "085d28f4b4cb423b73e5202d38dd964a2bb8a58695f2d3298bd6d825c0fc32dd"
+    },
+    "preview": {
+      "completedSets": 14,
+      "readyGroups": 0,
+      "setObjects": 0,
+      "setImageBytes": 0,
+      "groupObjects": 0,
+      "groupObjectBytes": 0,
+      "capturedAt": "2026-09-29T18:30:54.174402Z",
+      "privateExportSha256": "c405b8c44327278c29012a572c6dda1461c3cacf6577922c02a09ae4cbd373a4"
+    },
+    "detailRowsBothEnvironments": {
+      "pages": 0,
+      "objects": 0,
+      "inventory": 0,
+      "members": 0,
+      "groupPages": 0,
+      "required": 0
+    },
+    "limitation": "Completed D1 metadata remains and is preserved in private mode-600 exports. The complete account R2 listing contains no legacy backup bucket. Metadata counts do not prove legacy image copies are available."
+  }
+}

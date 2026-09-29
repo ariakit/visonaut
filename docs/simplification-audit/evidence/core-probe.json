@@ -1,0 +1,70 @@
+{
+  "date": "2026-09-29T14:42:46.866Z",
+  "runtime": "v24.18.0",
+  "source": "/Users/diegohaz/.codex/worktrees/1de3/visonaut/packages/compare/src/compare.ts",
+  "sourceSha256": "c1213300f67c8f9c3c487883517233e11c2f0e42fba9f15acac8ffb21ffd76fb",
+  "policy": {
+    "id": "visible-ratio-v3",
+    "channelThreshold": 0,
+    "maxChangedRatio": 0.0005
+  },
+  "cases": [
+    {
+      "width": 1000,
+      "height": 1000,
+      "changedPixels": 16,
+      "ratio": 0.000016,
+      "outcome": "unchanged",
+      "maskBytes": 4000000
+    },
+    {
+      "width": 1000,
+      "height": 1000,
+      "changedPixels": 500,
+      "ratio": 0.0005,
+      "outcome": "unchanged",
+      "maskBytes": 4000000
+    },
+    {
+      "width": 1000,
+      "height": 1000,
+      "changedPixels": 501,
+      "ratio": 0.000501,
+      "outcome": "changed",
+      "maskBytes": 4000000
+    },
+    {
+      "width": 96,
+      "height": 702,
+      "changedPixels": 33,
+      "ratio": 0.0004896723646723647,
+      "outcome": "unchanged",
+      "maskBytes": 269568
+    },
+    {
+      "width": 96,
+      "height": 702,
+      "changedPixels": 34,
+      "ratio": 0.0005045109211775879,
+      "outcome": "changed",
+      "maskBytes": 269568
+    },
+    {
+      "width": 20,
+      "height": 20,
+      "changedPixels": 1,
+      "ratio": 0.0025,
+      "outcome": "changed",
+      "maskBytes": 1600
+    },
+    {
+      "width": 1400,
+      "height": 1500,
+      "changedPixels": 0,
+      "ratio": 0,
+      "outcome": "unchanged",
+      "maskBytes": 8400000
+    }
+  ],
+  "limits": "Pure comparator only; synthetic opaque RGBA data. Mask byteLength proves allocation size, not peak isolate memory, production noise rate, CPU, or response time."
+}

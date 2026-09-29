@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform, release, totalmem } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,9 +17,9 @@ export function summarize(values) {
 }
 
 function sourceHash(file) {
-  return createHash("sha256")
-    .update(readFileSync(new URL(`../../src/${file}`, import.meta.url)))
-    .digest("hex");
+  const source = new URL(`../../src/${file}`, import.meta.url);
+  if (!existsSync(source)) return null;
+  return createHash("sha256").update(readFileSync(source)).digest("hex");
 }
 
 async function navigate(page, key, timeout) {
@@ -61,6 +61,8 @@ export async function run(chromium) {
     "review/use-evidence.ts",
     "components/screenshot-viewer.tsx",
     "review.css",
+    "styles.css",
+    "components/ariakit/components/shell.ariakit.react.tsx",
   ];
   const result = {
     measuredAt: new Date().toISOString(),
@@ -82,6 +84,34 @@ export async function run(chromium) {
       source: "apps/web/src/review/review-workspace.tsx",
       sourceSha256: sourceHash("review/review-workspace.tsx"),
       sourceFiles: Object.fromEntries(sourceFiles.map((file) => [file, sourceHash(file)])),
+      fixtureFiles: Object.fromEntries(
+        [
+          "fixture.jsx",
+          "fixtures.mjs",
+          "run.mjs",
+          "server.mjs",
+          "vite.config.mjs",
+          "index.html",
+        ].map((file) => [
+          file,
+          createHash("sha256")
+            .update(readFileSync(new URL(file, import.meta.url)))
+            .digest("hex"),
+        ]),
+      ),
+      buildFiles: [
+        "dist/index.html",
+        ...readdirSync(new URL("dist/assets/", import.meta.url)).map(
+          (file) => `dist/assets/${file}`,
+        ),
+      ].map((file) => {
+        const bytes = readFileSync(new URL(file, import.meta.url));
+        return {
+          file,
+          bytes: bytes.length,
+          sha256: createHash("sha256").update(bytes).digest("hex"),
+        };
+      }),
     },
     samplesPerSize: samples,
     excludedWarmupsPerSize: warmups,
@@ -105,11 +135,19 @@ export async function run(chromium) {
         await page.goto(`${origin}/?count=${count}`, { waitUntil: "domcontentloaded", timeout });
         await page.waitForFunction(() => window.scaleMetrics?.complete, {}, { timeout });
         const raw = await page.evaluate(() => structuredClone(window.scaleMetrics));
+        if (
+          raw.shellDisplay !== "grid" ||
+          !Number.isFinite(raw.listPaintOpportunity) ||
+          !Number.isFinite(raw.imagePaintOpportunity)
+        ) {
+          throw new Error("The Shell layout and list/image readiness metrics must be present.");
+        }
         const metric = {
           sample: index,
           captures: count,
           items: raw.items,
           domNodes: raw.domNodes,
+          shellDisplay: raw.shellDisplay,
           jsonBytes: raw.jsonBytes,
           documentToListMs: raw.listPaintOpportunity,
           documentToImageMs: raw.imagePaintOpportunity,

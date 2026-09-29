@@ -98,10 +98,10 @@ function github(
     repository,
     repositoryId: "10",
     request: vi.fn(async (path: string) => {
-      if (path.includes("/contents/.github/workflows/app.yml?ref=")) {
+      if (path.includes("/contents/.github/workflows/visual.yml?ref=")) {
         return {
           type: "file",
-          path: ".github/workflows/app.yml",
+          path: ".github/workflows/visual.yml",
           sha: heads.workflowBlob ?? workflowSha,
         };
       }
@@ -185,19 +185,19 @@ beforeAll(() => {
   expect(publicKey.kty).toBe("RSA");
 });
 
-describe("direct Ariakit app workflow", () => {
+describe("one pinned direct visual workflow", () => {
   const oldBlob = "01b78334223b47515b41f63f587308050a5dcdad";
   const newBlob = "c86f2dc5370fe07030a27af87979072f86afa8de";
   const direct: OidcConfiguration = {
     ...configuration,
     workflowPath: ".github/workflows/ci.yml",
-    trustedWorkflowPath: ".github/workflows/app.yml",
+    trustedWorkflowPath: ".github/workflows/visual.yml",
   };
 
   it.each([
     ["old", oldBlob, true],
-    ["new", newBlob, true],
-    ["successor", "4aac43e3039b578913e8a603c10ca47009493ef5", true],
+    ["changed", newBlob, false],
+    ["unapproved successor", "4aac43e3039b578913e8a603c10ca47009493ef5", false],
     ["unlisted", "f".repeat(40), false],
   ])("%s direct workflow blob has the expected trust result", async (_name, blob, allowed) => {
     const ref = "refs/pull/7/merge";
@@ -217,8 +217,6 @@ describe("direct Ariakit app workflow", () => {
       configuration: {
         ...direct,
         reusableWorkflowSha: oldBlob,
-        additionalTrustedWorkflowBlobSha: newBlob,
-        transitionTrustedWorkflowBlobSha: "4aac43e3039b578913e8a603c10ca47009493ef5",
       },
       github: github(
         { event: "pull_request", path: direct.workflowPath, head_sha: sourceHead },

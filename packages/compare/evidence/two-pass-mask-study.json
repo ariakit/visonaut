@@ -1,0 +1,97 @@
+{
+  "date": "2026-09-29T18:01:55.756Z",
+  "baselineCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "node": "v24.18.0",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "samples": 21,
+  "warmupIterations": 5,
+  "results": [
+    {
+      "name": "equal",
+      "pixels": 2100000,
+      "outcome": "unchanged",
+      "changedPixels": 0,
+      "changedMaskSha256": null,
+      "before": {
+        "medianCpuMilliseconds": 14.099,
+        "medianWallMilliseconds": 11.776708000000013,
+        "returnedMaskBytes": 8400000
+      },
+      "after": {
+        "medianCpuMilliseconds": 11.755,
+        "medianWallMilliseconds": 9.519333000000074,
+        "returnedMaskBytes": 0
+      }
+    },
+    {
+      "name": "tolerated",
+      "pixels": 2100000,
+      "outcome": "unchanged",
+      "changedPixels": 100,
+      "changedMaskSha256": null,
+      "before": {
+        "medianCpuMilliseconds": 12.237,
+        "medianWallMilliseconds": 9.989832999999976,
+        "returnedMaskBytes": 8400000
+      },
+      "after": {
+        "medianCpuMilliseconds": 11.573,
+        "medianWallMilliseconds": 9.43425000000002,
+        "returnedMaskBytes": 0
+      }
+    },
+    {
+      "name": "sparse-change",
+      "pixels": 2100000,
+      "outcome": "changed",
+      "changedPixels": 1051,
+      "changedMaskSha256": "7d86175d9b84a6f3a25ebbbdd7bb49bdd510af44bd36d622590bcaaa8ef7606f",
+      "before": {
+        "medianCpuMilliseconds": 12.729,
+        "medianWallMilliseconds": 10.261541999999963,
+        "returnedMaskBytes": 8400000
+      },
+      "after": {
+        "medianCpuMilliseconds": 22.239,
+        "medianWallMilliseconds": 18.551416000000017,
+        "returnedMaskBytes": 8400000
+      }
+    },
+    {
+      "name": "dense-change",
+      "pixels": 2100000,
+      "outcome": "changed",
+      "changedPixels": 2100000,
+      "changedMaskSha256": "4ab8b2de56af3d628c3cc2a343084391c097954e164468525eda9e1d7329929a",
+      "before": {
+        "medianCpuMilliseconds": 14.234,
+        "medianWallMilliseconds": 11.839249999999993,
+        "returnedMaskBytes": 8400000
+      },
+      "after": {
+        "medianCpuMilliseconds": 23.101,
+        "medianWallMilliseconds": 19.646124999999756,
+        "returnedMaskBytes": 8400000
+      }
+    },
+    {
+      "name": "dimension-change",
+      "pixels": 2100000,
+      "outcome": "changed",
+      "changedPixels": 2100000,
+      "changedMaskSha256": "4ab8b2de56af3d628c3cc2a343084391c097954e164468525eda9e1d7329929a",
+      "before": {
+        "medianCpuMilliseconds": 6.937,
+        "medianWallMilliseconds": 4.791917000000012,
+        "returnedMaskBytes": 8400000
+      },
+      "after": {
+        "medianCpuMilliseconds": 6.113,
+        "medianWallMilliseconds": 4.3634579999998095,
+        "returnedMaskBytes": 8400000
+      }
+    }
+  ],
+  "scope": "Local pure RGBA comparison, excluding decode, PNG encode, R2 and D1. Returned mask bytes measure this explicit allocation, not peak process or Worker memory. Local CPU is not hosted CPU or throughput evidence."
+}

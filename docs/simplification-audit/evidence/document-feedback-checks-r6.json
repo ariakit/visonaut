@@ -1,0 +1,337 @@
+{
+  "revision": "6",
+  "decisions": 45,
+  "cases": [
+    {
+      "name": "fresh",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": true,
+      "changedIds": [],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "fixtures-only"
+      ]
+    },
+    {
+      "name": "r5-open-baseline",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": true,
+      "changedIds": [],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "fixtures-only"
+      ],
+      "promptHasLocalNote": false
+    },
+    {
+      "name": "r5-submitted-fixtures",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": true,
+      "changedIds": [],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "fixtures-only"
+      ],
+      "promptHasLocalNote": false
+    },
+    {
+      "name": "r5-later-local-edit",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "test-app",
+        "notes": "Unsubmitted local question: keep deployed preview authentication."
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": false,
+      "changedIds": [
+        "O11"
+      ],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "test-app"
+      ],
+      "promptHasLocalNote": true
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "options": [
+    {
+      "name": "fixtures-only",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "fixtures-only",
+        "notes": "QA note: fixtures-only"
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": false,
+      "changedIds": [
+        "O11"
+      ],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "fixtures-only"
+      ],
+      "promptHasAnswer": true,
+      "promptHasNote": true,
+      "reload": {
+        "name": "fixtures-only-reload",
+        "progress": "45 / 45 answered",
+        "open": [],
+        "o11": {
+          "optionId": "fixtures-only",
+          "notes": "QA note: fixtures-only"
+        },
+        "baselineO11": {
+          "optionId": "fixtures-only",
+          "notes": ""
+        },
+        "mergedRevision": "6",
+        "emptyPrompt": false,
+        "changedIds": [
+          "O11"
+        ],
+        "prior44ValuesPreserved": true,
+        "prior44BaselinesPreserved": true,
+        "checkedO11": [
+          "fixtures-only"
+        ]
+      }
+    },
+    {
+      "name": "test-app",
+      "progress": "45 / 45 answered",
+      "open": [],
+      "o11": {
+        "optionId": "test-app",
+        "notes": "QA note: test-app"
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": false,
+      "changedIds": [
+        "O11"
+      ],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": [
+        "test-app"
+      ],
+      "promptHasAnswer": true,
+      "promptHasNote": true,
+      "reload": {
+        "name": "test-app-reload",
+        "progress": "45 / 45 answered",
+        "open": [],
+        "o11": {
+          "optionId": "test-app",
+          "notes": "QA note: test-app"
+        },
+        "baselineO11": {
+          "optionId": "fixtures-only",
+          "notes": ""
+        },
+        "mergedRevision": "6",
+        "emptyPrompt": false,
+        "changedIds": [
+          "O11"
+        ],
+        "prior44ValuesPreserved": true,
+        "prior44BaselinesPreserved": true,
+        "checkedO11": [
+          "test-app"
+        ]
+      }
+    }
+  ],
+  "copy": {
+    "matchesPreview": true,
+    "repeatMatches": true,
+    "storageUnchanged": true,
+    "baselineO11": {
+      "optionId": "fixtures-only",
+      "notes": ""
+    }
+  },
+  "cleared": {
+    "name": "cleared-open",
+    "progress": "44 / 45 answered",
+    "open": [
+      "O11"
+    ],
+    "o11": {
+      "optionId": null,
+      "notes": "QA note: test-app"
+    },
+    "baselineO11": {
+      "optionId": "fixtures-only",
+      "notes": ""
+    },
+    "mergedRevision": "6",
+    "emptyPrompt": false,
+    "changedIds": [
+      "O11"
+    ],
+    "prior44ValuesPreserved": true,
+    "prior44BaselinesPreserved": true,
+    "checkedO11": [],
+    "promptHasOpen": true,
+    "reload": {
+      "name": "cleared-reload",
+      "progress": "44 / 45 answered",
+      "open": [
+        "O11"
+      ],
+      "o11": {
+        "optionId": null,
+        "notes": "QA note: test-app"
+      },
+      "baselineO11": {
+        "optionId": "fixtures-only",
+        "notes": ""
+      },
+      "mergedRevision": "6",
+      "emptyPrompt": false,
+      "changedIds": [
+        "O11"
+      ],
+      "prior44ValuesPreserved": true,
+      "prior44BaselinesPreserved": true,
+      "checkedO11": []
+    }
+  },
+  "returnedToBaseline": {
+    "name": "fixtures-empty-notes",
+    "progress": "45 / 45 answered",
+    "open": [],
+    "o11": {
+      "optionId": "fixtures-only",
+      "notes": ""
+    },
+    "baselineO11": {
+      "optionId": "fixtures-only",
+      "notes": ""
+    },
+    "mergedRevision": "6",
+    "emptyPrompt": true,
+    "changedIds": [],
+    "prior44ValuesPreserved": true,
+    "prior44BaselinesPreserved": true,
+    "checkedO11": [
+      "fixtures-only"
+    ]
+  },
+  "models": {
+    "initialOption": "fixtures-only",
+    "initialResult": "One live App; preview uses fixtures\n\nProduction receives the real App events. Preview has no GitHub sign-in or production App sessions. Fixtures exercise review behavior, while focused auth checks run separately.",
+    "alternativeResult": "Two isolated Apps\n\nPreview keeps real GitHub sign-in and revocation through its own test App. Production uses its existing App. Each has separate credentials, receiver, installation, and data.",
+    "recordedSelectionAfterAlternative": "fixtures-only",
+    "storageUnchanged": true,
+    "resetOption": "fixtures-only",
+    "recordedSelectionAfterReset": "fixtures-only",
+    "resetStorageUnchanged": true
+  },
+  "terms": [
+    {
+      "name": "fixtures",
+      "hoverMatches": true,
+      "focusMatches": true,
+      "describedBy": true,
+      "escapeClosed": true,
+      "clickMatches": true,
+      "outsideClosed": true
+    }
+  ],
+  "narrow": {
+    "innerWidth": 390,
+    "documentWidth": 390,
+    "o11": {
+      "left": 16,
+      "right": 374,
+      "width": 358
+    }
+  },
+  "touch": {
+    "device": "Chromium touch emulation, 390x844",
+    "hash": "#O11",
+    "menuClosed": true,
+    "progress": "45 / 45 answered",
+    "selectedO11": "fixtures-only",
+    "firstTapMatches": true,
+    "tooltipWithinViewport": true,
+    "outsideTapClosed": true,
+    "pageErrors": []
+  },
+  "uniqueIds": true,
+  "checkedAt": "2026-09-29T17:45:44.757568+00:00",
+  "url": "http://127.0.0.1:4319/",
+  "method": "playwright-cli, isolated local Chromium session; portable index.html served over HTTP",
+  "artifactSha256": "1cad4098ebc380b65facb5de7faba2d06a675fe3fef92fe583ada32d5c03ded5",
+  "recordSha256": "779c89cfbc08f68771579f75f63ae4042e99fae056790cbb40e8e1af8ed6281c",
+  "r5SeedRecordSha256": "389a6cb35b57639233016cca65be12ba47d31b924dfe1bf3d5a979402ea47bc6",
+  "screenshots": [
+    "document-desktop-r6.png",
+    "document-narrow-r6.png",
+    "document-O11-r6.png",
+    "document-O11-narrow-r6.png"
+  ],
+  "findings": [],
+  "limits": [
+    "No file:// browser test. Local HTTP only, per the prior browser-policy block.",
+    "Revision5 seeds are reconstructed from the saved revision5 audit-data snapshot, not the user browser profile. They cover the old unchanged baseline, submitted fixtures-only answer, and a later unsubmitted test-app selection with notes.",
+    "Touch behavior uses Chromium emulation, not a physical device or screen reader.",
+    "This check covers the revision6 audit document and O11 model, not live GitHub authentication, production changes, or npm publication.",
+    "The initial open before listeners reported a404 for /favicon.ico from the local static server. Instrumented reloads and interactions reported no page or console errors."
+  ],
+  "screenshotNotes": {
+    "document-O11-narrow-r6.png": "Component crop temporarily hides the fixed audit header and skip link during capture to avoid overlaying the tall option panel. Source and persistent browser state are unchanged."
+  }
+}

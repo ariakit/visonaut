@@ -1,0 +1,37 @@
+{
+  "date": "2026-09-29T14:59:55.372Z",
+  "checks": [
+    {
+      "name": "portable initial render",
+      "passed": true
+    },
+    {
+      "name": "touch menu includes statuses and reaches unanswered last decision",
+      "passed": true
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "portable": {
+    "panels": 39,
+    "progress": "0 / 39 answered",
+    "theme": "dark",
+    "requests": [
+      "file:///Users/diegohaz/.codex/worktrees/1de3/visonaut/docs/simplification-audit/index.html"
+    ],
+    "remoteRequests": [],
+    "scriptCount": 1,
+    "promptReference": [
+      "Continue the living record “Visonaut · Less to maintain” (1).",
+      "Load the complete record and design document at: /Users/diegohaz/.codex/worktrees/1de3/visonaut/docs/simplification-audit/index.html",
+      "Read audit-data.json beside the design source if needed. Merge only the updates below and preserve every unchanged decision."
+    ]
+  },
+  "touch": {
+    "entries": 39,
+    "s01": "S01\nWhich storage boundary should Visonaut keep?\nAnswered",
+    "q04": "Q04\nHow much of the built application should the browser checks exercise?\nOpen",
+    "hash": "#Q04"
+  },
+  "passed": true
+}

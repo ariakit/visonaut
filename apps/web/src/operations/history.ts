@@ -11,7 +11,6 @@ import {
   prepareArchivedCommandReplay,
   ConflictError,
   Service,
-  type CommandResult,
   type Database,
   type SqlValue,
 } from "@visonaut/service";
@@ -322,37 +321,6 @@ export async function readHistoryView(
     sections,
     ...(viewUnavailableReason ? { viewUnavailableReason } : {}),
   };
-}
-export async function readArchivedCommand(
-  context: Pick<OperationsContext, "database" | "images" | "budget">,
-  runId: string,
-  commandId: string,
-): Promise<CommandResult> {
-  const root = await readHistoryManifest(context, runId);
-  if (!root) throw new Error("Command history is unavailable.");
-  for (const reference of root.manifest.pages) {
-    if (reference.section !== "commands") continue;
-    if (commandId < reference.firstCursor || commandId > reference.lastCursor) continue;
-    const page = parseHistoryPage(
-      await readVerifiedHistoryObject(context, reference),
-      root.manifest,
-      reference,
-    );
-    const command = page.rows.find((row) => row.id === commandId);
-    if (!command) continue;
-    if (typeof command.result_json !== "string") throw new Error("Command history is invalid.");
-    const result: unknown = JSON.parse(command.result_json);
-    if (
-      !result ||
-      typeof result !== "object" ||
-      !("commandId" in result) ||
-      result.commandId !== commandId
-    )
-      throw new Error("Command result identity is invalid.");
-    // The immutable command was validated by Service before it was archived.
-    return result as CommandResult;
-  }
-  throw new Error("Command history is missing.");
 }
 async function readArchivedDocument(context: OperationsContext, runId: string, objectKey: string) {
   const root = await readHistoryManifest(context, runId);

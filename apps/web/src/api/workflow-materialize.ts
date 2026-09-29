@@ -13,7 +13,7 @@ import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } f
 import { scheduleComparison, verifyAncestry } from "./ingest.js";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
-import { findPreRunCheck } from "./pre-run.js";
+import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
 import { reconcileWorkflowJobSet, type ReconciledBundle } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
 
@@ -36,10 +36,8 @@ interface StagedObjectMetadata {
 interface MaterializationMeasurements {
   imageCount: number;
   imageBytes: number;
-  inheritedImageCount: number;
   registrationBatches: number;
   verificationMs: number;
-  copyMs: number;
   registrationMs: number;
   shardCommitMs: number;
 }
@@ -131,22 +129,11 @@ async function leaseStagedSources(context: ApiContext, stagedRunId: string) {
   if (target.created_at <= now - stagedAttemptRetentionMs) {
     throw new IncompleteError("The submitted workflow stage expired before conversion.");
   }
-  // One D1 update wins before a retention claim or leaves a claimed source
-  // unchanged. Reconciliation rejects any source that is no longer live.
   await context.database
     .prepare(
-      "UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt <= ? AND tested_sha = ? AND workflow_source_digest = ? AND retention_state = 'live' AND EXISTS (SELECT 1 FROM ingest_staged_runs submitted WHERE submitted.id = ? AND submitted.retention_state = 'live' AND submitted.submitted_at IS NOT NULL AND submitted.created_at > ?)",
+      "UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL",
     )
-    .bind(
-      now + stagedMaterializationLeaseMs,
-      target.repository_id,
-      target.workflow_run_id,
-      target.workflow_attempt,
-      target.tested_sha,
-      target.workflow_source_digest,
-      stagedRunId,
-      now - stagedAttemptRetentionMs,
-    )
+    .bind(now + stagedMaterializationLeaseMs, stagedRunId)
     .run();
 }
 
@@ -157,6 +144,9 @@ async function materializeImages({
   currentRunImages,
   measurements,
 }: MaterializeImagesParams) {
+  if (bundle.sourceRunId !== runId) {
+    throw new IncompleteError("Submit must upload a fresh combined bundle for this attempt.");
+  }
   const images = await context.database
     .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
     .bind(bundle.sourceRunId, bundle.jobId)
@@ -194,12 +184,10 @@ async function materializeImages({
       throw new IncompleteError("A staged image differs from its validated manifest.");
     }
     // R2 checksums come from a validated PUT; older objects still need a body check.
-    if (bundle.sourceRunId === runId) {
-      const stored = currentRunImages.get(image.object_key);
-      const checksum = stored?.sha256;
-      if (stored?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
-        return { image, bytes: null };
-      }
+    const metadata = currentRunImages.get(image.object_key);
+    const checksum = metadata?.sha256;
+    if (metadata?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
+      return image;
     }
     const stored = await context.images.get(image.object_key);
     if (!stored || stored.size !== image.bytes) {
@@ -209,39 +197,25 @@ async function materializeImages({
     if ((await sha256(bytes)) !== image.digest) {
       throw new StagedOriginalUnavailableError("A validated original image changed after upload.");
     }
-    return { image, bytes };
+    return image;
   };
   for (let offset = 0; offset < images.results.length;) {
     const end = materializationBatchEnd(images.results, offset);
     const verificationStarted = performance.now();
     const results = await Promise.allSettled(images.results.slice(offset, end).map(verifyImage));
     measurements.verificationMs += performance.now() - verificationStarted;
-    const verified: Array<{ image: StagedImage; bytes: Uint8Array<ArrayBuffer> | null }> = [];
+    const verified: StagedImage[] = [];
     for (const result of results) {
       if (result.status === "rejected") throw result.reason;
       verified.push(result.value);
     }
-    // Keep copies and registrations in the original order after every source
-    // in this batch has passed its full digest check.
-    for (const { image, bytes } of verified) {
-      const imageId = bundle.sourceRunId === runId ? image.image_id : `${runId}:${image.image_id}`;
-      const objectKey =
-        bundle.sourceRunId === runId ? image.object_key : `runs/${runId}/images/${imageId}`;
-      if (bundle.sourceRunId !== runId) {
-        if (!bytes) throw new IncompleteError("An inherited original lost its verified bytes.");
-        const copyStarted = performance.now();
-        await context.images.put(objectKey, bytes, {
-          httpMetadata: { contentType: image.media_type },
-          sha256: image.digest,
-        });
-        measurements.copyMs += performance.now() - copyStarted;
-        measurements.inheritedImageCount += 1;
-      }
+    // Register only after every image in the bounded batch passes verification.
+    for (const image of verified) {
       pending.push({
-        id: imageId,
+        id: image.image_id,
         runId,
         digest: image.digest,
-        objectKey,
+        objectKey: image.object_key,
         contentType: image.media_type,
         bytes: image.bytes,
         width: image.width,
@@ -351,13 +325,6 @@ async function materializeBundle({
     ).values(),
   ].reduce((sum, bytes) => sum + bytes, 0);
   const manifestObjectKey = `manifests/${run.id}/${bundle.manifestDigest}.json`;
-  if (bundle.sourceRunId !== run.id) {
-    // The source attempt expires independently. Keep the inherited run's
-    // recovery evidence under its own retention boundary.
-    await context.quarantine.put(manifestObjectKey, JSON.stringify(manifest), {
-      httpMetadata: { contentType: "application/json" },
-    });
-  }
   await context.database
     .prepare(
       "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT(run_id, shard_key) DO NOTHING",
@@ -393,6 +360,18 @@ async function materializeBundle({
 /** Build a service run only from the final complete GitHub matrix and staged evidence. */
 export async function materializeWorkflowRun(context: ApiContext, stagedRunId: string) {
   await assertConfiguredProject(context);
+  const identity = await context.database
+    .prepare(
+      "SELECT tested_sha,workflow_run_id,workflow_attempt FROM ingest_staged_runs WHERE id=?",
+    )
+    .bind(stagedRunId)
+    .first<{ tested_sha: string; workflow_run_id: string; workflow_attempt: number }>();
+  if (!identity) throw new IncompleteError("The staged workflow identity is unavailable.");
+  await requireVisualPlan(context, {
+    testedSha: identity.tested_sha,
+    workflowRunId: identity.workflow_run_id,
+    workflowAttempt: identity.workflow_attempt,
+  });
   const alreadyStored = await context.database
     .prepare("SELECT id FROM visonaut_runs WHERE id = ?")
     .bind(stagedRunId)
@@ -417,10 +396,8 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const measurements: MaterializationMeasurements = {
     imageCount: 0,
     imageBytes: 0,
-    inheritedImageCount: 0,
     registrationBatches: 0,
     verificationMs: 0,
-    copyMs: 0,
     registrationMs: 0,
     shardCommitMs: 0,
   };
@@ -563,9 +540,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   }
   const reservedAt = performance.now();
   const inventoryStarted = performance.now();
-  const currentRunImages = bundles.some((bundle) => bundle.sourceRunId === run.id)
-    ? await listCurrentRunImages(context, run.id)
-    : new Map();
+  const currentRunImages = await listCurrentRunImages(context, run.id);
   measurements.verificationMs += performance.now() - inventoryStarted;
   for (const bundle of bundles) {
     await materializeBundle({ context, run, bundle, proof, currentRunImages, measurements });
@@ -589,13 +564,11 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       captures: bundles.reduce((count, bundle) => count + bundle.manifest.captures.length, 0),
       images: measurements.imageCount,
       imageBytes: measurements.imageBytes,
-      inheritedImages: measurements.inheritedImageCount,
       registrationBatches: measurements.registrationBatches,
       reconcileMs: Math.round(reconciledAt - started),
       reserveMs: Math.round(reservedAt - reconciledAt),
       materializeMs: Math.round(materializedAt - reservedAt),
       verifyImagesMs: Math.round(measurements.verificationMs),
-      copyImagesMs: Math.round(measurements.copyMs),
       registerImagesMs: Math.round(measurements.registrationMs),
       commitShardsMs: Math.round(measurements.shardCommitMs),
       finalJobCheckMs: Math.round(checkedAt - materializedAt),

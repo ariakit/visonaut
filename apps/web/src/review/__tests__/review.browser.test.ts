@@ -15,7 +15,7 @@ async function callCount(page: Page, count: number) {
 }
 
 function selected(page: Page) {
-  return page.getByRole("listbox", { name: "Variants" }).getByRole("option", { selected: true });
+  return page.getByRole("tablist", { name: "Variants" }).getByRole("tab", { selected: true });
 }
 
 test.beforeEach(async ({ page }) => {
@@ -62,11 +62,11 @@ test("valid prototype names stay visible in compact variant labels", async ({ pa
 });
 
 test("variant icons use brand marks and explain display preferences", async ({ page }) => {
-  const variants = page.getByRole("listbox", { name: "Variants" });
+  const variants = page.getByRole("tablist", { name: "Variants" });
   for (const name of ["React", "Solid", "Firefox", "WebKit"]) {
     await expect(
       variants
-        .getByRole("option", { name: new RegExp(name) })
+        .getByRole("tab", { name: new RegExp(name) })
         .first()
         .locator(`.review-variant-icons > span[title="${name}"] img`),
     ).toBeVisible();
@@ -98,7 +98,7 @@ test("variant icons use brand marks and explain display preferences", async ({ p
     ];
     window.reviewFixture.update(model);
   });
-  const icons = variants.getByRole("option").first().locator(".review-variant-icons > span");
+  const icons = variants.getByRole("tab").first().locator(".review-variant-icons > span");
   await expect(icons.nth(2)).toHaveAttribute("title", "Color scheme: no preference");
   await expect(icons.nth(3)).toHaveAttribute("title", "Contrast: no preference");
   await expect(icons.nth(4)).toHaveAttribute("title", "Forced colors: none");
@@ -118,7 +118,7 @@ test("variant keys do not claim an omitted display preference", async ({ page })
     ];
     window.reviewFixture.update(model);
   });
-  const summary = page.getByRole("listbox", { name: "Variants" }).getByRole("option").first();
+  const summary = page.getByRole("tablist", { name: "Variants" }).getByRole("tab").first();
   await expect(summary.locator(".review-variant-title")).toHaveText("none");
   await expect(
     summary.locator('.review-variant-icons > span[title="Forced colors: none"]'),
@@ -139,7 +139,7 @@ test("framework names do not display browser marks", async ({ page }) => {
     ];
     window.reviewFixture.update(model);
   });
-  const summary = page.getByRole("listbox", { name: "Variants" }).getByRole("option").first();
+  const summary = page.getByRole("tablist", { name: "Variants" }).getByRole("tab").first();
   await expect(summary.locator(".review-variant-title")).toHaveText("chrome · chrome-firefox");
   const icons = summary.locator(".review-variant-icons > span");
   await expect(icons).toHaveCount(1);
@@ -157,7 +157,7 @@ test("comparison errors stay visible ahead of accepted items", async ({ page }) 
     window.reviewFixture.update(model);
   });
   await expect(page.locator(".review-item")).toHaveCount(3);
-  await expect(page.locator("#review-item-2")).toContainText("1 comparison error");
+  await expect(page.locator('[id="review-item-new%2Fopen"]')).toContainText("1 comparison error");
   await expect(page.getByRole("button", { name: "Accepted (1)" })).toHaveAttribute(
     "aria-expanded",
     "false",
@@ -175,11 +175,17 @@ test("an accepted first item does not hide the initial attention selection", asy
   });
   const accepted = page.getByRole("button", { name: "Accepted (3)" });
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await expect(page.locator("#review-item-1")).toHaveAttribute("aria-current", "true");
-  await expect(page.locator("#review-item-0")).toHaveCount(0);
+  await expect(page.locator('[id="review-item-menu%2Fopen"]')).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveCount(0);
   await focusWorkspace(page);
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator("#review-item-0")).toHaveAttribute("aria-current", "true");
+  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(accepted).toHaveAttribute("aria-expanded", "true");
 });
 
@@ -194,7 +200,9 @@ test("a pending comparison stays visible without an evidence error", async ({ pa
     comparing.kind = "pending";
     window.reviewFixture.update(model);
   });
-  await expect(page.locator("#review-item-0")).toContainText("1 comparison running");
+  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toContainText(
+    "1 comparison running",
+  );
   await expect(page.getByRole("button", { name: "Accepted (2)" })).toHaveAttribute(
     "aria-expanded",
     "false",
@@ -220,19 +228,22 @@ test("keyboard item navigation follows attention items before accepted items", a
   });
   const accepted = page.getByRole("button", { name: "Accepted (2)" });
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.locator("#review-item-0").focus();
+  await page.locator('[id="review-item-dialog%2Fopen"]').focus();
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator("#review-item-2")).toBeFocused();
+  await expect(page.locator('[id="review-item-new%2Fopen"]')).toBeFocused();
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Home");
-  await expect(page.locator("#review-item-0")).toBeFocused();
+  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toBeFocused();
   await page.getByLabel("Review workspace", { exact: true }).focus();
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator("#review-item-2")).toHaveAttribute("aria-current", "true");
+  await expect(page.locator('[id="review-item-new%2Fopen"]')).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.locator("#review-item-2").focus();
+  await page.locator('[id="review-item-new%2Fopen"]').focus();
   await page.keyboard.press("End");
-  await expect(page.locator("#review-item-3")).toBeFocused();
+  await expect(page.locator('[id="review-item-removed%2Fopen"]')).toBeFocused();
   await expect(accepted).toHaveAttribute("aria-expanded", "true");
 });
 
@@ -275,7 +286,7 @@ test("item navigation picks the first variant needing review unless one was chos
     first.source = "automatic";
     window.reviewFixture.update(model);
   });
-  await expect(page.locator("#review-item-1")).toContainText("1 of 2 need review");
+  await expect(page.locator('[id="review-item-menu%2Fopen"]')).toContainText("1 of 2 need review");
   await page.keyboard.press("ArrowDown");
   await expect(selected(page)).toContainText("Menu-dark");
 });
@@ -317,7 +328,7 @@ test("save confirmation gates verdicts and navigation, and repeat keys do nothin
   await ready(page);
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
-  await expect(page.getByRole("option", { name: /Solid.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Solid.*Rejected/ })).toBeVisible();
 });
 
 test("a saved review keeps its reviewer visible when revisited", async ({ page }) => {
@@ -325,7 +336,7 @@ test("a saved review keeps its reviewer visible when revisited", async ({ page }
   await expect(selected(page)).toContainText("Solid");
   await page.keyboard.press("ArrowLeft");
   await expect(selected(page)).toContainText("React");
-  await expect(page.locator(".review-result-heading p")).toContainText("maintainer-1");
+  await expect(page.locator(".review-result-heading")).toContainText("maintainer-1");
 });
 
 test("whole item freezes all changed IDs in one undoable command", async ({ page }) => {
@@ -344,7 +355,7 @@ test("whole item freezes all changed IDs in one undoable command", async ({ page
   await expect(selected(page)).toContainText("Menu");
   await page.keyboard.press("Control+z");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("option", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -395,7 +406,7 @@ test("protected whole-item rejection refuses every target, while individual acti
     }
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("option", { name: /Protected Solid/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Protected Solid/ })).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
   await expect(
@@ -844,7 +855,7 @@ test("conflict identifies reviewer and does not advance or save a partial item",
   await page.keyboard.press("Shift+A");
   await expect(page.getByRole("alert")).toContainText("Updated by octocat");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("option", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -1035,6 +1046,7 @@ test("failed Undo retries its original command identity", async ({ page }) => {
 test("recompare keeps prior evidence visible and blocks review until the new comparison is ready", async ({
   page,
 }) => {
+  await page.getByRole("button", { name: "Details", exact: true }).click();
   await page.getByRole("button", { name: "Recompare stored run" }).click();
   await expect(page.getByText("Comparison 2", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
@@ -1161,6 +1173,7 @@ test("export gives pending and failure feedback without changing review verdicts
 test("closed retained runs can recompare while historical results remain read-only", async ({
   page,
 }) => {
+  await page.getByRole("button", { name: "Details", exact: true }).click();
   await page.clock.install();
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
@@ -1265,6 +1278,7 @@ test("a failed historical comparison stops polling and shows its failure reason"
 test("a run that closes before recompare also disables the previous Undo while comparing", async ({
   page,
 }) => {
+  await page.getByRole("button", { name: "Details", exact: true }).click();
   await page.keyboard.press("a");
   await expect(selected(page)).toContainText("Solid");
   await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
@@ -1283,3 +1297,169 @@ test("a run that closes before recompare also disables the previous Undo while c
   await page.keyboard.press("Control+z");
   await callCount(page, 1);
 });
+
+test("page-wide arrows work from body focus and the off switch preserves native keys", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    document.body.tabIndex = -1;
+    document.body.focus();
+  });
+  await page.keyboard.press("ArrowRight");
+  await expect(page.locator('.review-variant[aria-selected="true"]')).toContainText("Solid");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Shortcuts on" }).click();
+  await page.evaluate(() => document.body.focus());
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Outside search" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toContainText("Menu · Chromium");
+});
+
+test("a diff loads on first use and keeps pan until the variant changes", async ({ page }) => {
+  let requests = 0;
+  await page.route("**/lazy-diff.svg", (route) => {
+    requests++;
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const diff = model.items[0]?.variants[0]?.diff;
+    if (!diff) throw new Error("Expected a diff image.");
+    diff.url = "/lazy-diff.svg";
+    window.reviewFixture.update(model);
+  });
+  await ready(page);
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+  expect(requests).toBe(0);
+  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await ready(page);
+  await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
+  expect(requests).toBe(1);
+  await page.getByRole("button", { name: "200%", exact: true }).click();
+  const viewport = page.locator('.review-image-viewport[aria-label^="Pixel diff"]');
+  await page
+    .getByRole("button", { name: "Pan Pixel diff · red pixels changed right", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Pan Pixel diff · red pixels changed down", exact: true })
+    .click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const position = await viewport.evaluate((element) => ({
+    left: element.scrollLeft,
+    top: element.scrollTop,
+  }));
+  await page.getByRole("button", { name: "New only F" }).click();
+  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await ready(page);
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => ({ left: element.scrollLeft, top: element.scrollTop })),
+    )
+    .toEqual(position);
+  expect(requests).toBe(1);
+
+  await page.getByRole("button", { name: "New only F" }).click();
+  await focusWorkspace(page);
+  await page.keyboard.press("ArrowRight");
+  await ready(page);
+  await expect(selected(page)).toContainText("Solid");
+  expect(requests).toBe(1);
+  await page.keyboard.press("ArrowLeft");
+  await ready(page);
+  await expect(selected(page)).toContainText("React");
+  expect(requests).toBe(1);
+  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
+  await expect
+    .poll(() =>
+      viewport.evaluate((element) => ({ left: element.scrollLeft, top: element.scrollTop })),
+    )
+    .toEqual({ left: 0, top: 0 });
+});
+
+for (const imagesExpired of [false, true]) {
+  test(`closed summaries preserve verdicts without requesting ${imagesExpired ? "expired" : "pinned"} image history`, async ({
+    page,
+  }) => {
+    await page.evaluate((imagesExpired) => {
+      const model = window.reviewFixture.model();
+      model.evidenceState = "summary";
+      model.imagesExpired = imagesExpired;
+      model.archived = true;
+      model.reviewReady = false;
+      for (const item of model.items) {
+        for (const variant of item.variants) {
+          variant.reference = null;
+          variant.candidate = null;
+          variant.diff = null;
+          variant.thumbnail = undefined;
+        }
+      }
+      window.reviewFixture.update(model);
+    }, imagesExpired);
+    await expect(
+      page.getByRole("heading", {
+        name: imagesExpired ? "Image history expired" : "Closed review summary",
+      }),
+    ).toBeVisible();
+    await expect(page.locator(".review-viewer")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await page.keyboard.press("ArrowRight");
+    await expect(selected(page)).toContainText("Solid");
+  });
+}
+
+for (const forcedColors of ["none", "active"] as const) {
+  test(`long review context and recovery controls reflow at 200% CSS zoom with ${forcedColors} forced colors`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 640, height: 900 });
+    await page.emulateMedia({ forcedColors });
+    await page.evaluate(() => {
+      const model = window.reviewFixture.model();
+      model.run.title =
+        "A long pull request title that must stay readable without covering the review actions ".repeat(
+          3,
+        );
+      const variant = model.items[0]?.variants[0];
+      if (!variant) throw new Error("Missing review variant.");
+      variant.label =
+        "React · Chromium · Light · 1280 × 720 · A descriptive wrapped capture state ".repeat(2);
+      window.reviewFixture.update(model);
+      document.documentElement.style.zoom = "2";
+    });
+    await ready(page);
+    const header = page.locator(".shell-main-header");
+    const approve = page.getByRole("button", { name: "Approve A", exact: true });
+    await expect(approve).toBeVisible();
+    const geometry = await header.evaluate((element) => {
+      const context = element.querySelector(".review-result-heading")?.getBoundingClientRect();
+      const actions = element.querySelector(".review-actions")?.getBoundingClientRect();
+      if (!context || !actions) throw new Error("Missing review header content.");
+      return {
+        contextBottom: context.bottom,
+        actionsTop: actions.top,
+        right: element.getBoundingClientRect().right,
+        viewport: window.innerWidth,
+      };
+    });
+    expect(geometry.actionsTop).toBeGreaterThanOrEqual(geometry.contextBottom);
+    expect(geometry.right).toBeLessThanOrEqual(geometry.viewport);
+    await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+    await approve.click();
+    await expect(page.getByRole("alert")).toContainText(/not saved/i);
+    await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      640,
+    );
+  });
+}

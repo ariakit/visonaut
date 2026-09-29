@@ -264,94 +264,94 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   const captureJobs = latestJobs.filter(
     (job) => typeof job.name === "string" && job.name.startsWith(run.capture_job_prefix),
   );
-  // The signed Submit job stages the combined bundle.
   if (!captureJobs.length) {
-    captureJobs.push(submitJobs[0]);
+    throw new IncompleteError("The pinned workflow has no required capture jobs.");
   }
-  const keys = new Set<string>();
-  const bundles: ReconciledBundle[] = [];
+  const staged = await context.database
+    .prepare(
+      `${bundleSql} WHERE bundle.run_id = ? AND bundle.job_id = ? AND bundle.shard_key = 'combined'`,
+    )
+    .bind(run.id, run.submit_job_id)
+    .first<StagedBundle>();
+  if (!staged) {
+    throw new IncompleteError("The signed Submit job has no complete combined bundle.");
+  }
+  const combined = await stagedBundle(
+    context,
+    github,
+    run,
+    submit,
+    staged,
+    "combined",
+    run.submit_job_name,
+    submit.sourceHead,
+  );
+  const sources = combined.manifest.captureSources;
+  if (
+    !sources ||
+    sources.length !== captureJobs.length ||
+    new Set(sources.map((source) => source.shardKey)).size !== sources.length
+  ) {
+    throw new IncompleteError("The combined manifest does not cover every required capture job.");
+  }
+  const names = new Set<string>();
   for (const job of captureJobs) {
     const name = String(job.name);
-    const key =
-      job.id === submitJobs[0].id ? "combined" : name.slice(run.capture_job_prefix.length);
-    validateKey(key, "shardKey");
-    if (keys.has(key)) {
+    if (names.has(name)) {
       throw new IncompleteError("The workflow has duplicate capture job names.");
     }
-    keys.add(key);
+    names.add(name);
     successfulJob(job, name, run, submit.sourceHead);
-    const currentExecution =
-      job.run_attempt === run.workflow_attempt && jobExecutedInAttempt(job, attempt.run_started_at);
-    if (currentExecution) {
-      if (!attemptJobs.some((entry) => entry.id === job.id)) {
-        throw new IncompleteError("The current capture job is absent from its attempt.");
+    const key = name.slice(run.capture_job_prefix.length);
+    validateKey(key, "shardKey");
+    const source = sources.find((entry) => entry.shardKey === key && entry.jobName === name);
+    if (!source || source.workflowAttempt > run.workflow_attempt) {
+      throw new IncompleteError("A required capture source is absent or stale.");
+    }
+    if (jobExecutedInAttempt(job, attempt.run_started_at)) {
+      if (
+        source.workflowAttempt !== run.workflow_attempt ||
+        String(job.id) !== source.jobId ||
+        !attemptJobs.some((entry) => entry.id === job.id)
+      ) {
+        throw new IncompleteError("A rerun visual shard needs fresh evidence from this attempt.");
       }
-      const staged = await context.database
-        .prepare(`${bundleSql} WHERE bundle.run_id = ? AND bundle.job_id = ?`)
-        .bind(run.id, String(job.id))
-        .first<StagedBundle>();
-      if (!staged) {
-        throw new IncompleteError("A successful capture job did not stage its bundle.");
-      }
-      bundles.push(
-        await stagedBundle(context, github, run, submit, staged, key, name, submit.sourceHead),
-      );
-      continue;
+    } else {
+      await verifyCarriedExecution(github, source.jobId, job, {
+        workflowRunId: run.workflow_run_id,
+        workflowAttempt: run.workflow_attempt,
+        sourceAttempt: source.workflowAttempt,
+        sourceHead: submit.sourceHead,
+        jobName: name,
+        attemptStartedAt: attempt.run_started_at,
+      });
     }
-    const prior = await context.database
-      .prepare(
-        `${bundleSql} WHERE source.repository_id = ? AND source.workflow_run_id = ? AND source.workflow_attempt < ? AND source.tested_sha = ? AND source.workflow_source_digest = ? AND source.caller_workflow_path = ? AND source.reusable_workflow_ref = ? AND source.capture_job_prefix = ? AND source.submit_job_name = ? AND source.retention_state = 'live' AND bundle.shard_key = ? AND bundle.job_name = ? AND manifest.complete = 1 ORDER BY source.workflow_attempt DESC LIMIT 100`,
-      )
-      .bind(
-        run.repository_id,
-        run.workflow_run_id,
-        run.workflow_attempt,
-        run.tested_sha,
-        run.workflow_source_digest,
-        run.caller_workflow_path,
-        run.reusable_workflow_ref,
-        run.capture_job_prefix,
-        run.submit_job_name,
-        key,
-        name,
-      )
-      .all<StagedBundle>();
-    if (prior.results.length === 100) {
-      throw new IncompleteError("The carried job source set exceeds its limit.");
-    }
-    const matches: StagedBundle[] = [];
-    for (const source of prior.results) {
-      try {
-        await verifyCarriedExecution(github, source.job_id, job, {
-          workflowRunId: run.workflow_run_id,
-          workflowAttempt: run.workflow_attempt,
-          sourceAttempt: source.source_attempt,
-          sourceHead: submit.sourceHead,
-          jobName: name,
-          attemptStartedAt: attempt.run_started_at,
-        });
-        matches.push(source);
-      } catch (error) {
-        if (!(error instanceof IncompleteError)) throw error;
-      }
-    }
-    if (matches.length !== 1 || !matches[0]) {
-      throw new IncompleteError("One original signed bundle is required for a carried job.");
-    }
-    bundles.push(
-      await stagedBundle(context, github, run, submit, matches[0], key, name, submit.sourceHead),
+    const artifact = object(
+      await github.request(`/repos/${github.repository}/actions/artifacts/${source.artifactId}`),
     );
+    if (
+      String(artifact.id) !== source.artifactId ||
+      artifact.expired !== false ||
+      artifact.name !== source.artifactName ||
+      source.artifactName !==
+        `visonaut-capture-${run.workflow_run_id}-${source.workflowAttempt}-${key}` ||
+      String(object(artifact.workflow_run).id) !== run.workflow_run_id
+    ) {
+      throw new IncompleteError(
+        "A verified source artifact is unavailable. Rerun all visual jobs.",
+      );
+    }
   }
+  const bundles: ReconciledBundle[] = [combined];
   const currentBundles = await context.database
     .prepare("SELECT job_id FROM ingest_staged_bundles WHERE run_id = ?")
     .bind(run.id)
     .all<{ job_id: string }>();
   if (
-    currentBundles.results.some(
-      (bundle) => !bundles.some((selected) => selected.jobId === bundle.job_id),
-    )
+    currentBundles.results.length !== 1 ||
+    currentBundles.results[0]?.job_id !== run.submit_job_id
   ) {
-    throw new IncompleteError("A staged upload is absent from the final GitHub matrix.");
+    throw new IncompleteError("Only the signed Submit job may stage capture data.");
   }
   const current = await workflowAttempt(github, submit);
   if (current.path !== run.caller_workflow_path) {

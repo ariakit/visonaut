@@ -384,3 +384,43 @@ it("binds discovered captures to the manifest digest published by the trusted jo
     "server-verified successful",
   );
 });
+
+it("separates rendering identity from comparison policy and engine evidence", async () => {
+  const { digestRenderingProfile } = await import("../src/index.js");
+  const profile: CaptureProfile = {
+    browser: "chromium",
+    browserVersion: "149",
+    osImageDigest: "a".repeat(64),
+    fontsDigest: "b".repeat(64),
+    viewport: { width: 100, height: 100 },
+    deviceScaleFactor: 1,
+    locale: "en-US",
+    timezone: "UTC",
+    reducedMotion: "reduce",
+    colorScheme: "light",
+    contrast: "no-preference",
+    forcedColors: "none",
+    animationPolicy: "disabled",
+    captureOptions: { clip: { x: 0, y: 0, width: 100, height: 100 } },
+    comparisonPolicyDigest: "c".repeat(64),
+    comparisonEngineVersion: "1",
+  };
+  const digest = await digestRenderingProfile(profile);
+  expect(
+    await digestRenderingProfile({
+      ...profile,
+      comparisonPolicyDigest: "d".repeat(64),
+      comparisonEngineVersion: "2",
+    }),
+  ).toBe(digest);
+  for (const changed of [
+    { fontsDigest: "e".repeat(64) },
+    { browserVersion: "150" },
+    { locale: "pt-BR" },
+    { deviceScaleFactor: 2 },
+    { viewport: { width: 200, height: 100 } },
+    { captureOptions: { clip: { x: 1, y: 0, width: 100, height: 100 } } },
+  ]) {
+    expect(await digestRenderingProfile({ ...profile, ...changed })).not.toBe(digest);
+  }
+});

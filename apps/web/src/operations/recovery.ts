@@ -1,3 +1,5 @@
+import { digestStream } from "./common.ts";
+import type { OperationsContext } from "./types.ts";
 import type { Database } from "@visonaut/service";
 
 /** Run only in the isolated restore target, before deploying new secrets and activating it. */
@@ -17,15 +19,6 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
   for (const table of ["operations_run_archives", "operations_comparison_archives"]) {
     if (names.has(table)) commands.push(`DELETE FROM "${table}" WHERE state='building'`);
   }
-  for (const table of [
-    "operations_backup_members",
-    "operations_backup_group_pages",
-    "operations_backup_groups",
-    "operations_backup_inventory",
-    "operations_backup_objects",
-  ]) {
-    if (names.has(table)) commands.push(`DELETE FROM "${table}"`);
-  }
   commands.push(
     // Old external writes cannot be proven settled by reading a backup. Keep them fenced.
     "UPDATE work_checks SET ambiguous=1",
@@ -35,9 +28,6 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     "UPDATE visonaut_runs SET active=0,state=CASE WHEN state='accepted' THEN state ELSE 'failed' END",
     "UPDATE visonaut_snapshots SET state='revoked',reference_eligible=0 WHERE state='copying'",
     "DELETE FROM work_retention_pins WHERE reason IN ('recovery','promotion')",
-    "DELETE FROM operations_backup_pages",
-    "DELETE FROM operations_backup_required",
-    "DELETE FROM operations_backups",
     "DELETE FROM visonaut_pins WHERE reason='export'",
     "DELETE FROM operations_exports",
     "DELETE FROM operations_cursors",
@@ -64,4 +54,36 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     .run();
   const violations = await database.prepare("PRAGMA foreign_key_check").all();
   if (violations.results?.length) throw new Error("Restored database contains broken references.");
+}
+
+/** Read-only evidence check after the isolated database rewind, before reactivation. */
+export async function inspectRecoveryImages(context: OperationsContext, afterId = "") {
+  const rows = await context.database
+    .prepare(
+      "SELECT id,object_key,digest,bytes FROM visonaut_images WHERE id>? AND bytes_present=1 AND role='original' ORDER BY id LIMIT ?",
+    )
+    .bind(afterId, context.budget.objectsPerStep)
+    .all<{ id: string; object_key: string; digest: string; bytes: number }>();
+  const missing: string[] = [];
+  const corrupt: string[] = [];
+  for (const image of rows.results ?? []) {
+    const object = await context.images.get(image.object_key);
+    if (!object) {
+      missing.push(image.id);
+      continue;
+    }
+    try {
+      const checked = await digestStream(object.body, context.budget.maximumObjectBytes);
+      if (checked.digest !== image.digest || checked.bytes !== image.bytes) corrupt.push(image.id);
+    } catch {
+      corrupt.push(image.id);
+    }
+  }
+  return {
+    checked: rows.results?.length ?? 0,
+    missing,
+    corrupt,
+    nextAfterId: rows.results?.at(-1)?.id ?? afterId,
+    hasMore: (rows.results?.length ?? 0) === context.budget.objectsPerStep,
+  };
 }

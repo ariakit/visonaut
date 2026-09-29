@@ -13,7 +13,7 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const candidates = await database
     .prepare(`SELECT id,object_prefix FROM work_retained_runs
-    WHERE EXISTS(SELECT 1 FROM operations_run_archives archive WHERE archive.run_id=work_retained_runs.id AND archive.state='ready') AND NOT EXISTS(SELECT 1 FROM work_retention_pins WHERE run_id=work_retained_runs.id) AND ((byte_state='live' AND closed_at IS NOT NULL AND closed_at<=?)
+    WHERE EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=work_retained_runs.id AND summary.state='ready') AND NOT EXISTS(SELECT 1 FROM work_retention_pins WHERE run_id=work_retained_runs.id) AND ((byte_state='live' AND closed_at IS NOT NULL AND closed_at<=?)
        OR (byte_state='deleting' AND deletion_until<=?))
     ORDER BY closed_at,id LIMIT ?`)
     .bind(context.now() - closedRunRetentionMs, context.now(), budget.tasksPerStep)

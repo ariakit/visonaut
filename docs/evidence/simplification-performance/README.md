@@ -1,0 +1,67 @@
+# Simplification performance evidence
+
+[before.json](before.json) records the original review component with the repaired current selector and Shell/readiness checks on 2026-09-29. Its source hashes identify the measured UI. The fixture, runner, server, and build output hashes and bytes are included. The component source is the audit baseline Visonaut [`7e23173`](https://github.com/ariakit/visonaut/commit/7e23173d11b1081f55021ef498e4c5c6d6a08131).
+
+The sample has three excluded mount warmups, nine measured mounts, and 36 cached variant transitions across 3,582, 10,580, and 35,820 captures. Every measured Shell had `display: grid`, each selection changed, and no browser page error occurred. Environment: Apple M4 Pro, macOS, Node 24.18.0, Chrome 154.0.8037.58, 1280 × 900 viewport, localhost, no CPU or network throttling.
+
+This is a small synthetic baseline, not a performance budget or a production latency result. Images are generated and the render clock begins after model parsing. The sample excludes real authentication, Worker route loading, D1/R2 requests, and review saves. Keep new integrated UI measurements in a separate record and use the [on-demand built-route checks](../../../apps/web/tooling/review-scale/README.md#built-route-checks) with a writable local PR fixture for those boundaries. Do not replace the earlier dated evidence.
+
+## Built Worker baseline
+
+[routes-before.json](routes-before.json) records the original built review UI with the on-demand local Worker harness. Twelve measured paths cover three samples per normal/throttled profile and cold/warm browser cache. Every actual approval returned HTTP 200, changed one target, displayed the next pending image, and was undone. No page error occurred. [routes-before-fixture.json](routes-before-fixture.json) records the safe GitHub request paths and twelve revoked human approvals. The local D1/R2 runtime and private temporary session file were disposed after the check.
+
+| Profile | Browser cache | Open to first image p50 (ms) | Save to next image p50 (ms) |
+| ------- | ------------- | ---------------------------: | --------------------------: |
+| local   | cold          |                        157.5 |                       121.9 |
+| local   | warm          |                        155.6 |                        89.7 |
+| slow    | cold          |                       2186.6 |                       660.1 |
+| slow    | warm          |                        949.8 |                       502.1 |
+
+The Worker was warm after local readiness checks. The synthetic PR reintroduces three known identities, with tiny PNG images and distinct opaque profile identities. The probe uses real local authentication, review API, native D1/R2, and built assets; external GitHub responses are allowlisted local fixtures. It excludes capture, comparison execution, Queue processing, production networking, and physical display timing. These three samples per cell do not establish a performance budget. Keep the dated raw records and disclose changes to harness, fixture, browser, machine, and profiles when comparing them.
+
+## Integrated after measurements
+
+[after.json](after.json) records nine measured production fixture mounts after three excluded warmups and 36 cached variant transitions. The fixture/runner/server source hashes match the repaired before fixture. All Shell checks pass, selections change, and page errors are empty. These measurements include the final pan retention state; the later route loading option does not run in this synthetic fixture.
+
+| Captures | DOM nodes before → after | List paint proxy p50 before → after (ms) | First image paint proxy p50 before → after (ms) | Cached navigation paint proxy p50 before → after (ms) |
+| -------: | -----------------------: | ---------------------------------------: | ----------------------------------------------: | ----------------------------------------------------: |
+|    3,582 |                543 → 339 |                              68.6 → 52.4 |                                    100.8 → 82.7 |                                           32.5 → 32.4 |
+|   10,580 |                543 → 339 |                              65.6 → 53.5 |                                     97.2 → 83.4 |                                           32.4 → 32.4 |
+|   35,820 |                543 → 339 |                              68.6 → 60.9 |                                   101.9 → 100.1 |                                           32.6 → 32.6 |
+
+[routes-after.json](routes-after.json) records twelve measured writable paths against the checked Worker after the history identity correction and before the later formal pre-commit repairs. Every approval returned 200, changed one target, loaded the next image, and was undone. Page errors are empty. [routes-after-fixture.json](routes-after-fixture.json) records twelve revoked decisions and 50 allowlisted local GitHub calls. The temporary session and native local D1/R2 runtime were disposed. Source, probe, build bytes, and build hashes remain in the raw records.
+
+| Profile | Browser cache | Open to first image p50 before → after (ms) | Save to next image p50 before → after (ms) |
+| ------- | ------------- | ------------------------------------------: | -----------------------------------------: |
+| local   | cold          |                               157.5 → 178.2 |                              121.9 → 139.7 |
+| local   | warm          |                               155.6 → 155.8 |                               89.7 → 122.8 |
+| slow    | cold          |                             2186.6 → 2337.5 |                              660.1 → 763.5 |
+| slow    | warm          |                               949.8 → 981.9 |                              502.1 → 618.9 |
+
+The result is mixed. Scale DOM count is lower at each size, the local list/image paint proxies are lower, and cached navigation paint is roughly unchanged. The tiny actual route has roughly unchanged warm local open time and higher other open/save medians. These observations do not establish an overall speed gain. Both runs used the same Apple M4 Pro, but Chrome changed from 154.0.8037.58 to 154.0.8037.92. There are only three samples per cell. Cold means a new browser context; warm reuses its cache. The Worker was warm. Local has CPU rate 1 and no network throttling; slow has CPU rate 4, 150-ms latency, 200,000-byte/s download and 100,000-byte/s upload. Two animation frames identify a paint opportunity; they do not measure a physical display.
+
+The after local harness supplies an explicit synthetic workflow SHA and executor digest because the current runtime requires capture trust configuration. The earlier harness inherited preview configuration and then selected local mode; that setup now returned 503 until those required local values were supplied. PR data, real local auth, save/Undo flow, tiny PNG, and synthetic GitHub boundaries remain the same. No production configuration was weakened. This harness change and the browser change limit causal before/after conclusions.
+
+The retained [intermediate route record](routes-pending-delay.json) and [fixture receipt](routes-pending-delay-fixture.json) exposed an avoidable loading hold before the final measurements. In its first local cold path, the API response ended at 65.6 ms but the first image request began at 639.6 ms. The installed router's 500-ms minimum pending duration held the `ssr:false` hydrated shell after data was ready. Setting `pendingMinMs: 0` on the existing review route removes that hold without changing the loading/error/abort flow. The final first local cold API response ends at 62.7 ms and the first image starts at 120.5 ms. The intermediate record is not the accepted after result.
+
+The [latest dated manual built preview record](iab-verified-preview.json) and [desktop](https://github.com/user-attachments/assets/b388b7fc-99ff-470b-b7ec-ca805d088c53)/[narrow](https://github.com/user-attachments/assets/b7179cf1-2b20-4b93-9863-28924414fa60) screenshots check real built navigation, reload/Back, image decode, geometry, and retained diff pan. Preview is read-only; real writes are proved by the separate native route probe. Its restart receipt identifies the checked disk Worker before the formal backend repairs; HTTP does not attest its hash. Earlier [headless asset/geometry checks](built-preview/summary.json) remain a dated checkpoint before the final pan and loading fixes.
+
+The [before-receipt-fix record](routes-before-receipt-fix.json) and [fixture receipt](routes-before-receipt-fix-fixture.json) preserve the next checkpoint, after the loading hold was removed. It exposed a stale predicted run revision: every ordinary save failed the API's current-receipt fence and returned the complete model. The one-literal correction predicts the single persisted increment; current native API regressions prove the delta response, while stale/idempotent replay still receives the authoritative model. In the first local cold path, command bytes fall from 3,262 decoded/1,024 encoded to 358 decoded/261 encoded; the original baseline was 358/260. The [pre-history-identity checkpoint](routes-before-history-identity.json) and [fixture](routes-before-history-identity-fixture.json) retain the measured receipt repair before the final history correction. The accepted twelve-path after record follows that history correction. Tiny-fixture timing remains unchanged or slower than the original baseline despite the two route/save repairs. Complete model sizes and resource traces remain in the raw files; no general byte reduction or production performance gain is asserted.
+
+The scale after record predates the history identity repair. All seven measured UI source hashes and six fixture/probe source hashes still match the repaired working tree, so those UI samples remain applicable. The complete backend source/build was checked again and the native active-route measurement was repeated after the history repair. Both the accepted route measurement and manual media precede the later canonical-webhook and expired-detail repairs. No timing or manual-runtime rerun is claimed for those backend changes. No overall speed gain is inferred.
+
+The [verification record](verification.json) identifies the [source manifest](source-manifest.json), including tracked and untracked source/test/config, and [check receipts](check-receipts.json). Their raw logs are preserved in [logs](logs). The earlier whole-check checkpoint passed 895 unit tests across 64 files and 102 browser checks; it follows the receipt and history identity corrections. The [latest whole check](logs/pr-gate-check.log) follows the canonical-webhook and expired-detail repairs and passed lint, formatting, types, builds, 898 unit tests across 64 files, and 102 browser checks. Release/deployment guards, installed public package smoke, diagnostic Container server, scale probe, and native route probe retain their dated scopes. The record separates earlier checkpoints and unchanged measured inputs from the repaired complete source. Docker image build and live external cutover remain unverified here.
+
+## Published visual evidence
+
+The [attachment index](attachments.json) maps every preserved audit and implementation screenshot to its published URL, byte count, and SHA-256. Media are not committed to Git. Original local files and dated raw records keep their paths and hashes; use this index to resolve image paths in those records after cloning the repository.
+
+## Post-publication follow-up
+
+The first [hosted CI run](https://github.com/ariakit/visonaut/actions/runs/36640799784) for [`c319790`](https://github.com/ariakit/visonaut/commit/c319790c6264a613457961b832e1bae4dbbb1c4c) passed all three unit shards, lint, build, types, and release guards. The browser job passed 101 tests and failed one test. The hosted rerun remains pending.
+
+The browser test now waits for visible diff evidence before its first request-count check and final pan check. Initial load, same-variant reuse, and pan checks remain. The final `expect(requests).toBe(2)` is removed because the browser can reuse the same loaded URL. A [controlled decoded-image reuse case](logs/ci-browser-diagnosis.json) failed the [old count assertion](logs/ci-browser-red.log), then passed three times with the final assertions. The [focused repeats](logs/ci-browser-focused-green.log) passed 10/10, and the [complete local browser suite](logs/ci-browser-full-green.log) passed all 102 tests. The controlled case does not reproduce the exact hosted timing.
+
+The earlier `pnpm check` receipt identifies source snapshot SHA-256 `e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e`. Its 898 unit tests across 64 files, build, and type results still apply to the unchanged production sources. This follow-up does not claim another complete `pnpm check` run or an overall performance gain.
+
+The [public attachment readback](public-attachments-readback.json) records successful anonymous GETs for all 39 media files, with matching bytes and SHA-256 hashes. Two swapped image URL mappings were corrected without another upload. Production deployment, npm publication, Infisical, GitHub App, required rule, and resource changes remain outside this follow-up.

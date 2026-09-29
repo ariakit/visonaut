@@ -1,102 +1,31 @@
 # @visonaut/playwright
 
-Capture prepared page variants and write a Visonaut manifest with a Playwright reporter. The service compares uploaded images. An upload does not approve a visual change.
-
-Launch support is limited to Node.js 24.18.0, pnpm 12.5.1, and Playwright 1.63.0. Single captures emit original PNG bytes. Batched captures encode lossless PNG crops. The ingest protocol also supports validated lossless WebP from other clients.
-
-```sh
-pnpm add -D @visonaut/playwright visonaut @playwright/test@1.63.0
-```
-
-## Capture
-
-The caller owns navigation, page preparation, media settings, variant loops, clipping, and cleanup. Each call captures one variant. Item and variant keys are explicit. A display-name change does not change identity.
+Capture prepared Playwright pages with stable item and variant identities. Ariakit owns its projects, page preparation, clip geometry, and normal Playwright command. Visonaut waits for settled font faces and two consecutive equal screenshots. A failed or incomplete test run produces no manifest.
 
 ```ts
 import { visual } from "@visonaut/playwright";
+import { measureEnvironment } from "@visonaut/playwright/environment";
 
-await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+const environment = await measureEnvironment({
+  outputDirectory: captureDirectory,
+  appPackageFile: new URL("./package.json", import.meta.url).pathname,
+  applicationFontPackage: "@fontsource-variable/inter",
+});
+// Set project.metadata.visonaut.profile = environment.profile.
 await visual(page, {
-  item: "dialog/success/open",
-  name: "Success dialog",
-  variant: {
-    key: "react-chromium-dark",
-    framework: "react",
-    browser: "chromium",
-    colorScheme: "dark",
-  },
-  timeout: 5000,
-  screenshot: { fullPage: false, scale: "css" },
+  item: "dialog/open",
+  variant: { key: "react-light", browser: "chromium" },
 });
 ```
 
-The adapter waits for document and font readiness. It captures PNG images with animations disabled and requires two consecutive images with equal dimensions and equal decoded RGBA pixels. Captures are at least 100 ms apart. A deadline applies to the complete operation. The default is 5000 ms; a timeout is a capture failure, including for a new item. Pass the existing effective timeout and screenshot options when you replace another capture helper. The adapter does not read private Playwright assertion configuration. Capture limits are 20 MiB encoded and 32 million decoded pixels. These are defensive client limits, separate from the measured service policy.
+Configure `@visonaut/playwright/reporter` in the caller's normal Playwright configuration. Set `outputFile`, the exact GitHub run and tested commit, the shard key and source attempt, and trusted discovery options. Candidate discovery uses the pinned package digest and the complete selected suite. Keep expected invocation and project checks explicit in the local Ariakit setup helper.
 
-Use `visualBatch` when several static items share one page state and the full page fits the capture limits. Each item keeps its own identity, image, and capture profile. Item clips use integer CSS-pixel coordinates in the document. The adapter takes one full-page screenshot pair and crops each item from the stable image. The profile records the shared-crop method, which can render differently from direct clipped screenshots. Use `visual` for individual items on larger pages.
+The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Comparison policy and engine identity belong to the service comparison and do not change the captured rendering identity.
 
-```ts
-import { visualBatch } from "@visonaut/playwright";
+Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 
-await visualBatch(page, {
-  variant: { key: "react-chromium-light", browser: "chromium" },
-  items: [
-    { item: "button/default", clip: { x: 24, y: 24, width: 360, height: 180 } },
-    { item: "button/brand", clip: { x: 400, y: 24, width: 360, height: 180 } },
-  ],
-});
-```
+Upload the complete successful capture directory as one ordinary GitHub Actions artifact per required shard. Name it `visonaut-capture-<run-id>-<source-attempt>-<shard-key>` and retain it for one day. Keep failure screenshots and retry traces in ordinary bounded seven-day diagnostic artifacts. Candidate jobs receive no GitHub OIDC or service upload credential.
 
-For the supported Playwright 1.63.0 Firefox path, set `PW_TEST_SCREENSHOT_NO_FONTS_READY=1` in the Playwright config before browsers launch. Playwright's own screenshot wait can remain pending after navigation even when all font faces have settled. The trusted CI config helper sets this value; the adapter then checks the font faces directly.
+The sole trusted Submit job runs `visonaut begin --run <run-id>` before lengthy work, then `visonaut submit --shard linux --shard safari`. It downloads exact verified artifacts, validates every image and rendering profile, and submits a new complete bundle. An expired inherited artifact requires a full visual rerun. Upload or submission never grants review approval.
 
-Set the operating-system image digest, font digest, comparison-policy digest, and comparison-engine version in `project.metadata.visonaut.profile`, or pass them in `visual(..., { profile })`. Use real SHA-256 digests from the trusted capture configuration. Browser version, viewport, device scale, locale, time zone, media state, animation policy, and screenshot options are recorded from the prepared page. A variant's declared browser or media state must match that page.
-
-```ts
-import { defineConfig } from "@playwright/test";
-
-export default defineConfig({
-  use: { reducedMotion: "reduce", locale: "en-US", timezoneId: "UTC" },
-  metadata: {
-    visonaut: {
-      profile: {
-        osImageDigest: process.env.VISONAUT_OS_IMAGE_DIGEST,
-        fontsDigest: process.env.VISONAUT_FONTS_DIGEST,
-        comparisonPolicyDigest: process.env.VISONAUT_POLICY_DIGEST,
-        comparisonEngineVersion: "rgba-v1",
-      },
-    },
-  },
-});
-```
-
-The adapter does not set CI gates. Ariakit's integration must retain its `CI` and `VISUAL_TEST` checks before calling it.
-
-## Workflow capture
-
-Keep the application's Playwright configuration and visual test command. Call `measureEnvironment` from `@visonaut/playwright/ci` before the visual run, with `outputDirectory` set to the capture directory. It writes the `environment.json` required by `visonaut pack`. Set the returned profile on the visual projects and add the Visonaut reporter with its manifest in that same directory. The existing `visual()` helper calls this adapter from the prepared page. The reporter writes the successful manifest and images there.
-
-In each visual job, run the existing tests and then encrypt its result:
-
-```sh
-VISUAL_TEST=true pnpm -F app exec playwright test --project chrome firefox --grep @visual --output test-results/test-visual
-pnpm exec visonaut pack --dir "$RUNNER_TEMP/visonaut-linux" --output "$RUNNER_TEMP/visonaut-linux.enc"
-```
-
-The visual jobs have no GitHub OIDC permission. Upload only the encrypted packs as short-lived Actions artifacts. One signed Submit job downloads every pack and submits the run:
-
-```yaml
-- id: submit
-  run: pnpm exec visonaut submit --bundle "linux=$RUNNER_TEMP/visonaut-linux.enc" --bundle "safari=$RUNNER_TEMP/visonaut-safari.enc"
-- uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-  with:
-    name: ${{ steps.submit.outputs.name }}
-    path: ${{ steps.submit.outputs.path }}
-    if-no-files-found: error
-```
-
-Submit obtains the upload credential and validates the profile recorded by each capture job. Its generated receipt artifact is required for Visonaut to verify the completed job. Keep plaintext screenshots out of GitHub artifacts. The pinned workflow controls the capture jobs and the signed Submit job; Visonaut verifies that workflow source.
-
-The application checkout controls its test files, Playwright configuration, and installed reporter. Visonaut verifies the signed Submit job and validates the bundle, but it cannot attest that collaborator-controlled test code ran an immutable suite. Review changes to visual test selection and dependencies as code.
-
-The older `visonaut-capture render` command remains available for pinned diagnostic workflows. New application integrations should use their existing Playwright jobs.
-
-The reporter selects only the final successful attempt of each test. If a test captures blue, fails later, then captures green and passes on retry, only green enters the manifest. A failed run, exhausted retry, missing image, duplicate identity, caught capture failure, or empty capture set produces no successful manifest. The reporter deletes any prior manifest before the new run starts, so a failed rerun cannot upload old success.
+The old `@visonaut/playwright/ci` export, `visonaut-capture` binary, second test configuration, runtime lock, dependency bootstrap, transfer encryption, and per-shard signed upload are removed. New integrations use their normal Playwright jobs and the single signed Submit path.

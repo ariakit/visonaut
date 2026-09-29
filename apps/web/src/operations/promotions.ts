@@ -1,20 +1,12 @@
 import { createHash } from "node:crypto";
 import {
-  atomic,
-  assertion,
   claimPromotionLease,
   ConflictError,
   IncompleteError,
   releasePromotionLeaseStatement,
   Service,
 } from "@visonaut/service";
-import {
-  copyVerifiedObject,
-  digestStream,
-  mapConcurrent,
-  recordEvent,
-  resolveEvents,
-} from "./common.ts";
+import { digestStream, mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 interface PromotionPosition {
@@ -192,9 +184,6 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       continue;
     }
     const started = performance.now();
-    let copyRows = 0;
-    let copyObjects = 0;
-    let copyBytes = 0;
     let verifyRows = 0;
     let verifyBytes = 0;
     let outcome = "deferred";
@@ -207,56 +196,42 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         now: context.now(),
         copyLimit: remainingObjects,
       });
-      copyRows = copies.length;
-      const copyGroups = new Map<string, typeof copies>();
-      for (const copy of copies) {
-        const group = copyGroups.get(copy.object_key);
-        if (!group) {
-          copyGroups.set(copy.object_key, [copy]);
-          copyObjects += 1;
-          copyBytes += copy.bytes;
-          continue;
-        }
-        const first = group[0];
-        if (
-          !first ||
-          first.image_id !== copy.image_id ||
-          first.source_object_key !== copy.source_object_key ||
-          first.digest !== copy.digest ||
-          first.bytes !== copy.bytes ||
-          first.content_type !== copy.content_type
-        ) {
-          throw new Error("Protected snapshot copies disagree on shared object metadata.");
-        }
-        group.push(copy);
-      }
-      // Captures may share an image, so only one worker writes each protected key.
       remainingObjects -= copies.length;
+      const groups = new Map<string, typeof copies>();
+      for (const copy of copies) {
+        const group = groups.get(copy.source_object_key) ?? [];
+        const previous = group[0];
+        if (
+          copy.object_key !== copy.source_object_key ||
+          (previous &&
+            (previous.digest !== copy.digest ||
+              previous.bytes !== copy.bytes ||
+              previous.image_id !== copy.image_id))
+        )
+          throw new Error("Baseline originals disagree on immutable source identity.");
+        group.push(copy);
+        groups.set(copy.source_object_key, group);
+      }
       await mapConcurrent(
-        [...copyGroups.values()],
+        [...groups.values()],
         maximumConcurrentPromotionObjects,
         async (group) => {
           const copy = group[0];
-          if (!copy) {
-            throw new Error("Missing protected snapshot copy.");
-          }
-          const result = await copyVerifiedObject({
-            source: context.images,
-            destination: context.images,
-            sourceKey: copy.source_object_key,
-            destinationKey: copy.object_key,
-            maximum: budget.maximumObjectBytes,
-            expectedDigest: copy.digest,
-            expectedBytes: copy.bytes,
-          });
-          for (const capture of group) {
+          if (!copy) throw new Error("Missing baseline original.");
+          const object = await context.images.get(copy.source_object_key);
+          if (!object) throw new Error("A required baseline source original is missing.");
+          const verified = await digestStream(object.body, budget.maximumObjectBytes);
+          if (verified.digest !== copy.digest || verified.bytes !== copy.bytes)
+            throw new Error("Baseline source original failed verification.");
+          for (const capture of group)
             await service.recordSnapshotCopy({
               snapshotId,
               captureId: capture.capture_id,
-              objectKey: capture.object_key,
-              digest: result.digest,
+              objectKey: copy.source_object_key,
+              digest: verified.digest,
             });
-          }
+          verifyRows += group.length;
+          verifyBytes += verified.bytes;
         },
       );
       const pending = await service.pendingSnapshotCopies(snapshotId, 1);
@@ -264,53 +239,6 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         report.deferred.push(candidate.id);
         report.hasMore = true;
       } else {
-        await database
-          .prepare(
-            "INSERT INTO operations_promotions(snapshot_id) VALUES(?) ON CONFLICT DO NOTHING",
-          )
-          .bind(snapshotId)
-          .run();
-        const verification = await database
-          .prepare(`SELECT copy.capture_id,copy.object_key,copy.digest,image.bytes FROM visonaut_snapshot_images copy
-          JOIN visonaut_images image ON image.id=copy.image_id JOIN operations_promotions progress ON progress.snapshot_id=copy.snapshot_id
-          WHERE copy.snapshot_id=? AND copy.copied=1 AND (progress.verified_through IS NULL OR copy.capture_id>progress.verified_through)
-          ORDER BY copy.capture_id LIMIT ?`)
-          .bind(snapshotId, remainingObjects + 1)
-          .all<{ capture_id: string; object_key: string; digest: string; bytes: number }>();
-        const verificationRows = verification.results ?? [];
-        const page = verificationRows.slice(0, remainingObjects);
-        verifyRows = page.length;
-        verifyBytes = page.reduce((bytes, copy) => bytes + copy.bytes, 0);
-        remainingObjects -= page.length;
-        await mapConcurrent(page, maximumConcurrentPromotionObjects, async (copy) => {
-          const object = await context.images.get(copy.object_key);
-          if (!object) {
-            throw new Error("A protected snapshot object disappeared before promotion.");
-          }
-          const verified = await digestStream(object.body, budget.maximumObjectBytes);
-          if (verified.digest !== copy.digest || verified.bytes !== copy.bytes) {
-            throw new Error("Protected snapshot integrity changed.");
-          }
-        });
-        const last = page.at(-1);
-        if (last) {
-          // Only advance the cursor after every object in the page passes.
-          await atomic(database, [
-            assertion(
-              database,
-              "EXISTS(SELECT 1 FROM work_retention_pins WHERE run_id=? AND owner=? AND lease_token=? AND lease_until>?)",
-              [candidate.id, owner, token, context.now()],
-            ),
-            database
-              .prepare("UPDATE operations_promotions SET verified_through=? WHERE snapshot_id=?")
-              .bind(last.capture_id, snapshotId),
-          ]);
-        }
-        if (verificationRows.length > page.length) {
-          report.hasMore = true;
-          report.deferred.push(candidate.id);
-          continue;
-        }
         await service.promote({
           snapshotId,
           promotionId,
@@ -320,7 +248,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         await resolveEvents(database, "promotion", candidate.id, context.now());
         report.completed.push(candidate.id);
         outcome = "completed";
-        // Publishing checks runs before copying; schedule a pass for the new revision.
+        // Publishing checks runs before source verification; schedule a pass for the new revision.
         report.hasMore = true;
       }
     } catch (error) {
@@ -328,7 +256,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       const code =
         error instanceof ConflictError || error instanceof IncompleteError
           ? "state-changed"
-          : "copy-failed";
+          : "source-verification-failed";
       await recordEvent(database, {
         kind: "promotion",
         subject: candidate.id,
@@ -346,9 +274,6 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
           JSON.stringify({
             event: "baseline_promotion_step",
             runId: candidate.id,
-            copyRows,
-            copyObjects,
-            copyBytes,
             verifyRows,
             verifyBytes,
             elapsedMs: Math.round(performance.now() - started),

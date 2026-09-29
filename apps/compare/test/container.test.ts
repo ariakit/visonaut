@@ -12,7 +12,10 @@ import {
 } from "@visonaut/compare";
 import type { ComparisonTask } from "@visonaut/service";
 import { nodeCodecs } from "../../../packages/compare/test/codecs.ts";
-import { processComparisonTaskInContainer, type ContainerTransport } from "../src/container.ts";
+import {
+  processComparisonTaskInContainer,
+  type ContainerTransport,
+} from "../container/transport.ts";
 import type { ArtifactStorage } from "../src/process.ts";
 
 const codecVersion = "sharp-0.35.4-vips-8.18.6";

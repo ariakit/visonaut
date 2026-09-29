@@ -57,7 +57,7 @@ export function createExportWriter(context: OperationsContext, id: string, runId
     metadataBytes += bytes.length;
     if (
       bytes.length > context.budget.maximumObjectBytes ||
-      metadataBytes > context.budget.maximumDatabaseBytes
+      metadataBytes > context.budget.maximumMetadataBytes
     ) {
       throw new Error("Export metadata exceeds configured bounds.");
     }

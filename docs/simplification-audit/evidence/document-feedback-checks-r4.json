@@ -1,0 +1,156 @@
+{
+  "revision": "4",
+  "decisions": 44,
+  "cases": [
+    {
+      "name": "fresh",
+      "progress": "44 / 44 answered",
+      "open": [],
+      "o10": {
+        "optionId": "plan-all",
+        "notes": ""
+      },
+      "mergedRevision": "4",
+      "emptyPrompt": true
+    },
+    {
+      "name": "r3-open-baseline",
+      "progress": "44 / 44 answered",
+      "open": [],
+      "o10": {
+        "optionId": "plan-all",
+        "notes": ""
+      },
+      "mergedRevision": "4",
+      "emptyPrompt": true
+    },
+    {
+      "name": "r3-submitted-plan-all",
+      "progress": "44 / 44 answered",
+      "open": [],
+      "o10": {
+        "optionId": "plan-all",
+        "notes": ""
+      },
+      "mergedRevision": "4",
+      "emptyPrompt": true
+    }
+  ],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "preservedLocalChange": {
+    "name": "r3-unsubmitted-alternative",
+    "progress": "44 / 44 answered",
+    "open": [],
+    "o10": {
+      "optionId": "keep-selector",
+      "notes": "Unsubmitted local question"
+    },
+    "mergedRevision": "4",
+    "emptyPrompt": false,
+    "promptHasLocalNote": true
+  },
+  "toggled": {
+    "progress": "44 / 44 answered",
+    "changedIds": [
+      "O10"
+    ],
+    "includesAnswer": true,
+    "persistedSelection": "keep-selector"
+  },
+  "copy": {
+    "matchesPreview": true,
+    "repeatMatches": true,
+    "storageUnchanged": true,
+    "baselineO10": {
+      "optionId": "plan-all",
+      "notes": ""
+    }
+  },
+  "noteOnly": {
+    "progress": "44 / 44 answered",
+    "changedIds": [
+      "O10"
+    ],
+    "containsNote": true,
+    "selection": "plan-all",
+    "persisted": "QA note only: keep reviewed release scope."
+  },
+  "models": {
+    "initialOption": "plan-all",
+    "initialResult": "Publish the reviewed planThe manual job publishes every eligible unpublished public package from the reviewed version plan. It keeps one latest/next tag, source checks, and registry checks. The dispatch has no package filter.",
+    "initialSteps": "01Review package versions before release02Verify main source and package contents03Publish every eligible package under one tag",
+    "alternativeResult": "Keep three dispatch choicesAn operator can hold back one package, but a trusted preparation layer must construct and verify the chosen Changesets plan. CLI-only cannot be a simple ignore of the adapter it depends on.",
+    "alternativeSteps": "01Choose both, CLI, or adapter02Validate dependency-safe release scope03Publish and verify requested tag",
+    "recordedSelectionAfterAlternative": "plan-all",
+    "storageUnchanged": true,
+    "resetOption": "plan-all"
+  },
+  "terms": [
+    {
+      "name": "Changesets plan",
+      "hoverMatches": true,
+      "focusMatches": true,
+      "clickMatches": true,
+      "describedBy": true,
+      "escapeClosed": true,
+      "outsideClosed": true
+    },
+    {
+      "name": "per-package selector",
+      "hoverMatches": true,
+      "focusMatches": true,
+      "clickMatches": true,
+      "describedBy": true,
+      "escapeClosed": true,
+      "outsideClosed": true
+    }
+  ],
+  "narrow": {
+    "innerWidth": 390,
+    "documentWidth": 390,
+    "o10": {
+      "left": 16,
+      "right": 374,
+      "width": 358
+    }
+  },
+  "touch": {
+    "device": "Chromium touch emulation, 390x844",
+    "terms": [
+      {
+        "name": "Changesets plan",
+        "firstTapMatches": true,
+        "withinViewport": true,
+        "outsideTapClosed": true
+      },
+      {
+        "name": "per-package selector",
+        "firstTapMatches": true,
+        "withinViewport": true,
+        "outsideTapClosed": true
+      }
+    ],
+    "pageErrors": []
+  },
+  "checkedAt": "2026-09-29T17:18:04.645484+00:00",
+  "url": "http://127.0.0.1:4319/",
+  "method": "playwright-cli, isolated local Chromium session; served portable index.html over HTTP",
+  "artifactSha256": "9cdc2d95bf06bb6bce878d7ff5dfd91e1663a3644684445bf3ea8c3d3d256024",
+  "recordSha256": "52e0e05a2b6cb3717e828a46b421e115f2fa02b484e2a7cbeb54ad1b2c09ad44",
+  "screenshots": [
+    "document-desktop-r4.png",
+    "document-narrow-r4.png",
+    "document-O10-r4.png",
+    "document-O10-narrow-r4.png",
+    "document-O10-alternative-r4.png"
+  ],
+  "findings": [],
+  "limits": [
+    "No file:// browser test. Local HTTP only, per the prior browser-policy block.",
+    "The revision 3 seed is reconstructed from the known previous baseline: 43 answered decisions, O10 open, mergedRevision=3. It is not a capture of the user browser profile.",
+    "Touch behavior uses Chromium emulation, not physical device or screen-reader testing.",
+    "This check covers the revision 4 audit document and O10 model, not live npm publication or production app behavior.",
+    "Page and console error listeners cover instrumented reloads and interactions. The initial open occurred before listeners were attached."
+  ]
+}

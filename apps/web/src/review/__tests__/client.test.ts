@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { loadReview, parseReviewModel, parseReviewPollState } from "../client.ts";
-import { ReviewCommandError } from "../model.ts";
+import { compactReviewModel } from "../compact-model.ts";
+import { ReviewCommandError, type ReviewModel } from "../model.ts";
 import { applySavedReview } from "../navigation.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -18,19 +19,27 @@ afterEach(() => {
 test("the review client keeps the configured repository and rejects an invalid label", () => {
   const model = fixtureModel();
   const raw = { ...model, run: { ...model.run, repository: "ariakit/visonaut-diagnostics" } };
-  expect(parseReviewModel(raw).run.repository).toBe("ariakit/visonaut-diagnostics");
-  expect(() => parseReviewModel({ ...raw, run: { ...raw.run, repository: 42 } })).toThrow();
+  expect(parseReviewModel(compactReviewModel(raw)).run.repository).toBe(
+    "ariakit/visonaut-diagnostics",
+  );
+  expect(() =>
+    parseReviewModel({ ...compactReviewModel(raw), run: { ...raw.run, repository: 42 } }),
+  ).toThrow();
 });
 
 test("the client preserves archived read-only history and rejects malformed archive state", async () => {
-  const model = {
+  const model: ReviewModel = {
     ...fixtureModel(),
     reviewReady: false,
     archived: true,
     readOnlyReason: "This closed run is read-only. Its review history remains available.",
   };
   vi.stubGlobal("fetch", async (path: unknown) =>
-    json(path === "/api/review-sessions" ? { reviewSessionId: "session-1" } : model),
+    json(
+      path === "/api/review-sessions"
+        ? { reviewSessionId: "session-1" }
+        : compactReviewModel(model),
+    ),
   );
   const review = await loadReview("run-42");
   expect(review.model).toMatchObject({
@@ -38,7 +47,7 @@ test("the client preserves archived read-only history and rejects malformed arch
     readOnlyReason: model.readOnlyReason,
     reviewReady: false,
   });
-  expect(() => parseReviewModel({ ...model, archived: "false" })).toThrow();
+  expect(() => parseReviewModel({ ...compactReviewModel(model), archived: "false" })).toThrow();
 });
 
 test("the client binds every review and Undo to the server session for this page", async () => {
@@ -47,7 +56,7 @@ test("the client binds every review and Undo to the server session for this page
   vi.stubGlobal("fetch", async (path: unknown, init?: RequestInit) => {
     requests.push({ path, init });
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" }, 201);
-    if (path === "/api/runs/run-42") return json(model);
+    if (path === "/api/runs/run-42") return json(compactReviewModel(model));
     if (path === "/api/comparisons/comparison-2/commands")
       return json({
         commandId: "command-1",
@@ -60,7 +69,7 @@ test("the client binds every review and Undo to the server session for this page
         runStatus: "needs-review",
       });
     return json({
-      model,
+      model: compactReviewModel(model),
       commandId: "undo-1",
       selection: { itemKey: "dialog/open", variantKey: "React" },
     });
@@ -207,11 +216,11 @@ test("conflict responses carry current evidence and reviewer without inventing s
   const model = fixtureModel();
   vi.stubGlobal("fetch", async (path: unknown) => {
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
-    if (path === "/api/runs/run-42") return json(model);
+    if (path === "/api/runs/run-42") return json(compactReviewModel(model));
     return json(
       {
         error: { code: "conflict", message: "A newer verdict exists." },
-        model,
+        model: compactReviewModel(model),
         reviewer: "octocat",
       },
       409,
@@ -239,14 +248,15 @@ test("HTML failures and invalid review models cannot become review data", async 
       new Response("Gateway error", { status: 503, headers: { "content-type": "text/html" } }),
   );
   await expect(loadReview("run-42")).rejects.toBeInstanceOf(ReviewCommandError);
-  expect(() => parseReviewModel({ ...fixtureModel(), reviewReady: "true" })).toThrow(
-    "invalid state",
-  );
+  expect(() =>
+    parseReviewModel({ ...compactReviewModel(fixtureModel()), reviewReady: "true" }),
+  ).toThrow("invalid state");
   const model = fixtureModel();
+  const wire = compactReviewModel(model);
   const raw = {
-    ...model,
+    ...wire,
     items: [
-      { ...model.items[0], variants: [{ ...model.items[0]?.variants[0], reference: undefined }] },
+      { ...wire.items[0], variants: [{ ...wire.items[0]?.variants[0], reference: undefined }] },
     ],
   };
   expect(() => parseReviewModel(raw)).toThrow();
@@ -254,11 +264,14 @@ test("HTML failures and invalid review models cannot become review data", async 
 
 test("unknown additive API fields stay compatible, but unsupported verdicts fail clearly", () => {
   const model = fixtureModel();
-  expect(parseReviewModel({ ...model, schemaVersion: 1, futureField: "allowed" })).toEqual(model);
+  expect(
+    parseReviewModel({ ...compactReviewModel(model), schemaVersion: 1, futureField: "allowed" }),
+  ).toEqual(model);
+  const wire = compactReviewModel(model);
   const raw = {
-    ...model,
+    ...wire,
     items: [
-      { ...model.items[0], variants: [{ ...model.items[0]?.variants[0], verdict: "auto-pass" }] },
+      { ...wire.items[0], variants: [{ ...wire.items[0]?.variants[0], verdict: "auto-pass" }] },
     ],
   };
   expect(() => parseReviewModel(raw)).toThrow("unsupported review state");
@@ -282,7 +295,7 @@ test("the compact poll response rejects invalid terminal state", () => {
 });
 
 test("historical selection remains pinned during initial load, refresh, and recompare", async () => {
-  const model = {
+  const model: ReviewModel = {
     ...fixtureModel(),
     archived: true,
     reviewReady: false,
@@ -297,7 +310,10 @@ test("historical selection remains pinned during initial load, refresh, and reco
     requests.push(path);
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
     if (path === "/api/runs/run-42/recompare")
-      return json({ ...model, comparisonId: "history/two", comparisonState: "comparing" }, 202);
+      return json(
+        { ...compactReviewModel(model), comparisonId: "history/two", comparisonState: "comparing" },
+        202,
+      );
     if (String(path).includes("/state"))
       return json({
         run: { status: "comparing" },
@@ -305,7 +321,7 @@ test("historical selection remains pinned during initial load, refresh, and reco
         reviewReady: false,
         archived: true,
       });
-    return json(model);
+    return json(compactReviewModel(model));
   });
   const review = await loadReview("run-42", "history/one");
   expect(requests).toContain("/api/runs/run-42?comparison=history%2Fone");
@@ -338,7 +354,7 @@ test("live recompare continues to follow the active comparison pointer", async (
         reviewReady: false,
         archived: false,
       });
-    return json({ ...fixtureModel(), comparisonId: "new-live-comparison" });
+    return json({ ...compactReviewModel(fixtureModel()), comparisonId: "new-live-comparison" });
   });
   const review = await loadReview("run-42");
   await review.commands.recompare?.();
@@ -351,13 +367,15 @@ test("live recompare continues to follow the active comparison pointer", async (
 
 test("malformed historical state cannot enable actions or become comparison history", () => {
   const model = fixtureModel();
-  expect(() => parseReviewModel({ ...model, recompareAllowed: "true" })).toThrow("invalid state");
-  expect(() => parseReviewModel({ ...model, comparisonState: "approved" })).toThrow(
-    "unsupported review state",
-  );
+  expect(() =>
+    parseReviewModel({ ...compactReviewModel(model), recompareAllowed: "true" }),
+  ).toThrow("invalid state");
+  expect(() =>
+    parseReviewModel({ ...compactReviewModel(model), comparisonState: "approved" }),
+  ).toThrow("unsupported review state");
   expect(() =>
     parseReviewModel({
-      ...model,
+      ...compactReviewModel(model),
       historicalComparisons: [
         { id: "history-1", ordinal: 1, state: "ready", createdAt: "yesterday" },
       ],
@@ -370,10 +388,29 @@ test("the client retains explicit mask expectation and rejects non-boolean evide
   const variant = model.items[0]?.variants[0];
   if (!variant) throw new Error("Missing variant.");
   variant.maskExpected = false;
-  expect(parseReviewModel(model).items[0]?.variants[0]?.maskExpected).toBe(false);
+  expect(parseReviewModel(compactReviewModel(model)).items[0]?.variants[0]?.maskExpected).toBe(
+    false,
+  );
+  const wire = compactReviewModel(model);
   const malformed = {
-    ...model,
-    items: [{ ...model.items[0], variants: [{ ...variant, maskExpected: "false" }] }],
+    ...wire,
+    items: [
+      { ...wire.items[0], variants: [{ ...wire.items[0]?.variants[0], maskExpected: "false" }] },
+    ],
   };
   expect(() => parseReviewModel(malformed)).toThrow("invalid state field");
+});
+
+test("model-only reads forward route cancellation and do not create mutable commands", async () => {
+  const controller = new AbortController();
+  const fetcher = vi.fn<typeof fetch>(async (_path, init) => {
+    expect(init?.signal).toBe(controller.signal);
+    controller.abort();
+    throw new DOMException("Aborted", "AbortError");
+  });
+  vi.stubGlobal("fetch", fetcher);
+  await expect(loadReview("run-42", undefined, controller.signal)).rejects.toMatchObject({
+    name: "AbortError",
+  });
+  expect(fetcher).toHaveBeenCalledTimes(1);
 });

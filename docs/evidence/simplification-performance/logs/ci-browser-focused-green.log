@@ -1,0 +1,38 @@
+$ playwright test --config apps/web/src/review/__tests__/playwright.config.ts --grep 'a diff loads on first use and keeps pan until the variant changes' --repeat-each=10
+[WebServer] (node:44424) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 3 workers
+
+(node:44444) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44443) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   1 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   2 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+(node:44516) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44518) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44517) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   5 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   4 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.4s)
+(node:44587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44588) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:44589) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   7 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   8 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+  ✓   9 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.3s)
+(node:44646) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  10 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.1s)
+
+  10 passed (7.9s)

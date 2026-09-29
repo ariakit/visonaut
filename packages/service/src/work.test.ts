@@ -1,8 +1,9 @@
-import { readFileSync } from "node:fs";
+import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { atomic, type Database, type Result, type SqlValue, type Statement } from "./database.ts";
 import {
+  operationsMessage,
   claimExpiredRun,
   claimPromotionLease,
   claimStatus,
@@ -65,11 +66,9 @@ class TestDatabase implements Database {
   readonly connection = new DatabaseSync(":memory:");
 
   constructor() {
-    this.connection.exec("PRAGMA foreign_keys = ON");
-    this.connection.exec(readFileSync(new URL("../work-schema.sql", import.meta.url), "utf8"));
-    this.connection.exec(
-      "CREATE TABLE visonaut_assertions (valid INTEGER NOT NULL CHECK (valid = 1))",
-    );
+    for (const migration of readTestMigrations()) {
+      this.connection.exec(migration.sql);
+    }
     this.connection.exec("CREATE TABLE result_evidence (id TEXT PRIMARY KEY)");
   }
 
@@ -974,5 +973,22 @@ describe("retained image bytes", () => {
     await expect(
       database.prepare("UPDATE work_retained_runs SET byte_state = 'live'").run(),
     ).rejects.toThrow("cannot be restored");
+  });
+});
+
+describe("named operation messages", () => {
+  it("decodes narrow continuations and rejects an unknown maintenance family", () => {
+    expect(operationsMessage({ kind: "status", comparisonId: "comparison" })).toEqual({
+      kind: "status",
+      comparisonId: "comparison",
+    });
+    expect(operationsMessage({ kind: "ingest" })).toEqual({ kind: "ingest" });
+    expect(operationsMessage({ kind: "maintenance", family: "retention" })).toEqual({
+      kind: "maintenance",
+      family: "retention",
+    });
+    expect(operationsMessage({ kind: "maintenance", family: "everything" })).toBeNull();
+    expect(operationsMessage({ kind: "status", comparisonId: 1 })).toBeNull();
+    expect(operationsMessage({ kind: "continue" })).toEqual({ kind: "recovery" });
   });
 });

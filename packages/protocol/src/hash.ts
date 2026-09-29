@@ -72,6 +72,22 @@ export function isJson(value: unknown, depth = 0): value is Json {
   return Object.values(value).every((item) => isJson(item, depth + 1));
 }
 
+/** Comparison settings do not affect the pixels produced by the browser. */
+export function renderingProfile(
+  profile: CaptureProfile,
+): Omit<CaptureProfile, "comparisonPolicyDigest" | "comparisonEngineVersion"> {
+  const {
+    comparisonPolicyDigest: _comparisonPolicyDigest,
+    comparisonEngineVersion: _comparisonEngineVersion,
+    ...rendering
+  } = profile;
+  return rendering;
+}
+
+export function digestRenderingProfile(profile: CaptureProfile): Promise<string> {
+  return digestJson(renderingProfile(profile));
+}
+
 /** Content clipping can change with a defect without a trusted-plan rollout. */
 export async function digestEnvironmentProfile(profile: CaptureProfile): Promise<string> {
   const captureOptions = Object.fromEntries(

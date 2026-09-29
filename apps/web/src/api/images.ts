@@ -1,9 +1,16 @@
-import type { ApiContext } from "./context.js";
+import type { Database } from "@visonaut/service";
+import type { ObjectStorage } from "./context.js";
 import { uuid } from "./input.js";
+
+interface PublicImageContext {
+  database: Database;
+  images: Pick<ObjectStorage, "get" | "head">;
+  configuration: { limits: { maximumImageBytes: number } };
+}
 
 export async function publicImage(
   request: Request,
-  context: ApiContext,
+  context: PublicImageContext,
   imageId: string,
 ): Promise<Response> {
   if (!/^[a-f0-9]{64}$/.test(imageId)) uuid(imageId);
@@ -27,19 +34,17 @@ export async function publicImage(
       bytes_present: number;
     }>();
   if (!image) return missing();
-  let stored = image.bytes_present ? await context.images.get(image.object_key) : null;
-  if (!stored) {
-    const copy = await context.database
-      .prepare(
-        "SELECT object_key FROM visonaut_snapshot_images WHERE image_id = ? AND copied = 1 ORDER BY snapshot_id LIMIT 1",
-      )
-      .bind(image.id)
-      .first<{ object_key: string }>();
-    if (copy) {
-      stored = await context.images.get(copy.object_key);
+  const etag = `"${image.digest}"`;
+  const metadataOnly = request.method === "HEAD" || request.headers.get("if-none-match") === etag;
+  const read = (key: string) => (metadataOnly ? context.images.head(key) : context.images.get(key));
+  const stored = image.bytes_present ? await read(image.object_key) : null;
+  if (!stored) return missing();
+  if (stored.size > context.configuration.limits.maximumImageBytes) {
+    if ("body" in stored && stored.body) {
+      await stored.body.cancel();
     }
+    return missing();
   }
-  if (!stored || stored.size > context.configuration.limits.maximumImageBytes) return missing();
   const headers = new Headers({
     "Content-Type": image.content_type,
     "Content-Length": String(stored.size),
@@ -57,5 +62,6 @@ export async function publicImage(
   if (request.method === "HEAD") {
     return new Response(null, { headers });
   }
-  return new Response(await stored.arrayBuffer(), { headers });
+  if (!("body" in stored) || !stored.body) return missing();
+  return new Response(stored.body, { headers });
 }

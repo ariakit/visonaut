@@ -1,7 +1,7 @@
 import * as ak from "@ariakit/react";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import {
   Button as FlatButton,
@@ -10,10 +10,27 @@ import {
 } from "../components/ariakit/components/button.ariakit.react.tsx";
 import {
   Shell,
+  ShellHeader,
+  ShellMain,
+  ShellMainHeader,
+  ShellMainBody,
+  ShellFooter,
   ShellSidebar,
   ShellSidebarBody,
   ShellSidebarHeader,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
+import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
+import {
+  Disclosure,
+  DisclosureButton,
+} from "../components/ariakit/components/disclosure.ariakit.react.tsx";
+import {
+  Tabs,
+  Tab,
+  TabList,
+  TabPanel,
+} from "../components/ariakit/components/tabs.ariakit.react.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import { ItemList } from "./item-list.tsx";
 import { ReviewCommandError } from "./model.ts";
@@ -44,6 +61,7 @@ export interface ReviewWorkspaceProps {
   model: ReviewModel;
   commands: ReviewCommands;
   route?: ReviewRoute;
+  headerEnd?: ReactNode;
 }
 
 export interface ReviewRoute {
@@ -65,14 +83,29 @@ interface SaveState {
   failedUndo?: UndoCommand;
 }
 
-function excludesShortcuts(event: KeyboardEvent<HTMLElement>) {
+function excludesShortcuts(event: globalThis.KeyboardEvent) {
   const target = event.target;
+  if (!target) return true;
   if (!("nodeType" in target)) return true;
   if (target.nodeType !== 1) return true;
   const element = target as HTMLElement;
   return !!element.closest(
-    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"]',
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"]',
   );
+}
+
+function followFocusedTab(event: KeyboardEvent<HTMLElement>) {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const list = event.currentTarget;
+  const before = list.ownerDocument.activeElement;
+  // Ariakit moves focus first. Follow that tab's existing route afterwards.
+  requestAnimationFrame(() => {
+    const next = list.ownerDocument.activeElement;
+    if (next === before || !next || !list.contains(next)) return;
+    if (next.tagName !== "A" && next.tagName !== "BUTTON") return;
+    (next as HTMLElement).click();
+  });
 }
 
 function initialSelection(model: ReviewModel): ReviewSelection {
@@ -142,19 +175,20 @@ function terminalEvidenceMessage(model: ReviewModel) {
 function ShortcutHelp() {
   return (
     <ak.DialogProvider>
-      <ak.DialogDisclosure render={<Button className="review-control" />}>
+      <ak.DialogDisclosure render={<Button className="text-xs" />}>
         Keyboard help
       </ak.DialogDisclosure>
       <ak.Dialog
-        className="review-help-dialog ak-layer ak-layer-canvas"
-        backdrop={<div className="review-dialog-backdrop" />}
+        render={<Frame $layer="canvas" $border $rounded="lg" $p={5} />}
+        className="review-help-dialog fixed inset-[50%_auto_auto_50%] -translate-x-1/2 -translate-y-1/2 w-[min(540px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-auto z-50 text-sm"
+        backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
       >
         <ak.DialogHeading>Review with the keyboard</ak.DialogHeading>
         <ak.DialogDescription>
-          Shortcuts work while focus is in the review workspace. Text fields, menus, and dialogs
-          keep their own keys.
+          Shortcuts work across this page. Text fields, tabs, menus, and dialogs keep their own
+          keys. Use the visible pan buttons to move zoomed images.
         </ak.DialogDescription>
-        <dl>
+        <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
           <dt>↑ / ↓</dt>
           <dd>Previous or next item. Stop at either end.</dd>
           <dt>← / → · 1–6</dt>
@@ -170,9 +204,7 @@ function ShortcutHelp() {
           <dt>Tab / Escape</dt>
           <dd>Move to controls or close this help.</dd>
         </dl>
-        <ak.DialogDismiss render={<Button className="review-control" />}>
-          Close help
-        </ak.DialogDismiss>
+        <ak.DialogDismiss render={<Button className="text-xs" />}>Close help</ak.DialogDismiss>
       </ak.Dialog>
     </ak.DialogProvider>
   );
@@ -182,7 +214,7 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
   return <ReviewSession key={props.model.run.id} {...props} />;
 }
 
-function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspaceProps) {
+function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: ReviewWorkspaceProps) {
   const [previousModel, setPreviousModel] = useState(suppliedModel);
   const [model, setModel] = useState(suppliedModel);
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
@@ -221,7 +253,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     mode === "diff" && (!variant?.reference || !variant.candidate) ? "side" : mode;
   const evidence = useEvidence({
     comparisonId: model.comparisonId,
-    variant,
+    variant: model.evidenceState === "summary" ? undefined : variant,
     mode: effectiveMode,
     retry,
   });
@@ -234,11 +266,17 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     evidence.status === "ready";
   const busy = saveState.status === "saving";
   const targets = item ? reviewTargets(item) : [];
-  const pending = model.items.reduce(
-    (count, entry) => count + entry.variants.filter(needsReview).length,
-    0,
+  const counts = useMemo(
+    () => ({
+      pending: model.items.reduce(
+        (count, entry) => count + entry.variants.filter(needsReview).length,
+        0,
+      ),
+      total: model.items.reduce((count, entry) => count + entry.variants.length, 0),
+    }),
+    [model.items],
   );
-  const total = model.items.reduce((count, entry) => count + entry.variants.length, 0);
+  const { pending, total } = counts;
   const awaitingComparison =
     pendingComparison ||
     model.comparisonState === "comparing" ||
@@ -576,7 +614,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
       });
     }
   };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || !shortcuts) return;
     if (excludesShortcuts(event)) return;
     if (event.altKey) return;
@@ -593,157 +631,212 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
     const order = partitionItems(model.items).order;
     const itemPosition = order.indexOf(itemIndex);
     const variantIndex = item.variants.indexOf(variant);
-    if (key === "arrowup") selectItem(order[itemPosition - 1] ?? -1);
-    else if (key === "arrowdown") selectItem(order[itemPosition + 1] ?? -1);
-    else if (key === "arrowleft") selectVariant(variantIndex - 1);
-    else if (key === "arrowright") selectVariant(variantIndex + 1);
-    else if (/^[1-6]$/.test(key)) selectVariant(Number(key) - 1);
-    else if (key === "a") review("approved", event.shiftKey);
-    else if (key === "x") review("rejected", event.shiftKey);
-    else if (key === "s") setView("side");
-    else if (key === "d") setView("diff");
-    else if (key === "f") setView("new");
-    else if (key === "g") setView("original");
-    else return;
+    if (key === "arrowup") {
+      selectItem(order[itemPosition - 1] ?? -1);
+    } else if (key === "arrowdown") {
+      selectItem(order[itemPosition + 1] ?? -1);
+    } else if (key === "arrowleft") {
+      selectVariant(variantIndex - 1);
+    } else if (key === "arrowright") {
+      selectVariant(variantIndex + 1);
+    } else if (/^[1-6]$/.test(key)) {
+      selectVariant(Number(key) - 1);
+    } else if (key === "a") {
+      review("approved", event.shiftKey);
+    } else if (key === "x") {
+      review("rejected", event.shiftKey);
+    } else if (key === "s") {
+      setView("side");
+    } else if (key === "d") {
+      setView("diff");
+    } else if (key === "f") {
+      setView("new");
+    } else if (key === "g") {
+      setView("original");
+    } else {
+      return;
+    }
     event.preventDefault();
-  };
+  });
+  useEffect(() => {
+    const document = workspace.current?.ownerDocument;
+    if (!document) return;
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
     <Shell
-      className="review-workspace"
+      className="review-workspace max-md:flex! max-md:flex-col! max-md:[&>.shell-sidebar]:w-full!"
       ref={workspace}
       tabIndex={0}
       aria-label="Review workspace"
-      onKeyDown={onKeyDown}
+      $layer="canvas"
     >
-      <div className="col-[shell] row-[header]">
-        <header className="review-run-header">
-          <div>
-            <p className="review-eyebrow">Visonaut · {model.run.repository ?? "Repository"}</p>
-            <h1>
+      <ShellHeader
+        $height="lg"
+        $stackCenter
+        start={
+          <a href="/" className="text-sm font-semibold">
+            Visonaut
+          </a>
+        }
+        center={
+          <div className="min-w-0">
+            <p className="text-xs ak-ink-60">{model.run.repository ?? "Repository"}</p>
+            <h1 className="text-sm font-semibold wrap-anywhere">
               {model.run.title ??
                 `${model.run.kind === "main" ? "Main" : model.run.kind === "merge_group" ? "Merge queue" : "Pull request"} visual review`}
             </h1>
-            <p className="review-run-identity">
-              <code title={model.run.testedSha}>{model.run.testedSha.slice(0, 12)}</code>
-              <span>Run {model.run.id}</span>
-              <span>Attempt {model.run.attempt}</span>
-              <span>Comparison {model.comparisonRevision}</span>
-            </p>
           </div>
-          <div className="review-run-state">
-            <strong>
-              {pending} of {total} need review
-            </strong>
-            <span>{runStatusLabel(model.run.status)}</span>
-          </div>
-        </header>
-        {!!model.historicalComparisons?.length && (
-          <nav className="review-banner" aria-label="Comparison history">
-            <a
-              href={`/runs/${encodeURIComponent(model.run.id)}`}
-              aria-current={
-                model.historicalComparisons.some(
-                  (comparison) => comparison.id === model.comparisonId,
-                )
-                  ? undefined
-                  : "page"
+        }
+        end={<div className="flex items-center gap-2">{headerEnd}</div>}
+      />
+      <ShellSidebar
+        $show={true}
+        $width="md"
+        render={<aside />}
+        className="review-sidebar max-md:w-full! max-md:[&>.shell-sidebar-panel]:w-full! max-md:[&>.shell-sidebar-panel]:relative!"
+        aria-label="Review navigation"
+      >
+        <ShellSidebarHeader className="flex justify-between text-xs" $p={3}>
+          <strong>Items</strong>
+          <span>{model.items.length}</span>
+        </ShellSidebarHeader>
+        <ShellSidebarBody $p={2} className="review-sidebar-body">
+          <ItemList
+            items={model.items}
+            selectedIndex={item ? model.items.indexOf(item) : -1}
+            selectItem={selectItem}
+            route={route}
+            variantKeyForItem={(entry) =>
+              entry.variants.find(needsReview)?.key ?? entry.variants[0]?.key
+            }
+          />
+        </ShellSidebarBody>
+      </ShellSidebar>
+      <ShellMain $maxWidth="100%" $p={0} className="review-main max-md:block!">
+        <ShellMainHeader className="max-md:block!" $p={0}>
+          <Frame $p={3} className="flex flex-wrap items-center justify-between gap-3">
+            <div className="review-result-heading min-w-0">
+              <h2 className="text-sm font-semibold wrap-anywhere">
+                {item?.name ?? "Visual review"}
+              </h2>
+              {variant && (
+                <p className="text-xs ak-ink-60 wrap-anywhere">
+                  {variant.label} · {verdictLabel(variant)}
+                  {variant.reviewer ? ` · ${variant.reviewer}` : ""}
+                  {variant.kind === "added"
+                    ? " · New image"
+                    : variant.kind === "removed"
+                      ? " · Removed"
+                      : ""}
+                </p>
+              )}
+              <p className="text-xs ak-ink-60">
+                {pending} of {total} need review · {runStatusLabel(model.run.status)}
+              </p>
+            </div>
+            <div className="review-actions flex flex-wrap gap-2 items-center">
+              <Button
+                disabled={
+                  !ready ||
+                  busy ||
+                  saveState.status === "error" ||
+                  !targets.some((entry) => entry.id === variant?.id) ||
+                  !!variant?.approveDisabledReason
+                }
+                title={variant?.approveDisabledReason}
+                onClick={() => review("approved")}
+              >
+                Approve <ButtonSlot $kind="shortcut">A</ButtonSlot>
+              </Button>
+              <Button
+                disabled={
+                  !ready ||
+                  busy ||
+                  saveState.status === "error" ||
+                  !targets.some((entry) => entry.id === variant?.id) ||
+                  !!variant?.rejectDisabledReason
+                }
+                title={variant?.rejectDisabledReason}
+                onClick={() => review("rejected")}
+              >
+                Reject <ButtonSlot $kind="shortcut">X</ButtonSlot>
+              </Button>
+              <Button
+                disabled={model.archived || !history.length || busy || saveState.status === "error"}
+                onClick={() => void undo()}
+              >
+                Undo <ButtonSlot $kind="shortcut">⌘/Ctrl Z</ButtonSlot>
+              </Button>
+            </div>
+            <div
+              className="review-save-state basis-full flex flex-wrap items-center gap-2 text-xs ak-ink-60"
+              role={
+                saveState.status === "error" || saveState.status === "conflict" ? "alert" : "status"
               }
             >
-              Original comparison
-            </a>
-            {model.historicalComparisons.map((comparison) => (
-              <span key={comparison.id}>
-                {" · "}
-                <a
-                  href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
-                  aria-current={comparison.id === model.comparisonId ? "page" : undefined}
-                  title={new Date(comparison.createdAt).toLocaleString()}
+              {saveState.message || "Review commands are saved after server confirmation."}
+              {!model.archived && saveState.status === "error" && saveState.failed && (
+                <Button
+                  className="text-xs"
+                  onClick={() => {
+                    if (saveState.failed) void save(saveState.failed);
+                  }}
                 >
-                  Historical comparison {comparison.ordinal} ·{" "}
-                  {comparison.state === "ready"
-                    ? "Complete"
-                    : comparison.state === "invalidated"
-                      ? "Failed"
-                      : "Comparing"}
-                </a>
-              </span>
-            ))}
-          </nav>
-        )}
-        {model.run.error && (
-          <p role="alert" className="review-banner">
-            {model.run.error}
-          </p>
-        )}
-        {model.archived && (
-          <p className="review-banner" role="status">
-            {model.readOnlyReason ??
-              "This closed run is read-only. Its review history remains available."}
-          </p>
-        )}
-        {!model.archived && !model.reviewReady && !terminalComparison && (
-          <p className="review-banner" role="status">
-            Review is unavailable until the run is sealed and all comparisons are complete.
-          </p>
-        )}
-        {pendingComparison && (
-          <p className="review-banner" role="status">
-            A new comparison is being prepared from stored captures. The previous comparison remains
-            visible until the new evidence is ready.
-          </p>
-        )}
-      </div>
-      <Shell className="review-shell col-[shell] row-[body]">
-        <ShellSidebar
-          $show={true}
-          $width="md"
-          render={<aside />}
-          className="review-sidebar"
-          aria-label="Review items"
-        >
-          <ShellSidebarHeader className="review-sidebar-heading">
-            <strong>Items</strong>
-            <span>{model.items.length}</span>
-          </ShellSidebarHeader>
-          <ShellSidebarBody className="review-sidebar-body">
-            <ItemList
-              items={model.items}
-              selectedIndex={item ? model.items.indexOf(item) : -1}
-              selectItem={selectItem}
-              route={route}
-              variantKeyForItem={(entry) =>
-                entry.variants.find(needsReview)?.key ??
-                entry.variants.find(
-                  (candidate) => candidate.key === remembered.current.get(entry.key),
-                )?.key ??
-                entry.variants[0]?.key
-              }
-            />
-          </ShellSidebarBody>
-        </ShellSidebar>
-        <main className="review-main col-[main] row-[body]">
+                  Retry same command
+                </Button>
+              )}
+              {!model.archived && saveState.status === "error" && saveState.failedUndo && (
+                <Button className="text-xs" onClick={() => void undo(saveState.failedUndo)}>
+                  Retry Undo
+                </Button>
+              )}
+              {(saveState.status === "conflict" || saveState.status === "error") && (
+                <Button className="text-xs" onClick={() => void refresh()}>
+                  Refresh current state
+                </Button>
+              )}
+            </div>
+          </Frame>
+        </ShellMainHeader>
+        <ShellMainBody className="max-md:block!">
+          {model.run.error && (
+            <p role="alert" className="text-sm p-3 ak-layer-warning">
+              {model.run.error}
+            </p>
+          )}
+          {model.archived && (
+            <p className="text-sm p-3 ak-layer-warning" role="status">
+              {model.readOnlyReason ??
+                "This closed run is read-only. Its review history remains available."}
+            </p>
+          )}
+          {!model.archived && !model.reviewReady && !terminalComparison && (
+            <p className="text-sm p-3 ak-layer-warning" role="status">
+              Review is unavailable until the run is sealed and all comparisons are complete.
+            </p>
+          )}
+          {pendingComparison && (
+            <p className="text-sm p-3 ak-layer-warning" role="status">
+              A new comparison is being prepared from stored captures. The previous comparison
+              remains visible until the new evidence is ready.
+            </p>
+          )}
           {item && variant ? (
             <>
-              <div className="review-item-heading">
-                <h2>{item.name}</h2>
-                <code>{item.key}</code>
-              </div>
-              <ak.CompositeProvider
-                orientation="horizontal"
-                activeId={variant.id}
-                setActiveId={(id) => {
-                  const index = item.variants.findIndex((entry) => entry.id === id);
-                  if (index >= 0 && id !== variant.id) selectVariant(index);
-                }}
-              >
-                <ak.Composite className="review-variants" role="listbox" aria-label="Variants">
+              <Tabs selectedId={variant.id} selectOnMove={false}>
+                <TabList
+                  aria-label="Variants"
+                  className="overflow-x-auto max-w-full"
+                  onKeyDownCapture={(event) => followFocusedTab(event)}
+                >
                   {item.variants.map((entry, index) => (
-                    <ak.CompositeItem
+                    <Tab
                       key={entry.id}
                       id={entry.id}
-                      role="option"
-                      aria-selected={entry.id === variant.id}
+                      className="review-variant"
                       render={
                         route ? (
                           <Link
@@ -754,197 +847,184 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                               item: item.key,
                               variant: entry.key,
                             }}
-                            className="review-variant"
                           />
-                        ) : (
-                          <Button className="review-variant" />
-                        )
+                        ) : undefined
                       }
-                      onClick={route ? undefined : () => selectVariant(index)}
+                      onClick={(event) => {
+                        if (
+                          event.button !== 0 ||
+                          event.altKey ||
+                          event.ctrlKey ||
+                          event.metaKey ||
+                          event.shiftKey
+                        )
+                          return;
+                        remembered.current.set(item.key, entry.key);
+                        if (!route) selectVariant(index);
+                      }}
                       aria-label={`${index + 1}. ${entry.label}. ${verdictLabel(entry)}`}
                     >
                       <VariantSummary variant={entry} index={index} />
-                      <small>{verdictLabel(entry)}</small>
-                    </ak.CompositeItem>
+                      <small className="text-xs ak-ink-60">{verdictLabel(entry)}</small>
+                    </Tab>
                   ))}
-                </ak.Composite>
-                <div className="review-result" tabIndex={-1}>
-                  <div className="review-result-heading">
-                    <div>
-                      <h3>{variant.label}</h3>
-                      <p>
-                        {verdictLabel(variant)}
-                        {variant.reviewer ? ` · ${variant.reviewer}` : ""}
-                        {variant.kind === "added"
-                          ? " · New image"
-                          : variant.kind === "removed"
-                            ? " · Removed"
-                            : ""}
+                </TabList>
+                <TabPanel single className="review-result" tabIndex={-1}>
+                  {!model.archived &&
+                    (variant.approveDisabledReason || variant.rejectDisabledReason) && (
+                      <p className="text-xs ak-ink-60 px-3 pb-3">
+                        {variant.rejectDisabledReason ?? variant.approveDisabledReason}
                       </p>
-                    </div>
-                    <div className="review-actions">
-                      <Button
-                        className="review-control"
-                        disabled={
-                          !ready ||
-                          busy ||
-                          saveState.status === "error" ||
-                          !targets.some((entry) => entry.id === variant.id) ||
-                          !!variant.approveDisabledReason
-                        }
-                        title={variant.approveDisabledReason}
-                        onClick={() => review("approved")}
-                      >
-                        Approve <ButtonSlot $kind="shortcut">A</ButtonSlot>
-                      </Button>
-                      <Button
-                        className="review-control"
-                        disabled={
-                          !ready ||
-                          busy ||
-                          saveState.status === "error" ||
-                          !targets.some((entry) => entry.id === variant.id) ||
-                          !!variant.rejectDisabledReason
-                        }
-                        title={variant.rejectDisabledReason}
-                        onClick={() => review("rejected")}
-                      >
-                        Reject <ButtonSlot $kind="shortcut">X</ButtonSlot>
-                      </Button>
-                    </div>
-                  </div>
-                  {(variant.approveDisabledReason || variant.rejectDisabledReason) && (
-                    <p className="review-protection">
-                      {variant.rejectDisabledReason ?? variant.approveDisabledReason}
-                    </p>
-                  )}
-                  <div className="review-view-tools">
-                    <ButtonGroup
-                      $p={0}
-                      $gap="none"
-                      className="min-w-0 max-w-full overflow-x-auto"
-                      aria-label="Image view"
-                    >
-                      <FlatButton
-                        className="review-control"
-                        aria-pressed={effectiveMode === "side"}
-                        $lightnessOffset={effectiveMode === "side"}
-                        onClick={() => setView("side")}
-                      >
-                        Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
-                      </FlatButton>
-                      <FlatButton
-                        className="review-control"
-                        aria-pressed={effectiveMode === "diff"}
-                        $lightnessOffset={effectiveMode === "diff"}
-                        aria-disabled={!variant.reference || !variant.candidate}
-                        onClick={() => setView("diff")}
-                      >
-                        Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
-                      </FlatButton>
-                      <FlatButton
-                        className="review-control"
-                        aria-pressed={effectiveMode === "new"}
-                        $lightnessOffset={effectiveMode === "new"}
-                        onClick={() => setView("new")}
-                      >
-                        New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
-                      </FlatButton>
-                      <FlatButton
-                        className="review-control"
-                        aria-pressed={effectiveMode === "original"}
-                        $lightnessOffset={effectiveMode === "original"}
-                        onClick={() => setView("original")}
-                      >
-                        Original only <ButtonSlot $kind="shortcut">G</ButtonSlot>
-                      </FlatButton>
-                    </ButtonGroup>
-                    <ButtonGroup $p={0} $gap="none" aria-label="Image zoom">
-                      {(["fit", 1, 2] as const).map((value) => (
-                        <FlatButton
-                          key={value}
-                          className="review-control"
-                          aria-pressed={zoom === value}
-                          $lightnessOffset={zoom === value}
-                          onClick={() => setZoom(value)}
+                    )}
+                  {model.evidenceState === "summary" ? (
+                    <Frame $p={4} $layer $border>
+                      <h3 className="text-sm font-semibold">
+                        {model.imagesExpired ? "Image history expired" : "Closed review summary"}
+                      </h3>
+                      <p className="text-sm ak-ink-60 mt-2">
+                        Review results and capture identity remain available. This view does not
+                        contain image bytes.
+                      </p>
+                    </Frame>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap justify-between gap-3 p-3">
+                        <ButtonGroup
+                          $p={0}
+                          $gap="none"
+                          className="min-w-0 max-w-full overflow-x-auto"
+                          aria-label="Image view"
                         >
-                          {value === "fit" ? "Fit" : `${value * 100}%`}
-                        </FlatButton>
-                      ))}
-                    </ButtonGroup>
-                  </div>
-                  {(!variant.reference || !variant.candidate) && (
-                    <p className="review-view-note">
-                      Pixel diff requires both a reference and a new image.
-                    </p>
-                  )}
-                  <div
-                    className="review-evidence"
-                    data-evidence={terminalComparison ? "terminal" : evidence.status}
-                  >
-                    {evidence.status === "loading" && !terminalComparison && (
-                      <div className="review-evidence-message" role="status">
-                        {variant.kind === "pending"
-                          ? "Comparison is still running…"
-                          : "Loading this comparison’s images…"}
+                          <FlatButton
+                            className="text-xs"
+                            aria-pressed={effectiveMode === "side"}
+                            $lightnessOffset={effectiveMode === "side"}
+                            onClick={() => setView("side")}
+                          >
+                            Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
+                          </FlatButton>
+                          <FlatButton
+                            className="text-xs"
+                            aria-pressed={effectiveMode === "diff"}
+                            $lightnessOffset={effectiveMode === "diff"}
+                            aria-disabled={!variant.reference || !variant.candidate}
+                            onClick={() => setView("diff")}
+                          >
+                            Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
+                          </FlatButton>
+                          <FlatButton
+                            className="text-xs"
+                            aria-pressed={effectiveMode === "new"}
+                            $lightnessOffset={effectiveMode === "new"}
+                            onClick={() => setView("new")}
+                          >
+                            New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
+                          </FlatButton>
+                          <FlatButton
+                            className="text-xs"
+                            aria-pressed={effectiveMode === "original"}
+                            $lightnessOffset={effectiveMode === "original"}
+                            onClick={() => setView("original")}
+                          >
+                            Original only <ButtonSlot $kind="shortcut">G</ButtonSlot>
+                          </FlatButton>
+                        </ButtonGroup>
+                        <ButtonGroup $p={0} $gap="none" aria-label="Image zoom">
+                          {(["fit", 1, 2] as const).map((value) => (
+                            <FlatButton
+                              key={value}
+                              className="text-xs"
+                              aria-pressed={zoom === value}
+                              $lightnessOffset={zoom === value}
+                              onClick={() => setZoom(value)}
+                            >
+                              {value === "fit" ? "Fit" : `${value * 100}%`}
+                            </FlatButton>
+                          ))}
+                        </ButtonGroup>
                       </div>
-                    )}
-                    {(terminalComparison || evidence.status === "error") && (
-                      <div
-                        className="review-evidence-message"
-                        role={terminalComparison ? "status" : "alert"}
-                      >
-                        <strong>
-                          {terminalComparison
-                            ? model.run.status === "superseded"
-                              ? "Comparison superseded"
-                              : model.run.status === "needs-recompare"
-                                ? "Comparison needs to be rerun"
-                                : "Comparison failed"
-                            : retryImages
-                              ? "Image evidence unavailable"
-                              : "Comparison evidence incomplete"}
-                        </strong>
-                        <p>
-                          {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
+                      {(!variant.reference || !variant.candidate) && (
+                        <p className="text-xs ak-ink-60 px-3 pb-3">
+                          Pixel diff requires both a reference and a new image.
                         </p>
-                        {terminalComparison && variant.error && <p>{variant.error}</p>}
-                        {retryImages && (
-                          <Button
-                            className="review-control"
-                            disabled={busy}
-                            onClick={() => setRetry((value) => value + 1)}
+                      )}
+                      <Frame
+                        $layer="canvas"
+                        $border
+                        $p={0}
+                        className="review-evidence"
+                        data-evidence={terminalComparison ? "terminal" : evidence.status}
+                      >
+                        {evidence.status === "loading" && !terminalComparison && (
+                          <div
+                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
+                            role="status"
                           >
-                            Retry images
-                          </Button>
+                            {variant.kind === "pending"
+                              ? "Comparison is still running…"
+                              : "Loading this comparison’s images…"}
+                          </div>
                         )}
-                        {recompareEvidence && commands.recompare && recompareAllowed && (
-                          <Button
-                            className="review-control"
-                            disabled={busy || awaitingComparison || saveState.status === "error"}
-                            onClick={() => void recompare()}
+                        {(terminalComparison || evidence.status === "error") && (
+                          <div
+                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
+                            role={terminalComparison ? "status" : "alert"}
                           >
-                            Recompare now
-                          </Button>
+                            <strong>
+                              {terminalComparison
+                                ? model.run.status === "superseded"
+                                  ? "Comparison superseded"
+                                  : model.run.status === "needs-recompare"
+                                    ? "Comparison needs to be rerun"
+                                    : "Comparison failed"
+                                : retryImages
+                                  ? "Image evidence unavailable"
+                                  : "Comparison evidence incomplete"}
+                            </strong>
+                            <p>
+                              {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
+                            </p>
+                            {terminalComparison && variant.error && <p>{variant.error}</p>}
+                            {retryImages && (
+                              <Button
+                                className="text-xs"
+                                disabled={busy}
+                                onClick={() => setRetry((value) => value + 1)}
+                              >
+                                Retry images
+                              </Button>
+                            )}
+                            {recompareEvidence && commands.recompare && recompareAllowed && (
+                              <Button
+                                className="text-xs"
+                                disabled={
+                                  busy || awaitingComparison || saveState.status === "error"
+                                }
+                                onClick={() => void recompare()}
+                              >
+                                Recompare now
+                              </Button>
+                            )}
+                          </div>
                         )}
-                      </div>
-                    )}
-                    <ScreenshotViewer
-                      variant={variant}
-                      mode={effectiveMode}
-                      zoom={zoom}
-                      ready={evidence.status === "ready"}
-                      images={evidence.images}
-                      identity={evidence.identity}
-                      report={evidence.report}
-                    />
-                  </div>
-                  <div className="review-whole-item">
+                        <ScreenshotViewer
+                          variant={variant}
+                          mode={effectiveMode}
+                          zoom={zoom}
+                          ready={evidence.status === "ready"}
+                          images={evidence.images}
+                          identity={evidence.identity}
+                          report={evidence.report}
+                        />
+                      </Frame>
+                    </>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 p-3">
                     <span>
                       {targets.length} changed variant{targets.length === 1 ? "" : "s"} in this item
                     </span>
                     <Button
-                      className="review-control"
+                      className="text-xs"
                       disabled={!ready || busy || saveState.status === "error" || !targets.length}
                       onClick={() => review("approved", true)}
                     >
@@ -952,7 +1032,7 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                       <ButtonSlot $kind="shortcut">Shift A</ButtonSlot>
                     </Button>
                     <Button
-                      className="review-control"
+                      className="text-xs"
                       disabled={!ready || busy || saveState.status === "error" || !targets.length}
                       onClick={() => review("rejected", true)}
                     >
@@ -960,9 +1040,34 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                       <ButtonSlot $kind="shortcut">Shift X</ButtonSlot>
                     </Button>
                   </div>
-                  <details className="review-metadata">
-                    <summary>Comparison details</summary>
-                    <dl>
+                  <Disclosure
+                    className="review-metadata"
+                    $p={3}
+                    button={<DisclosureButton>Details</DisclosureButton>}
+                  >
+                    <p className="review-run-identity text-xs">
+                      Run {model.run.id} · Attempt {model.run.attempt} · Commit{" "}
+                      <code>{model.run.testedSha.slice(0, 12)}</code> ·{" "}
+                      <span>Comparison {model.comparisonRevision}</span>
+                    </p>
+                    <nav aria-label="Comparison history" className="flex flex-wrap gap-3 text-xs">
+                      <a href={`/runs/${encodeURIComponent(model.run.id)}`}>Original comparison</a>
+                      {model.historicalComparisons?.map((comparison) => (
+                        <a
+                          key={comparison.id}
+                          href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
+                          aria-current={comparison.id === model.comparisonId ? "page" : undefined}
+                        >
+                          Historical comparison {comparison.ordinal} ·{" "}
+                          {comparison.state === "ready"
+                            ? "Complete"
+                            : comparison.state === "invalidated"
+                              ? "Failed"
+                              : "Comparing"}
+                        </a>
+                      ))}
+                    </nav>
+                    <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
                       <dt>Changed pixels</dt>
                       <dd>
                         {variant.changedPixels?.toLocaleString() ?? "—"}
@@ -996,12 +1101,12 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
                         {model.comparisonId} · {variant.id} · decision revision {variant.revision}
                       </dd>
                     </dl>
-                  </details>
-                </div>
-              </ak.CompositeProvider>
+                  </Disclosure>
+                </TabPanel>
+              </Tabs>
             </>
           ) : (
-            <div className="review-empty">
+            <div className="p-6">
               <h2>No comparison items</h2>
               <p>
                 {model.reviewReady
@@ -1010,56 +1115,21 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
               </p>
             </div>
           )}
-        </main>
-      </Shell>
-      <footer className="review-footer col-[shell] row-[footer]">
-        <div
-          className="review-save-state"
-          role={
-            saveState.status === "error" || saveState.status === "conflict" ? "alert" : "status"
-          }
-        >
-          {saveState.message || "Review commands are saved after server confirmation."}
-          {!model.archived && saveState.status === "error" && saveState.failed && (
-            <Button
-              className="review-control"
-              onClick={() => {
-                if (saveState.failed) void save(saveState.failed);
-              }}
-            >
-              Retry same command
-            </Button>
-          )}
-          {!model.archived && saveState.status === "error" && saveState.failedUndo && (
-            <Button className="review-control" onClick={() => void undo(saveState.failedUndo)}>
-              Retry Undo
-            </Button>
-          )}
-          {(saveState.status === "conflict" || saveState.status === "error") && (
-            <Button className="review-control" onClick={() => void refresh()}>
-              Refresh current state
-            </Button>
-          )}
-        </div>
-        <div className="review-footer-controls">
+        </ShellMainBody>
+      </ShellMain>
+      <ShellFooter className="flex! flex-wrap gap-3" $p={3}>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
-            className="review-control"
-            disabled={model.archived || !history.length || busy || saveState.status === "error"}
-            onClick={() => void undo()}
-          >
-            Undo <ButtonSlot $kind="shortcut">⌘/Ctrl Z</ButtonSlot>
-          </Button>
-          <Button
-            className="review-control"
+            className="text-xs"
             aria-pressed={shortcuts}
             onClick={() => setShortcuts((value) => !value)}
           >
             Shortcuts {shortcuts ? "on" : "off"}
           </Button>
           <ShortcutHelp />
-          {commands.recompare && (
+          {commands.recompare && !model.preview && (
             <Button
-              className="review-control"
+              className="text-xs"
               disabled={
                 !recompareAllowed || busy || awaitingComparison || saveState.status === "error"
               }
@@ -1069,9 +1139,9 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
               Recompare stored run
             </Button>
           )}
-          {commands.export && (
+          {commands.export && !model.preview && (
             <Button
-              className="review-control"
+              className="text-xs"
               disabled={exportState.pending}
               onClick={() => void exportRun()}
             >
@@ -1079,14 +1149,19 @@ function ReviewSession({ model: suppliedModel, commands, route }: ReviewWorkspac
             </Button>
           )}
         </div>
-        {commands.recompare && !recompareAllowed && recompareDisabledReason && (
+        {commands.recompare && !model.preview && !recompareAllowed && recompareDisabledReason && (
           <p>{recompareDisabledReason}</p>
         )}
         {exportState.message && <p role="status">{exportState.message}</p>}
-        <p className="review-announcement" role="status" aria-live="polite" aria-atomic="true">
+        <p
+          className="text-xs ak-ink-60 basis-full"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           {announcement}
         </p>
-      </footer>
+      </ShellFooter>
     </Shell>
   );
 }

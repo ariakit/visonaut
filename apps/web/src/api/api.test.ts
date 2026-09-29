@@ -1,34 +1,27 @@
-import { prepareHistoricalCaptures } from "../operations/historical-captures.ts";
-import { TestDatabase, context as operationsContext } from "../operations/test-fixtures.ts";
+import { nativeTestStorage } from "./test-storage.ts";
+import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
+import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { createPublicKey } from "node:crypto";
 import { createRequire } from "node:module";
 import { decodeImage, validateImage } from "@visonaut/compare";
 import { createCodecs } from "@visonaut/compare/jsquash";
 import {
   digestJson,
+  digestEnvironmentProfile,
   type CaptureProfile,
   type Manifest,
   type TrustedPlan,
 } from "@visonaut/protocol";
-import {
-  createAuth,
-  createGitHubClient,
-  issueIngestCapability,
-  SecurityError,
-  type VerifiedRun,
-} from "@visonaut/security";
+import { createAuth, issueIngestCapability } from "@visonaut/security";
 import { Service } from "@visonaut/service";
-import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
+import { exportPKCS8, generateKeyPair } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
-import { comparisonReference, startComparisonPublication, trySealRun } from "./ingest.js";
-import { inheritedShards, workflowJobs } from "./jobs.js";
-import carriedJobs from "./fixtures/failed-job-rerun.json";
-import { discoveryEvidence } from "./receipts.js";
-import { handleApi, apiContext, reconcileIngest, type ApiBindings } from "./index.js";
+import { comparisonReference, startComparisonPublication, scheduleComparison } from "./ingest.js";
+import { captureProfileReference, storeCaptureProfiles } from "../profiles.js";
+import { handleApi, apiContext, type ApiBindings } from "./index.js";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -79,13 +72,6 @@ async function advanceDashboardState(projectId: string, sourceRunId: string, lat
       .bind(laterRunId, sourceRunId),
   ]);
 }
-async function declarationResponse(response: Response) {
-  const body = await objectResponse(response);
-  return {
-    manifestDigest: string(body.manifestDigest),
-    uploads: objects(body.uploads).map((upload) => ({ ticket: string(upload.ticket, 8192) })),
-  };
-}
 async function reviewResponse(response: Response) {
   const body = await objectResponse(response);
   return {
@@ -96,79 +82,23 @@ async function reviewResponse(response: Response) {
 }
 
 beforeAll(async () => {
-  const sources = [
-    new URL(
-      "../../../apps/web/migrations/0001_service.sql",
-      import.meta.resolve("@visonaut/service"),
-    ),
-    new URL("../work-schema.sql", import.meta.resolve("@visonaut/service")),
-    new URL("../migrations/0001_auth.sql", import.meta.resolve("@visonaut/security")),
-    new URL("../../migrations/0004_ingest.sql", import.meta.url),
-
-    new URL(
-      "../../../apps/web/migrations/0006_acceptance.sql",
-      import.meta.resolve("@visonaut/service"),
-    ),
-    new URL("../../migrations/0005_operations.sql", import.meta.url),
-    new URL("../../migrations/0007_backup_inventory.sql", import.meta.url),
-    new URL("../../migrations/0008_capture_profiles.sql", import.meta.url),
-    new URL("../../migrations/0009_retention_history.sql", import.meta.url),
-    new URL("../../migrations/0010_run_history.sql", import.meta.url),
-    new URL("../../migrations/0011_backup_groups.sql", import.meta.url),
-    new URL("../../migrations/0012_historical_comparisons.sql", import.meta.url),
-    new URL("../../migrations/0013_promotion_scans.sql", import.meta.url),
-    new URL("../../migrations/0014_visonaut_brand.sql", import.meta.url),
-    new URL("../../migrations/0015_run_original_bytes.sql", import.meta.url),
-    new URL("../../migrations/0018_transfer_key_redemptions.sql", import.meta.url),
-    new URL("../../migrations/0019_staged_workflows.sql", import.meta.url),
-    new URL("../../migrations/0020_pre_run_checks.sql", import.meta.url),
-  ];
-  for (const source of sources) {
-    const sql = (await readFile(source, "utf8")).replace(/^--.*$/gm, "");
-    let query = "";
-    for (const line of sql.split("\n")) {
-      query += `${line}\n`;
-      if (!line.trimEnd().endsWith(";")) continue;
-      await database.prepare(query).run();
-      query = "";
-    }
-  }
+  await applyTestMigrations(database);
 });
 afterAll(async () => runtime.dispose());
 
 interface FixtureOptions {
-  secondShard?: boolean;
-  discovery?: boolean;
   duplicateOriginal?: boolean;
-  inheritedShardCount?: number;
 }
 
-async function fixture({
-  secondShard = false,
-  discovery = false,
-  duplicateOriginal = false,
-  inheritedShardCount = 0,
-}: FixtureOptions = {}) {
+/** Private HTTP tests use a measured run after the signed capture boundary. */
+async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
   repositoryId += 1;
   const id = String(repositoryId);
   const projectId = crypto.randomUUID();
   const runId = crypto.randomUUID();
   let permission = "write";
-  let jobStatus = "in_progress";
-  let workflowStatus = "in_progress";
-  let workflowConclusion: string | null = null;
-  let workflowAttempt = 1;
   const githubResponses = new Map<string, unknown>();
   const githubRequests: string[] = [];
-  const sourceJob = () => ({
-    ...carriedJobs.original,
-    id: 789,
-    run_id: 456,
-    name: "chrome",
-    head_sha: "d".repeat(40),
-    status: jobStatus,
-    conclusion: jobStatus === "completed" ? "success" : null,
-  });
   const profile: CaptureProfile = {
     browser: "chromium",
     browserVersion: "149.0",
@@ -184,8 +114,6 @@ async function fixture({
     forcedColors: "none",
     animationPolicy: "disabled",
     captureOptions: { fullPage: false, animations: "disabled" },
-    comparisonPolicyDigest: "c".repeat(64),
-    comparisonEngineVersion: "1",
   };
   const profileDigest = await digestJson(profile);
   const plan: TrustedPlan = {
@@ -195,8 +123,8 @@ async function fixture({
     invocation: ["pnpm", "test:visual"],
     shards: [
       {
-        key: "chrome-1",
-        jobName: "chrome",
+        key: "combined",
+        jobName: "App / Visual / Submit",
         environmentProfileDigests: [profileDigest],
         tests: [
           { id: "test-1", captures: [{ itemKey: "dialog/open", variantKey: "react-light" }] },
@@ -204,53 +132,11 @@ async function fixture({
       },
     ],
   };
-  if (secondShard)
-    plan.shards.push({
-      ...plan.shards[0]!,
-      key: "firefox-1",
-      jobName: "firefox",
-      tests: [
-        { id: "test-2", captures: [{ itemKey: "dialog/open", variantKey: "firefox-light" }] },
-      ],
-    });
-  for (let index = 1; index <= inheritedShardCount; index += 1) {
-    const key = `carried-${index}`;
-    plan.shards.push({
-      ...plan.shards[0]!,
-      key,
-      jobName: key,
-      tests: [
-        {
-          id: `test-${key}`,
-          captures: Array.from({ length: 256 }, (_, ordinal) => ({
-            itemKey: `${key}/item-${ordinal}`,
-            variantKey: "light",
-          })),
-        },
-      ],
-    });
-  }
   if (duplicateOriginal) {
     plan.shards[0]?.tests?.[0]?.captures.push({
       itemKey: "dialog/open",
       variantKey: "react-dark",
     });
-  }
-  if (discovery) {
-    plan.discovery = { executorDigest: "f".repeat(64) };
-    for (const shard of plan.shards) {
-      delete shard.tests;
-      shard.collection = {
-        projectName: shard.key,
-        testDir: "tests",
-        testMatch: ["**/*.test.ts"],
-        testIgnore: [],
-        grep: [{ source: ".*", flags: "" }],
-        grepInvert: [],
-        shard: null,
-        repeatEach: 1,
-      };
-    }
   }
   const planDigest = await digestJson(plan);
   const manifest: Manifest = {
@@ -269,7 +155,7 @@ async function fixture({
       testedSha: "d".repeat(40),
       planDigest,
     },
-    shard: { key: "chrome-1", jobId: "789", sourceAttempt: 1 },
+    shard: { key: "combined", jobId: "789", sourceAttempt: 1 },
     profiles: [{ digest: profileDigest, profile }],
     tests: [
       {
@@ -314,19 +200,10 @@ async function fixture({
       variant: { ...capture.variant, key: "react-dark" },
     });
   }
-  if (plan.discovery) {
-    manifest.discovery = {
-      executorDigest: plan.discovery.executorDigest,
-      configurationDigest: await digestJson(plan.shards[0]?.collection),
-      inventoryDigest: await digestJson(
-        manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-      ),
-    };
-  }
   const bindings: ApiBindings = {
     database,
-    images,
-    quarantine,
+    images: nativeTestStorage(images),
+    quarantine: nativeTestStorage(quarantine),
     operations: { async send() {} },
     comparator: {
       async fetch(input, init) {
@@ -382,69 +259,18 @@ async function fixture({
           if (path === "/user/42") return Response.json({ id: 42, login: "maintainer" });
           if (path.endsWith("/permission"))
             return Response.json({ permission, role_name: permission, user: { id: 42 } });
-          if (path.endsWith("/artifacts")) {
-            return Response.json({
-              artifacts: [
-                {
-                  name: `visonaut-discovery-1-789-chrome-1-${await digestJson(manifest)}`,
-                  expired: false,
-                  workflow_run: {
-                    id: 456,
-                    repository_id: Number(id),
-                    head_repository_id: Number(id),
-                    head_sha: manifest.run.testedSha,
-                  },
-                },
-              ],
-            });
-          }
-          if (path.endsWith("/jobs/789")) {
-            return Response.json(sourceJob());
-          }
-          if (path.endsWith("/jobs"))
-            return Response.json({
-              jobs: [
-                {
-                  ...sourceJob(),
-                  ...(workflowAttempt === 2
-                    ? {
-                        id: 793,
-                        run_attempt: 2,
-                        created_at: carriedJobs.alias.created_at,
-                        runner_group_id: null,
-                      }
-                    : {}),
-                },
-                ...(secondShard
-                  ? [
-                      {
-                        id: 790 + workflowAttempt,
-                        name: "firefox",
-                        run_attempt: workflowAttempt,
-                        status: "in_progress",
-                        conclusion: null,
-                      },
-                    ]
-                  : []),
-              ],
-            });
           return Response.json({
             id: 456,
-            run_attempt: workflowAttempt,
+            run_attempt: 1,
             head_sha: "d".repeat(40),
-            run_started_at:
-              workflowAttempt === 2 ? carriedJobs.attempt.run_started_at : "2026-09-22T14:56:30Z",
-            status: workflowStatus,
-            conclusion: workflowConclusion,
+            run_started_at: "2026-09-22T14:56:30Z",
+            status: "completed",
+            conclusion: "success",
           });
         },
       },
       webhookSecret: "test-webhook-secret-with-32-characters-or-more",
-      oidcAudience: "https://preview.example/ingest",
       repositoryOwnerId: "5",
-      trustedPlanPath: ".visonaut/plan.json",
-      reusableWorkflowRef: "ariakit/ariakit/.github/workflows/capture.yml@sha",
-      reusableWorkflowSha: "f".repeat(40),
       comparisonMaxAttempts: 3,
       limits: {
         maximumImageBytes: 2 * 1024 * 1024,
@@ -452,7 +278,7 @@ async function fixture({
         maximumRunBytes: 2 * 1024 * 1024 * 1024,
         maximumManifestBytes: 2 * 1024 * 1024,
         maximumPlanBytes: 2 * 1024 * 1024,
-        maximumCaptures: inheritedShardCount ? 1100 : 100,
+        maximumCaptures: 100,
       },
     },
   };
@@ -469,14 +295,6 @@ async function fixture({
         key: shard.key,
         profileDigest: await digestJson(shard.environmentProfileDigests),
         environmentProfileDigests: shard.environmentProfileDigests,
-        ...(plan.discovery
-          ? {
-              discovery: {
-                executorDigest: plan.discovery.executorDigest,
-                configurationDigest: await digestJson(shard.collection),
-              },
-            }
-          : {}),
         tests: (shard.tests ?? []).map((test) => test.id),
         captures: (shard.tests ?? []).flatMap((test) =>
           test.captures.map((capture) => ({ ...capture, testId: test.id })),
@@ -514,8 +332,8 @@ async function fixture({
         ref: "refs/heads/main",
         sourceHead: manifest.run.testedSha,
         targetHead: manifest.run.testedSha,
-        reusableWorkflowRef: bindings.configuration.reusableWorkflowRef,
-        reusableWorkflowSha: bindings.configuration.reusableWorkflowSha,
+        reusableWorkflowRef: "ariakit/ariakit/.github/workflows/visual.yml@" + "f".repeat(40),
+        reusableWorkflowSha: "f".repeat(40),
       }),
       `plans/${planDigest}.json`,
       Date.now(),
@@ -528,7 +346,7 @@ async function fixture({
     workflowAttempt: 1,
     testedSha: manifest.run.testedSha,
     planDigest,
-    shardKey: "chrome-1",
+    shardKey: "combined",
     jobId: "789",
     maximumBytes: 16 * 1024 * 1024,
     maximumImages: 1,
@@ -567,20 +385,60 @@ async function fixture({
     },
     body: JSON.stringify(body),
   });
-  const declare = () => send(`/v1/runs/${runId}/shards/chrome-1`, json(manifest));
+  const imageId = crypto.randomUUID();
+  const imageKey = `runs/${runId}/images/${imageId}`;
+  let uploaded = false;
   const upload = async () => {
-    const declaration = await declare();
-    expect(declaration.status, await declaration.clone().text()).toBe(200);
-    const body = await declarationResponse(declaration);
-    expect(body.uploads).toHaveLength(1);
-    const ticket = string(body.uploads[0]?.ticket, 8192);
-    const response = await send(`/v1/uploads/${ticket}`, {
-      method: "PUT",
-      headers: { authorization: `Bearer ${capability}`, "content-type": "image/png" },
-      body: bytes,
+    if (uploaded) return digestJson(manifest);
+    uploaded = true;
+    await images.put(imageKey, bytes, { httpMetadata: { contentType: "image/png" } });
+    await service.registerImage({
+      id: imageId,
+      runId,
+      digest: image.digest,
+      objectKey: imageKey,
+      contentType: "image/png",
+      bytes: bytes.byteLength,
+      width: image.width,
+      height: image.height,
     });
-    expect(response.status).toBe(204);
-    return body.manifestDigest;
+    await storeCaptureProfiles(database, manifest.profiles);
+    await service.commitShard({
+      runId,
+      key: "combined",
+      manifestDigest: await digestJson(manifest),
+      captures: await Promise.all(
+        manifest.captures.map(async (capture) => ({
+          id: `${runId}:${await digestJson([capture.itemKey, capture.variant.key])}`,
+          itemKey: capture.itemKey,
+          variantKey: capture.variant.key,
+          ordinal: capture.ordinal,
+          imageId,
+          profileDigest,
+          environmentProfileDigest: await digestEnvironmentProfile(profile),
+          testId: capture.testId,
+          testRetry: capture.testRetry,
+          metadata: {
+            name: capture.name,
+            variant: capture.variant,
+            profile: captureProfileReference(profileDigest),
+            source: manifest.tests[0],
+          },
+        })),
+      ),
+      finalTestOutcomes: manifest.tests.map((test) => ({
+        testId: test.id,
+        retry: test.retry,
+        status: test.status,
+      })),
+      now: Date.now(),
+    });
+    return digestJson(manifest);
+  };
+  const complete = async () => {
+    await upload();
+    await service.sealRun({ runId, now: Date.now() });
+    await scheduleComparison(apiContext(bindings), runId);
   };
   return {
     bindings,
@@ -600,145 +458,91 @@ async function fixture({
     token: session.token,
     send,
     json,
-    declare,
+    imageId,
+    imageKey,
+    complete,
     upload,
     setPermission(value: string) {
       permission = value;
     },
-    succeedJob() {
-      jobStatus = "completed";
-      workflowStatus = "completed";
-      workflowConclusion = "success";
-    },
-    succeedShard() {
-      jobStatus = "completed";
-    },
-    failWorkflow() {
-      workflowStatus = "completed";
-      workflowConclusion = "failure";
-    },
-    startRerun() {
-      workflowAttempt = 2;
-      workflowStatus = "in_progress";
-      workflowConclusion = null;
-    },
   };
 }
 
-async function rerunFixture(discovery = false, duplicateOriginal = false) {
-  const test = await fixture({ secondShard: true, discovery, duplicateOriginal });
-  const digest = await test.upload();
-  test.succeedShard();
-  expect(
-    (
-      await test.send(
-        `/v1/runs/${test.runId}/finalize`,
-        test.json({
-          schemaVersion: "1.0",
-          shardKey: "chrome-1",
-          manifestDigest: digest,
+describe("Private HTTP boundary with real local D1 and R2", () => {
+  it("accepts signed App pings at the canonical webhook route without a maintainer session", async () => {
+    const test = await fixture();
+    const origin = "https://visonaut.example";
+    const bindings: ApiBindings = {
+      ...test.bindings,
+      configuration: {
+        ...test.bindings.configuration,
+        origin,
+        auth: { ...test.bindings.configuration.auth, origin, environment: "production" },
+        capability: {
+          ...test.bindings.configuration.capability,
+          issuer: origin,
+          environment: "production",
+        },
+      },
+    };
+    const body = JSON.stringify({ hook: { type: "App", app_id: 123 }, sender: { id: 42 } });
+    const signature = createHmac("sha256", bindings.configuration.webhookSecret)
+      .update(body)
+      .digest("hex");
+    const pending: Promise<unknown>[] = [];
+    const lifetime = {
+      waitUntil(promise: Promise<unknown>) {
+        pending.push(promise);
+      },
+    };
+    for (const path of ["/v1/webhooks", "/webhooks/github"]) {
+      const deliveryId = crypto.randomUUID();
+      const response = await handleApi(
+        new Request(`${origin}${path}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-github-event": "ping",
+            "x-github-delivery": deliveryId,
+            "x-hub-signature-256": `sha256=${signature}`,
+          },
+          body,
         }),
-      )
-    ).status,
-  ).toBe(202);
-  test.startRerun();
-  const github = await createGitHubClient(test.bindings.configuration.github);
-  const verified: VerifiedRun = {
-    ...test.manifest.run,
-    workflowAttempt: 2,
-    shardKey: "firefox-1",
-    jobId: "792",
-    checkRunId: "1",
-    event: "push",
-    ref: "refs/heads/main",
-    sourceHead: test.manifest.run.testedSha,
-    targetHead: test.manifest.run.testedSha,
-  };
-  const original = {
-    ...carriedJobs.original,
-    id: 789,
-    run_id: 456,
-    name: "chrome",
-    head_sha: verified.sourceHead,
-  };
-  const alias = {
-    ...carriedJobs.alias,
-    id: 793,
-    run_id: 456,
-    name: "chrome",
-    head_sha: verified.sourceHead,
-  };
-  const current = {
-    id: 792,
-    name: "firefox",
-    run_attempt: 2,
-    status: "in_progress",
-    conclusion: null,
-  };
-  const inherit = () => inheritedShards(apiContext(test.bindings), github, verified, test.plan);
-  const reserve = async () => {
-    const inheritance = await inherit();
-    const next = await test.service.reserveRun({
-      id: crypto.randomUUID(),
-      projectId: test.bindings.configuration.projectId,
-      externalRunId: "456",
-      attempt: 2,
-      kind: "main",
-      testedSha: verified.testedSha,
-      lineageKey: "main",
-      plan: test.servicePlan,
-      verifiedRelatedRunIds: [test.runId],
-      verifiedAncestorShas: [],
-      verificationDigest: "verified-rerun",
-      ...inheritance,
-      now: Date.now(),
-    });
-    await database
-      .prepare(
-        "INSERT INTO ingest_run_provenance (run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
-      )
-      .bind(next.id, test.runId)
-      .run();
-    return next;
-  };
-  return { ...test, digest, github, verified, original, alias, current, inherit, reserve };
-}
-
-async function secondShardDeclaration(
-  test: Awaited<ReturnType<typeof fixture>>,
-  runId: string,
-  workflowAttempt: number,
-) {
-  const jobId = workflowAttempt === 1 ? "791" : "792";
-  const manifest: Manifest = {
-    ...test.manifest,
-    run: { ...test.manifest.run, workflowAttempt },
-    shard: { key: "firefox-1", jobId, sourceAttempt: workflowAttempt },
-    tests: test.manifest.tests.map((entry) => ({ ...entry, id: "test-2" })),
-    captures: test.manifest.captures.slice(0, 1).map((capture) => ({
-      ...capture,
-      testId: "test-2",
-      variant: { ...capture.variant, key: "firefox-light" },
-    })),
-  };
-  const capability = await issueIngestCapability(test.bindings.configuration.capability, {
-    runId,
-    repositoryId: test.manifest.run.repositoryId,
-    workflowRunId: "456",
-    workflowAttempt,
-    testedSha: manifest.run.testedSha,
-    planDigest: manifest.run.planDigest,
-    shardKey: "firefox-1",
-    jobId,
-    maximumBytes: test.bindings.configuration.limits.maximumShardBytes,
-    maximumImages: 1,
+        bindings,
+        lifetime,
+      );
+      expect(response?.status).toBe(202);
+      expect(
+        await database
+          .prepare("SELECT event FROM github_webhook_delivery WHERE delivery_id = ?")
+          .bind(deliveryId)
+          .first<string>("event"),
+      ).toBe("ping");
+    }
+    await Promise.all(pending);
+    const rejectedId = crypto.randomUUID();
+    const rejected = await handleApi(
+      new Request(`${origin}/v1/webhooks`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-github-event": "ping",
+          "x-github-delivery": rejectedId,
+          "x-hub-signature-256": `sha256=${"0".repeat(64)}`,
+        },
+        body,
+      }),
+      bindings,
+      lifetime,
+    );
+    expect(rejected?.status).toBe(401);
+    expect(
+      await database
+        .prepare("SELECT delivery_id FROM github_webhook_delivery WHERE delivery_id = ?")
+        .bind(rejectedId)
+        .first(),
+    ).toBeNull();
   });
-  const declare = () =>
-    test.send(`/v1/runs/${runId}/shards/firefox-1`, test.json(manifest, capability));
-  return { manifest, capability, declare };
-}
-
-describe("HTTP boundary with real local D1, R2, and image codecs", () => {
   it("does not exchange an ingest capability for private read access", async () => {
     const test = await fixture();
     const response = await test.send(`/v1/runs/${test.runId}`, {
@@ -770,6 +574,50 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     test.setPermission("read");
     expect((await test.send("/api/runs", { headers })).status).toBe(403);
     expect((await test.send("/api/operations", { headers })).status).toBe(403);
+  });
+  it("expires a private-read grant at 60 seconds and keeps revocation and writes live", async () => {
+    const test = await fixture();
+    const checkedAt = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: test.bindings.configuration.origin,
+    };
+    const permissionChecks = () =>
+      test.githubRequests.filter((path) => path.endsWith("/permission")).length;
+    try {
+      expect((await test.send("/api/runs", { headers })).status).toBe(200);
+      expect(permissionChecks()).toBe(1);
+      test.setPermission("read");
+      clock.mockReturnValue(checkedAt + 59_999);
+      expect((await test.send("/api/runs", { headers })).status).toBe(200);
+      expect(permissionChecks()).toBe(1);
+      clock.mockReturnValue(checkedAt + 60_000);
+      expect((await test.send("/api/runs", { headers })).status).toBe(403);
+      expect(permissionChecks()).toBe(2);
+      test.setPermission("write");
+      expect((await test.send("/api/runs", { headers })).status).toBe(200);
+      test.setPermission("read");
+      const deniedWrite = await test.send("/api/review-sessions", { method: "POST", headers });
+      expect(deniedWrite.status).toBe(403);
+      expect(await objectResponse(deniedWrite)).toMatchObject({
+        error: { code: "not_maintainer" },
+      });
+      expect(permissionChecks()).toBe(4);
+      expect((await test.send("/api/runs", { headers })).status).toBe(403);
+      test.setPermission("write");
+      expect((await test.send("/api/runs", { headers })).status).toBe(200);
+      const auth = createAuth({ ...test.bindings.configuration.auth, database });
+      await auth.api.signOut({ headers: new Headers(headers) });
+      const requests = test.githubRequests.length;
+      expect((await test.send("/api/runs", { headers })).status).toBe(401);
+      expect((await test.send("/api/review-sessions", { method: "POST", headers })).status).toBe(
+        401,
+      );
+      expect(test.githubRequests).toHaveLength(requests);
+    } finally {
+      clock.mockRestore();
+    }
   });
   it("reads dashboard project state after authorization when a new run arrives", async () => {
     const test = await fixture();
@@ -899,6 +747,13 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       state: "not-required",
     });
     test.setPermission("read");
+    expect((await test.send(path, { headers })).status).toBe(200);
+    const deniedWrite = await test.send("/api/review-sessions", {
+      method: "POST",
+      headers: { ...headers, origin: test.bindings.configuration.origin },
+    });
+    expect(deniedWrite.status).toBe(403);
+    expect(await objectResponse(deniedWrite)).toMatchObject({ error: { code: "not_maintainer" } });
     expect((await test.send(path, { headers })).status).toBe(403);
   });
   it("keeps a check link on its sealed run after an older merge webhook arrives late", async () => {
@@ -976,7 +831,9 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const test = await fixture();
     await test.upload();
     const stored = await database
-      .prepare("SELECT image_id, image_key FROM ingest_uploads WHERE run_id = ?")
+      .prepare(
+        "SELECT id AS image_id, object_key AS image_key FROM visonaut_images WHERE run_id = ?",
+      )
       .bind(test.runId)
       .first<{ image_id: string; image_key: string }>();
     expect(stored).not.toBeNull();
@@ -1017,206 +874,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       .run();
     expect((await test.send(`/images/${derivedId}`)).status).toBe(404);
   });
-  it("refuses a digest mismatch before image publication", async () => {
-    const test = await fixture();
-    const declared = await declarationResponse(await test.declare());
-    const altered = bytes.slice();
-    altered[0] = 0;
-    const response = await test.send(`/v1/uploads/${string(declared.uploads[0]?.ticket, 8192)}`, {
-      method: "PUT",
-      headers: { authorization: `Bearer ${test.capability}`, "content-type": "image/png" },
-      body: altered,
-    });
-    expect(response.status).toBe(422);
-    const count = await database
-      .prepare("SELECT count(*) AS count FROM visonaut_images WHERE run_id = ?")
-      .bind(test.runId)
-      .first<{ count: number }>();
-    expect(count?.count).toBe(0);
-  });
-  it("rejects changed manifests under the same shard identity", async () => {
-    const test = await fixture();
-    expect((await test.declare()).status).toBe(200);
-    test.manifest.producer.version = "0.1.1";
-    expect((await test.declare()).status).toBe(409);
-    expect((await quarantine.list({ prefix: `manifests/${test.runId}/` })).objects).toHaveLength(1);
-  });
-  it("atomically refuses a second shard above the aggregate declared-byte cap", async () => {
-    const test = await fixture({ secondShard: true });
-    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2 - 1;
-    expect((await test.declare()).status).toBe(200);
-    const second = await secondShardDeclaration(test, test.runId, 1);
-    const refused = await second.declare();
-    expect(refused.status, await refused.clone().text()).toBe(413);
-    expect(
-      await database
-        .prepare("SELECT shard_key, declared_bytes FROM ingest_manifests WHERE run_id=?")
-        .bind(test.runId)
-        .all(),
-    ).toMatchObject({ results: [{ shard_key: "chrome-1", declared_bytes: bytes.byteLength }] });
-    expect((await test.declare()).status).toBe(200);
-  });
-  it("serializes simultaneous shard claims against the same byte cap", async () => {
-    const test = await fixture({ secondShard: true });
-    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength;
-    const second = await secondShardDeclaration(test, test.runId, 1);
-    const responses = await Promise.all([test.declare(), second.declare()]);
-    expect(responses.map((response) => response.status).sort()).toEqual([200, 413]);
-    expect(
-      await database
-        .prepare(
-          "SELECT COUNT(*) AS count, SUM(declared_bytes) AS bytes FROM ingest_manifests WHERE run_id=?",
-        )
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 1, bytes: bytes.byteLength });
-  });
-  it("waits for a legacy manifest to be replayed with its complete byte total", async () => {
-    const test = await fixture({ secondShard: true });
-    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2;
-    expect((await test.declare()).status).toBe(200);
-    await database
-      .prepare("UPDATE ingest_manifests SET declared_bytes=NULL WHERE run_id=?")
-      .bind(test.runId)
-      .run();
-    const second = await secondShardDeclaration(test, test.runId, 1);
-    expect((await second.declare()).status).toBe(409);
-    expect((await test.declare()).status).toBe(200);
-    expect((await second.declare()).status).toBe(200);
-    expect(
-      await database
-        .prepare("SELECT SUM(declared_bytes) AS bytes FROM ingest_manifests WHERE run_id=?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ bytes: bytes.byteLength * 2 });
-  });
-  it("charges inherited originals once and permits an identical shard replay", async () => {
-    const test = await rerunFixture(false, true);
-    test.bindings.configuration.limits.maximumRunBytes = bytes.byteLength * 2;
-    const next = await test.reserve();
-    const second = await secondShardDeclaration(test, next.id, 2);
-    expect((await second.declare()).status).toBe(200);
-    expect((await second.declare()).status).toBe(200);
-    expect(
-      await database
-        .prepare("SELECT shard_key, declared_bytes FROM ingest_manifests WHERE run_id=?")
-        .bind(next.id)
-        .all(),
-    ).toMatchObject({ results: [{ shard_key: "firefox-1", declared_bytes: bytes.byteLength }] });
-    expect(
-      await database
-        .prepare(
-          "SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'",
-        )
-        .bind(next.id)
-        .first(),
-    ).toEqual({ count: 2 });
-  });
-  it("counts separate inherited image objects with matching digests at the 2 GiB boundary", async () => {
-    const test = await fixture({ inheritedShardCount: 4 });
-    test.bindings.configuration.limits.maximumShardBytes = 512 * 1024 * 1024;
-    const shardKeys = ["carried-1", "carried-2", "carried-3", "carried-4"];
-    const profileDigest = test.manifest.profiles[0]?.digest;
-    if (!profileDigest) throw new Error("Expected a profile fixture.");
-    const fullProfileDigest = "e".repeat(64);
-    const imageBytes = 2 * 1024 * 1024;
-
-    // Model four verified 512 MiB shards without allocating 2 GiB in the test.
-    for (const shardKey of shardKeys) {
-      await database
-        .prepare(
-          "WITH RECURSIVE numbers(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM numbers WHERE n < 255) INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) SELECT printf('%s:image:%s:%d', ?, ?, n), ?, printf('%064x', n), printf('runs/%s/images/%s/%d', ?, ?, n), 'image/png', ?, 1, 1 FROM numbers",
-        )
-        .bind(test.runId, shardKey, test.runId, test.runId, shardKey, imageBytes)
-        .run();
-      await database
-        .prepare(
-          "WITH RECURSIVE numbers(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM numbers WHERE n < 255) INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT printf('%s:capture:%s:%d', ?, ?, n), ?, ?, printf('%s/item-%d', ?, n), 'light', n, printf('%s:image:%s:%d', ?, ?, n), ?, ?, 1, '{}' FROM numbers",
-        )
-        .bind(
-          test.runId,
-          shardKey,
-          test.runId,
-          shardKey,
-          shardKey,
-          test.runId,
-          shardKey,
-          profileDigest,
-          `test-${shardKey}`,
-        )
-        .run();
-      await database
-        .prepare(
-          "UPDATE visonaut_shards SET state='complete', manifest_digest=?, full_profile_digest=? WHERE run_id=? AND key=?",
-        )
-        .bind("a".repeat(64), fullProfileDigest, test.runId, shardKey)
-        .run();
-    }
-    const next = await test.service.reserveRun({
-      id: crypto.randomUUID(),
-      projectId: test.bindings.configuration.projectId,
-      externalRunId: "456",
-      attempt: 2,
-      kind: "main",
-      testedSha: test.manifest.run.testedSha,
-      lineageKey: "main",
-      plan: test.servicePlan,
-      verifiedRelatedRunIds: [test.runId],
-      verifiedAncestorShas: [],
-      verificationDigest: "verified-rerun",
-      rerunShardKeys: ["chrome-1"],
-      inheritFromRunId: test.runId,
-      verifiedInheritedShards: shardKeys.map((key) => ({
-        key,
-        manifestDigest: "a".repeat(64),
-        captureProfileDigest: fullProfileDigest,
-      })),
-      now: Date.now(),
-    });
-    await database
-      .prepare(
-        "INSERT INTO ingest_run_provenance(run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
-      )
-      .bind(next.id, test.runId)
-      .run();
-    expect(
-      await database
-        .prepare(
-          "SELECT COUNT(DISTINCT image.id) AS images, COUNT(DISTINCT image.digest) AS digests, SUM(image.bytes) AS bytes FROM visonaut_captures AS capture JOIN visonaut_images AS image ON image.id=capture.image_id WHERE capture.run_id=?",
-        )
-        .bind(next.id)
-        .first(),
-    ).toEqual({ images: 1024, digests: 256, bytes: 2 * 1024 * 1024 * 1024 });
-    const manifest: Manifest = {
-      ...test.manifest,
-      run: { ...test.manifest.run, workflowAttempt: 2 },
-      shard: { ...test.manifest.shard, jobId: "790", sourceAttempt: 2 },
-    };
-    const capability = await issueIngestCapability(test.bindings.configuration.capability, {
-      runId: next.id,
-      repositoryId: manifest.run.repositoryId,
-      workflowRunId: "456",
-      workflowAttempt: 2,
-      testedSha: manifest.run.testedSha,
-      planDigest: manifest.run.planDigest,
-      shardKey: "chrome-1",
-      jobId: "790",
-      maximumBytes: test.bindings.configuration.limits.maximumShardBytes,
-      maximumImages: 1,
-    });
-    const response = await test.send(
-      `/v1/runs/${next.id}/shards/chrome-1`,
-      test.json(manifest, capability),
-    );
-    expect(response.status, await response.clone().text()).toBe(413);
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_manifests WHERE run_id=?")
-        .bind(next.id)
-        .first(),
-    ).toEqual({ count: 0 });
-  });
-  it("waits for successful GitHub jobs before sealing and presenting review", async () => {
+  it("presents review only after a combined measured run is sealed", async () => {
     const test = await fixture();
     const statePath = `/api/runs/${test.runId}/state`;
     expect((await test.send(statePath)).status).toBe(401);
@@ -1229,21 +887,12 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       reviewReady: false,
       archived: false,
     });
-    const digest = await test.upload();
-    const response = await test.send(
-      `/v1/runs/${test.runId}/finalize`,
-      test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-    );
-    expect(response.status).toBe(202);
+    await test.upload();
     expect((await test.service.run(test.runId)).sealed_at).toBeNull();
-    expect((await reconcileIngest(apiContext(test.bindings))).progressed).toBe(0);
-    test.succeedJob();
     const wake = vi.fn(async () => {});
     test.bindings.operations.send = wake;
-    const result = await reconcileIngest(apiContext(test.bindings));
-    expect(result.errors).toEqual([]);
-    expect(result.progressed).toBe(1);
-    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+    await test.complete();
+    expect(wake).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ kind: "status" }));
     const comparisonId = (await test.service.run(test.runId)).comparison_id;
     if (!comparisonId) throw new Error("Missing comparison");
     await startComparisonPublication(apiContext(test.bindings), comparisonId);
@@ -1284,29 +933,39 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       source: "automatic",
     });
   });
+  it("ends review polling when an accepted main run becomes history", async () => {
+    const test = await fixture();
+    await test.complete();
+    const headers = { authorization: `Bearer ${test.token}` };
+    const path = `/api/runs/${test.runId}/state`;
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      archived: false,
+      reviewReady: true,
+    });
+    await database
+      .prepare("UPDATE visonaut_runs SET state='accepted' WHERE id=?")
+      .bind(test.runId)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      archived: true,
+      reviewReady: false,
+    });
+  });
+
   it("keeps a zero-pending comparison ready when its status wake fails", async () => {
     const test = await fixture();
-    const digest = await test.upload();
+    await test.upload();
     const wake = vi.fn(async () => {
       throw new Error("Queue unavailable");
     });
     test.bindings.operations.send = wake;
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      test.succeedJob();
-      expect(
-        (
-          await test.send(
-            `/v1/runs/${test.runId}/finalize`,
-            test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-          )
-        ).status,
-      ).toBe(202);
-      expect((await reconcileIngest(apiContext(test.bindings))).errors).toEqual([]);
+      await test.complete();
       const comparisonId = (await test.service.run(test.runId)).comparison_id;
       if (!comparisonId) throw new Error("Missing comparison");
       expect((await test.service.comparison(comparisonId)).state).toBe("ready");
-      expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+      expect(wake).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ kind: "status" }));
       expect(error).toHaveBeenCalledWith(
         JSON.stringify({ event: "comparison-status-wakeup-failed", comparisonId }),
       );
@@ -1314,98 +973,10 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       error.mockRestore();
     }
   });
-  it("fails an unfinished run when its trusted capture executor changes", async () => {
-    const test = await fixture();
-    test.bindings.configuration.reusableWorkflowRef =
-      "ariakit/ariakit/.github/workflows/new-capture.yml@sha";
-    const result = await reconcileIngest(apiContext(test.bindings));
-    expect(result).toEqual({ checked: 1, errors: [], progressed: 1 });
-    expect((await test.service.run(test.runId)).state).toBe("failed");
-    const audit = await database
-      .prepare(
-        "SELECT action,detail_json FROM visonaut_audit WHERE run_id=? ORDER BY created_at DESC LIMIT 1",
-      )
-      .bind(test.runId)
-      .first<{ action: string; detail_json: string }>();
-    expect(audit?.action).toBe("capture-failed");
-    expect(JSON.parse(audit?.detail_json ?? "{}")).toMatchObject({
-      reason: "The trusted capture executor changed. Start a new capture attempt.",
-    });
-  });
-  it("retires an old attempt under a changed executor without blocking a later attempt", async () => {
-    const test = await fixture({ secondShard: true });
-    test.bindings.configuration.reusableWorkflowSha = "e".repeat(40);
-    await trySealRun(apiContext(test.bindings), test.runId, true);
-    expect((await test.service.run(test.runId)).state).toBe("failed");
-    await expect(trySealRun(apiContext(test.bindings), test.runId, true)).resolves.toBeUndefined();
-    test.startRerun();
-    const github = await createGitHubClient(test.bindings.configuration.github);
-    const inheritance = await inheritedShards(
-      apiContext(test.bindings),
-      github,
-      {
-        ...test.manifest.run,
-        workflowAttempt: 2,
-        shardKey: "firefox-1",
-        jobId: "792",
-        checkRunId: "1",
-        event: "push",
-        ref: "refs/heads/main",
-        sourceHead: test.manifest.run.testedSha,
-        targetHead: test.manifest.run.testedSha,
-      },
-      test.plan,
-    );
-    expect(inheritance).toEqual({ rerunShardKeys: ["chrome-1", "firefox-1"] });
-    const next = await test.service.reserveRun({
-      id: crypto.randomUUID(),
-      projectId: test.bindings.configuration.projectId,
-      externalRunId: "456",
-      attempt: 2,
-      kind: "main",
-      testedSha: test.manifest.run.testedSha,
-      lineageKey: "main",
-      plan: test.servicePlan,
-      verifiedRelatedRunIds: [test.runId],
-      verifiedAncestorShas: [],
-      verificationDigest: "verified-rerun",
-      ...inheritance,
-      now: Date.now(),
-    });
-    expect(next.attempt).toBe(2);
-  });
-  it("fails an obsolete run even when its stored plan is unavailable", async () => {
-    const test = await fixture();
-    const key = `plans/${test.servicePlan.digest}.json`;
-    const stored = await quarantine.get(key);
-    expect(stored).not.toBeNull();
-    const body = await stored!.arrayBuffer();
-    await quarantine.delete(key);
-    try {
-      test.bindings.configuration.reusableWorkflowRef =
-        "ariakit/ariakit/.github/workflows/new-capture.yml@sha";
-      expect(await reconcileIngest(apiContext(test.bindings))).toEqual({
-        checked: 1,
-        errors: [],
-        progressed: 1,
-      });
-      expect((await test.service.run(test.runId)).state).toBe("failed");
-    } finally {
-      await quarantine.put(key, body);
-    }
-  });
   it("accepts the service's opaque promotion ID when saving a review after a baseline exists", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.upload();
+    await test.complete();
     const promotionId = `promotion-${"a".repeat(64)}`;
     await database
       .prepare("UPDATE visonaut_projects SET promotion_id=? WHERE id=?")
@@ -1448,15 +1019,17 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
     const result = await objectResponse(response);
     expect(result).toMatchObject({
       revisions: [{ id: variant?.id, expectedRevision: Number(variant?.revision) + 1 }],
       baselineRevision: model.baselineRevision,
       promotionId,
-      runRevision: Number(model.comparisonRevision) + 2,
+      runRevision: Number(model.comparisonRevision) + 1,
+      runStatus: "rejected",
     });
     expect(result).not.toHaveProperty("model");
+    expect(result.runRevision).toBe((await test.service.run(test.runId)).revision);
     const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
     const savedVariant = objects(objects(refreshed.items)[0]?.variants)[0];
     expect(savedVariant).toMatchObject({
@@ -1469,16 +1042,8 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
 
   it("keeps a mixed error row pending after compactly approving the last changed row", async () => {
     const test = await fixture({ duplicateOriginal: true });
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.upload();
+    await test.complete();
     const headers = {
       authorization: `Bearer ${test.token}`,
       origin: "https://preview.example",
@@ -1516,6 +1081,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const result = await objectResponse(response);
     expect(result).not.toHaveProperty("model");
     expect(result.runStatus).toBe("needs-review");
+    expect(result.runRevision).toBe((await test.service.run(test.runId)).revision);
     const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
     expect(object(refreshed.run).status).toBe(result.runStatus);
     expect(objects(objects(refreshed.items)[0]?.variants)).toMatchObject([
@@ -1526,16 +1092,8 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
 
   it("returns the authoritative model when another review changed a different variant", async () => {
     const test = await fixture({ duplicateOriginal: true });
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.upload();
+    await test.complete();
     const headers = {
       authorization: `Bearer ${test.token}`,
       origin: "https://preview.example",
@@ -1548,21 +1106,18 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
     const item = objects(model.items)[0];
     const [first, second] = objects(item?.variants);
     expect(second).toBeDefined();
+    const otherRequest = {
+      reviewSessionId: session.reviewSessionId,
+      commandId: crypto.randomUUID(),
+      verdict: "rejected",
+      targets: [{ id: second?.id, expectedRevision: second?.revision }],
+      selection: { itemKey: item?.key, variantKey: second?.key },
+      expectedBaselineRevision: model.baselineRevision,
+      expectedRunRevision: model.comparisonRevision,
+    };
     const otherResponse = await test.send(
       `/api/comparisons/${string(model.comparisonId)}/commands`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          reviewSessionId: session.reviewSessionId,
-          commandId: crypto.randomUUID(),
-          verdict: "rejected",
-          targets: [{ id: second?.id, expectedRevision: second?.revision }],
-          selection: { itemKey: item?.key, variantKey: second?.key },
-          expectedBaselineRevision: model.baselineRevision,
-          expectedRunRevision: model.comparisonRevision,
-        }),
-      },
+      { method: "POST", headers, body: JSON.stringify(otherRequest) },
     );
     expect(otherResponse.status).toBe(200);
     expect(await objectResponse(otherResponse)).not.toHaveProperty("model");
@@ -1589,20 +1144,22 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       { verdict: "rejected", source: "human" },
       { verdict: "rejected", source: "human" },
     ]);
+    const currentRevision = (await test.service.run(test.runId)).revision;
+    const replayResponse = await test.send(
+      `/api/comparisons/${string(model.comparisonId)}/commands`,
+      { method: "POST", headers, body: JSON.stringify(otherRequest) },
+    );
+    expect(replayResponse.status).toBe(200);
+    const replayResult = await objectResponse(replayResponse);
+    expect(replayResult).toHaveProperty("model");
+    expect(replayResult.model).toEqual(staleResult.model);
+    expect((await test.service.run(test.runId)).revision).toBe(currentRevision);
   });
 
   it("wakes status delivery after a saved review and Undo", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.upload();
+    await test.complete();
     const headers = {
       authorization: `Bearer ${test.token}`,
       origin: "https://preview.example",
@@ -1631,7 +1188,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       }),
     });
     expect(response.status).toBe(200);
-    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "continue" });
+    expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
 
     const undoResponse = await test.send(`/api/commands/${commandId}/undo`, {
       method: "POST",
@@ -1643,7 +1200,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       }),
     });
     expect(undoResponse.status).toBe(200);
-    expect(wake).toHaveBeenNthCalledWith(2, { kind: "continue" });
+    expect(wake).toHaveBeenNthCalledWith(2, { kind: "status" });
     expect(
       objects(objects(object((await objectResponse(undoResponse)).model).items)[0]?.variants)[0],
     ).toMatchObject({
@@ -1651,1051 +1208,16 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       source: variant?.source,
     });
   });
-  it("keeps staged inline profiles unchanged when a shard retries after normalization deploys", async () => {
-    const test = await fixture({ secondShard: true });
-    const digest = await test.upload();
-    test.succeedShard();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
-    const capture = await database
-      .prepare("SELECT metadata_json FROM visonaut_captures WHERE run_id=?")
-      .bind(test.runId)
-      .first<{ metadata_json: string }>();
-    expect(capture).not.toBeNull();
-    const metadata = object(JSON.parse(capture?.metadata_json ?? "null"));
-    const inline = JSON.stringify({ ...metadata, profile: test.manifest.profiles[0]?.profile });
-    // These rows model a prior deployment interrupted before the shard's final transaction.
-    await database
-      .prepare("UPDATE visonaut_captures SET metadata_json=? WHERE run_id=?")
-      .bind(inline, test.runId)
-      .run();
-    await database
-      .prepare(
-        "UPDATE visonaut_shards SET state='pending',manifest_digest=NULL WHERE run_id=? AND key='chrome-1'",
-      )
-      .bind(test.runId)
-      .run();
-    expect((await reconcileIngest(apiContext(test.bindings))).errors).toEqual([]);
-    const retried = await database
-      .prepare("SELECT metadata_json FROM visonaut_captures WHERE run_id=?")
-      .bind(test.runId)
-      .first<{ metadata_json: string }>();
-    expect(retried?.metadata_json).toBe(inline);
-    expect(
-      await database
-        .prepare("SELECT state FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
-        .bind(test.runId)
-        .first<{ state: string }>(),
-    ).toEqual({ state: "complete" });
-    expect((await test.service.run(test.runId)).sealed_at).toBeNull();
-  });
-  it("does not inherit a carried shard captured under an obsolete executor", async () => {
-    const test = await rerunFixture();
-    test.bindings.configuration.reusableWorkflowSha = "e".repeat(40);
-    await trySealRun(apiContext(test.bindings), test.runId, true);
-    expect((await test.service.run(test.runId)).state).toBe("failed");
-    await expect(test.inherit()).rejects.toThrow("original verified manifest");
-  });
-  it("inherits GitHub carried-success aliases using the original job execution", async () => {
-    const test = await fixture({ secondShard: true, discovery: true });
-    const digest = await test.upload();
-    test.succeedShard();
-    const response = await test.send(
-      `/v1/runs/${test.runId}/finalize`,
-      test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-    );
-    expect(response.status).toBe(202);
-    const successful = await database
-      .prepare("SELECT state FROM visonaut_shards WHERE run_id = ? AND key = 'chrome-1'")
-      .bind(test.runId)
-      .first<{ state: string }>();
-    expect(successful?.state).toBe("complete");
-    expect((await test.service.run(test.runId)).sealed_at).toBeNull();
-    test.failWorkflow();
-    await reconcileIngest(apiContext(test.bindings));
-    expect((await test.service.status(test.runId)).status).toBe("failed");
-    test.startRerun();
-    const github = await createGitHubClient(test.bindings.configuration.github);
-    const inheritance = await inheritedShards(
-      apiContext(test.bindings),
-      github,
-      {
-        ...test.manifest.run,
-        workflowAttempt: 2,
-        shardKey: "firefox-1",
-        jobId: "792",
-        checkRunId: "1",
-        event: "push",
-        ref: "refs/heads/main",
-        sourceHead: test.manifest.run.testedSha,
-        targetHead: test.manifest.run.testedSha,
-      },
-      test.plan,
-    );
-    expect(inheritance.rerunShardKeys).toEqual(["firefox-1"]);
-    const next = await test.service.reserveRun({
-      id: crypto.randomUUID(),
-      projectId: test.bindings.configuration.projectId,
-      externalRunId: "456",
-      attempt: 2,
-      kind: "main",
-      testedSha: test.manifest.run.testedSha,
-      lineageKey: "main",
-      plan: test.servicePlan,
-      verifiedRelatedRunIds: [test.runId],
-      verifiedAncestorShas: [],
-      verificationDigest: "verified-rerun",
-      ...inheritance,
-      now: Date.now(),
-    });
-    const inherited = await database
-      .prepare(
-        "SELECT state, source_attempt FROM visonaut_shards WHERE run_id = ? AND key = 'chrome-1'",
-      )
-      .bind(next.id)
-      .first<{ state: string; source_attempt: number }>();
-    expect(inherited).toMatchObject({ state: "complete", source_attempt: 1 });
-    expect(test.githubRequests).toContain("/repos/ariakit/ariakit/actions/jobs/789");
-    expect(test.githubRequests).toContain("/repos/ariakit/ariakit/actions/runs/456/attempts/2");
-    await database
-      .prepare(
-        "INSERT INTO ingest_run_provenance (run_id,verified_json,plan_object_key,created_at) SELECT ?,verified_json,plan_object_key,created_at FROM ingest_run_provenance WHERE run_id=?",
-      )
-      .bind(next.id, test.runId)
-      .run();
-    const nextManifest: Manifest = {
-      ...test.manifest,
-      run: { ...test.manifest.run, workflowAttempt: 2 },
-      shard: { key: "firefox-1", jobId: "792", sourceAttempt: 2 },
-      tests: test.manifest.tests.map((entry) => ({ ...entry, id: "test-2" })),
-      captures: test.manifest.captures.map((capture) => ({
-        ...capture,
-        testId: "test-2",
-        variant: { ...capture.variant, key: "firefox-light" },
-      })),
-    };
-    if (test.plan.discovery) {
-      nextManifest.discovery = {
-        executorDigest: test.plan.discovery.executorDigest,
-        configurationDigest: await digestJson(test.plan.shards[1]?.collection),
-        inventoryDigest: await digestJson(
-          nextManifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-        ),
-      };
-    }
-    const nextCapability = await issueIngestCapability(test.bindings.configuration.capability, {
-      runId: next.id,
-      repositoryId: test.manifest.run.repositoryId,
-      workflowRunId: "456",
-      workflowAttempt: 2,
-      testedSha: next.tested_sha,
-      planDigest: next.plan_digest,
-      shardKey: "firefox-1",
-      jobId: "792",
-      maximumBytes: 16 * 1024 * 1024,
-      maximumImages: 1,
-    });
-    const declaration = await test.send(
-      `/v1/runs/${next.id}/shards/firefox-1`,
-      test.json(nextManifest, nextCapability),
-    );
-    expect(declaration.status, await declaration.clone().text()).toBe(200);
-    const declared = await declarationResponse(declaration);
-    expect(
-      (
-        await test.send(`/v1/uploads/${string(declared.uploads[0]?.ticket, 8192)}`, {
-          method: "PUT",
-          headers: { authorization: `Bearer ${nextCapability}`, "content-type": "image/png" },
-          body: bytes,
-        })
-      ).status,
-    ).toBe(204);
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", {
-      artifacts: [
-        {
-          name: `visonaut-discovery-1-789-chrome-1-${digest}`,
-          expired: false,
-          workflow_run: {
-            id: 456,
-            repository_id: Number(test.manifest.run.repositoryId),
-            head_repository_id: Number(test.manifest.run.repositoryId),
-            head_sha: next.tested_sha,
-          },
-        },
-        {
-          name: `visonaut-discovery-2-792-firefox-1-${declared.manifestDigest}`,
-          expired: false,
-          workflow_run: {
-            id: 456,
-            repository_id: Number(test.manifest.run.repositoryId),
-            head_repository_id: Number(test.manifest.run.repositoryId),
-            head_sha: next.tested_sha,
-          },
-        },
-      ],
-    });
-    test.succeedJob();
-    const latest = {
-      ...carriedJobs.alias,
-      id: 793,
-      run_id: 456,
-      name: "chrome",
-      head_sha: next.tested_sha,
-    };
-    const successfulRerun = {
-      id: 792,
-      name: "firefox",
-      run_attempt: 2,
-      status: "completed",
-      conclusion: "success",
-    };
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-      jobs: [latest, successfulRerun],
-    });
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2/jobs", {
-      jobs: [latest, successfulRerun],
-    });
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${next.id}/finalize`,
-          test.json(
-            {
-              schemaVersion: "1.0",
-              shardKey: "firefox-1",
-              manifestDigest: declared.manifestDigest,
-            },
-            nextCapability,
-          ),
-        )
-      ).status,
-    ).toBe(202);
-    const sealed = await test.service.run(next.id);
-    expect(sealed.sealed_at).not.toBeNull();
-    expect(sealed.comparison_id).not.toBeNull();
-    expect(
-      await database
-        .prepare(
-          "SELECT s.source_attempt,s.manifest_digest,m.job_id FROM visonaut_shards s JOIN ingest_manifests m ON m.run_id=? AND m.shard_key=s.key WHERE s.run_id=? AND s.key='chrome-1'",
-        )
-        .bind(test.runId, next.id)
-        .first(),
-    ).toEqual({ source_attempt: 1, manifest_digest: digest, job_id: "789" });
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
-        .bind(next.id)
-        .first(),
-    ).toEqual({ count: 2 });
-    expect(
-      await database
-        .prepare(
-          "SELECT COUNT(*) AS count FROM ingest_manifests WHERE run_id=? AND shard_key='chrome-1'",
-        )
-        .bind(next.id)
-        .first(),
-    ).toEqual({ count: 0 });
-
-    expect(
-      await database
-        .prepare("SELECT image_id FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'")
-        .bind(next.id)
-        .first(),
-    ).toEqual(
-      await database
-        .prepare("SELECT image_id FROM visonaut_captures WHERE run_id=? AND shard_key='chrome-1'")
-        .bind(test.runId)
-        .first(),
-    );
-    expect((await test.service.run(test.runId)).active).toBe(0);
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(409);
-  });
-  it("rejects changed, malformed, and ambiguous carried execution evidence", async () => {
-    const test = await rerunFixture();
-    const changedStep = test.alias.steps.map((step, index) =>
-      index === 0 ? { ...step, conclusion: "failure" } : step,
-    );
-    const invalidSteps = test.alias.steps.map((step, index) =>
-      index === 0 ? { ...step, started_at: "2026-09-22T14:56:20Z" } : step,
-    );
-    const cases: Array<{
-      name: string;
-      alias?: Record<string, unknown>;
-      original?: Record<string, unknown>;
-    }> = [
-      { name: "runner ID", alias: { runner_id: 1000308620 } },
-      { name: "runner name", alias: { runner_name: "another runner" } },
-      { name: "runner labels", alias: { labels: ["another-image"] } },
-      { name: "step outcome", alias: { steps: changedStep } },
-      { name: "missing steps", alias: { steps: [] } },
-      { name: "missing runner", alias: { runner_id: null } },
-      { name: "invalid date", alias: { completed_at: "2026-02-30T14:57:26Z" } },
-      { name: "reversed interval", alias: { completed_at: "2026-09-22T14:56:20Z" } },
-      { name: "wrong source head", original: { head_sha: "a".repeat(40) } },
-      { name: "wrong run", original: { run_id: 999 } },
-      { name: "wrong original ID", original: { id: 794 } },
-      { name: "wrong original attempt", original: { run_attempt: 2 } },
-      { name: "failed original", original: { conclusion: "failure" } },
-      { name: "cancelled original", original: { conclusion: "cancelled" } },
-      { name: "another ID in the original attempt", alias: { run_attempt: 1 } },
-      { name: "incomplete original", original: { status: "in_progress" } },
-      { name: "missing direct original", original: { id: null } },
-      { name: "failed alias", alias: { conclusion: "failure" } },
-      {
-        name: "step outside job",
-        alias: { steps: invalidSteps },
-        original: { steps: invalidSteps },
-      },
-      {
-        name: "ambiguous attempt boundary",
-        alias: { completed_at: carriedJobs.attempt.run_started_at },
-        original: { completed_at: carriedJobs.attempt.run_started_at },
-      },
-    ];
-    for (const entry of cases) {
-      test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
-        ...test.original,
-        ...entry.original,
-      });
-      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-        jobs: [{ ...test.alias, ...entry.alias }, test.current],
-      });
-      await expect(test.inherit(), entry.name).rejects.toThrow();
-    }
-    test.clearGitHubResponses();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-      jobs: [test.alias, test.alias, test.current],
-    });
-    await expect(test.inherit()).rejects.toThrow("complete rerun job matrix");
-    test.clearGitHubResponses();
-    for (const conclusion of ["failure", "cancelled"]) {
-      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
-        ...carriedJobs.attempt,
-        id: 456,
-        head_sha: test.verified.sourceHead,
-        conclusion,
-      });
-      await expect(test.inherit()).rejects.toThrow("current workflow attempt did not succeed");
-    }
-    test.clearGitHubResponses();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2", {
-      ...carriedJobs.attempt,
-      id: 456,
-      head_sha: test.verified.sourceHead,
-      run_started_at: null,
-    });
-    await expect(test.inherit()).rejects.toThrow("workflow attempt start is unavailable");
-    test.clearGitHubResponses();
-    test.verified.jobId = "793";
-    await expect(test.inherit()).rejects.toThrow("signed job");
-    expect((await test.service.run(test.runId)).active).toBe(1);
-  });
-
-  it("requires each real rerun to submit its own manifest regardless of its outcome", async () => {
-    const test = await rerunFixture();
-    for (const state of [
-      { status: "completed", conclusion: "success" },
-      { status: "completed", conclusion: "failure" },
-      { status: "completed", conclusion: "cancelled" },
-      { status: "queued", conclusion: null },
-      { status: "in_progress", conclusion: null },
-    ]) {
-      test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-        jobs: [
-          {
-            ...test.alias,
-            ...state,
-            started_at: "2026-09-22T15:01:08Z",
-            completed_at: "2026-09-22T15:02:21Z",
-            runner_id: 1000308621,
-          },
-          test.current,
-        ],
-      });
-      expect(await test.inherit()).toEqual({ rerunShardKeys: ["chrome-1", "firefox-1"] });
-    }
-  });
-
-  it("requires original finalized source, complete profile, and trusted identity", async () => {
-    const test = await rerunFixture(true);
-    const changes = [
-      {
-        sql: "UPDATE ingest_manifests SET finalized=0 WHERE run_id=?",
-        restore: "UPDATE ingest_manifests SET finalized=1 WHERE run_id=?",
-      },
-      {
-        sql: "UPDATE visonaut_shards SET state='pending' WHERE run_id=? AND key='chrome-1'",
-        restore: "UPDATE visonaut_shards SET state='complete' WHERE run_id=? AND key='chrome-1'",
-      },
-      {
-        sql: "UPDATE visonaut_shards SET source_attempt=2 WHERE run_id=? AND key='chrome-1'",
-        restore: "UPDATE visonaut_shards SET source_attempt=1 WHERE run_id=? AND key='chrome-1'",
-      },
-    ];
-    for (const change of changes) {
-      await database.prepare(change.sql).bind(test.runId).run();
-      await expect(test.inherit()).rejects.toThrow("original verified manifest");
-      await database.prepare(change.restore).bind(test.runId).run();
-    }
-    for (const key of ["testedSha", "planDigest"] as const) {
-      const value = test.verified[key];
-      test.verified[key] = "a".repeat(value.length);
-      await expect(test.inherit()).rejects.toThrow("earlier shard evidence");
-      test.verified[key] = value;
-    }
-    const proof = await database
-      .prepare("SELECT discovery_json FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
-      .bind(test.runId)
-      .first<{ discovery_json: string }>();
-    if (!proof) throw new Error("Expected a verified discovery source.");
-    for (const field of ["configurationDigest", "inventoryDigest"] as const) {
-      const altered = {
-        ...object(JSON.parse(proof.discovery_json)),
-        [field]: field === "configurationDigest" ? "a".repeat(64) : "",
-      };
-      await database
-        .prepare("UPDATE visonaut_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
-        .bind(JSON.stringify(altered), test.runId)
-        .run();
-      await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
-    }
-    await database
-      .prepare("UPDATE visonaut_shards SET discovery_json=NULL WHERE run_id=? AND key='chrome-1'")
-      .bind(test.runId)
-      .run();
-    await expect(test.inherit()).rejects.toThrow("independent discovery receipt");
-    await database
-      .prepare("UPDATE visonaut_shards SET discovery_json=? WHERE run_id=? AND key='chrome-1'")
-      .bind(proof.discovery_json, test.runId)
-      .run();
-    const next = await test.reserve();
-    await database
-      .prepare("UPDATE visonaut_shards SET full_profile_digest=? WHERE run_id=? AND key='chrome-1'")
-      .bind("a".repeat(64), next.id)
-      .run();
-    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
-      "original verified manifest",
-    );
-    expect((await test.service.run(next.id)).comparison_id).toBeNull();
-  });
-
-  it("does not inherit discovery uploads without an independent successful receipt", async () => {
-    const test = await fixture({ secondShard: true, discovery: true });
-    const digest = await test.upload();
-    test.succeedShard();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/artifacts", { artifacts: [] });
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({
-            schemaVersion: "1.0",
-            shardKey: "chrome-1",
-            manifestDigest: digest,
-          }),
-        )
-      ).status,
-    ).toBe(409);
-    test.startRerun();
-    const github = await createGitHubClient(test.bindings.configuration.github);
-    await expect(
-      inheritedShards(
-        apiContext(test.bindings),
-        github,
-        {
-          ...test.manifest.run,
-          workflowAttempt: 2,
-          shardKey: "firefox-1",
-          jobId: "792",
-          checkRunId: "1",
-          event: "push",
-          ref: "refs/heads/main",
-          sourceHead: test.manifest.run.testedSha,
-          targetHead: test.manifest.run.testedSha,
-        },
-        test.plan,
-      ),
-    ).rejects.toThrow("original verified manifest");
-    expect(
-      await database
-        .prepare("SELECT state FROM visonaut_shards WHERE run_id=? AND key='chrome-1'")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ state: "pending" });
-  });
-
-  it("binds carried jobs to the PR source head while retaining the tested merge SHA", async () => {
-    const test = await rerunFixture();
-    test.verified.sourceHead = carriedJobs.original.head_sha;
-    test.verified.event = "pull_request";
-    test.verified.ref = "refs/pull/9/merge";
-    test.verified.pullRequestNumber = 9;
-    await database
-      .prepare(
-        "UPDATE ingest_run_provenance SET verified_json=json_set(verified_json,'$.sourceHead',?) WHERE run_id=?",
-      )
-      .bind(test.verified.sourceHead, test.runId)
-      .run();
-    const metadata = { ...carriedJobs.attempt, id: 456, head_sha: test.verified.sourceHead };
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", metadata);
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/2", metadata);
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
-      ...test.original,
-      head_sha: test.verified.sourceHead,
-    });
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-      jobs: [{ ...test.alias, head_sha: test.verified.sourceHead }, test.current],
-    });
-    expect(test.verified.sourceHead).not.toBe(test.verified.testedSha);
-    expect((await test.inherit()).verifiedInheritedShards?.[0]?.manifestDigest).toBe(test.digest);
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/jobs/789", {
-      ...test.original,
-      head_sha: test.verified.testedSha,
-    });
-    await expect(test.inherit()).rejects.toThrow("original workflow execution");
-  });
-
-  it("reads the complete paginated job matrix and supports the unchanged original job form", async () => {
-    const test = await rerunFixture();
-    const jobs = Array.from({ length: 99 }, (_, index) => ({
-      id: 1000 + index,
-      name: `other-${index}`,
-      run_attempt: 2,
-    }));
-    test.setGitHubResponse(
-      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=1",
-      { jobs: [...jobs, test.current] },
-    );
-    test.setGitHubResponse(
-      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=2",
-      { jobs: [test.original] },
-    );
-    expect((await test.inherit()).rerunShardKeys).toEqual(["firefox-1"]);
-    expect(test.githubRequests).toContain(
-      "/repos/ariakit/ariakit/actions/runs/456/jobs?filter=latest&per_page=100&page=2",
-    );
-    const endless = {
-      ...test.github,
-      request: async () => ({ jobs: Array.from({ length: 100 }, () => test.current) }),
-    };
-    await expect(workflowJobs(endless, "456")).rejects.toThrow("exceeded its limit");
-  });
-
-  it("rejects attempt changes during reservation and rejects real reruns during sealing", async () => {
-    const test = await rerunFixture();
-    const request = test.github.request.bind(test.github);
-    test.github.request = async (path, ...options) => {
-      const response = await request(path, ...options);
-      if (path.endsWith("/jobs/789")) {
-        test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
-          ...carriedJobs.attempt,
-          id: 456,
-          head_sha: test.verified.sourceHead,
-          run_attempt: 3,
-        });
-      }
-      return response;
-    };
-    await expect(test.inherit()).rejects.toThrow("workflow attempt or source head changed");
-    test.github.request = request;
-    test.clearGitHubResponses();
-    const next = await test.reserve();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-      jobs: [
-        {
-          ...test.alias,
-          started_at: "2026-09-22T15:01:08Z",
-          completed_at: "2026-09-22T15:02:21Z",
-          runner_id: 1000308621,
-        },
-        test.current,
-      ],
-    });
-    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow();
-    expect((await test.service.run(next.id)).sealed_at).toBeNull();
-    expect((await test.service.run(next.id)).comparison_id).toBeNull();
-    test.clearGitHubResponses();
-    const originalFetch = test.bindings.configuration.github.fetch;
-    if (!originalFetch) throw new Error("Expected the diagnostic GitHub transport.");
-    test.bindings.configuration.github.fetch = async (input, init) => {
-      const response = await originalFetch(input, init);
-      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-      if (url.pathname.endsWith("/jobs/789")) {
-        test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
-          ...carriedJobs.attempt,
-          id: 456,
-          head_sha: test.verified.sourceHead,
-          run_attempt: 3,
-        });
-      }
-      return response;
-    };
-    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
-      "workflow attempt or source head changed",
-    );
-    expect((await test.service.run(next.id)).comparison_id).toBeNull();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
-      ...carriedJobs.attempt,
-      id: 456,
-      head_sha: test.verified.sourceHead,
-      run_attempt: 3,
-    });
-    await expect(trySealRun(apiContext(test.bindings), next.id)).rejects.toThrow(
-      "workflow attempt or source head changed",
-    );
-  });
-
-  it("resolves later reruns directly to the original manifest and verifies historical aliases", async () => {
-    const test = await rerunFixture(true);
-    const next = await test.reserve();
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456", {
-      ...carriedJobs.attempt,
-      id: 456,
-      head_sha: test.verified.sourceHead,
-      run_attempt: 3,
-      run_started_at: "2026-09-22T15:10:00Z",
-    });
-    const previousCalls = test.githubRequests.filter((path) => path.endsWith("/jobs/789")).length;
-    await trySealRun(apiContext(test.bindings), next.id, true);
-    expect(test.githubRequests.filter((path) => path.endsWith("/jobs/789")).length).toBe(
-      previousCalls + 1,
-    );
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/attempts/3", {
-      ...carriedJobs.attempt,
-      id: 456,
-      head_sha: test.verified.sourceHead,
-      run_attempt: 3,
-      run_started_at: "2026-09-22T15:10:00Z",
-    });
-    test.verified.workflowAttempt = 3;
-    test.verified.jobId = "794";
-    test.setGitHubResponse("/repos/ariakit/ariakit/actions/runs/456/jobs", {
-      jobs: [
-        { ...test.alias, id: 795, run_attempt: 3 },
-        { ...test.current, id: 794, run_attempt: 3 },
-      ],
-    });
-    const inheritance = await test.inherit();
-    expect(inheritance.inheritFromRunId).toBe(next.id);
-    expect(inheritance.verifiedInheritedShards?.[0]?.manifestDigest).toBe(test.digest);
-    expect(
-      test.githubRequests.some((path) => path.endsWith("/jobs/793") || path.endsWith("/jobs/795")),
-    ).toBe(false);
-  });
-  it("requires one independent nonexpired discovery receipt with matching workflow identity", async () => {
-    const test = await fixture();
-    const receiptDigest = "e".repeat(64);
-    const artifact = {
-      name: `visonaut-discovery-1-789-chrome-1-${receiptDigest}`,
-      expired: false,
-      workflow_run: {
-        id: 456,
-        repository_id: Number(test.manifest.run.repositoryId),
-        head_repository_id: Number(test.manifest.run.repositoryId),
-        head_sha: test.manifest.run.testedSha,
-      },
-    };
-    let artifacts = [artifact];
-    const github = {
-      appId: "123",
-      repository: test.manifest.run.repository,
-      repositoryId: test.manifest.run.repositoryId,
-      async request() {
-        return { artifacts };
-      },
-    };
-    const plan = { ...test.plan, discovery: { executorDigest: "f".repeat(64) } };
-    expect(
-      (await discoveryEvidence(github, test.manifest, plan, test.manifest.run.testedSha))
-        ?.manifestDigest,
-    ).toBe(receiptDigest);
-    artifacts = [artifact, artifact];
-    await expect(
-      discoveryEvidence(github, test.manifest, plan, test.manifest.run.testedSha),
-    ).rejects.toMatchObject({ code: "missing_receipt" });
-    artifacts = [{ ...artifact, expired: true }];
-    await expect(
-      discoveryEvidence(github, test.manifest, plan, test.manifest.run.testedSha),
-    ).rejects.toMatchObject({ code: "invalid_receipt" });
-    artifacts = [
-      { ...artifact, workflow_run: { ...artifact.workflow_run, head_sha: "a".repeat(40) } },
-    ];
-    await expect(
-      discoveryEvidence(github, test.manifest, plan, test.manifest.run.testedSha),
-    ).rejects.toMatchObject({ code: "invalid_receipt" });
-  });
-
-  it("reserves concurrent matrix jobs through signed OIDC and a trusted main plan", async () => {
-    const test = await fixture();
-    const configuration = test.bindings.configuration;
-    const original = configuration.github.fetch!;
-    configuration.github.fetch = async (input, init) => {
-      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-      if (url.pathname.endsWith("/git/ref/heads/main"))
-        return Response.json({ object: { sha: test.manifest.run.testedSha } });
-      if (url.pathname.includes("/contents/"))
-        return Response.json({
-          type: "file",
-          encoding: "base64",
-          content: Buffer.from(JSON.stringify(test.plan)).toString("base64"),
-        });
-      if (url.pathname.endsWith("/pulls")) return Response.json([]);
-      if (url.pathname.endsWith("/jobs"))
-        return Response.json({
-          jobs: [
-            {
-              id: 890,
-              run_id: 457,
-              run_attempt: 1,
-              name: "chrome",
-              check_run_url: "https://api.github.com/repos/ariakit/ariakit/check-runs/999",
-              status: "in_progress",
-              conclusion: null,
-            },
-          ],
-        });
-      if (url.pathname.includes("/actions/runs/457"))
-        return Response.json({
-          id: 457,
-          run_attempt: 1,
-          repository: { id: Number(test.manifest.run.repositoryId), owner: { id: 5 } },
-          event: "push",
-          path: test.plan.workflow,
-          status: "in_progress",
-          conclusion: null,
-          head_sha: test.manifest.run.testedSha,
-          head_branch: "main",
-        });
-      return original(input, init);
-    };
-    const keys = await generateKeyPair("RS256");
-    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "api-test", alg: "RS256" };
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks")
-        throw new Error("Unexpected test network request");
-      return Response.json({ keys: [jwk] });
-    });
-    try {
-      const token = await new SignJWT({
-        repository: test.manifest.run.repository,
-        repository_id: test.manifest.run.repositoryId,
-        repository_owner_id: "5",
-        run_id: "457",
-        run_attempt: "1",
-        sha: test.manifest.run.testedSha,
-        check_run_id: "999",
-        event_name: "push",
-        ref: "refs/heads/main",
-        workflow_ref: `ariakit/ariakit/${test.plan.workflow}@refs/heads/main`,
-        job_workflow_ref: configuration.reusableWorkflowRef,
-        job_workflow_sha: configuration.reusableWorkflowSha,
-      })
-        .setProtectedHeader({ alg: "RS256", kid: "api-test" })
-        .setIssuer("https://token.actions.githubusercontent.com")
-        .setAudience(configuration.oidcAudience)
-        .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
-        .setIssuedAt()
-        .setNotBefore("0s")
-        .setExpirationTime("5m")
-        .setJti(crypto.randomUUID())
-        .sign(keys.privateKey);
-      const body = {
-        ...test.manifest.run,
-        workflowRunId: "457",
-        schemaVersion: "1.0",
-        shardKey: "chrome-1",
-      };
-      test.bindings.admission = vi
-        .fn()
-        .mockRejectedValue(new SecurityError("capacity_exceeded", 503, "New runs are paused."));
-      const paused = await test.send("/v1/runs", test.json(body, token));
-      expect(paused.status).toBe(503);
-      expect(await objectResponse(paused)).toMatchObject({ error: { code: "capacity_exceeded" } });
-      expect(
-        await database
-          .prepare("SELECT id FROM visonaut_runs WHERE project_id=? AND external_run_id='457'")
-          .bind(configuration.projectId)
-          .first(),
-      ).toBeNull();
-      test.bindings.admission = vi.fn().mockResolvedValue({ maximumActiveRuns: 1000 });
-      const responses = await Promise.all([
-        test.send("/v1/runs", test.json(body, token)),
-        test.send("/v1/runs", test.json(body, token)),
-      ]);
-      expect(responses.map((response) => response.status)).toEqual([201, 201]);
-      const results = await Promise.all(responses.map(objectResponse));
-      expect(string(results[0]?.runId)).toBe(string(results[1]?.runId));
-      expect(
-        (await test.send("/v1/runs", test.json({ ...body, planDigest: "a".repeat(64) }, token)))
-          .status,
-      ).toBe(403);
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("serves the transfer key only to its signed capture job", async () => {
-    const test = await fixture();
-    const configuration = test.bindings.configuration;
-    const executorDigest = "e".repeat(64);
-    configuration.trustedExecutorDigest = executorDigest;
-    const sourceShard = test.plan.shards[0];
-    if (!sourceShard) throw new Error("The test plan has no shard.");
-    const plan: TrustedPlan = {
-      ...test.plan,
-      discovery: { executorDigest },
-      shards: [
-        {
-          ...sourceShard,
-          key: "chromium",
-          jobName: "capture / chromium",
-          tests: undefined,
-          collection: {
-            projectName: "chrome",
-            testDir: "app/src",
-            testMatch: ["**/test-browser.ts"],
-            testIgnore: [],
-            grep: [{ source: "@visual", flags: "" }],
-            grepInvert: [],
-            shard: null,
-            repeatEach: 1,
-          },
-        },
-      ],
-    };
-    const original = configuration.github.fetch!;
-    let signedJobName = "capture / chromium";
-    configuration.github.fetch = async (input, init) => {
-      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-      if (url.pathname.endsWith("/git/ref/heads/main")) {
-        return Response.json({ object: { sha: test.manifest.run.testedSha } });
-      }
-      if (url.pathname.includes("/contents/")) {
-        return Response.json({
-          type: "file",
-          encoding: "base64",
-          content: Buffer.from(JSON.stringify(plan)).toString("base64"),
-        });
-      }
-      if (url.pathname.endsWith("/jobs")) {
-        return Response.json({
-          jobs: [
-            {
-              id: 890,
-              run_id: 457,
-              run_attempt: 1,
-              name: signedJobName,
-              check_run_url: "https://api.github.com/repos/ariakit/ariakit/check-runs/999",
-              status: "in_progress",
-              conclusion: null,
-            },
-          ],
-        });
-      }
-      if (url.pathname.includes("/actions/runs/457")) {
-        return Response.json({
-          id: 457,
-          run_attempt: 1,
-          repository: { id: Number(test.manifest.run.repositoryId), owner: { id: 5 } },
-          event: "push",
-          path: plan.workflow,
-          status: "in_progress",
-          conclusion: null,
-          head_sha: test.manifest.run.testedSha,
-          head_branch: "main",
-        });
-      }
-      return original(input, init);
-    };
-    const keys = await generateKeyPair("RS256");
-    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "transfer-test", alg: "RS256" };
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
-        throw new Error("Unexpected test network request");
-      }
-      return Response.json({ keys: [jwk] });
-    });
-    try {
-      const signed = async (
-        audience = "https://preview.example/transfer-key",
-        reusableWorkflowRef = configuration.reusableWorkflowRef,
-        callerWorkflowRef = `ariakit/ariakit/${plan.workflow}@refs/heads/main`,
-      ) =>
-        new SignJWT({
-          repository: test.manifest.run.repository,
-          repository_id: test.manifest.run.repositoryId,
-          repository_owner_id: "5",
-          run_id: "457",
-          run_attempt: "1",
-          sha: test.manifest.run.testedSha,
-          check_run_id: "999",
-          event_name: "push",
-          ref: "refs/heads/main",
-          workflow_ref: callerWorkflowRef,
-          job_workflow_ref: reusableWorkflowRef,
-          job_workflow_sha: configuration.reusableWorkflowSha,
-        })
-          .setProtectedHeader({ alg: "RS256", kid: "transfer-test" })
-          .setIssuer("https://token.actions.githubusercontent.com")
-          .setAudience(audience)
-          .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
-          .setIssuedAt()
-          .setNotBefore("0s")
-          .setExpirationTime("5m")
-          .setJti(crypto.randomUUID())
-          .sign(keys.privateKey);
-      const transferRoute = "/v1/transfer/private-key";
-      const transferBody = {
-        browser: "chromium",
-        workflowRunId: "457",
-        workflowAttempt: 1,
-        testedSha: test.manifest.run.testedSha,
-      };
-      const transferToken = await signed();
-      test.bindings.transferPrivateKey = undefined;
-      expect((await test.send("/v1/transfer/public-key", { method: "GET" })).status).toBe(503);
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        503,
-      );
-      test.bindings.transferPrivateKey = privateKey;
-      const publicResponse = await test.send("/v1/transfer/public-key", { method: "GET" });
-      expect(publicResponse.status).toBe(200);
-      expect(publicResponse.headers.get("cache-control")).toBe("no-store");
-      const publicKey = await publicResponse.text();
-      expect(publicKey).toBe(createPublicKey(privateKey).export({ type: "spki", format: "pem" }));
-      expect(publicKey).not.toContain("BEGIN PRIVATE KEY");
-      const transfers = await Promise.all([
-        test.send(transferRoute, test.json(transferBody, transferToken)),
-        test.send(transferRoute, test.json(transferBody, transferToken)),
-      ]);
-      expect(transfers.map((response) => response.status).sort()).toEqual([200, 200]);
-      const transferResponse = transfers.find((response) => response.status === 200);
-      if (!transferResponse) throw new Error("The transfer key was not redeemed.");
-      expect(transferResponse.headers.get("cache-control")).toContain("no-store");
-      expect(await transferResponse.text()).toBe(privateKey);
-      expect(await transfers.find((response) => response !== transferResponse)?.text()).toBe(
-        privateKey,
-      );
-      const firstRedemption = await database
-        .prepare(
-          "SELECT redeemed_at FROM transfer_key_redemptions WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND check_run_id = ?",
-        )
-        .bind(test.manifest.run.repositoryId, "457", 1, "999")
-        .first<{ redeemed_at: number }>();
-      expect(firstRedemption).toBeTruthy();
-      const replay = await test.send(transferRoute, test.json(transferBody, transferToken));
-      expect(replay.status).toBe(200);
-      expect(await replay.text()).toBe(privateKey);
-      expect(
-        (
-          await test.send(
-            transferRoute,
-            test.json(transferBody, await signed("https://preview.example/transfer-key")),
-          )
-        ).status,
-      ).toBe(200);
-      const redemptions = await database
-        .prepare(
-          "SELECT redeemed_at FROM transfer_key_redemptions WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ?",
-        )
-        .bind(test.manifest.run.repositoryId, "457", 1)
-        .all<{ redeemed_at: number }>();
-      expect(redemptions.results).toEqual([firstRedemption]);
-      signedJobName = "capture / render-chromium";
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        403,
-      );
-      signedJobName = "capture / chromium";
-      expect(
-        (
-          await test.send(
-            transferRoute,
-            test.json(transferBody, await signed("https://preview.example/bootstrap")),
-          )
-        ).status,
-      ).toBe(401);
-      expect(
-        (
-          await test.send(
-            transferRoute,
-            test.json(
-              transferBody,
-              await signed(
-                "https://preview.example/transfer-key",
-                "ariakit/ariakit/.github/workflows/untrusted.yml@forged",
-              ),
-            ),
-          )
-        ).status,
-      ).toBe(403);
-      expect(
-        (
-          await test.send(
-            transferRoute,
-            test.json(
-              transferBody,
-              await signed(
-                "https://preview.example/transfer-key",
-                configuration.reusableWorkflowRef,
-                "ariakit/ariakit/.github/workflows/untrusted.yml@refs/heads/main",
-              ),
-            ),
-          )
-        ).status,
-      ).toBe(403);
-      const trustedJobName = plan.shards[0]!.jobName;
-      plan.shards[0]!.jobName = "capture / untrusted";
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        403,
-      );
-      plan.shards[0]!.jobName = trustedJobName;
-      configuration.trustedExecutorDigest = "f".repeat(64);
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        403,
-      );
-      configuration.trustedExecutorDigest = executorDigest;
-      test.bindings.transferPrivateKey = undefined;
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        503,
-      );
-      test.bindings.transferPrivateKey = `-----BEGIN PRIVATE KEY-----\n${"a".repeat(4096)}\n-----END PRIVATE KEY-----`;
-      expect((await test.send(transferRoute, test.json(transferBody, transferToken))).status).toBe(
-        503,
-      );
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
   it("refreshes newly accepted ancestor evidence and fences a later baseline change", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    await test.send(
-      `/v1/runs/${test.runId}/finalize`,
-      test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-    );
+    await test.upload();
+    await test.complete();
     const run = await test.service.run(test.runId);
     const snapshotId = crypto.randomUUID();
     const ancestorSha = "a".repeat(40);
     await database
       .prepare(
-        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at) VALUES (?, ?, ?, ?, ?, 'accepted', 1, ?, ?)",
+        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, storage_mode, prefix, created_at) VALUES (?, ?, ?, ?, ?, 'accepted', 1, 'source', ?, ?)",
       )
       .bind(
         snapshotId,
@@ -2736,14 +1258,10 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       }),
     ).rejects.toMatchObject({ name: "ConflictError" });
   });
-  it("does not present an approval vetoed by a related rejection", async () => {
+  it("keeps a review-owned approval after a related source is rejected", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    await test.send(
-      `/v1/runs/${test.runId}/finalize`,
-      test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-    );
+    await test.upload();
+    await test.complete();
     const run = await test.service.run(test.runId);
     const rejectedComparison = crypto.randomUUID();
     const rejectedRow = crypto.randomUUID();
@@ -2781,8 +1299,8 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       headers: { authorization: `Bearer ${test.token}` },
     });
     const model = await reviewResponse(response);
-    expect(model.run.status).toBe("needs-review");
-    expect(model.items[0]?.variants[0]).toMatchObject({ verdict: null, source: null });
+    expect(model.run.status).toBe("passed");
+    expect(model.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "automatic" });
   });
   it("refreshes a prior main attempt into the stored flat lineage before recomparison", async () => {
     const test = await fixture();
@@ -2933,7 +1451,7 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
       targetHead: nextSha,
       jobId: "111",
       checkRunId: "222",
-      shardKey: "chrome-1",
+      shardKey: "combined",
     };
     const evidence = await relatedRunEvidence(apiContext(test.bindings), github, target);
     expect(new Set(evidence.runIds)).toEqual(new Set([test.runId, newlyMergedSource]));
@@ -2963,18 +1481,9 @@ describe("HTTP boundary with real local D1, R2, and image codecs", () => {
   });
 });
 describe("private recomparison API", () => {
-  it("blocks stale active PR captures before scheduling work and allows current captures", async () => {
+  it("recompares measured PR captures under the active policy without recapture", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.complete();
     await database
       .prepare("UPDATE visonaut_runs SET kind = 'pull_request' WHERE id = ?")
       .bind(test.runId)
@@ -2987,134 +1496,36 @@ describe("private recomparison API", () => {
     };
     const nextPolicyDigest = await digestJson(nextPolicy);
     await test.service.createPolicy({ digest: nextPolicyDigest, policy: nextPolicy });
-    const run = await test.service.run(test.runId);
     await database
       .prepare(
         "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
       )
-      .bind(nextPolicyDigest, run.project_id)
+      .bind(nextPolicyDigest, test.bindings.configuration.projectId)
       .run();
-    const before = await database
-      .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
-      .bind(test.runId)
-      .first<{ total: number }>();
     const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
     const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
-    expect(model.recompareAllowed).toBe(false);
-    expect(model.recompareDisabledReason).toMatch(/Refresh it against main and rerun CI/);
-    const rejected = await test.send(`/api/runs/${test.runId}/recompare`, {
+    expect(model.recompareAllowed).toBe(true);
+    const response = await test.send(`/api/runs/${test.runId}/recompare`, {
       method: "POST",
       headers,
     });
-    expect(rejected.status).toBe(409);
-    expect(await objectResponse(rejected)).toMatchObject({
-      error: { code: "incomplete", message: model.recompareDisabledReason },
-    });
+    expect(response.status).toBe(202);
+    const run = await test.service.run(test.runId);
+    const comparison = await test.service.comparison(run.comparison_id!);
+    expect(comparison.policy_digest).toBe(nextPolicyDigest);
     expect(
       await database
-        .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
+        .prepare("SELECT count(*) AS count FROM visonaut_images WHERE run_id = ?")
         .bind(test.runId)
         .first(),
-    ).toEqual(before);
-    await database
-      .prepare(
-        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
-      )
-      .bind("c".repeat(64), run.project_id)
-      .run();
-    expect(
-      (await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers })))
-        .recompareAllowed,
-    ).toBe(true);
-    const originalCheck = Service.prototype.hasObsoletePullRequestCapturePolicy;
-    let changedDuringRequest = false;
-    const check = vi
-      .spyOn(Service.prototype, "hasObsoletePullRequestCapturePolicy")
-      .mockImplementation(async function (this: Service, runId: string) {
-        const stale = await originalCheck.call(this, runId);
-        if (!stale && !changedDuringRequest) {
-          changedDuringRequest = true;
-          await database
-            .prepare(
-              "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
-            )
-            .bind(nextPolicyDigest, run.project_id)
-            .run();
-        }
-        return stale;
-      });
-    let raced: Response;
-    try {
-      raced = await test.send(`/api/runs/${test.runId}/recompare`, {
-        method: "POST",
-        headers,
-      });
-    } finally {
-      check.mockRestore();
-    }
-    expect(changedDuringRequest).toBe(true);
-    expect(raced.status).toBe(409);
-    expect(await objectResponse(raced)).toMatchObject({
-      error: { code: "incomplete", message: model.recompareDisabledReason },
-    });
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS total FROM visonaut_comparisons WHERE run_id = ?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual(before);
-    await database
-      .prepare(
-        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
-      )
-      .bind("c".repeat(64), run.project_id)
-      .run();
-    expect(
-      (await test.send(`/api/runs/${test.runId}/recompare`, { method: "POST", headers })).status,
-    ).toBe(202);
+    ).toEqual({ count: 1 });
   });
 
-  it("recompares a closed retained run and exposes a private immutable view without changing its live pointer", async () => {
+  it("recompares retained native closed detail without changing the live review pointer", async () => {
     const test = await fixture();
-    const digest = await test.upload();
-    test.succeedJob();
-    expect(
-      (
-        await test.send(
-          `/v1/runs/${test.runId}/finalize`,
-          test.json({ schemaVersion: "1.0", shardKey: "chrome-1", manifestDigest: digest }),
-        )
-      ).status,
-    ).toBe(202);
+    await test.complete();
     await test.service.retireRun({ runId: test.runId, now: Date.now() });
     const before = await test.service.run(test.runId);
-    const nextPolicy = {
-      id: "historical-policy",
-      channelThreshold: 1,
-      maxChangedPixels: 0,
-      maxChangedRatio: 0,
-    };
-    const nextPolicyDigest = await digestJson(nextPolicy);
-    await test.service.createPolicy({ digest: nextPolicyDigest, policy: nextPolicy });
-    await database
-      .prepare(
-        "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
-      )
-      .bind(nextPolicyDigest, before.project_id)
-      .run();
-    using fixtureDatabase = new TestDatabase();
-    const operations = { ...operationsContext(fixtureDatabase).context, database };
-    test.bindings.history = {
-      async read() {
-        return null;
-      },
-      async readCommand() {
-        throw new Error("Not used");
-      },
-      prepareComparison(input) {
-        return prepareHistoricalCaptures(operations, input);
-      },
-    };
     const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
     const response = await test.send(`/api/runs/${test.runId}/recompare`, {
       method: "POST",
@@ -3124,25 +1535,51 @@ describe("private recomparison API", () => {
     const model = await objectResponse(response);
     expect(model.archived).toBe(true);
     expect(model.reviewReady).toBe(false);
-    expect(model.recompareAllowed).toBe(true);
     expect(model.comparisonId).not.toBe(before.comparison_id);
     expect(await test.service.run(test.runId)).toEqual(before);
-    const comparisonId = string(model.comparisonId);
-    expect((await test.service.comparison(comparisonId)).purpose).toBe("historical");
-    expect((await test.service.comparisonRows(comparisonId))[0]?.decision_id).toBeNull();
-    const selected = `/api/runs/${test.runId}?comparison=${comparisonId}`;
-    const selectedState = `/api/runs/${test.runId}/state?comparison=${comparisonId}`;
-    expect((await test.send(selected)).status).toBe(401);
-    expect((await test.send(selected, { headers })).status).toBe(200);
-    expect((await test.send(selectedState)).status).toBe(401);
-    expect(await objectResponse(await test.send(selectedState, { headers }))).toEqual({
-      run: { status: "compared" },
-      comparisonState: "ready",
-      reviewReady: false,
-      archived: true,
+    expect((await test.service.comparison(string(model.comparisonId))).purpose).toBe("historical");
+  });
+
+  it("keeps an expired closed run immutable when the active policy changes", async () => {
+    const test = await fixture();
+    await test.complete();
+    await test.service.retireRun({ runId: test.runId, now: Date.now() });
+    await database
+      .prepare("UPDATE visonaut_runs SET closed_at=? WHERE id=?")
+      .bind(Date.now() - 31 * 24 * 60 * 60 * 1000, test.runId)
+      .run();
+    const before = await test.service.run(test.runId);
+    const policy = {
+      id: "historical-policy",
+      channelThreshold: 1,
+      maxChangedPixels: 0,
+      maxChangedRatio: 0,
+    };
+    const policyDigest = await digestJson(policy);
+    await test.service.createPolicy({ digest: policyDigest, policy });
+    await database
+      .prepare("UPDATE visonaut_projects SET policy_digest=?,revision=revision+1 WHERE id=?")
+      .bind(policyDigest, before.project_id)
+      .run();
+    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
+    const response = await test.send(`/api/runs/${test.runId}/recompare`, {
+      method: "POST",
+      headers,
     });
+    expect(response.status).toBe(409);
+    expect(await objectResponse(response)).toMatchObject({ error: { code: "history_closed" } });
+    expect(await test.service.run(test.runId)).toEqual(before);
+    const path = `/api/runs/${test.runId}`;
+    expect((await test.send(path)).status).toBe(401);
+    expect((await test.send(path, { headers })).status).toBe(200);
     test.setPermission("read");
-    expect((await test.send(selected, { headers })).status).toBe(403);
-    expect((await test.send(selectedState, { headers })).status).toBe(403);
+    expect((await test.send(path, { headers })).status).toBe(200);
+    const deniedWrite = await test.send("/api/review-sessions", {
+      method: "POST",
+      headers: { ...headers, origin: test.bindings.configuration.origin },
+    });
+    expect(deniedWrite.status).toBe(403);
+    expect(await objectResponse(deniedWrite)).toMatchObject({ error: { code: "not_maintainer" } });
+    expect((await test.send(path, { headers })).status).toBe(403);
   });
 });

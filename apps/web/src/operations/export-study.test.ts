@@ -8,7 +8,7 @@ it("consumes a10,580-image local export with TAR checksum validation and bounded
   const fixture = context(database);
   await captured(fixture.context);
   fixture.context.budget.maximumExportEntries = 20_000;
-  fixture.context.budget.maximumDatabaseBytes = 20 * 1024 * 1024;
+  fixture.context.budget.maximumMetadataBytes = 20 * 1024 * 1024;
   const value = new Uint8Array(1024);
   value.fill(37);
   const hash = digest(value);

@@ -1,0 +1,173 @@
+{
+  "url": "http://127.0.0.1:4319",
+  "verifiedAt": "2026-09-29T14:59:51.991Z",
+  "scope": "Independent fresh browser context. Only this context localStorage was changed; no user data or artifact files changed.",
+  "checks": [
+    {
+      "name": "dark initial theme",
+      "passed": true,
+      "details": {
+        "scheme": "dark",
+        "background": "oklch(0.17 0.014 259)"
+      }
+    },
+    {
+      "name": "39 decisions; no preselected answers",
+      "passed": true,
+      "details": {
+        "panels": 39,
+        "checked": 0,
+        "progress": "0 / 39 answered"
+      }
+    },
+    {
+      "name": "initial prompt omits unchanged decisions",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "notes alone do not count as answered",
+      "passed": true,
+      "details": {
+        "progress": "1 / 39 answered"
+      }
+    },
+    {
+      "name": "changed-only prompt includes selection and notes",
+      "passed": true,
+      "details": {
+        "updates": [
+          "S01 — Which storage boundary should Visonaut keep?",
+          "S02 — What recovery promise replaces the retired backup system?"
+        ]
+      }
+    },
+    {
+      "name": "selection notes and baseline survive reload",
+      "passed": true,
+      "details": {
+        "progress": "1 / 39 answered",
+        "baselineS01": {
+          "optionId": null,
+          "notes": ""
+        }
+      }
+    },
+    {
+      "name": "changing answer preserves notes",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "copy and repeat copy do not advance baseline",
+      "passed": true,
+      "details": {
+        "clipboardLength": 1118,
+        "baselineUnchanged": true
+      }
+    },
+    {
+      "name": "footer copy matches current prompt",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "clearing selection reports OPEN and preserves notes",
+      "passed": true,
+      "details": {
+        "progress": "0 / 39 answered"
+      }
+    },
+    {
+      "name": "cleared answer survives reload",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "restored baseline omits unchanged settled feedback",
+      "passed": true,
+      "details": {
+        "progress": "1 / 39 answered",
+        "updates": [
+          "S02 — What recovery promise replaces the retired backup system?"
+        ]
+      }
+    },
+    {
+      "name": "menu includes all current statuses",
+      "passed": true,
+      "details": {
+        "entries": 39
+      }
+    },
+    {
+      "name": "keyboard menu reaches last decision",
+      "passed": true,
+      "details": {
+        "hash": "#Q04",
+        "focused": "Q04"
+      }
+    },
+    {
+      "name": "clear relative to incorporated selection emits OPEN",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "invalid option restore forces OPEN and keeps notes",
+      "passed": true,
+      "details": {
+        "value": {
+          "optionId": null,
+          "notes": "Keep invalidated option notes"
+        },
+        "forcedOpen": true
+      }
+    },
+    {
+      "name": "changed selected option meaning forces OPEN",
+      "passed": true,
+      "details": {
+        "value": {
+          "optionId": null,
+          "notes": "Meaning check"
+        },
+        "forcedOpen": true,
+        "fingerprintShape": "object"
+      }
+    },
+    {
+      "name": "explicit current choice resolves invalidation",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "unselected option change preserves current choice",
+      "passed": true,
+      "details": {
+        "value": {
+          "optionId": "keep-two",
+          "notes": "Meaning check"
+        },
+        "forcedOpen": false,
+        "fingerprintShape": "object"
+      }
+    },
+    {
+      "name": "clipboard failure selects manual fallback",
+      "passed": true,
+      "details": {
+        "focused": true,
+        "start": 0,
+        "end": 1069,
+        "length": 1069,
+        "readOnly": true,
+        "status": "Select and copy the prompt below."
+      }
+    }
+  ],
+  "errors": [],
+  "browser": "154.0.8037.58",
+  "finalProgress": "1 / 39 answered",
+  "passed": true
+}

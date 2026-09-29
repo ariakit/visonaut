@@ -92,8 +92,27 @@ function variantPart(value: unknown): ReviewVariantPart {
   };
 }
 
-function variant(value: unknown): ReviewVariant {
+interface SharedReviewEvidence {
+  images: Array<ReviewImage | null>;
+  metadata: Array<Record<string, unknown>>;
+}
+
+function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
   const data = record(value);
+  const index = number(data.metadata);
+  const metadata = Number.isInteger(index) && index >= 0 ? shared.metadata[index] : undefined;
+  if (!metadata) {
+    throw new Error("The service returned invalid review metadata. Refresh before reviewing.");
+  }
+  const evidence = (value: unknown) => {
+    if (value === null) return null;
+    const index = number(value);
+    const result = Number.isInteger(index) && index >= 0 ? shared.images[index] : undefined;
+    if (!result) {
+      throw new Error("The service returned invalid image evidence. Refresh before reviewing.");
+    }
+    return result;
+  };
   return {
     id: string(data.id),
     key: string(data.key),
@@ -104,38 +123,48 @@ function variant(value: unknown): ReviewVariant {
     verdict: data.verdict === null ? null : oneOf(data.verdict, ["approved", "rejected"]),
     source: data.source === null ? null : oneOf(data.source, ["human", "automatic"]),
     reviewer: optionalString(data.reviewer),
-    reference: image(data.reference),
-    candidate: image(data.candidate),
-    diff: image(data.diff),
+    reference: evidence(data.reference),
+    candidate: evidence(data.candidate),
+    diff: evidence(data.diff),
     thumbnail: optionalString(data.thumbnail),
     changedPixels: optionalNumber(data.changedPixels),
     maskExpected: data.maskExpected == null ? undefined : boolean(data.maskExpected),
     ratio: optionalNumber(data.ratio),
-    engine: optionalString(data.engine),
-    codec: optionalString(data.codec),
-    policy: optionalString(data.policy),
-    threshold: optionalString(data.threshold),
-    referenceProfile: optionalString(data.referenceProfile),
-    candidateProfile: optionalString(data.candidateProfile),
+    engine: optionalString(metadata.engine),
+    codec: optionalString(metadata.codec),
+    policy: optionalString(metadata.policy),
+    threshold: optionalString(metadata.threshold),
+    referenceProfile: optionalString(metadata.referenceProfile),
+    candidateProfile: optionalString(metadata.candidateProfile),
     error: optionalString(data.error),
     rejectDisabledReason: optionalString(data.rejectDisabledReason),
     approveDisabledReason: optionalString(data.approveDisabledReason),
   };
 }
 
-function item(value: unknown): ReviewItem {
+function item(value: unknown, shared: SharedReviewEvidence): ReviewItem {
   const data = record(value);
   return {
     key: string(data.key),
     name: string(data.name),
-    variants: values(data.variants).map(variant),
+    variants: values(data.variants).map((value) => variant(value, shared)),
   };
 }
 
 export function parseReviewModel(value: unknown): ReviewModel {
   const data = record(value);
+  if (data.format !== "compact-review-1") {
+    throw new Error("This review format has changed. Refresh before reviewing.");
+  }
+  const shared: SharedReviewEvidence = {
+    images: values(data.images).map(image),
+    metadata: values(data.metadata).map(record),
+  };
   const run = record(data.run);
   return {
+    preview: data.preview == null ? undefined : boolean(data.preview),
+    evidenceState: data.evidenceState == null ? undefined : oneOf(data.evidenceState, ["summary"]),
+    imagesExpired: data.imagesExpired == null ? undefined : boolean(data.imagesExpired),
     run: {
       id: string(run.id),
       ...(run.repository == null ? {} : { repository: string(run.repository) }),
@@ -172,7 +201,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
     readOnlyReason: optionalString(data.readOnlyReason),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
-    items: values(data.items).map(item),
+    items: values(data.items).map((value) => item(value, shared)),
   };
 }
 
@@ -221,13 +250,14 @@ function saveResult(value: unknown): ReviewSaveResult {
   };
 }
 
-async function request(path: string, body?: object): Promise<unknown> {
+async function request(path: string, body?: object, signal?: AbortSignal): Promise<unknown> {
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
     credentials: "same-origin",
     cache: "no-store",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
+    signal,
   });
   if (!response.headers.get("content-type")?.includes("application/json")) {
     throw new ReviewCommandError(
@@ -249,17 +279,13 @@ async function request(path: string, body?: object): Promise<unknown> {
 }
 
 /** Loads review evidence before creating a session for a review command. */
-export async function loadReview(
-  runId: string,
-  comparisonId?: string,
-): Promise<{ model: ReviewModel; commands: ReviewCommands }> {
+export function createReviewCommands(runId: string, comparisonId?: string): ReviewCommands {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
   let selectedComparisonId = comparisonId;
   const selectedPath = (suffix = "") =>
     selectedComparisonId
       ? `${runPath}${suffix}?comparison=${encodeURIComponent(selectedComparisonId)}`
       : `${runPath}${suffix}`;
-  const run = await request(selectedPath());
   let sessionPromise: Promise<string> | undefined;
   const reviewSession = () => {
     sessionPromise ??= request("/api/review-sessions", {})
@@ -271,53 +297,70 @@ export async function loadReview(
     return sessionPromise;
   };
   return {
-    model: parseReviewModel(run),
-    commands: {
-      async save(command) {
-        const reviewSessionId = await reviewSession();
-        return saveResult(
-          await request(`/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`, {
-            ...command,
-            reviewSessionId,
-          }),
-        );
-      },
-      async undo(command) {
-        const reviewSessionId = await reviewSession();
-        return commandResult(
-          await request(`/api/commands/${encodeURIComponent(command.commandId)}/undo`, {
-            undoCommandId: command.undoCommandId,
-            expectedBaselineRevision: command.expectedBaselineRevision,
-            reviewSessionId,
-          }),
-        );
-      },
-      async refresh() {
-        return parseReviewModel(await request(selectedPath()));
-      },
-      async pollStatus() {
-        return parseReviewPollState(await request(selectedPath("/state")));
-      },
-      async recompare() {
-        const model = parseReviewModel(await request(`${runPath}/recompare`, {}));
-        // Historical results have no active run pointer for subsequent refreshes.
-        selectedComparisonId = model.archived ? model.comparisonId : undefined;
-        return model;
-      },
-      async export() {
-        const data = record(await request(`${runPath}/export`, {}));
-        const downloadPath = string(data.downloadPath);
-        const url = new URL(downloadPath, window.location.origin);
-        if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/exports/")) {
-          throw new Error("The service returned an invalid export location.");
-        }
-        const link = document.createElement("a");
-        link.href = url.href;
-        link.download = `visonaut-${runId}.tar`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-      },
+    async save(command) {
+      const reviewSessionId = await reviewSession();
+      return saveResult(
+        await request(`/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`, {
+          ...command,
+          reviewSessionId,
+        }),
+      );
+    },
+    async undo(command) {
+      const reviewSessionId = await reviewSession();
+      return commandResult(
+        await request(`/api/commands/${encodeURIComponent(command.commandId)}/undo`, {
+          undoCommandId: command.undoCommandId,
+          expectedBaselineRevision: command.expectedBaselineRevision,
+          reviewSessionId,
+        }),
+      );
+    },
+    async refresh() {
+      return parseReviewModel(await request(selectedPath()));
+    },
+    async pollStatus() {
+      return parseReviewPollState(await request(selectedPath("/state")));
+    },
+    async recompare() {
+      const model = parseReviewModel(await request(`${runPath}/recompare`, {}));
+      // Historical results have no active run pointer for subsequent refreshes.
+      selectedComparisonId = model.archived ? model.comparisonId : undefined;
+      return model;
+    },
+    async export() {
+      const data = record(await request(`${runPath}/export`, {}));
+      const downloadPath = string(data.downloadPath);
+      const url = new URL(downloadPath, window.location.origin);
+      if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/exports/")) {
+        throw new Error("The service returned an invalid export location.");
+      }
+      const link = document.createElement("a");
+      link.href = url.href;
+      link.download = `visonaut-${runId}.tar`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     },
   };
+}
+
+/** Router loaders own reads; command sessions remain local to the review page. */
+export async function loadReviewModel(
+  runId: string,
+  comparisonId?: string,
+  signal?: AbortSignal,
+): Promise<ReviewModel> {
+  const path = `/api/runs/${encodeURIComponent(runId)}`;
+  const query = comparisonId ? `?comparison=${encodeURIComponent(comparisonId)}` : "";
+  return parseReviewModel(await request(`${path}${query}`, undefined, signal));
+}
+
+export async function loadReview(
+  runId: string,
+  comparisonId?: string,
+  signal?: AbortSignal,
+): Promise<{ model: ReviewModel; commands: ReviewCommands }> {
+  const model = await loadReviewModel(runId, comparisonId, signal);
+  return { model, commands: createReviewCommands(runId, comparisonId) };
 }

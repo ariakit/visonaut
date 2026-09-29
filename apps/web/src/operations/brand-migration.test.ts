@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 
@@ -6,11 +7,8 @@ it("renames the existing service schema without losing capture references or pro
   const database = new DatabaseSync(":memory:");
   try {
     const directory = new URL("../../migrations/", import.meta.url);
-    const migrations = readdirSync(directory)
-      .filter((name) => name.endsWith(".sql"))
-      .sort();
-    for (const name of migrations.filter((name) => !name.startsWith("0014_"))) {
-      database.exec(readFileSync(new URL(name, directory), "utf8"));
+    for (const migration of readTestMigrations({ through: "0013_promotion_scans" })) {
+      database.exec(migration.sql);
     }
     database.exec(`
       INSERT INTO ariviso_policies(digest,policy_json) VALUES('policy','{}');

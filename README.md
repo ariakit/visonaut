@@ -4,17 +4,19 @@ Visual regression capture, comparison, and review for Ariakit.
 
 Visonaut captures prepared Playwright pages, compares the original images in a Cloudflare Worker, and lets maintainers review changes in a private web app. GitHub checks report the result for the tested commit. Uploading a capture does not approve it.
 
-[Issue #1](https://github.com/ariakit/visonaut/issues/1) defines the product and launch requirements. Package publication, production deployment, and Ariakit's required-check cutover use the [release and deployment workflow](.github/workflows/README.md). A passing local test suite alone does not establish launch readiness.
+The [current implementation contract](docs/current-contract.md) indexes the selected simplification rules and their explicit supersessions. [Issue #1](https://github.com/ariakit/visonaut/issues/1) remains the published contract until the repository authority handoff. Unaffected issue requirements remain binding. Package publication, production deployment, and Ariakit's required-check cutover use the [release and deployment workflow](.github/workflows/README.md). A passing local test suite alone does not establish launch readiness.
 
 ## Review a run
 
 Open the review link from the GitHub check and sign in with GitHub. Access requires current write permission to the configured repository. Check the commit and attempt, select an item and variant, then inspect its images before you approve or reject it.
 
+Preview uses isolated fixture runs without GitHub login or production data. It does not certify deployed authentication.
+
 The dashboard also shows unresolved service alerts. It refreshes them while open; no external notifications are sent.
 
 Use the [review guide](docs/review-guide.md) for image modes, keyboard controls, whole-item commands, Undo, and recovery from a failed save.
 
-## Capture and upload
+## Capture and submit
 
 The Playwright adapter captures one prepared variant per call. The caller controls navigation, media settings, viewport, and variant order. Item and variant keys define identity.
 
@@ -28,17 +30,15 @@ await visual(page, {
 });
 ```
 
-Configure the reporter and pinned capture workflow before uploading. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, and retries. The [CLI guide](packages/cli/README.md) explains the signed upload and submit jobs.
+Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Its small pinned visual workflow owns capture and signed Submit. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, and retries. The [CLI guide](packages/cli/README.md) explains the trusted submission path.
 
 ```sh
-# In each signed upload job, after its browser capture succeeds:
-pnpm exec visonaut upload --dir visonaut
-
-# In the final signed job, after every upload job succeeds:
-pnpm exec visonaut submit --run "$GITHUB_RUN_ID"
+# In the trusted signed Submit job, after every capture job succeeds:
+pnpm exec visonaut begin --run "$GITHUB_RUN_ID"
+pnpm exec visonaut submit --shard linux --shard safari
 ```
 
-The service verifies the complete pinned workflow and its staged capture jobs. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
+The service verifies the small pinned visual workflow, exact tested commit and attempt, and complete source-attempt capture set. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
 
 ## Work on the repository
 
@@ -49,7 +49,7 @@ pnpm install --frozen-lockfile
 pnpm check
 ```
 
-For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite starts an isolated review fixture with controlled data. It does not require a GitHub session or a deployed Worker.
+Use the [development and verification guide](docs/development.md) for command scopes and the on-demand built-app check. For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite starts an isolated review fixture with controlled data. It does not require a GitHub session or a deployed Worker.
 
 `pnpm dev` starts the web app. Complete the local Cloudflare bindings and authentication configuration before using its live API. Local, preview, and production must use separate data and credentials. See the [security configuration](packages/security/README.md), [Worker configuration](apps/web/wrangler.jsonc), and [deployment guide](.github/workflows/README.md).
 
@@ -65,10 +65,13 @@ For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite s
 
 ## Reference
 
+- [Current implementation contract](docs/current-contract.md)
+- [Development and verification](docs/development.md)
+- [Implementation record](docs/simplification-implementation.md)
 - [Review guide](docs/review-guide.md)
 - [Operations and recovery](apps/web/src/operations/README.md)
 - [CI, deployment, and publication](.github/workflows/README.md)
 - [Review evidence capture plan](docs/review-evidence-plan.md)
 - [Revision 9 design](docs/design-r9.html), [decision data](docs/design-r9.json), and [design verification](docs/design-verification.md)
 
-The design archive records the selected product behavior. Its prototype checks are separate from implementation and deployment evidence. The copied Ariakit UI components retain their [MIT license](apps/web/src/components/ariakit/LICENSE) and [source notice](apps/web/src/components/ariakit/NOTICE).
+The revision 9 design is a historical record. The current contract preserves its 61 decisions and states each selected supersession. Prototype checks remain separate from implementation and deployment evidence. The copied Ariakit UI components retain their [MIT license](apps/web/src/components/ariakit/LICENSE) and [source notice](apps/web/src/components/ariakit/NOTICE).

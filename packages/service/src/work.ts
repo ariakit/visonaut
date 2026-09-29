@@ -1,3 +1,35 @@
+export type MaintenanceFamily = "history" | "retention" | "profiles" | "baseline-conversion";
+export type OperationsMessage =
+  | { kind: "status"; comparisonId?: string }
+  | { kind: "ingest" }
+  | { kind: "maintenance"; family: MaintenanceFamily }
+  | { kind: "recovery" };
+
+export function operationsMessage(value: unknown): OperationsMessage | null {
+  if (!value || typeof value !== "object" || !("kind" in value)) return null;
+  if (value.kind === "recovery" || value.kind === "ingest") return { kind: value.kind };
+  if (value.kind === "status") {
+    if ("comparisonId" in value && typeof value.comparisonId !== "string") return null;
+    return {
+      kind: "status",
+      ...("comparisonId" in value ? { comparisonId: value.comparisonId as string } : {}),
+    };
+  }
+  if (
+    value.kind === "maintenance" &&
+    "family" in value &&
+    (value.family === "history" ||
+      value.family === "retention" ||
+      value.family === "profiles" ||
+      value.family === "baseline-conversion")
+  )
+    return { kind: "maintenance", family: value.family };
+  // Drain messages published by the previous deployed receiver through one full
+  // recovery pass. New writers never publish this old queue shape.
+  if (value.kind === "continue") return { kind: "recovery" };
+  return null;
+}
+
 import { assertion, atomic, ConflictError, type Database, type Statement } from "./database.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 

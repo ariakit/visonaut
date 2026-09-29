@@ -1,0 +1,605 @@
+{
+  "track": "UI design, accessibility, and Ariakit UI adoption",
+  "researchDate": "2026-09-29",
+  "checkout": "/Users/diegohaz/.codex/worktrees/1de3/visonaut",
+  "status": "Read-only audit. Product code was not changed. All audit decisions are OPEN.",
+  "summary": "Ariakit UI is already present, but the review screen still rebuilds much of its layout and style in custom CSS. The strongest verified interaction defect is that arrow keys change the selected comparison when focus is in its scrollable image. The strongest layout result is that Undo is below the first desktop viewport even in a fixture that omits the outer app header.",
+  "existingContract": [
+    {
+      "id": "D02",
+      "answer": "variant",
+      "constraint": "A/X acts on the current variant. Preserve this unless a new explicit choice reopens it."
+    },
+    {
+      "id": "D03",
+      "answer": "next",
+      "constraint": "After confirmed save, advance to the next pending variant."
+    },
+    {
+      "id": "D04",
+      "answer": "remember",
+      "constraint": "Remember explicit variant choice for keyboard item navigation. Later PR #104 explicitly makes routed item links prefer first pending variant."
+    },
+    {
+      "id": "D05",
+      "answer": "variants",
+      "constraint": "Frameworks are variants of one item."
+    },
+    {
+      "id": "D12",
+      "answer": "sealed",
+      "constraint": "Review begins only after complete sealed run comparison."
+    },
+    {
+      "id": "D17",
+      "answer": "compact",
+      "constraint": "Compact mostly flat controls; more image area. Existing record says both alternatives use copied Ariakit UI components."
+    },
+    {
+      "id": "D21",
+      "answer": "shift",
+      "constraint": "Shift+A/X applies to the whole item."
+    },
+    {
+      "id": "D22",
+      "answer": "current",
+      "constraint": "Undo can roll back the current promotion subject to server rules."
+    },
+    {
+      "id": "D28",
+      "answer": "wrap",
+      "constraint": "After a saved verdict wrap once through pending review order."
+    },
+    {
+      "id": "D29",
+      "answer": "candidate",
+      "constraint": "Removal ordering remains as settled in original record."
+    },
+    {
+      "id": "D30",
+      "answer": "empty",
+      "constraint": "A missing image has an explicit absence view, not a fabricated diff."
+    },
+    {
+      "id": "D31",
+      "answer": "session",
+      "constraint": "Undo history lasts for the review session."
+    },
+    {
+      "id": "D53",
+      "answer": "chrome",
+      "constraint": "Chrome Desktop and keyboard-only review, including focus and zoom. Other browsers, phone workflows, and screen-reader certification remain deferred."
+    }
+  ],
+  "adoption": {
+    "alreadyUsed": [
+      "Shell, ShellHeader, ShellMain, ShellMainBody, Frame, Table, Badge on the runs page",
+      "Shell, ShellSidebar, ShellSidebarHeader/Body, ButtonGroup and FlatButton in review",
+      "NavDisclosure in accepted items",
+      "Frame and Layer on run routes",
+      "Popover and Badge for service attention"
+    ],
+    "notUsedWhereApplicable": [
+      "ShellHeader/ ShellMain / ShellMainHeader / ShellFooter in review workspace",
+      "Tabs/TabList/Tab/TabPanel for its tab-like variant controls",
+      "Frame/Layer spacing and surface tokens for result sections and image frame"
+    ],
+    "counts": {
+      "reviewCssLines": 573,
+      "dashboardCssLines": 314,
+      "combinedCssLines": 887,
+      "reviewWorkspaceLines": 1092,
+      "itemListLines": 293
+    },
+    "pinnedCopy": {
+      "commit": "fc85b809f3b44d3bc72fa1eae927f785ce744f02",
+      "file": "apps/web/src/components/ariakit/NOTICE"
+    },
+    "limit": "Line count is a maintenance measure. It does not prove rendering cost. No claim that ordinary CSS by itself causes slow interactions."
+  },
+  "experiments": [
+    {
+      "id": "UI-E1",
+      "question": "Do image arrow keys scroll its focused viewport, or change review selection?",
+      "expected": "A scroll-owned model keeps the same item and changes image scrollTop. Current global shortcuts change the item.",
+      "environment": "Chrome desktop, local production build at http://127.0.0.1:5191/?count=3582, current review source copied by performance audit agent, 1440x1000, synthetic images and models, 200% image zoom",
+      "observed": "Focus Reference viewport; press ArrowDown. Item changed from dialog / open 1 to menu / expanded 2. viewport scrollTop stayed 0; focus stayed .review-image-viewport. Reproduced again after fixture Tailwind source discovery repair.",
+      "limits": "No production auth, save, network image loading or screen reader. This checks current event handling, not production latency."
+    },
+    {
+      "id": "UI-E2",
+      "question": "How much first-view space is consumed before image evidence and Undo?",
+      "expected": "Image and recovery controls should remain available during normal desktop review.",
+      "environment": "Same corrected fixture, dark color scheme, Fit zoom; six variants, 597 items (3582 captures)",
+      "observed": {
+        "desktop1440x1000": {
+          "imageViewportTop": 385,
+          "undoTop": 1059.39,
+          "documentHeight": 1101
+        },
+        "narrow390x844": {
+          "imageViewportTop": 741.47,
+          "footerTop": 1884.98,
+          "documentWidth": 390
+        }
+      },
+      "screenshots": [
+        "/tmp/visonaut-ui-desktop.png",
+        "/tmp/visonaut-ui-narrow-fit.png"
+      ],
+      "limits": "Fixture omits the real run route outer app header (minimum 62px in source) and uses synthetic screenshots. Narrow check is layout/desktop-zoom evidence, not certification of phone workflows."
+    },
+    {
+      "id": "UI-E3",
+      "question": "Can synthetic performance fixtures represent the Ariakit UI layout after copied recipe migration?",
+      "observed": "Initial fixture omitted generated Tailwind recipe classes: Shell computed display:block. Performance agent added @source ./ only in copied fixture CSS; Shell then computed display:grid, and CSS changed from 38.53 kB to 316.91 kB. Visual evidence above is from the corrected fixture.",
+      "limits": "Fixture-only problem. Do not report it as a production application bug or use the initial screenshot."
+    }
+  ],
+  "research": [
+    {
+      "url": "https://www.w3.org/WAI/ARIA/apg/patterns/tabs/",
+      "claim": "Tabs expose one selected panel. Automatic selection should be used only when a panel appears without noticeable delay. Arrow keys outside the tab axis retain browser scrolling."
+    },
+    {
+      "url": "https://www.w3.org/WAI/ARIA/apg/patterns/link/",
+      "claim": "Native anchors provide link behavior such as opening another tab and link destinations."
+    },
+    {
+      "url": "https://www.w3.org/WAI/ARIA/apg/patterns/listbox/",
+      "claim": "Listbox options expose flat option labels, rather than the interaction model of navigation links. Current link elements have role=option; this is a model choice, not automatically a standards failure."
+    },
+    {
+      "url": "https://www.w3.org/TR/WCAG22/#character-key-shortcuts",
+      "claim": "Single-character shortcuts need an off/remap/focus mechanism. The current app has a Shortcuts off button and focus scope. Do not report A/X alone as a WCAG failure."
+    },
+    {
+      "url": "https://github.com/ariakit/visonaut/pull/89",
+      "state": "MERGED",
+      "claim": "Previous change addressed crowded review navigation with Shell, thumbnails, icons, URLs, pagination and preserved keyboard controls. Source still shows hybrid custom styling; merger status is not proof that the current design is sufficient."
+    },
+    {
+      "url": "https://github.com/ariakit/visonaut/pull/104",
+      "state": "MERGED",
+      "claim": "Source-supported distinction: route item links select first pending variant, keyboard navigation preserves explicit variant memory. Preserve this outcome unless a decision reopens it."
+    },
+    {
+      "url": "https://github.com/ariakit/ariakit/issues/919",
+      "state": "CLOSED",
+      "reportedVersion": "Reakit in October 2021; exact package version unspecified",
+      "reportedBehavior": "Tab focus on mouse down immediately activated a panel, unlike ordinary button mouse-up action.",
+      "outcome": "Classified as feature request; manual activation/event customization discussed; later stale closure. No fix inferred.",
+      "designEffect": "Activation-on-focus is a real behavior choice. Verify current installed 0.4.40 behavior; do not transfer an old Reakit workaround into Visonaut."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "U01",
+      "short": "Complete Ariakit UI composition",
+      "question": "How should we finish the move to Ariakit UI without adding another design system?",
+      "status": "OPEN",
+      "context": "The app imports copied Ariakit UI components today. Custom CSS still sets surface colors, borders, radii, typography, spacing, focus rings and responsive shell placement in parallel. Complete the existing approach instead of introducing another component wrapper layer.",
+      "evidence": [
+        {
+          "path": "apps/web/src/components/ariakit/NOTICE",
+          "line": 1,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/components/ariakit/NOTICE#L1",
+          "claim": "Copied component source is pinned to an Ariakit commit."
+        },
+        {
+          "path": "apps/web/src/routes/index.tsx",
+          "line": 211,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/routes/index.tsx#L211",
+          "claim": "The dashboard already uses Shell, Table and Badge."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 612,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L612",
+          "claim": "Review uses Shell but manually places header, main and footer."
+        },
+        {
+          "path": "apps/web/src/review.css",
+          "line": 4,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review.css#L4",
+          "claim": "Review adds parallel surface and typography tokens."
+        },
+        {
+          "path": "apps/web/src/review.css",
+          "line": 105,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review.css#L105",
+          "claim": "Item and variant skin replaces borders, radii and selected state."
+        },
+        {
+          "path": "apps/web/src/routes/dashboard.css",
+          "line": 1,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/routes/dashboard.css#L1",
+          "claim": "Dashboard repeats a second surface and typography token set."
+        }
+      ],
+      "options": [
+        {
+          "id": "compose",
+          "label": "Use the copied components throughout",
+          "detail": "Replace general layout, spacing, borders, surfaces, tabs and disclosure skin with existing Shell, Frame, Layer, Tabs and Nav components. Keep a small image-canvas stylesheet for checkerboard, pixel rendering and pan geometry.",
+          "complexity": "Medium one-time edit; fewer style paths after migration.",
+          "migration": "One view at a time. Keep existing event and service code during visual migration.",
+          "risk": "Recipe behavior can differ from current overrides. Measure layout and image rendering before deleting each rule.",
+          "recommended": true
+        },
+        {
+          "id": "tokens",
+          "label": "First remove only duplicate style values",
+          "detail": "Keep current markup and interaction model. Use Ariakit color/space/radius values, and delete overrides that repeat component behavior.",
+          "complexity": "Low; leaves most custom layout and selectors.",
+          "migration": "Small reversible patches.",
+          "risk": "This can improve consistency but leaves two layout systems and does not solve crowded review space.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "compose",
+      "strongestCounterexample": "If current recipe APIs need many exceptions for the image canvas, keep those few rules local; do not grow a new recipe or wrapper to meet a one-page need.",
+      "invalidation": "If an audited recipe adds measurable interaction cost or cannot express required image geometry, retain the minimal local CSS for that part.",
+      "compatibility": "Preserve D17 compact direction. No data, API, URL, shortcut, verdict or browser support change.",
+      "before": "<div className=\"review-result-heading\">\u2026</div>\n/* padding, border, color, type repeated in review.css */",
+      "after": "<Frame $p={3} $border $layer>\n  <Layer $layer=\"canvas\">\u2026</Layer>\n</Frame>",
+      "demo": "Let the reviewer toggle Current skin / Ariakit composition on the same toolbar and image frame. Show actual component props, unchanged content, and a reset button.",
+      "tests": [
+        "Chrome desktop light and dark",
+        "200% zoom, narrow desktop viewport and forced colors",
+        "Compare focus, selected and disabled appearance",
+        "Record CSS size and interaction samples; do not assume component use improves performance"
+      ]
+    },
+    {
+      "id": "U02",
+      "short": "Put image evidence first",
+      "question": "Which review layout should replace the stacked headers and distant recovery controls?",
+      "status": "OPEN",
+      "context": "The real run route has an app header, the workspace has a run header, then an item heading, a variant strip, a selected-variant heading, and view controls. Undo/save feedback is after the image and details. A corrected desktop fixture starts image content at y385 and Undo below y1059 in a 1000px viewport.",
+      "evidence": [
+        {
+          "path": "apps/web/src/routes/runs.$runId.tsx",
+          "line": 142,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/routes/runs.$runId.tsx#L142",
+          "claim": "Outer app header wraps ReviewWorkspace."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 619,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L619",
+          "claim": "Separate run header carries run, attempt and comparison IDs."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 725,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L725",
+          "claim": "Further item, variant and result headings precede evidence."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 1015,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L1015",
+          "claim": "Save state and Undo are below the viewer."
+        },
+        {
+          "path": "apps/web/src/review.css",
+          "line": 327,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review.css#L327",
+          "claim": "Fixed min/viewport image heights further push the footer down."
+        }
+      ],
+      "options": [
+        {
+          "id": "single-shell",
+          "label": "Use one review shell",
+          "detail": "One compact ShellHeader for project/run context; sidebar for items; ShellMainHeader for selected variant, Approve/Reject, save state and Undo. Image evidence takes the remaining main area. Move run IDs, policy and comparison history to a Details disclosure.",
+          "complexity": "Medium layout edit; removes nested page chrome.",
+          "migration": "Keep existing URLs, action gating, history and keyboard commands. Keep all details available.",
+          "risk": "Long titles and save errors must wrap without covering images or focus.",
+          "recommended": true
+        },
+        {
+          "id": "compact-existing",
+          "label": "Compact the current screen",
+          "detail": "Keep current structure. Combine item and variant headings, reduce padding, and move Undo/save state next to verdict buttons.",
+          "complexity": "Low; smallest useful layout change.",
+          "migration": "Can ship before a full shell composition edit.",
+          "risk": "Two app/run headers and custom responsive layout remain.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "single-shell",
+      "strongestCounterexample": "During debugging, run IDs and historical comparison state can be essential. Keep an explicit Details control and a visible read-only/historical label; do not hide state that changes what approval means.",
+      "invalidation": "If side-by-side images lose usable height at desktop zoom or toolbar content obscures focus, use the compact-existing option until the single shell can pass reflow checks.",
+      "compatibility": "Preserve D02/D03/D21 verdict scope and advancement. Historical and read-only states stay visible. This does not alter support scope D53.",
+      "before": "<Layer render={<header />}>All runs</Layer>\n<ReviewWorkspace /> // another header plus footer below images",
+      "after": "<Shell>\n  <ShellHeader start={runTitle} end={<Details />} />\n  <ShellSidebar $width=\"md\"><ItemNavigation /></ShellSidebar>\n  <ShellMain $maxWidth=\"100%\">\n    <ShellMainHeader><ReviewActions /></ShellMainHeader>\n    <ShellMainBody><Frame $layer=\"canvas\"><ImageEvidence /></Frame></ShellMainBody>\n  </ShellMain>\n</Shell>",
+      "demo": "Toggle Compact current / One shell, then resize the prototype and switch loading/error/read-only states. Show current item, action scope, saved state and Undo in both.",
+      "tests": [
+        "1440x1000 and 1280x720 desktop layouts",
+        "390px/320px desktop reflow at zoom",
+        "Keyboard focus is visible below sticky header",
+        "Long run title, long variant title, conflict and save error",
+        "Images keep exact Fit/100%/200% semantics"
+      ]
+    },
+    {
+      "id": "U03",
+      "short": "Use clear item and variant navigation",
+      "question": "Should item navigation behave as links and variants as tabs, or should both remain option lists?",
+      "status": "OPEN",
+      "context": "Current items and variants use Composite listboxes, and override route links with role=option. The route stores item/variant in the URL. Variant visual labels replace common words with icons and native title hover text. There are up to 50 items per page and no item search. This is a choice about navigation behavior and readable labels, not a claim of a confirmed screen-reader defect.",
+      "evidence": [
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 15,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/item-list.tsx#L15",
+          "claim": "Item pages are capped at 50."
+        },
+        {
+          "path": "apps/web/src/review/item-list.tsx",
+          "line": 121,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/item-list.tsx#L121",
+          "claim": "CompositeItem applies option semantics to route links."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 732,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L732",
+          "claim": "Variant listbox selects from activeId on focus."
+        },
+        {
+          "path": "apps/web/src/review/variant-summary.tsx",
+          "line": 48,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/variant-summary.tsx#L48",
+          "claim": "Known label parts become icons; description relies on title text and sr-only label."
+        },
+        {
+          "path": "apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx",
+          "line": 23,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx#L23",
+          "claim": "Copied Tabs/TabProvider/TabList/Tab components already exist."
+        }
+      ],
+      "options": [
+        {
+          "id": "nav-tabs",
+          "label": "Use item links and variant tabs",
+          "detail": "Use the copied Nav components with native item links and current-page state. Use copied Tabs for the selected variant panel; preserve its URL. Keep short readable variant text beside optional icons. Add a local item-name filter using the loaded list, not a new search service.",
+          "complexity": "Medium; clearer roles, one small filter state.",
+          "migration": "Preserve first-pending route-link behavior from PR #104 and explicit variant memory for keyboard navigation. Test focus-to-selection behavior before replacing Composite.",
+          "risk": "A tab migration can accidentally activate on focus and load images while users only move focus. Use manual activation if evidence is not ready.",
+          "recommended": true
+        },
+        {
+          "id": "keep-option-lists",
+          "label": "Keep current option lists; make labels clear",
+          "detail": "Keep Composite keyboard behavior and paging. Show short text labels, preserve full accessible labels, and add an optional local item filter.",
+          "complexity": "Low; no widget contract change.",
+          "migration": "Mostly rendering and label changes.",
+          "risk": "Item links remain exposed as options and two navigation regions still use the same generic pattern.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "nav-tabs",
+      "strongestCounterexample": "A listbox is a valid model if the intended task is selecting one result, not navigating linked views. If native link semantics conflict with the established keyboard workflow, keep the listbox until a precise replacement passes its tests.",
+      "invalidation": "If the proposed Nav path requires a custom roving-focus subsystem or loses modifier clicks, route history, cross-page keyboard navigation or focus restoration, prefer keep-option-lists.",
+      "compatibility": "Preserve D04 and PR #104 distinction between link targeting and remembered keyboard selection, D05 framework grouping, D28 wrap order and D29 removed-item order. A change in activation policy must be explicit.",
+      "before": "<ak.CompositeItem role=\"option\" render={<Link to=\"/runs/$runId\" />} />",
+      "after": "<NavLink render={<Link to=\"/runs/$runId\" />} aria-current={selected ? \"page\" : undefined}>\n  {item.name}\n</NavLink>\n<TabProvider selectedId={variantId} selectOnMove={false}>\n  <TabList aria-label=\"Variants\"><Tab id=\"chrome-light\">Chrome \u00b7 Light</Tab></TabList>\n  <TabPanel tabId=\"chrome-light\">\u2026</TabPanel>\n</TabProvider>",
+      "demo": "Show 60 named items with a local filter, URL preview, a selected item, and variant tabs. Let users toggle current option-list versus link/tab behavior, arrow through, press Enter, open a link in another tab, and reset.",
+      "tests": [
+        "Route item/variant URL and Back/Forward",
+        "Modifier click keeps native link behavior",
+        "Cross-page ArrowUp/Down/Home/End under current and proposed policy",
+        "No lost focus when item moves into Accepted after save",
+        "Slow image delivery and manual/automatic activation",
+        "Readable labels without hover"
+      ]
+    },
+    {
+      "id": "U04",
+      "short": "Let focused controls own arrow keys",
+      "question": "What should arrow keys do when the image viewport has focus?",
+      "status": "OPEN",
+      "context": "The image viewport is focusable and tells the user to scroll to inspect it. The workspace intercepts ArrowUp/Down/Left/Right before native scrolling. At 200% image zoom, ArrowDown changed the selected item and did not scroll the image. The current Shortcuts off control already supplies a way to disable letter shortcuts.",
+      "evidence": [
+        {
+          "path": "apps/web/src/components/screenshot-viewer.tsx",
+          "line": 109,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/components/screenshot-viewer.tsx#L109",
+          "claim": "Focusable scroll viewport tells the user to inspect by scroll."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 68,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L68",
+          "claim": "Shortcut exclusion list covers input/menu/dialog but not image scroll region."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 579,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L579",
+          "claim": "All four arrows dispatch selection and preventDefault."
+        },
+        {
+          "path": "apps/web/src/review/review-workspace.tsx",
+          "line": 1052,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/review/review-workspace.tsx#L1052",
+          "claim": "A visible Shortcuts toggle already exists."
+        }
+      ],
+      "options": [
+        {
+          "id": "focus-owned",
+          "label": "Let image focus scroll the image",
+          "detail": "Handle review navigation arrows only on the review workspace itself and the item/variant navigation controls. Let the focused image viewport use browser scroll keys. Keep A/X/F/S/D/G and the off switch as already specified.",
+          "complexity": "Low; narrow event scope and tests.",
+          "migration": "Update keyboard help. Keep existing explicit Pan buttons.",
+          "risk": "Users who rely on global arrows while inspecting an image need a clear path back to item navigation.",
+          "recommended": true
+        },
+        {
+          "id": "pan-mode",
+          "label": "Add an explicit image inspection mode",
+          "detail": "Keep global arrows initially. Enter image inspection to use arrows for panning; Escape returns to review navigation.",
+          "complexity": "Higher; introduces mode state and more instructions.",
+          "migration": "Preserves existing muscle memory outside inspection.",
+          "risk": "Mode confusion and extra focus transitions add complexity.",
+          "recommended": false
+        },
+        {
+          "id": "global",
+          "label": "Keep global arrows and require pan buttons",
+          "detail": "Retain current behavior. State clearly that image arrows navigate review, and use the visible Pan controls or shortcuts-off toggle to inspect images.",
+          "complexity": "Minimal; copy/help update only.",
+          "migration": "No event changes.",
+          "risk": "Scroll areas behave unlike normal focused scroll regions; manual panning takes more actions.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "focus-owned",
+      "strongestCounterexample": "A reviewer may intentionally want to navigate items while keeping focus on the image. Preserve that workflow through the workspace focus target or explicit navigation controls, not a new global interception rule.",
+      "invalidation": "If the focus-owned policy makes the agreed keyboard review flow fail its existing tests, adjust the focus handoff. Do not expand to a new pan mode without evidence it is needed.",
+      "compatibility": "This refines arrow ownership; D02 A/X, D03 advancement, D21 Shift+A/X remain unchanged. D53 requires this Chrome keyboard path to work.",
+      "before": "if (key === \"arrowdown\") selectItem(next);\nevent.preventDefault();",
+      "after": "const imageHasFocus = element.closest(\".review-image-viewport\");\nif (imageHasFocus && key.startsWith(\"arrow\")) return;\n// Let the focused scroll area use its native keys.",
+      "demo": "Two real overflowing Frame image viewports. Focus one at 200%, press arrows, and compare Current global / Focus-owned policies. Display selected item, focused region and scroll offsets. Reset returns to first item and top-left.",
+      "tests": [
+        "Arrow keys on image viewport change scroll and retain item under proposed policy",
+        "Arrow keys on item/variant lists preserve navigation",
+        "Letters excluded from text fields, menus and dialogs",
+        "Shortcuts off disables shortcuts",
+        "Space/PageDown/Home/End scroll semantics",
+        "No production save needed for probe"
+      ]
+    },
+    {
+      "id": "U05",
+      "short": "Show runs by reviewer task",
+      "question": "What should the home page help a maintainer find first?",
+      "status": "OPEN",
+      "context": "The home table shows generic kind (Pull request/Main/Merge queue), an opaque run ID, commit, state, attempt and timestamp. It returns only the latest 100 runs. The response does not expose PR identity or pending-item counts, so a cosmetic rewrite alone cannot make those available. Service attention is already in a separate bell popover; it need not become a new operations dashboard.",
+      "evidence": [
+        {
+          "path": "apps/web/src/routes/index.tsx",
+          "line": 26,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/routes/index.tsx#L26",
+          "claim": "DashboardRun has no PR title/number or review counts."
+        },
+        {
+          "path": "apps/web/src/routes/index.tsx",
+          "line": 339,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/routes/index.tsx#L339",
+          "claim": "Table uses generic kind plus run ID as its primary label."
+        },
+        {
+          "path": "apps/web/src/api/review.ts",
+          "line": 666,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/api/review.ts#L666",
+          "claim": "Latest-100 query has no cursor/filter and excludes lineage identity."
+        },
+        {
+          "path": "apps/web/migrations/0001_service.sql",
+          "line": 24,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/migrations/0001_service.sql#L24",
+          "claim": "Run already stores lineage_key that can provide PR identity."
+        },
+        {
+          "path": "apps/web/src/components/operations-attention/index.tsx",
+          "line": 288,
+          "url": "https://github.com/ariakit/visonaut/blob/main/apps/web/src/components/operations-attention/index.tsx#L288",
+          "claim": "Existing bell separates technical service details from run list."
+        }
+      ],
+      "options": [
+        {
+          "id": "task-first",
+          "label": "List review work first with a history view",
+          "detail": "Show PR number or main branch, known commit, readable status and review action. Use existing stored lineage data; do not fetch GitHub titles on page load. Add a server filter and a simple cursor for older history only if history browsing is required. Keep one existing service-details popover.",
+          "complexity": "Low to medium API/UI change; no new storage or external request.",
+          "migration": "Keep stable /runs/:id links and put run/attempt IDs in secondary details. Use the copied Table and Badge components.",
+          "risk": "A local filter over the latest 100 rows would falsely imply complete history; make the bound visible or implement the explicit server filter.",
+          "recommended": true
+        },
+        {
+          "id": "recent-clear",
+          "label": "Keep the recent-run table and improve labels",
+          "detail": "Label it Latest 100 runs; show PR number from existing lineage data where available, add plain status labels and keep technical IDs secondary. Keep direct GitHub review links as the main entry path.",
+          "complexity": "Low; minimal contract extension for identity only.",
+          "migration": "No pagination or new query model.",
+          "risk": "Older review work can remain out of this view; this is acceptable only if the page is explicitly a recent activity list.",
+          "recommended": false
+        },
+        {
+          "id": "github-entry",
+          "label": "Treat GitHub as the main work queue",
+          "detail": "Keep a small recent activity page and invest UI effort in the linked run review. Use existing GitHub checks/PR links to choose work.",
+          "complexity": "Lowest app UI scope.",
+          "migration": "Document the entry path and preserve direct run URLs.",
+          "risk": "Maintainers cannot discover all pending work in one Visonaut view.",
+          "recommended": false
+        }
+      ],
+      "recommendation": "task-first",
+      "strongestCounterexample": "If maintainers always enter through GitHub checks and never use the home page to find work, a complete pending-work view adds maintenance without value. Choose recent-clear or github-entry.",
+      "invalidation": "Observe entry paths or ask the maintainer through this decision. If no one uses a dashboard queue, do not add server pagination/search.",
+      "compatibility": "No change to permissions, required checks, approval, retry or retention policy. Historical labels must remain accurate after attempts are superseded.",
+      "before": "<TableCell><strong>Pull request</strong><small>{run.id}</small></TableCell>",
+      "after": "<TableCell header=\"row\">\n  <Link to=\"/runs/$runId\">Pull request #{run.pullNumber}</Link>\n  <small>{run.testedSha.slice(0, 8)}</small>\n</TableCell>\n<TableCell><Badge $layer=\"warning\">Needs review</Badge></TableCell>",
+      "demo": "Toggle Review work / Recent activity / GitHub entry over a fixture with pending, passed, failed and superseded attempts. Open each row to the same review prototype. Show a visible Latest 100 bound in the minimal variant.",
+      "tests": [
+        "Latest-100 bound is visible or cursor results are complete",
+        "Known PR/main identity without GitHub read on page load",
+        "Empty/loading/access-denied/failure states",
+        "Table names and row labels",
+        "Duplicate attempts/superseded state",
+        "Run links remain stable"
+      ]
+    }
+  ],
+  "prototypePlan": {
+    "layout": "A single real Shell with compact header, 16rem sidebar, ShellMainHeader review actions, and a Frame/Layer image canvas. Full selected variant text remains visible. Details contain run identity, history and diagnostics. Reuse current copied components; do not build fake equivalents.",
+    "keepVisible": [
+      "Run/PR identity",
+      "Pending count",
+      "Selected item/variant",
+      "Approve current / Reject current",
+      "Saved, saving or conflict state",
+      "Undo",
+      "Image view and zoom",
+      "Read-only or failed-state reason"
+    ],
+    "moveToDetails": [
+      "Run ID",
+      "Attempt",
+      "Comparison ID/revision",
+      "Codec and policy",
+      "Capture profile",
+      "Historical comparison links",
+      "Export/recompare commands when not the active recovery action"
+    ],
+    "retainCustomCss": [
+      "Checkerboard image background",
+      "Exact native image dimensions",
+      "Pixelated zoom rendering",
+      "Scroll viewport geometry"
+    ],
+    "notAuthorized": [
+      "Product implementation",
+      "GitHub publication",
+      "Deployment",
+      "A new public Ariakit API",
+      "New mobile/screen-reader certification"
+    ]
+  },
+  "verificationLimits": [
+    "Production route authentication not exercised",
+    "Synthetic image content only",
+    "No real service commands sent",
+    "No real device or screen reader used",
+    "No contrast ratio audit was completed",
+    "Recipe prop snippets are design examples; typecheck them in artifact before treating as implementation code"
+  ]
+}

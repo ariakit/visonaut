@@ -17,20 +17,10 @@
     "VISONAUT_REPOSITORY": "ariakit/ariakit",
     "VISONAUT_LAUNCH_ENABLED": "false",
     "VISONAUT_ORIGIN": "https://preview.visonaut.com",
-    "GITHUB_CLIENT_ID": "Iv23lihLxwLZeW7tlh5u",
-    "GITHUB_APP_ID": "5028451",
-    "GITHUB_INSTALLATION_ID": "163661534",
     "GITHUB_REPOSITORY_ID": "104133653",
-    "GITHUB_OWNER_ID": "40200111",
     "VISONAUT_PROJECT_ID": "ariakit",
-    "VISONAUT_OIDC_AUDIENCE": "https://preview.visonaut.com",
-    "VISONAUT_TRUSTED_PLAN_PATH": ".github/visonaut-plan.json",
-    "VISONAUT_REUSABLE_WORKFLOW_REF": "ariakit/ariakit/.github/workflows/app.yml@bea39018ccd6f902c2c904afa263b3d01f99c017",
-    "VISONAUT_REUSABLE_WORKFLOW_SHA": "bea39018ccd6f902c2c904afa263b3d01f99c017",
-    "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
-    "VISONAUT_ALLOW_MAIN_DISPATCH": "true",
     "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}",
-    "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
+    "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumMetadataBytes\":2147483648,\"maximumExportEntries\":200000}",
   },
   "d1_databases": [
     {
@@ -84,7 +74,7 @@
     "subrequests": 250000,
   },
   "triggers": {
-    "crons": ["*/5 * * * *"],
+    "crons": [],
   },
   "env": {
     "production": {
@@ -101,15 +91,11 @@
         "GITHUB_REPOSITORY_ID": "104133653",
         "GITHUB_OWNER_ID": "40200111",
         "VISONAUT_PROJECT_ID": "ariakit",
-        "VISONAUT_OIDC_AUDIENCE": "https://visonaut.com",
-        "VISONAUT_TRUSTED_PLAN_PATH": ".github/visonaut-plan.json",
-        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f\",\"reusableWorkflowSha\":\"697172dfed281348d79bfe8ce61f9ccf21537c5f\",\"additionalTrustedWorkflowBlobSha\":\"6720c8f6e6038bc00046d08c86243f2ce160f4b6\",\"transitionTrustedWorkflowBlobSha\":\"4aac43e3039b578913e8a603c10ca47009493ef5\",\"additionalTrustedExecutorDigest\":\"5d29257230b1d822b846af7670741e3195a58fddbe7c8cac61dedd3a8a403179\"}",
-        "VISONAUT_REUSABLE_WORKFLOW_REF": "ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f",
-        "VISONAUT_REUSABLE_WORKFLOW_SHA": "697172dfed281348d79bfe8ce61f9ccf21537c5f",
+        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"captureJobPrefix\":\"App / Visual / \",\"submitJobName\":\"App / Visual / Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@697172dfed281348d79bfe8ce61f9ccf21537c5f\",\"reusableWorkflowSha\":\"697172dfed281348d79bfe8ce61f9ccf21537c5f\"}",
         "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
         "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
         "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}",
-        "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
+        "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumMetadataBytes\":2147483648,\"maximumExportEntries\":200000}",
       },
       "d1_databases": [
         {
@@ -168,19 +154,9 @@
           "GITHUB_CLIENT_SECRET",
           "GITHUB_APP_PRIVATE_KEY",
           "GITHUB_WEBHOOK_SECRET",
-          "VISONAUT_TRANSFER_PRIVATE_KEY",
         ],
       },
     },
   },
-  "secrets": {
-    "required": [
-      "BETTER_AUTH_SECRET",
-      "CAPABILITY_SECRET",
-      "GITHUB_CLIENT_SECRET",
-      "GITHUB_APP_PRIVATE_KEY",
-      "GITHUB_WEBHOOK_SECRET",
-      "VISONAUT_TRANSFER_PRIVATE_KEY",
-    ],
-  },
+  "secrets": { "required": [] },
 }

@@ -1,7 +1,12 @@
+import { backup, DatabaseSync } from "node:sqlite";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, it } from "vitest";
-import { sanitizeRestoredDatabase } from "./recovery.ts";
+import { sanitizeRestoredDatabase, inspectRecoveryImages } from "./recovery.ts";
 import { TestDatabase, captured, context } from "./test-fixtures.ts";
 import { archiveClosedRuns } from "./history.ts";
+import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
 
@@ -43,6 +48,10 @@ it.each(["building", "ready", "failed", "expired"])(
       archived = result.completed.includes("exported");
     }
     expect(archived).toBe(true);
+    for (let pass = 0; pass < 100; pass++) {
+      const result = await summarizeClosedRuns(fixture.context);
+      if (result.completed.includes("exported")) break;
+    }
     expect((await expireRunImages(fixture.context)).completed).toEqual(["exported"]);
     fixture.state.time += 86400001;
     for (
@@ -98,7 +107,10 @@ it("archives and expires restored unfinished work without restarting existing re
   expect((await expireRunImages(fixture.context)).completed).toEqual([]);
   fixture.state.time += 31 * 86400000;
   const expired = new Set<string>();
-  for (let step = 0; step < 10 && expired.size < 2; step++) {
+  // The shared two-object budget verifies one root and one page per turn.
+  for (let step = 0; step < 100 && expired.size < 2; step++) {
+    const summary = await summarizeClosedRuns(fixture.context);
+    expect(summary.attention).toEqual([]);
     const result = await expireRunImages(fixture.context);
     expect(result.attention).toEqual([]);
     for (const id of result.completed) {
@@ -110,7 +122,7 @@ it("archives and expires restored unfinished work without restarting existing re
   expect(fixture.images.objects.has("runs/closed/original")).toBe(false);
 });
 
-it("preserves current, rollback, manual, command, and other independently owned evidence roots", async () => {
+it("preserves current and explicit evidence roots while retiring the former rollback baseline", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   for (const id of ["current", "rollback"]) {
@@ -188,7 +200,7 @@ it("preserves current, rollback, manual, command, and other independently owned 
       .all(),
   ).toEqual([
     { snapshot_id: "current", byte_state: "live" },
-    { snapshot_id: "rollback", byte_state: "live" },
+    { snapshot_id: "rollback", byte_state: "retiring" },
   ]);
   expect([...fixture.images.objects.keys()].filter((key) => key.startsWith("runs/"))).toHaveLength(
     7,
@@ -213,6 +225,10 @@ it("preserves current, rollback, manual, command, and other independently owned 
     archived = result.completed.includes("current");
   }
   expect(archived).toBe(true);
+  for (let pass = 0; pass < 100; pass++) {
+    const result = await summarizeClosedRuns(fixture.context);
+    if (result.completed.includes("current")) break;
+  }
   expect((await expireRunImages(fixture.context)).completed).toEqual(["current"]);
   fixture.state.time += 86400001;
   for (let step = 0; step < 5 && fixture.images.objects.has("baselines/current/original"); step++) {
@@ -289,4 +305,61 @@ it("keeps verified history and drops unfinished run and comparison archives inde
     { id: "building", active: 0, state: "failed" },
     { id: "ready", active: 0, state: "failed" },
   ]);
+});
+
+it("rehearses an isolated SQL rewind, fences old access and work, and reports unavailable retained originals", async () => {
+  using source = new TestDatabase();
+  const fixture = context(source);
+  await captured(fixture.context, "saved");
+  source.connection
+    .exec(`INSERT INTO user(id,name,email,emailVerified,createdAt,updatedAt) VALUES('user','Maintainer','maintainer@example.test',1,1,1);
+ INSERT INTO session(id,expiresAt,token,createdAt,updatedAt,userId) VALUES('old-session',9,'old-token',1,1,'user');
+ INSERT INTO account(id,accountId,providerId,userId,accessToken,refreshToken,idToken,createdAt,updatedAt) VALUES('account','user','github','user','old-access','old-refresh','old-id',1,1);
+ INSERT INTO work_tasks(id,kind,payload,max_attempts,available_at,created_at,updated_at) VALUES('old-task','compare','{}',2,1,1,1);
+ INSERT INTO work_checks(id,desired_revision) VALUES('old-check',1);`);
+  const directory = await mkdtemp(join(tmpdir(), "visonaut-isolated-rewind-"));
+  try {
+    const path = join(directory, "restored.sqlite");
+    await backup(source.connection, path);
+    using restored = new TestDatabase(new DatabaseSync(path));
+    const isolated = { ...fixture.context, database: restored };
+    await fixture.images.delete("runs/saved/original");
+    await sanitizeRestoredDatabase(restored, fixture.context.now());
+    await sanitizeRestoredDatabase(restored, fixture.context.now() + 1);
+    expect(restored.connection.prepare("SELECT id,active,state FROM visonaut_runs").get()).toEqual({
+      id: "saved",
+      active: 0,
+      state: "failed",
+    });
+    expect(restored.connection.prepare("SELECT * FROM session").all()).toEqual([]);
+    expect(
+      restored.connection.prepare("SELECT accessToken,refreshToken,idToken FROM account").get(),
+    ).toEqual({ accessToken: null, refreshToken: null, idToken: null });
+    expect(
+      restored.connection
+        .prepare("SELECT state,last_error FROM work_tasks WHERE id='old-task'")
+        .get(),
+    ).toEqual({ state: "dead", last_error: "restored-environment" });
+    expect(
+      restored.connection.prepare("SELECT ambiguous FROM work_checks WHERE id='old-check'").get(),
+    ).toEqual({ ambiguous: 1 });
+    expect(await inspectRecoveryImages(isolated)).toMatchObject({
+      checked: 1,
+      missing: ["image-saved"],
+      corrupt: [],
+    });
+    await fixture.images.put("runs/saved/original", "corrupt");
+    expect(await inspectRecoveryImages(isolated)).toMatchObject({
+      missing: [],
+      corrupt: ["image-saved"],
+    });
+    await fixture.images.put("runs/saved/original", "original-image-bytes");
+    expect(await inspectRecoveryImages(isolated)).toMatchObject({ missing: [], corrupt: [] });
+    expect(source.connection.prepare("SELECT id FROM session").get()).toEqual({
+      id: "old-session",
+    });
+    expect(restored.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

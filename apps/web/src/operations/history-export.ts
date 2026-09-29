@@ -8,7 +8,7 @@ import type { OperationsContext } from "./types.ts";
 export async function getHistoricalExportRoots(context: OperationsContext, runId: string) {
   const pending = await context.database
     .prepare(
-      "SELECT comparison.id FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready') LIMIT 1",
+      "SELECT comparison.id FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND (comparison.state='comparing' OR NOT EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id=comparison.id) OR EXISTS(SELECT 1 FROM operations_run_archives root WHERE root.run_id=comparison.run_id AND root.state='ready')) AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready') LIMIT 1",
     )
     .bind(runId)
     .first();
@@ -63,7 +63,7 @@ export function historicalExportAssertion(
 ) {
   return assertion(
     context.database,
-    "NOT EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND (SELECT COUNT(*) FROM operations_comparison_archives WHERE run_id=? AND state='ready')=?",
+    "NOT EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.run_id=? AND comparison.purpose='historical' AND (comparison.state='comparing' OR NOT EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id=comparison.id) OR EXISTS(SELECT 1 FROM operations_run_archives root WHERE root.run_id=comparison.run_id AND root.state='ready')) AND NOT EXISTS(SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) AND (SELECT COUNT(*) FROM operations_comparison_archives WHERE run_id=? AND state='ready')=?",
     [runId, runId, rootCount],
   );
 }

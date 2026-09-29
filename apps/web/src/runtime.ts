@@ -1,6 +1,7 @@
-import { prepareHistoricalCaptures } from "./operations/historical-captures.ts";
-import { readArchivedComparison } from "./operations/history-supplement.ts";
-import { readArchivedCommand, readRunHistory } from "./operations/history.ts";
+import { logOperationFailure } from "./operations/failure.ts";
+import { recoverGitHubDeliveries } from "./operations/github-deliveries.ts";
+import { readClosedSummary } from "./operations/closed-summary.ts";
+import type { OperationsMessage } from "@visonaut/service";
 import {
   createGitHubClient,
   SecurityError,
@@ -10,7 +11,6 @@ import {
 } from "@visonaut/security";
 import {
   apiContext,
-  reconcileIngest,
   reconcileStagedWorkflows,
   reconcileWebhooks,
   type ApiBindings,
@@ -22,7 +22,6 @@ import {
   streamRunExport,
   type OperationsBudget,
   type OperationsContext,
-  type ObjectStore,
 } from "./operations/index.ts";
 import {
   checkRunAdmission,
@@ -38,7 +37,7 @@ function required(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is not configured.`);
   return value;
 }
-function enabled(value: string) {
+function enabled(value: string | undefined) {
   return value === "true";
 }
 
@@ -84,7 +83,7 @@ export function operationsBudget(env: Env): OperationsBudget {
     leaseMilliseconds: positive(budget.leaseMilliseconds, "leaseMilliseconds"),
     maxAttempts: positive(budget.maxAttempts, "maxAttempts"),
     maximumObjectBytes: positive(budget.maximumObjectBytes, "maximumObjectBytes"),
-    maximumDatabaseBytes: positive(budget.maximumDatabaseBytes, "maximumDatabaseBytes"),
+    maximumMetadataBytes: positive(budget.maximumMetadataBytes, "maximumMetadataBytes"),
     maximumExportEntries: positive(budget.maximumExportEntries, "maximumExportEntries"),
   };
   validateBudget(result);
@@ -119,7 +118,6 @@ export function operationsContext(env: Env): OperationsContext {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    backups: retiredBackups,
     comparisons: {
       async send(message) {
         await env.COMPARISONS.send(message);
@@ -131,24 +129,6 @@ export function operationsContext(env: Env): OperationsContext {
     now: Date.now,
   };
 }
-
-const retiredBackups: ObjectStore = {
-  async get() {
-    throw new Error("Scheduled backups are retired.");
-  },
-  async put() {
-    throw new Error("Scheduled backups are retired.");
-  },
-  async list() {
-    throw new Error("Scheduled backups are retired.");
-  },
-  async delete() {
-    throw new Error("Scheduled backups are retired.");
-  },
-  async createMultipartUpload() {
-    throw new Error("Scheduled backups are retired.");
-  },
-};
 
 export async function assertOperationsProject(env: Env) {
   const expected = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
@@ -188,62 +168,30 @@ async function assertExportProject(env: Env, exportId: string) {
 export function apiBindings(env: Env): ApiBindings {
   const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
   const auth = authConfiguration(env);
-  const workflowOwnedValue = (env as Env & { VISONAUT_WORKFLOW_OWNED?: string })
-    .VISONAUT_WORKFLOW_OWNED;
-  const workflowOwned = workflowOwnedValue
-    ? configurationObject(workflowOwnedValue, "VISONAUT_WORKFLOW_OWNED")
-    : undefined;
-  const workflowOwnedConfiguration = workflowOwned
-    ? {
-        callerWorkflowPath: required(
-          workflowOwned.callerWorkflowPath,
-          "VISONAUT_WORKFLOW_OWNED.callerWorkflowPath",
-        ),
-        captureJobPrefix: required(
-          workflowOwned.captureJobPrefix,
-          "VISONAUT_WORKFLOW_OWNED.captureJobPrefix",
-        ),
-        submitJobName: required(
-          workflowOwned.submitJobName,
-          "VISONAUT_WORKFLOW_OWNED.submitJobName",
-        ),
-        reusableWorkflowRef: required(
-          workflowOwned.reusableWorkflowRef,
-          "VISONAUT_WORKFLOW_OWNED.reusableWorkflowRef",
-        ),
-        reusableWorkflowSha: required(
-          workflowOwned.reusableWorkflowSha,
-          "VISONAUT_WORKFLOW_OWNED.reusableWorkflowSha",
-        ),
-        trustedWorkflowPath: workflowOwned.trustedWorkflowPath
-          ? required(
-              workflowOwned.trustedWorkflowPath,
-              "VISONAUT_WORKFLOW_OWNED.trustedWorkflowPath",
-            )
-          : undefined,
-        additionalTrustedWorkflowBlobSha:
-          workflowOwned.additionalTrustedWorkflowBlobSha === undefined
-            ? undefined
-            : required(
-                workflowOwned.additionalTrustedWorkflowBlobSha,
-                "VISONAUT_WORKFLOW_OWNED.additionalTrustedWorkflowBlobSha",
-              ),
-        transitionTrustedWorkflowBlobSha:
-          workflowOwned.transitionTrustedWorkflowBlobSha === undefined
-            ? undefined
-            : required(
-                workflowOwned.transitionTrustedWorkflowBlobSha,
-                "VISONAUT_WORKFLOW_OWNED.transitionTrustedWorkflowBlobSha",
-              ),
-        additionalTrustedExecutorDigest:
-          workflowOwned.additionalTrustedExecutorDigest === undefined
-            ? undefined
-            : required(
-                workflowOwned.additionalTrustedExecutorDigest,
-                "VISONAUT_WORKFLOW_OWNED.additionalTrustedExecutorDigest",
-              ),
-      }
-    : undefined;
+  const workflowOwned = configurationObject(env.VISONAUT_WORKFLOW_OWNED, "VISONAUT_WORKFLOW_OWNED");
+  const workflowOwnedConfiguration = {
+    callerWorkflowPath: required(
+      workflowOwned.callerWorkflowPath,
+      "VISONAUT_WORKFLOW_OWNED.callerWorkflowPath",
+    ),
+    captureJobPrefix: required(
+      workflowOwned.captureJobPrefix,
+      "VISONAUT_WORKFLOW_OWNED.captureJobPrefix",
+    ),
+    submitJobName: required(workflowOwned.submitJobName, "VISONAUT_WORKFLOW_OWNED.submitJobName"),
+    reusableWorkflowRef: required(
+      workflowOwned.reusableWorkflowRef,
+      "VISONAUT_WORKFLOW_OWNED.reusableWorkflowRef",
+    ),
+    reusableWorkflowSha: required(
+      workflowOwned.reusableWorkflowSha,
+      "VISONAUT_WORKFLOW_OWNED.reusableWorkflowSha",
+    ),
+    trustedWorkflowPath: required(
+      workflowOwned.trustedWorkflowPath,
+      "VISONAUT_WORKFLOW_OWNED.trustedWorkflowPath",
+    ),
+  };
   const configuration: ApiConfiguration = {
     origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
     projectId: required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID"),
@@ -255,20 +203,10 @@ export function apiBindings(env: Env): ApiBindings {
       environment: env.VISONAUT_ENVIRONMENT,
     },
     webhookSecret: required(env.GITHUB_WEBHOOK_SECRET, "GITHUB_WEBHOOK_SECRET"),
-    oidcAudience: required(env.VISONAUT_OIDC_AUDIENCE, "VISONAUT_OIDC_AUDIENCE"),
     allowMainDispatch:
       enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
-    trustedPlanPath: workflowOwned
-      ? (env.VISONAUT_TRUSTED_PLAN_PATH ?? "")
-      : required(env.VISONAUT_TRUSTED_PLAN_PATH, "VISONAUT_TRUSTED_PLAN_PATH"),
     workflowOwned: workflowOwnedConfiguration,
-    reusableWorkflowRef:
-      workflowOwnedConfiguration?.reusableWorkflowRef ??
-      required(env.VISONAUT_REUSABLE_WORKFLOW_REF, "VISONAUT_REUSABLE_WORKFLOW_REF"),
-    reusableWorkflowSha:
-      workflowOwnedConfiguration?.reusableWorkflowSha ??
-      required(env.VISONAUT_REUSABLE_WORKFLOW_SHA, "VISONAUT_REUSABLE_WORKFLOW_SHA"),
     trustedExecutorDigest: required(
       env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
       "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
@@ -278,9 +216,7 @@ export function apiBindings(env: Env): ApiBindings {
       maximumImageBytes: positive(limits.maximumImageBytes, "maximumImageBytes"),
       maximumShardBytes: positive(limits.maximumShardBytes, "maximumShardBytes"),
       maximumRunBytes: positive(limits.maximumRunBytes, "maximumRunBytes"),
-      maximumStagedBytes: workflowOwnedConfiguration
-        ? positive(limits.maximumStagedBytes, "maximumStagedBytes")
-        : undefined,
+      maximumStagedBytes: positive(limits.maximumStagedBytes, "maximumStagedBytes"),
       maximumManifestBytes: positive(limits.maximumManifestBytes, "maximumManifestBytes"),
       maximumPlanBytes: positive(limits.maximumPlanBytes, "maximumPlanBytes"),
       maximumCaptures: positive(limits.maximumCaptures, "maximumCaptures"),
@@ -290,8 +226,6 @@ export function apiBindings(env: Env): ApiBindings {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    transferPrivateKey: (env as Env & { VISONAUT_TRANSFER_PRIVATE_KEY?: string })
-      .VISONAUT_TRANSFER_PRIVATE_KEY,
     comparator: { fetch: (request, init) => env.COMPARATOR.fetch(request, init) },
     operations: {
       async send(message) {
@@ -304,19 +238,30 @@ export function apiBindings(env: Env): ApiBindings {
     history: {
       async read(runId) {
         await assertOperationsProject(env);
-        return readRunHistory(operationsContext(env), runId);
+        return readClosedSummary(env.DB, runId);
       },
       async readComparison(runId, comparisonId) {
         await assertOperationsProject(env);
-        return readArchivedComparison(operationsContext(env), { runId, comparisonId });
+        const summary = await readClosedSummary(env.DB, runId);
+        return summary?.sections.comparisons?.some((row) => row.id === comparisonId)
+          ? summary
+          : null;
       },
-      async prepareComparison(input) {
+      async prepareComparison() {
         await assertOperationsProject(env);
-        return prepareHistoricalCaptures(operationsContext(env), input);
+        throw new SecurityError(
+          "history_closed",
+          409,
+          "Closed history is read-only. Capture a new run.",
+        );
       },
-      async readCommand(runId, commandId) {
+      async readCommand() {
         await assertOperationsProject(env);
-        return readArchivedCommand(operationsContext(env), runId, commandId);
+        throw new SecurityError(
+          "history_closed",
+          409,
+          "Closed command replay has ended. The decision summary remains available.",
+        );
       },
     },
     exports: {
@@ -332,42 +277,70 @@ export function apiBindings(env: Env): ApiBindings {
   };
 }
 
-export interface OperationsMessage {
-  kind: "continue";
-}
+export type { OperationsMessage } from "@visonaut/service";
 
 /** The continuation queue runs each bounded, repeat-safe step; cron only publishes. */
-export async function runScheduledOperations(env: Env) {
+export async function runScheduledOperations(
+  env: Env,
+  message: OperationsMessage = { kind: "recovery" },
+) {
+  if (env.VISONAUT_ENVIRONMENT === "preview")
+    return { completed: [], deferred: [], attention: [], hasMore: false };
+  const startedAt = Date.now();
+  const correlationId = crypto.randomUUID();
   await assertOperationsProject(env);
   const context = operationsContext(env);
-  try {
-    await monitorDatabaseCapacity(env.DB, databaseCapacityPolicy(env), Date.now());
-  } catch {
-    // Capacity is an admission safeguard. Existing work and cleanup must still run
-    // when this observation fails; new identities remain fail-closed at admission.
-    await recordEvent(env.DB, {
-      kind: "database-capacity",
-      subject: "database",
-      code: "measurement-unavailable",
-      now: Date.now(),
-    }).catch(() => {});
+  if (message.kind === "recovery") {
+    try {
+      await monitorDatabaseCapacity(env.DB, databaseCapacityPolicy(env), Date.now());
+    } catch {
+      // Capacity is an admission safeguard. Existing work and cleanup must still run
+      // when this observation fails; new identities remain fail-closed at admission.
+      await recordEvent(env.DB, {
+        kind: "database-capacity",
+        subject: "database",
+        code: "measurement-unavailable",
+        now: Date.now(),
+      }).catch(() => {});
+    }
+    try {
+      await recoverGitHubDeliveries({ context, configuration: githubConfiguration(env) });
+      await resolveSchedulerFailure(env, "upstream-webhook", "recovery-unavailable");
+    } catch {
+      logOperationFailure({
+        operation: "github-delivery-recovery",
+        code: "recovery-unavailable",
+        correlationId,
+        startedAt,
+      });
+      await recordEvent(env.DB, {
+        kind: "upstream-webhook",
+        subject: "scheduler",
+        code: "recovery-unavailable",
+        now: Date.now(),
+      });
+    }
   }
   let reconcileMore = false;
-  for (const [kind, reconcile] of [
-    ["webhooks", reconcileWebhooks],
-    ["checks", retireUnpinnedMainChecks],
-    ["check-aliases", reconcileEquivalentPullRequestChecks],
-    ["staged", reconcileStagedWorkflows],
-    ["ingest", reconcileIngest],
-  ] as const) {
+  for (const [kind, reconcile] of message.kind === "recovery"
+    ? ([
+        ["webhooks", reconcileWebhooks],
+        ["checks", retireUnpinnedMainChecks],
+        ["check-aliases", reconcileEquivalentPullRequestChecks],
+        ["staged", reconcileStagedWorkflows],
+      ] as const)
+    : message.kind === "ingest"
+      ? ([["staged", reconcileStagedWorkflows]] as const)
+      : []) {
     try {
       const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
       const failed = "pending" in result ? result.pending.length : result.errors.length;
       const progressed =
-        kind === "ingest" || kind === "staged"
+        kind === "staged"
           ? "progressed" in result && typeof result.progressed === "number" && result.progressed > 0
           : failed < result.checked;
-      if (result.checked >= context.budget.tasksPerStep && progressed) reconcileMore = true;
+      if (kind === "staged" && result.checked >= context.budget.tasksPerStep && progressed)
+        reconcileMore = true;
       if (failed === 0) {
         await resolveSchedulerFailure(env, kind, "reconciliation-failed");
       } else {
@@ -379,6 +352,12 @@ export async function runScheduledOperations(env: Env) {
         });
       }
     } catch {
+      logOperationFailure({
+        operation: kind,
+        code: "reconciliation-failed",
+        correlationId,
+        startedAt,
+      });
       await recordEvent(env.DB, {
         kind,
         subject: "scheduler",
@@ -387,7 +366,10 @@ export async function runScheduledOperations(env: Env) {
       });
     }
   }
-  if (apiBindings(env).configuration.workflowOwned) {
+  if (
+    (message.kind === "recovery" || message.kind === "ingest") &&
+    apiBindings(env).configuration.workflowOwned
+  ) {
     try {
       const expired = await expireStagedAttempts(context);
       if (expired.hasMore) reconcileMore = true;
@@ -403,11 +385,27 @@ export async function runScheduledOperations(env: Env) {
       });
     }
   }
-  const result = await runOperations(context);
-  if (result.hasMore || reconcileMore)
-    await env.OPERATIONS.send({ kind: "continue" } satisfies OperationsMessage, {
-      delaySeconds: 1,
-    });
+  const result = await runOperations(context, message);
+  if (reconcileMore)
+    await env.OPERATIONS.send({ kind: "ingest" } satisfies OperationsMessage, { delaySeconds: 1 });
+  if (message.kind === "recovery") {
+    const families = {
+      history: ["history"],
+      retention: ["reference-retention", "source-retention", "snapshot-retention", "retention"],
+      profiles: ["profile-retention"],
+      "baseline-conversion": ["baseline-conversion"],
+    } as const;
+    for (const family of Object.keys(families) as (keyof typeof families)[]) {
+      if (families[family].some((name) => result.reports[name]?.hasMore))
+        await env.OPERATIONS.send({ kind: "maintenance", family } satisfies OperationsMessage, {
+          delaySeconds: 1,
+        });
+    }
+    if (["checks", "review-links", "promotion"].some((name) => result.reports[name]?.hasMore))
+      await env.OPERATIONS.send({ kind: "status" } satisfies OperationsMessage, {
+        delaySeconds: 1,
+      });
+  } else if (result.hasMore) await env.OPERATIONS.send(message, { delaySeconds: 1 });
   await resolveSchedulerFailure(env, "runtime", "configuration-or-step-failed");
   return result;
 }

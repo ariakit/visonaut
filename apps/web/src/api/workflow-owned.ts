@@ -35,7 +35,7 @@ import {
   type ApiContext,
 } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
-import { ensureSignedAttemptCheck } from "./pre-run.js";
+import { ensureSignedAttemptCheck, requireVisualPlan } from "./pre-run.js";
 
 interface StagedRun {
   id: string;
@@ -111,29 +111,6 @@ export function workflowConfiguration(context: ApiContext) {
     !configuration.submitJobName ||
     configuration.submitJobName.length > 256 ||
     !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
-    (configuration.additionalTrustedWorkflowBlobSha !== undefined &&
-      (!/^[a-f0-9]{40}$/.test(configuration.additionalTrustedWorkflowBlobSha) ||
-        configuration.additionalTrustedWorkflowBlobSha === configuration.reusableWorkflowSha ||
-        context.configuration.github.repository !== "ariakit/ariakit" ||
-        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
-        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
-    (configuration.transitionTrustedWorkflowBlobSha !== undefined &&
-      (!/^[a-f0-9]{40}$/.test(configuration.transitionTrustedWorkflowBlobSha) ||
-        configuration.transitionTrustedWorkflowBlobSha === configuration.reusableWorkflowSha ||
-        configuration.transitionTrustedWorkflowBlobSha ===
-          configuration.additionalTrustedWorkflowBlobSha ||
-        configuration.additionalTrustedWorkflowBlobSha === undefined ||
-        context.configuration.github.repository !== "ariakit/ariakit" ||
-        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
-        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
-    (configuration.additionalTrustedExecutorDigest !== undefined &&
-      (!/^[a-f0-9]{64}$/.test(configuration.additionalTrustedExecutorDigest) ||
-        configuration.additionalTrustedExecutorDigest ===
-          context.configuration.trustedExecutorDigest ||
-        configuration.additionalTrustedWorkflowBlobSha === undefined ||
-        context.configuration.github.repository !== "ariakit/ariakit" ||
-        configuration.callerWorkflowPath !== ".github/workflows/ci.yml" ||
-        configuration.trustedWorkflowPath !== ".github/workflows/app.yml")) ||
     (configuration.trustedWorkflowPath !== undefined &&
       configuration.reusableWorkflowRef !==
         `${context.configuration.github.repository}/${configuration.trustedWorkflowPath}@${configuration.reusableWorkflowSha}`) ||
@@ -155,9 +132,14 @@ export function workflowStagingJobName(
   configuration: NonNullable<ApiConfiguration["workflowOwned"]>,
   shardKey: string,
 ) {
-  return shardKey === "combined"
-    ? configuration.submitJobName
-    : `${configuration.captureJobPrefix}${shardKey}`;
+  if (shardKey !== "combined") {
+    throw new SecurityError(
+      "unsupported_capture_path",
+      403,
+      "Only signed combined Submit is supported.",
+    );
+  }
+  return configuration.submitJobName;
 }
 
 function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
@@ -203,8 +185,6 @@ async function verifyWorkflowJob(
       reusableWorkflowRef: configuration.reusableWorkflowRef,
       reusableWorkflowSha: configuration.reusableWorkflowSha,
       trustedWorkflowPath: configuration.trustedWorkflowPath,
-      additionalTrustedWorkflowBlobSha: configuration.additionalTrustedWorkflowBlobSha,
-      transitionTrustedWorkflowBlobSha: configuration.transitionTrustedWorkflowBlobSha,
       planDigest: identity.planDigest,
       shards: [{ key: identity.shardKey, jobName }],
       loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),
@@ -254,6 +234,40 @@ async function stagedCapability(request: Request, context: ApiContext, runId?: s
   return { capability, run, job };
 }
 
+/** Begin the App check before artifact downloads or image staging. */
+export async function beginStaged(request: Request, context: ApiContext, externalRunId: string) {
+  const body = await jsonBody(request, 32_768);
+  validateVersion(body.schemaVersion);
+  const configuration = workflowConfiguration(context);
+  const sourceDigest = await workflowSourceDigest(configuration.reusableWorkflowSha);
+  const identity: ReserveRunRequest = {
+    schemaVersion: SCHEMA_VERSION,
+    repository: context.configuration.github.repository,
+    repositoryId: context.configuration.github.repositoryId,
+    workflowRunId: externalRunId,
+    workflowAttempt: integer(body.workflowAttempt, 1),
+    testedSha: string(body.testedSha, 40),
+    planDigest: sourceDigest,
+    shardKey: "combined",
+  };
+  const github = await createGitHubClient(context.configuration.github);
+  const verified = await verifyWorkflowJob(
+    request,
+    context,
+    github,
+    identity,
+    configuration.submitJobName,
+    new URL("/submit", context.configuration.origin).href,
+  );
+  await ensureSignedAttemptCheck(context, github, verified);
+  await requireVisualPlan(context, {
+    testedSha: verified.testedSha,
+    workflowRunId: verified.workflowRunId,
+    workflowAttempt: verified.workflowAttempt,
+  });
+  return Response.json({ schemaVersion: SCHEMA_VERSION, state: "pending" });
+}
+
 export async function reserveStaged(request: Request, context: ApiContext) {
   const body = reserveRequest(await jsonBody(request, 32_768));
   const configuration = workflowConfiguration(context);
@@ -269,7 +283,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     github,
     body,
     jobName,
-    context.configuration.oidcAudience,
+    new URL("/submit", context.configuration.origin).href,
   );
   const run = await reserveVerifiedStagedRun(context, verified, sourceDigest);
   await context.database
@@ -329,6 +343,11 @@ export async function reserveVerifiedStagedRun(
   sourceDigest: string,
 ) {
   const configuration = workflowConfiguration(context);
+  await requireVisualPlan(context, {
+    testedSha: verified.testedSha,
+    workflowRunId: verified.workflowRunId,
+    workflowAttempt: verified.workflowAttempt,
+  });
   const existing = await context.database
     .prepare(
       "SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ?",
@@ -424,6 +443,12 @@ export async function declareStaged(
   const discovery = manifest.discovery;
   if (
     !discovery ||
+    !manifest.captureSources?.length ||
+    manifest.profiles.some(
+      ({ profile }) =>
+        Object.hasOwn(profile, "comparisonPolicyDigest") ||
+        Object.hasOwn(profile, "comparisonEngineVersion"),
+    ) ||
     !context.configuration.trustedExecutorDigest ||
     !isTrustedWorkflowExecutor(context.configuration, discovery.executorDigest) ||
     discovery.inventoryDigest !==
@@ -1010,6 +1035,11 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     new URL("/submit", context.configuration.origin).href,
   );
   await ensureSignedAttemptCheck(context, github, verified);
+  await requireVisualPlan(context, {
+    testedSha: verified.testedSha,
+    workflowRunId: verified.workflowRunId,
+    workflowAttempt: verified.workflowAttempt,
+  });
   if (!run) {
     run = await reserveVerifiedStagedRun(context, verified, seed.workflow_source_digest);
   }
@@ -1056,7 +1086,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
   ) {
     throw new SecurityError("submit_conflict", 409, "Another job submitted this run.");
   }
-  await context.operations.send({ kind: "continue" });
+  await context.operations.send({ kind: "ingest" });
   return Response.json(
     {
       schemaVersion: SCHEMA_VERSION,

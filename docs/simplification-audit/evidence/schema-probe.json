@@ -1,0 +1,67 @@
+{
+  "environment": {
+    "python_sqlite": "3.50.2",
+    "source_commit": "7e23173",
+    "scope": "Disposable in-memory SQLite; source fixture order reproduced with equivalent identical operations schema. No test suite or production query run."
+  },
+  "full_migrations": [
+    "0001_service",
+    "0002_work",
+    "0003_auth",
+    "0004_ingest",
+    "0005_operations",
+    "0006_acceptance",
+    "0007_backup_inventory",
+    "0008_capture_profiles",
+    "0009_retention_history",
+    "0010_run_history",
+    "0011_backup_groups",
+    "0012_historical_comparisons",
+    "0013_promotion_scans",
+    "0014_visonaut_brand",
+    "0015_run_original_bytes",
+    "0016_comparison_publication",
+    "0018_transfer_key_redemptions",
+    "0019_staged_workflows",
+    "0020_pre_run_checks",
+    "0021_staged_image_reuse",
+    "0022_review_links",
+    "0023_pending_webhook_index"
+  ],
+  "fixture_migrations": [
+    "0001_service",
+    "0002_work",
+    "0003_auth",
+    "0004_ingest",
+    "0005_operations",
+    "0006_acceptance",
+    "0007_backup_inventory",
+    "0008_capture_profiles",
+    "0009_retention_history",
+    "0010_run_history",
+    "0011_backup_groups",
+    "0012_historical_comparisons",
+    "0013_promotion_scans",
+    "0014_visonaut_brand",
+    "0016_comparison_publication",
+    "0020_pre_run_checks",
+    "0022_review_links"
+  ],
+  "full_schema_objects": 113,
+  "fixture_schema_objects": 106,
+  "missing_schema_objects": [
+    "github_webhook_delivery_pending",
+    "ingest_staged_bundles",
+    "ingest_staged_images",
+    "ingest_staged_images_reuse",
+    "ingest_staged_manifests",
+    "ingest_staged_runs",
+    "transfer_key_redemptions"
+  ],
+  "changed_schema_objects": [
+    "ingest_manifests"
+  ],
+  "missing_ingest_manifest_columns": [
+    "declared_bytes"
+  ]
+}

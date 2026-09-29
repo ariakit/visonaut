@@ -9,13 +9,14 @@ import {
 } from "@visonaut/security";
 import { ConflictError, IncompleteError } from "@visonaut/service";
 import { apiContext, assertConfiguredProject, type ApiBindings } from "./context.js";
-import { transferPrivateKey, transferPublicKey } from "./transfer-key.js";
-import { declareShard, finalize, reserve, runStatus, uploadImage } from "./ingest.js";
+import { runStatus } from "./ingest.js";
 import { uuid } from "./input.js";
 import { publicImage } from "./images.js";
+import { reportVisualPlan } from "./pre-run.js";
 import { handleReview } from "./review.js";
 import { receiveWebhook } from "./webhooks.js";
 import {
+  beginStaged,
   declareStaged,
   finalizeStaged,
   reuseStagedImages,
@@ -25,7 +26,6 @@ import {
 } from "./workflow-owned.js";
 
 export * from "./context.js";
-export { reconcileIngest } from "./ingest.js";
 export { reconcileStagedWorkflows } from "./workflow-materialize.js";
 export { reconcileWebhooks } from "./webhooks.js";
 
@@ -107,31 +107,27 @@ export async function handleApi(
     if (!path.startsWith("/api/auth/") && !dashboardRead) {
       await assertConfiguredProject(context);
     }
-    if (path === "/webhooks/github" && request.method === "POST") {
+    if ((path === "/v1/webhooks" || path === "/webhooks/github") && request.method === "POST") {
       return privateResponse(await receiveWebhook(request, context, lifetime));
     }
     const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
     if (path.startsWith("/api/auth/")) {
       return privateResponse(await auth.handler(request));
     }
+    if (path === "/v1/plan" && request.method === "POST") {
+      return privateResponse(await reportVisualPlan(request, context));
+    }
     if (path === "/v1/runs" && request.method === "POST") {
-      return privateResponse(
-        await (context.configuration.workflowOwned
-          ? reserveStaged(request, context)
-          : reserve(request, context)),
-      );
+      return privateResponse(await reserveStaged(request, context));
     }
-    if (path === "/v1/transfer/private-key" && request.method === "POST") {
-      const github = await createGitHubClient(bindings.configuration.github);
-      return privateResponse(await transferPrivateKey({ request, context, github }));
-    }
-    if (path === "/v1/transfer/public-key" && request.method === "GET") {
-      return transferPublicKey(bindings.transferPrivateKey);
+    const beginMatch = /^\/v1\/runs\/([1-9][0-9]*)\/begin$/.exec(path);
+    if (beginMatch?.[1] && request.method === "POST") {
+      return privateResponse(await beginStaged(request, context, beginMatch[1]));
     }
     const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
     if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {
       return privateResponse(
-        await (context.configuration.workflowOwned ? declareStaged : declareShard)(
+        await declareStaged(
           request,
           context,
           uuid(shardMatch[1]),
@@ -141,30 +137,18 @@ export async function handleApi(
     }
     const uploadMatch = /^\/v1\/uploads\/([A-Za-z0-9_.-]{1,8192})$/.exec(path);
     if (uploadMatch?.[1] && request.method === "PUT") {
-      return privateResponse(
-        await (context.configuration.workflowOwned ? uploadStagedImage : uploadImage)(
-          request,
-          context,
-          uploadMatch[1],
-        ),
-      );
+      return privateResponse(await uploadStagedImage(request, context, uploadMatch[1]));
     }
     const reuseMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reuse$/.exec(path);
-    if (reuseMatch?.[1] && request.method === "POST" && context.configuration.workflowOwned) {
+    if (reuseMatch?.[1] && request.method === "POST") {
       return privateResponse(await reuseStagedImages(request, context, uuid(reuseMatch[1])));
     }
     const finalizeMatch = /^\/v1\/runs\/([a-f0-9-]+)\/finalize$/.exec(path);
     if (finalizeMatch?.[1] && request.method === "POST") {
-      return privateResponse(
-        await (context.configuration.workflowOwned ? finalizeStaged : finalize)(
-          request,
-          context,
-          uuid(finalizeMatch[1]),
-        ),
-      );
+      return privateResponse(await finalizeStaged(request, context, uuid(finalizeMatch[1])));
     }
     const submitMatch = /^\/v1\/runs\/([1-9][0-9]*)\/submit$/.exec(path);
-    if (submitMatch?.[1] && request.method === "POST" && context.configuration.workflowOwned) {
+    if (submitMatch?.[1] && request.method === "POST") {
       return privateResponse(await submitStaged(request, context, submitMatch[1]));
     }
     // A signed upload token is never accepted by this live-session boundary.
@@ -174,6 +158,7 @@ export async function handleApi(
       auth,
       database: bindings.database,
       github,
+      access: request.method === "GET" || request.method === "HEAD" ? "read" : "write",
     });
     if (!["GET", "HEAD"].includes(request.method)) {
       requireSameOrigin(request, bindings.configuration.origin);

@@ -1,0 +1,223 @@
+{
+  "revision": "2",
+  "environment": "Local Chrome via separate playwright-cli session at http://127.0.0.1:4319/",
+  "sourceBuild": "Passed: Vite8.3.0, output in /tmp/visonaut-r2-qa-build",
+  "typecheck": "Passed: source main, schema, UI prototypes, quantitative prototypes, and copied component types",
+  "portable": {
+    "builtJSMatches": true,
+    "builtCSSMatches": true,
+    "externalScripts": [],
+    "externalStyles": [],
+    "fileURLBrowserTest": "Not run: browser-use policy denied file:// access; no alternate surface attempted."
+  },
+  "interactions": {
+    "initial": {
+      "progress": "39 / 43 answered",
+      "emptyPrompt": true
+    },
+    "manualArrow": {
+      "urlUnchanged": true,
+      "selected": "Chrome \u00b7 Light",
+      "focused": "Chrome \u00b7 Dark"
+    },
+    "enter": {
+      "url": "http://127.0.0.1:4319/#U03-item-1-dark",
+      "selected": "Chrome \u00b7 Dark",
+      "panels": 1
+    },
+    "back": {
+      "url": "http://127.0.0.1:4319/#U03-item-1-light",
+      "selected": "Chrome \u00b7 Light"
+    },
+    "middleClick": {
+      "parentUnchanged": true,
+      "parentSelected": "Chrome \u00b7 Light",
+      "popupUrl": "http://127.0.0.1:4319/#U03-item-1-dark"
+    },
+    "outside": "Selected: Button / focused \u00b7 Chrome \u00b7 DarkImage position: x 0, y 0Arrow owner in image: Review navigation",
+    "body": "Selected: Menu / expanded \u00b7 Chrome \u00b7 DarkImage position: x 0, y 0Arrow owner in image: Review navigation",
+    "pan": {
+      "x": 0,
+      "y": 100
+    },
+    "title": "PR #482 \u00b7 Fix dialog focus",
+    "historyMainVisible": true,
+    "narrow": {
+      "viewport": 390,
+      "document": 390,
+      "headerHeight": 72
+    }
+  },
+  "browserFeedback": {
+    "cases": [
+      {
+        "name": "fresh",
+        "progress": "39 / 43 answered",
+        "emptyPrompt": true,
+        "A06": "github-artifact",
+        "O07": {
+          "optionId": "workflow-only",
+          "notes": "The verified workflow runs changeset publish."
+        },
+        "open": [
+          "U06",
+          "A07",
+          "O08",
+          "O09"
+        ]
+      },
+      {
+        "name": "r1-empty",
+        "progress": "39 / 43 answered",
+        "emptyPrompt": true,
+        "A06": "github-artifact",
+        "O07": {
+          "optionId": "workflow-only",
+          "notes": "The verified workflow runs changeset publish."
+        },
+        "open": [
+          "U06",
+          "A07",
+          "O08",
+          "O09"
+        ]
+      },
+      {
+        "name": "r1-A06-O07",
+        "progress": "39 / 43 answered",
+        "emptyPrompt": true,
+        "A06": "github-artifact",
+        "O07": {
+          "optionId": "workflow-only",
+          "notes": "The verified workflow runs changeset publish."
+        },
+        "open": [
+          "U06",
+          "A07",
+          "O08",
+          "O09"
+        ]
+      }
+    ],
+    "notesOnly": {
+      "progress": "39 / 43 answered",
+      "openPrompt": true
+    },
+    "persisted": {
+      "progress": "40 / 43 answered",
+      "selected": "manual",
+      "notes": "QA-only note"
+    },
+    "copy": {
+      "matchesPreview": true,
+      "repeatedCopySame": true,
+      "stateUnchanged": true,
+      "onlyChangedDecision": true
+    },
+    "cleared": {
+      "progress": "39 / 43 answered",
+      "notesPreserved": true,
+      "openPrompt": true
+    }
+  },
+  "exactSourceFeedbackProbe": [
+    {
+      "name": "Fresh context",
+      "answered": 39,
+      "total": 43,
+      "changed": [],
+      "A06": "github-artifact",
+      "O07": {
+        "optionId": "workflow-only",
+        "notes": "The verified workflow runs changeset publish."
+      },
+      "open": [
+        "U06",
+        "A07",
+        "O08",
+        "O09"
+      ]
+    },
+    {
+      "name": "R1 empty baseline and zero choices",
+      "answered": 39,
+      "total": 43,
+      "changed": [],
+      "A06": "github-artifact",
+      "O07": {
+        "optionId": "workflow-only",
+        "notes": "The verified workflow runs changeset publish."
+      },
+      "open": [
+        "U06",
+        "A07",
+        "O08",
+        "O09"
+      ]
+    },
+    {
+      "name": "R1 empty except submitted A06 and O07",
+      "answered": 39,
+      "total": 43,
+      "changed": [],
+      "A06": "github-artifact",
+      "O07": {
+        "optionId": "workflow-only",
+        "notes": "The verified workflow runs changeset publish."
+      },
+      "open": [
+        "U06",
+        "A07",
+        "O08",
+        "O09"
+      ]
+    },
+    {
+      "name": "R1 all submitted choices",
+      "answered": 39,
+      "total": 43,
+      "changed": [],
+      "A06": "github-artifact",
+      "O07": {
+        "optionId": "workflow-only",
+        "notes": "The verified workflow runs changeset publish."
+      },
+      "open": [
+        "U06",
+        "A07",
+        "O08",
+        "O09"
+      ]
+    },
+    {
+      "name": "R1 later unsent local note",
+      "answered": 38,
+      "total": 43,
+      "changed": [
+        "U03"
+      ],
+      "A06": "github-artifact",
+      "O07": {
+        "optionId": "workflow-only",
+        "notes": "The verified workflow runs changeset publish."
+      },
+      "open": [
+        "U03",
+        "U06",
+        "A07",
+        "O08",
+        "O09"
+      ]
+    }
+  ],
+  "screenshots": [
+    "document-desktop-r2.png",
+    "document-prototype-r2.png",
+    "document-narrow-r2.png"
+  ],
+  "limits": [
+    "Browser feedback seed uses submitted r1 values and simulated old option fingerprints. The exact-source probe uses the actual preserved r1 option fingerprints.",
+    "A single favicon.ico404 appeared. No application JavaScript errors were observed.",
+    "No product code, GitHub content, cloud resource, or main artifact source was changed by this QA pass."
+  ]
+}

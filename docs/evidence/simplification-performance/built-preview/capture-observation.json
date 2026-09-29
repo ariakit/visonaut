@@ -1,0 +1,10 @@
+{
+  "status": "Closed as a transient headless capture observation; no product layout defect corroborated.",
+  "anomalousImage": "/tmp/visonaut-built-preview-smoke/desktop-reload-capture-anomaly.png",
+  "sequence": "Dashboard to Light review, ArrowRight to Dark, reload, full-page screenshot.",
+  "reproduction": "Direct fresh-route and repeated exact-flow DOM boxes were correct; viewport/full-page captures were correct; parent repeated exact desktop flow in IAB with correct layout.",
+  "boxesEvidence": "/tmp/visonaut-built-preview-smoke/desktop-boxes.json",
+  "diagnosticEvidence": "/tmp/visonaut-built-preview-smoke/desktop-geometry.json",
+  "productCssChanged": false,
+  "limits": "The anomalous image had no corresponding panel-box sample. The exact browser capture cause is not established."
+}

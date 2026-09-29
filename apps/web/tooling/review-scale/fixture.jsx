@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import "../../src/styles.css";
 import { ReviewWorkspace } from "../../src/review/review-workspace.tsx";
 
 // Two animation frames mark a paint opportunity, not a physical display time.
@@ -35,10 +36,18 @@ if (!rootElement) {
 let listSeen = false;
 let imageSeen = false;
 const observer = new MutationObserver(() => {
-  // The shipped sidebar mounts at most one 50-item page.
-  const expectedRows = Math.min(50, model.items.length);
-  if (!listSeen && document.querySelectorAll(".review-item").length === expectedRows) {
+  // The current renderer mounts visible rows, so readiness is the selected
+  // item rather than a historical fixed page size.
+  const selectedRow = document.querySelector(
+    '.review-item[aria-current="true"], .review-item[aria-current="page"]',
+  );
+  if (!listSeen && selectedRow) {
     listSeen = true;
+    const workspace = document.querySelector(".review-workspace");
+    metrics.shellDisplay = workspace && getComputedStyle(workspace).display;
+    if (metrics.shellDisplay !== "grid") {
+      throw new Error(`Review Shell display must be grid, received ${metrics.shellDisplay}.`);
+    }
     metrics.listCommit = performance.now();
     afterPaintOpportunity().then(() => {
       metrics.listPaintOpportunity = performance.now();
@@ -53,6 +62,7 @@ const observer = new MutationObserver(() => {
     afterPaintOpportunity().then(() => {
       metrics.imagePaintOpportunity = performance.now();
       metrics.domNodes = document.querySelectorAll("*").length;
+      if (!listSeen) throw new Error("The selected item never mounted.");
       metrics.complete = true;
       observer.disconnect();
     });
@@ -83,11 +93,14 @@ window.scaleFixture = {
       throw new Error("Review workspace is missing.");
     }
     workspace.focus();
-    const previous = document.querySelector('[role="tab"][aria-selected="true"]')?.id;
+    const selectedVariant = () =>
+      document.querySelector('[aria-label="Variants"] [aria-selected="true"]');
+    const previous = selectedVariant()?.id;
+    if (!previous) throw new Error("A selected variant is required before navigation.");
     const ready = new Promise((resolve) => {
       const navigationObserver = new MutationObserver(() => {
-        const selected = document.querySelector('[role="tab"][aria-selected="true"]')?.id;
-        if (selected === previous) return;
+        const selected = selectedVariant()?.id;
+        if (!selected || selected === previous) return;
         if (!document.querySelector('[data-evidence="ready"]')) return;
         navigationObserver.disconnect();
         resolve(performance.now());
@@ -105,7 +118,7 @@ window.scaleFixture = {
       readyCommitMs: readyCommit - start,
       paintOpportunityMs: performance.now() - start,
       resourceEntriesAdded: performance.getEntriesByType("resource").length - resourcesBefore,
-      selected: document.querySelector('[role="tab"][aria-selected="true"]')?.id,
+      selected: selectedVariant()?.id,
     };
   },
 };

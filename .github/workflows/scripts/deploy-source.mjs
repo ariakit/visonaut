@@ -19,7 +19,9 @@ assert.equal(
   process.env.GITHUB_SHA,
   "A newer main commit supersedes this deployment",
 );
-const configuration = JSON.parse(await readFile("apps/web/dist/server/wrangler.json", "utf8"));
-assert.equal(configuration.name, "visonaut", "Web build targets the wrong Worker");
-assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, "production");
-assert.equal(configuration.vars?.VISONAUT_ALLOW_MAIN_DISPATCH, "false");
+if (process.env.VISONAUT_RELEASE_SOURCE_ONLY !== "true") {
+  const configuration = JSON.parse(await readFile("apps/web/dist/server/wrangler.json", "utf8"));
+  assert.equal(configuration.name, "visonaut", "Web build targets the wrong Worker");
+  assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, "production");
+  assert.equal(configuration.vars?.VISONAUT_ALLOW_MAIN_DISPATCH, "false");
+}

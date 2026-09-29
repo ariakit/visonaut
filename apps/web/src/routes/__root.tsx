@@ -9,6 +9,7 @@ export const Route = createRootRoute({
       { title: "Visonaut" },
       { name: "robots", content: "noindex, nofollow" },
     ],
+    links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
   }),
   component: Root,
 });

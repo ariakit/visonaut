@@ -1,0 +1,697 @@
+{
+  "title": "Visonaut operations and access audit",
+  "revision": "1",
+  "date": "2026-09-29",
+  "commit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
+  "scope": "Read-only audit of Infisical, deployment, release, GitHub webhooks, app access, and operational diagnostics. No product implementation, cloud mutation, secret read, or publication.",
+  "verification": {
+    "tests": "node --test .github/workflows/scripts/deploy-version.test.mjs .github/workflows/scripts/packages.test.mjs: 11 passed, 0 failed (Node 24.18.0).",
+    "probes": [
+      {
+        "question": "Does the version-only preflight detect consumer and observability changes?",
+        "environment": "Node 24.18.0; current deploy-version.mjs functions; synthetic live settings; no network",
+        "observed": "Changing queue max_concurrency 1 to 20 and observability enabled true to false passed assertInfrastructure. versionConfiguration removed both queues and observability.",
+        "limit": "Proves local guard coverage and generated config only; does not inspect current live settings."
+      },
+      {
+        "question": "How many GitHub calls does the current token policy require?",
+        "environment": "Current github.ts/errors.ts/http.ts transpiled with TypeScript; installed jose 6.2.12; generated test RSA key; synthetic fetch; ten sequential client instances",
+        "observed": "10 installation-token requests, 10 permission requests, 1 numeric user lookup.",
+        "limit": "Counts only. No production latency, concurrency, or Worker runtime measurement."
+      },
+      {
+        "question": "Do main pushes run duplicate CI?",
+        "environment": "Read-only GitHub workflow metadata for main SHA 7e23173",
+        "observed": "CI run 36570110783 had 10 jobs and Deploy run 36570111308 repeated those 10 verification jobs plus deployment. The standalone CI jobs sum to 802 job-seconds.",
+        "limit": "One successful sample. Aggregate elapsed job time is not a billed-cost estimate or a prediction of end-to-end savings.",
+        "jobSeconds": {
+          "Build": 34,
+          "Release guards": 17,
+          "Typecheck": 39,
+          "Test 1/3": 236,
+          "Test 2/3": 174,
+          "Container": 27,
+          "Test 3/3": 127,
+          "Lint": 21,
+          "Browser": 119,
+          "Gate": 8
+        }
+      }
+    ],
+    "limits": [
+      "Live Infisical identity policies, folder inventory, and secret values were not read. Workflow settings, docs, and a current successful deploy were inspected.",
+      "Live Cloudflare bindings, queue configuration, token grants, logs, and traces were not read in this slice. Local source and recorded receipts do not prove current remote policy.",
+      "GitHub issue/run metadata was read successfully after the restricted shell initially could not connect.",
+      "The worktree had no node_modules. pnpm --version could not verify registry signatures under restricted network. No dependency or lockfile change was made.",
+      "Upstream issue searches included open and closed Infisical OIDC reports and Workers SDK version/queue reports. No pertinent closed Infisical OIDC report or directly applicable Workers SDK queue fix was found. Do not infer current defects from issue status."
+    ]
+  },
+  "constraints": [
+    "Keep production/preview storage and session isolation until the preview product scope is explicitly changed.",
+    "Keep live user identity and repository-write permission checks for current private endpoints unless the maintainer explicitly accepts a permission-staleness window.",
+    "Keep signature verification, bounded webhook bodies, durable receiver receipts, and idempotent processing.",
+    "Keep pinned actions, build-before-secret-loading, repository/main checks, serial deployments, database migrations before traffic, and exact source/version records.",
+    "Keep npm trusted publication, exact audited tarball bytes, provenance, and integrity checks. These are useful trust boundaries.",
+    "Latest main already removes backup R2 bindings and D1 backup secret requirements; do not propose those as still-active infrastructure."
+  ],
+  "decisions": [
+    {
+      "id": "O01",
+      "status": "OPEN",
+      "area": "CI",
+      "question": "Should one main-branch pipeline own checks and deployment?",
+      "summary": "Every push to main currently runs the full verification pipeline twice. The duplicated verification also builds the full workspace five times per invocation.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/checks.yml:3",
+          "claim": "checks.yml handles push to main as well as pull_request and workflow_call."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/deploy.yml:3",
+          "claim": "deploy.yml handles the same main push and calls checks.yml as its verify job at line 18."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/checks.yml:79",
+          "claim": "The build job, three test shards (line 111), and browser job (line 132) each run pnpm build. Deploy adds a production build at deploy.yml:46."
+        },
+        {
+          "kind": "verified remote metadata",
+          "url": "https://github.com/ariakit/visonaut/actions/runs/36570110783",
+          "claim": "For 7e23173, the standalone CI has 10 jobs; their elapsed times sum to 802 seconds."
+        },
+        {
+          "kind": "verified remote metadata",
+          "url": "https://github.com/ariakit/visonaut/actions/runs/36570111308",
+          "claim": "The same SHA has a successful Deploy run with all 10 checks repeated, then a 59-second deployment job."
+        },
+        {
+          "kind": "inference",
+          "claim": "Removing the duplicate invocation removes one complete set of runner jobs. Timing and billing savings vary with queueing and GitHub pricing."
+        }
+      ],
+      "options": [
+        {
+          "id": "one-owner",
+          "label": "Use one main pipeline",
+          "recommended": true,
+          "detail": "Minimal change: retain checks.yml for PR/manual/call use; let deploy.yml call it once for main. Preserve the exact-main check and production build. No cross-run artifact lookup."
+        },
+        {
+          "id": "reuse-run",
+          "label": "Deploy after the completed CI run",
+          "detail": "Keep standalone CI, trigger deployment from its completed run, and verify repository, branch, source SHA, status, and artifacts. Can reuse outputs, but adds a trust boundary and event handling."
+        },
+        {
+          "id": "keep",
+          "label": "Keep both full runs",
+          "detail": "No migration. Pays for duplicate work and can show two different statuses for one commit; useful only if the second run is an intentional independent check."
+        }
+      ],
+      "recommendation": "one-owner",
+      "counterexample": "If main CI must run without deployment permissions or if required status rules depend on a different job name, update and verify those rules before removing a trigger. Keeping PR checks separate already preserves the untrusted-PR boundary.",
+      "migration": "Remove only the redundant main trigger first. Confirm Gate status names and source SHA behavior. Then reduce repeated workspace builds only where jobs need package outputs; do not replace the production-environment web build with a preview build.",
+      "tests": [
+        "One PR event starts all required checks without deployment credentials.",
+        "One main push produces one check set and one serial deployment.",
+        "A failed or skipped required job prevents deployment.",
+        "Manual release still verifies and publishes the intended source."
+      ],
+      "reversibility": "A workflow-only change; restore the trigger without data migration.",
+      "snippet": {
+        "language": "yaml",
+        "code": "# checks.yml\non:\n  pull_request:\n  workflow_dispatch:\n  workflow_call:\n\n# deploy.yml keeps: verify -> deploy"
+      },
+      "demo": {
+        "title": "Count the work for one main push",
+        "inputs": [
+          "Pipeline option",
+          "Number of pushes"
+        ],
+        "outputs": [
+          "Verification job count",
+          "Workspace build count",
+          "Observed sample aggregate job time"
+        ],
+        "note": "Show counts from source. Label projected totals as a model, not a production benchmark."
+      }
+    },
+    {
+      "id": "O02",
+      "status": "OPEN",
+      "area": "Secrets",
+      "question": "What role should Infisical have in this small deployment?",
+      "summary": "Infisical currently supplies two deployment credentials through OIDC. It is not on the app request path. Runtime secrets remain in Cloudflare.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/deploy.yml:45",
+          "claim": "Build completes before the Infisical step. Lines 53\u201365 fetch one folder, with imports and recursive reads disabled."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/scripts/deploy-credentials.mjs:1",
+          "claim": "Worker and D1 migration tokens are required and must differ."
+        },
+        {
+          "kind": "documented policy; live scope unverified",
+          "source": ".github/workflows/README.md:18",
+          "claim": "The identity is bound to exact immutable repository/main/workflow claims and one deployment-only folder. Runtime auth, GitHub App, and ingest secrets are not copied to the runner."
+        },
+        {
+          "kind": "verified remote metadata",
+          "url": "https://github.com/ariakit/visonaut/actions/runs/36570111308",
+          "claim": "The current main deployment succeeded; its Infisical step ran successfully."
+        },
+        {
+          "kind": "unmeasured",
+          "claim": "No evidence that Infisical affects app navigation latency. It can affect deployment availability, but no failure rate was measured."
+        }
+      ],
+      "references": [
+        {
+          "url": "https://github.com/Infisical/secrets-action",
+          "claim": "The official action supports OIDC, an explicit audience, folder limits, and environment exports."
+        },
+        {
+          "url": "https://github.com/Infisical/infisical/blob/main/docs/documentation/platform/identities/oidc-auth/github.mdx",
+          "claim": "Current setup documentation describes immutable GitHub subjects with numeric IDs and recommends exact claim matching."
+        },
+        {
+          "url": "https://docs.github.com/en/actions/concepts/workflows-and-actions/deployment-environments",
+          "claim": "Native GitHub environments can restrict branches and access to deployment secrets."
+        },
+        {
+          "url": "https://github.com/Infisical/secrets-action/issues/29",
+          "claim": "December 2025 report: wildcard subject matched PR but not main. Exact main subject worked in the reported table; no version or current fix was confirmed. This supports exact subjects, not abandoning working OIDC."
+        },
+        {
+          "url": "https://github.com/Infisical/secrets-action/issues/32",
+          "claim": "January 2026 self-hosted v1.0.15 report: OIDC 403 while token auth worked. No cause/fix confirmed. Visonaut uses v1.0.18 and its current deploy passed."
+        }
+      ],
+      "options": [
+        {
+          "id": "narrow-oidc",
+          "label": "Keep Infisical only for deploy credentials",
+          "recommended": true,
+          "detail": "Keep the existing small OIDC step and Cloudflare runtime secrets. Preserve one folder and exact claims. Document the one owner of each credential; remove obsolete secret entries after scope is confirmed."
+        },
+        {
+          "id": "github-native",
+          "label": "Use GitHub environment secrets",
+          "detail": "Minimal vendor count. Move the same scoped credentials to a production-only GitHub environment and remove Infisical from this repository. This stores long-lived Cloudflare credentials in GitHub and gives up central Infisical policy/audit."
+        },
+        {
+          "id": "sync-all",
+          "label": "Use Infisical as the source for all runtime secrets",
+          "detail": "Central rotation and inventory, but adds synchronization, drift, and recovery behavior. Worth it only if several services or operators need that policy."
+        }
+      ],
+      "recommendation": "narrow-oidc",
+      "counterexample": "If this is Infisical's only useful role across the organization, the extra service and policy may cost more than it saves. Then native GitHub secrets are the simpler choice. Source inspection cannot decide that operating preference.",
+      "migration": "For native secrets, configure branch-restricted environment and scoped tokens before switching; test deployment; then retire the Infisical identity/path. For retained OIDC, verify actual claims/path grants with secret values suppressed. Adding a GitHub environment changes OIDC subject matching and must be deliberate.",
+      "tests": [
+        "A main deployment can read exactly the required deployment keys.",
+        "PR, fork, wrong workflow, and wrong audience identities are denied.",
+        "No build step runs after secrets load unless it requires credentials.",
+        "Migration and Worker credentials stay separate; runtime secrets do not enter the runner."
+      ],
+      "reversibility": "Credential source is reversible. Keep old identity disabled during a short rollback window; do not duplicate active secret ownership indefinitely.",
+      "snippet": {
+        "language": "yaml",
+        "code": "method: oidc\nsecret-path: /ci/visonaut-deploy\ninclude-imports: \"false\"\nrecursive: \"false\"\nexport-type: env"
+      },
+      "demo": {
+        "title": "See where a credential travels",
+        "inputs": [
+          "Credential-source option",
+          "Build or app request"
+        ],
+        "outputs": [
+          "Services contacted",
+          "Secret destination",
+          "Policy owner"
+        ],
+        "note": "Configuration model; no secrets or live credential calls."
+      }
+    },
+    {
+      "id": "O03",
+      "status": "OPEN",
+      "area": "Deployment",
+      "question": "Should routine deployment apply the full declared Worker configuration?",
+      "summary": "The current custom uploader preserves narrow Worker Editor permissions, but silently excludes queue consumers, routes, cron changes, and observability from upload. Some excluded changes are checked; consumer and observability changes are not.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/scripts/deploy-version.mjs:117",
+          "claim": "versionConfiguration uses experimental inherited queue bindings and drops queues, triggers, routes, workers_dev, preview_urls, observability, and logpush at lines 151\u2013168."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/scripts/deploy-version.mjs:87",
+          "claim": "assertInfrastructure checks producer/resource targets and cron expressions, not queue consumer limits or observability."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/scripts/deploy-version.mjs:254",
+          "claim": "The deploy wrapper uses unstable_readConfig and installed Wrangler schema; current file has 364 lines after the backup-retirement exception."
+        },
+        {
+          "kind": "verified experiment",
+          "claim": "A synthetic consumer change from max_concurrency 1 to 20 and observability true to false passed preflight; both sections were absent from output config."
+        },
+        {
+          "kind": "documented limitation",
+          "source": ".github/workflows/README.md:40",
+          "claim": "Consumer-setting changes need a separate authorized full deploy. The CI token cannot verify those settings."
+        }
+      ],
+      "references": [
+        {
+          "url": "https://developers.cloudflare.com/workers/versions-and-deployments/",
+          "claim": "A normal Wrangler deploy creates and activates a version; stored resource data is outside Worker version rollback."
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers/authorization/workers/",
+          "claim": "Worker Editor can deploy existing Workers; separate permissions are needed for direct bound-resource operations. Permission breadth is a real tradeoff."
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers/wrangler/commands/workers/",
+          "claim": "Version upload and trigger deployment are separate commands."
+        }
+      ],
+      "options": [
+        {
+          "id": "standard",
+          "label": "Use standard Wrangler deployment",
+          "recommended": true,
+          "detail": "After the infrastructure decisions settle, use Wrangler's normal deploy command for the declared configuration. Retain source/environment checks and separate D1 migrations. Give CI only the additional permissions that this path needs."
+        },
+        {
+          "id": "explicit-split",
+          "label": "Keep code and infrastructure deployments separate",
+          "detail": "Retain the narrow token and version upload. Make excluded configuration changes fail explicitly and send them through one documented infrastructure command. Add only the read permissions needed to verify those settings."
+        },
+        {
+          "id": "declarative-platform",
+          "label": "Move all resources to a provisioning tool",
+          "detail": "A Terraform/Pulumi plan can represent remote state and permissions, but adds another state/tool layer. Reject for now unless resource count and operator count justify it."
+        }
+      ],
+      "recommendation": "standard",
+      "counterexample": "Standard deploy can need broader queue or route grants than current per-Worker Editor. If Cloudflare cannot scope them acceptably in this shared account, choose the explicit split. Do not widen account permissions solely to delete a small script.",
+      "migration": "First inventory current live consumers, routes, cron, Container digest, and bindings without changing them. Test standard deploy on isolated resources, record the required grants, and compare readback. Keep serial deploys and backward-compatible D1 migrations. Remove one-off retirement exceptions only after deployed cleanup is verified.",
+      "tests": [
+        "Changed queue concurrency is either applied and read back or rejected before deployment.",
+        "Changed observability is applied or explicitly rejected.",
+        "Wrong account, environment, database, or Worker name stops deployment.",
+        "Image/DO migrations use the required full deploy path.",
+        "Failed deployment cannot route traffic to code that needs an unapplied schema."
+      ],
+      "reversibility": "Keep the previous deploy command and version ID during migration. Worker rollback does not undo database/resource state; this remains a documented constraint.",
+      "snippet": {
+        "language": "sh",
+        "code": "# Proposed standard path, after scope verification\npnpm exec wrangler d1 migrations apply DB --remote --env production\npnpm exec wrangler deploy --env production --config apps/compare/wrangler.jsonc\npnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json"
+      },
+      "demo": {
+        "title": "What does this deployment change?",
+        "inputs": [
+          "Change code / consumer limit / trace setting / cron",
+          "Deployment option"
+        ],
+        "outputs": [
+          "Applied",
+          "Rejected before upload",
+          "Requires separate infrastructure step"
+        ],
+        "note": "Model backed by the local omission probe, not a live deployment."
+      }
+    },
+    {
+      "id": "O04",
+      "status": "OPEN",
+      "area": "Webhooks",
+      "question": "Should production own webhook receipt without depending on preview?",
+      "summary": "The router waits for production and preview and returns 503 if either cannot persist a delivery. The test claims this makes GitHub retry. GitHub does not automatically redeliver failed webhooks.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": "apps/webhook/src/index.ts:82",
+          "claim": "All Ariakit/App events fan out to both destinations. Lines 94\u201399 return 503 when either response is not 202."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/webhook/src/index.test.ts:158",
+          "claim": "The test named 'makes GitHub retry' only verifies a local 503 and two calls; it does not exercise GitHub."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/api/webhooks.ts:319",
+          "claim": "The receiver persists a verified delivery before 202, then processes it with waitUntil. Reconciliation only sees already-persisted D1 rows."
+        },
+        {
+          "kind": "verified repository search",
+          "claim": "No upstream failed-delivery listing/redelivery code was found in apps, packages, or .github. This does not prove no external operator automation exists."
+        },
+        {
+          "kind": "verified repository policy",
+          "url": "https://github.com/ariakit/visonaut/issues/120",
+          "claim": "Preview capture was closed as not planned. Production alone owns the required Visonaut check; preview still shares App-wide authorization events."
+        },
+        {
+          "kind": "verified platform fact",
+          "url": "https://docs.github.com/en/webhooks/using-webhooks/handling-failed-webhook-deliveries",
+          "claim": "GitHub does not automatically redeliver failed deliveries. It documents manual or scheduled API redelivery."
+        }
+      ],
+      "options": [
+        {
+          "id": "production-owner",
+          "label": "Use one production receiver",
+          "recommended": true,
+          "detail": "Minimal target: point the App at the production receiver and use its existing D1 receipt/reconciliation. Keep preview on synthetic fixtures or give it an independent test App. Explicitly retire preview login before removing shared revocation delivery. Add a small scheduled failed-delivery recovery check if automatic recovery is required."
+        },
+        {
+          "id": "durable-fanout",
+          "label": "Keep shared fanout with durable retry",
+          "detail": "Preserve live preview login and events. The router first stores/queues each signed event, then retries destinations independently. Reliable, but adds a queue/store and more state."
+        },
+        {
+          "id": "manual-recovery",
+          "label": "Keep the current router with manual redelivery",
+          "detail": "Fewest immediate code changes. Correct the false retry claim and document alerts/manual recovery. Accept that delivery failures before receiver persistence need operator action."
+        }
+      ],
+      "recommendation": "production-owner",
+      "counterexample": "Live preview login still needs prompt GitHub grant revocation. Removing preview from fanout without retiring its sessions/auth or assigning a separate App weakens the current security contract. Production-only ownership also does not itself recover an event that never reaches its D1 receipt.",
+      "migration": "Decide preview's supported role first. Preserve the original signed bytes and numeric repository checks. Change the App URL only after the receiver is ready; verify real ping and revocation delivery. Remove the extra router only when no sender or auth path depends on it.",
+      "tests": [
+        "Production receipt succeeds while preview is unavailable.",
+        "Failed receiver persistence has an explicit manual or automatic recovery path.",
+        "Duplicate redelivery is idempotent.",
+        "Invalid signature/repository cannot create a receipt.",
+        "Grant revocation clears sessions in every environment that still supports login.",
+        "Router or receiver responds within GitHub's documented delivery timeout."
+      ],
+      "reversibility": "The App URL and router can be restored. Retiring preview sessions is intentional and cannot preserve signed-in sessions on rollback; users would sign in again.",
+      "snippet": {
+        "language": "ts",
+        "code": "const event = await verifyGitHubWebhook(request);\nawait persistWebhook(database, event);\n// Existing reconciliation owns retries after this receipt.\nreturn new Response(null, { status: 202 });"
+      },
+      "demo": {
+        "title": "Follow one webhook through an outage",
+        "inputs": [
+          "Production up/down",
+          "Preview up/down",
+          "Receipt policy",
+          "Redeliver"
+        ],
+        "outputs": [
+          "HTTP acknowledgment",
+          "Stored destinations",
+          "Pending/missing delivery"
+        ],
+        "note": "Clearly label as a policy simulation. A 503 does not trigger automatic GitHub retry."
+      }
+    },
+    {
+      "id": "O05",
+      "status": "OPEN",
+      "area": "App access and speed",
+      "question": "How much GitHub authorization work should each private request repeat?",
+      "summary": "Each private request creates an installation token and then checks live repository permission. Warm Workers only skip the numeric-user lookup. Token reuse can remove a network call without making permission results stale.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": "packages/security/src/github.ts:95",
+          "claim": "createGitHubClient stores its installation-token promise within one client; lines 105\u2013119 mint a token and discard its expiry after validation."
+        },
+        {
+          "kind": "verified source",
+          "source": "packages/security/src/github.ts:154",
+          "claim": "requireRepositoryWrite checks current permission and numeric user identity on every request; loginHints stores only login routing hints."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/api/index.ts:171",
+          "claim": "The private API path constructs a new GitHub client before requireMaintainer."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/server.ts:75",
+          "claim": "/api/me creates another client and performs the same maintainer check."
+        },
+        {
+          "kind": "verified source",
+          "source": "packages/security/src/authorization.ts:19",
+          "claim": "The live D1 session and linked numeric account are checked before repository access."
+        },
+        {
+          "kind": "verified experiment",
+          "claim": "Ten sequential client instances using current source with synthetic transport issued 10 installation tokens, 10 permission checks, and 1 numeric lookup."
+        },
+        {
+          "kind": "unmeasured",
+          "claim": "This demonstrates request count, not production latency or expected speedup."
+        }
+      ],
+      "references": [
+        {
+          "url": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app",
+          "claim": "Installation tokens carry an expiry and can be restricted to selected repositories; normal tokens expire after one hour."
+        },
+        {
+          "url": "https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user",
+          "claim": "The permission endpoint reports repository permission for the user; retain numeric identity verification."
+        }
+      ],
+      "options": [
+        {
+          "id": "token-only",
+          "label": "Reuse app tokens; keep live user permission",
+          "recommended": true,
+          "detail": "Minimal contract change: cache only resolved token bytes and expiry, bounded by exact app/installation/repository/config identity. Keep D1 session checks and live permission checks on every protected call. Do not share pending request I/O across Worker requests."
+        },
+        {
+          "id": "short-permission",
+          "label": "Also cache read permission briefly",
+          "detail": "Use a small explicit time window for private reads; recheck writes. Faster and less GitHub-dependent, but removed maintainers can read until that window ends. Needs a stated policy and invalidation tests."
+        },
+        {
+          "id": "current",
+          "label": "Keep all calls live",
+          "detail": "No new cache behavior. Current freshness guarantees remain; repeated app-token creation and upstream availability stay on the navigation path."
+        }
+      ],
+      "recommendation": "token-only",
+      "counterexample": "A warm in-isolate token cache has no benefit on cold isolates and must not mix preview/production or installations. If the live Worker probe shows cross-request ownership issues, keep only resolved immutable values and abandon shared promises. Permission caching is a separate policy choice.",
+      "migration": "First measure GitHub subrequest counts and timings by operation with safe logs. Add bounded token-byte reuse with expiry skew, configuration-key isolation, and one refresh on an explicit invalid-token response. Preserve lazy minting so anonymous requests do not call GitHub.",
+      "tests": [
+        "Ten warm private reads reuse one valid app token and still make ten permission checks.",
+        "Anonymous and invalid-session requests make zero GitHub calls.",
+        "Expiry, revoked token, key/config rotation, and different repository/installation keys cannot reuse an invalid token.",
+        "No Request, Response body, D1 binding, or pending fetch promise crosses Worker request ownership.",
+        "Removed maintainer access is denied on the next protected request."
+      ],
+      "reversibility": "Remove the cache with no data migration; current session and permission contracts remain.",
+      "snippet": {
+        "language": "ts",
+        "code": "// Proposed composition: token reuse does not cache user permission.\nconst token = await getValidInstallationToken(appConfiguration);\nconst github = createGitHubClient({ token, repository });\nawait requireRepositoryWrite(github, githubUserId);"
+      },
+      "demo": {
+        "title": "Count authorization calls",
+        "inputs": [
+          "1\u201320 private requests",
+          "Cold or warm Worker",
+          "Token/permission policy",
+          "Revoke maintainer"
+        ],
+        "outputs": [
+          "Token calls",
+          "Permission calls",
+          "Earliest denial"
+        ],
+        "note": "Call-count simulation. Do not display invented milliseconds."
+      }
+    },
+    {
+      "id": "O06",
+      "status": "OPEN",
+      "area": "Operations",
+      "question": "What is the smallest useful failure record for operators?",
+      "summary": "Workers logs and traces are enabled. Several top-level catches discard the error, and scheduler failure records identify only a broad category. A small shared log shape can reduce diagnosis time without another monitoring service.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": "apps/web/wrangler.jsonc:9",
+          "claim": "Web observability and traces are enabled; comparator and webhook configs also enable both."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/server.ts:30",
+          "claim": "privateFailure returns a generic 503 for unexpected errors without logging the error or operation; queue catch at line 119 drops the caught value."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/api/index.ts:64",
+          "claim": "Unexpected API errors log only event api-failed and the Error name."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/runtime.ts:423",
+          "claim": "Scheduler failure stores configuration-or-step-failed; fallback log only says operations-failed."
+        },
+        {
+          "kind": "verified source",
+          "source": "apps/web/src/operations/common.ts:16",
+          "claim": "Existing durable operations_events already deduplicates failures by kind, subject, and code."
+        },
+        {
+          "kind": "inference",
+          "claim": "Discarded context makes cause diagnosis harder. No incident recovery-time measurement was performed."
+        }
+      ],
+      "references": [
+        {
+          "url": "https://developers.cloudflare.com/workers/observability/logs/workers-logs/",
+          "claim": "Workers Logs records invocation and application console data."
+        },
+        {
+          "url": "https://developers.cloudflare.com/workers/observability/traces/",
+          "claim": "Native traces can connect request operations without requiring a second vendor."
+        }
+      ],
+      "options": [
+        {
+          "id": "small-record",
+          "label": "Use a small structured failure record",
+          "recommended": true,
+          "detail": "Keep native logs/traces and operations_events. Add operation, stable error code, run/task ID when known, correlation ID, and elapsed time at existing boundaries. Use allowlisted fields; no tokens, payloads, SQL, or raw request headers."
+        },
+        {
+          "id": "current",
+          "label": "Keep broad errors and inspect manually",
+          "detail": "Minimal code. Maintains current privacy behavior, but operators need more source-level reproduction to identify failures."
+        },
+        {
+          "id": "external",
+          "label": "Add an external monitoring system",
+          "detail": "Can add grouping, alert delivery, and longer retention. Adds a vendor, SDK, privacy rules, and cost; not recommended before native evidence shows a gap."
+        }
+      ],
+      "recommendation": "small-record",
+      "counterexample": "Raw Error messages can contain credentials or private data from upstream failures. More logging is not automatically better. Use safe codes/known operation names and inspect the native traces before adding custom timing for every helper.",
+      "migration": "Add context where the error is currently caught; keep client responses generic. Leave operator alerts in their existing details UI. Tie the read-only configuration check to O03 so tracing settings in source actually match deployment.",
+      "tests": [
+        "Injected D1/GitHub/queue failure records identify the failing operation and useful correlation.",
+        "Known secret/token/payload sentinels never appear in logs.",
+        "Client responses preserve current private cache/security headers.",
+        "Repeated errors still use the existing durable alert record; recovered errors resolve."
+      ],
+      "reversibility": "Log fields and sampling are reversible; no new state store or service is required.",
+      "snippet": {
+        "language": "ts",
+        "code": "console.error(JSON.stringify({\n  event: \"operation_failed\",\n  operation: \"publish_comparison\",\n  code: \"queue_unavailable\",\n  taskId,\n  requestId,\n}));"
+      },
+      "demo": {
+        "title": "Can an operator locate the failure?",
+        "inputs": [
+          "Failure location",
+          "Record policy"
+        ],
+        "outputs": [
+          "Visible diagnostic record",
+          "Next useful action"
+        ],
+        "note": "Synthetic safe records. Never copy real credentials into the example."
+      }
+    },
+    {
+      "id": "O07",
+      "status": "OPEN",
+      "area": "Publication",
+      "question": "Should the repository expose one supported package-release path?",
+      "summary": "The documentation requires a trusted workflow that publishes exact audited tarballs, but package.json still exposes a direct Changesets publication script.",
+      "evidence": [
+        {
+          "kind": "verified source",
+          "source": "package.json:16",
+          "claim": "release runs pnpm build && changeset publish."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/README.md:52",
+          "claim": "The documented release path is manual release.yml on main, using verified tarballs and an exact source-commit gate."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/release.yml:52",
+          "claim": "The workflow downloads its own verified package artifact and invokes packages.mjs publish."
+        },
+        {
+          "kind": "verified source",
+          "source": ".github/workflows/scripts/packages.mjs:380",
+          "claim": "Publication validates source/artifact hashes and requested tags before npm publish with trusted provenance."
+        },
+        {
+          "kind": "inference",
+          "claim": "Two visible commands create an operator ambiguity. Direct local publication still needs npm authority; this is not proof of an authentication bypass or a bad release."
+        }
+      ],
+      "references": [
+        {
+          "url": "https://docs.npmjs.com/trusted-publishers/",
+          "claim": "npm trusted publishing uses workflow identity and supports provenance for public packages from public repositories."
+        }
+      ],
+      "options": [
+        {
+          "id": "workflow-only",
+          "label": "Support the verified workflow only",
+          "recommended": true,
+          "detail": "Smallest change: remove the misleading direct publish script and point release instructions to release.yml. Keep Changesets for version updates and keep exact tarball checks."
+        },
+        {
+          "id": "changesets-only",
+          "label": "Use one native Changesets release flow",
+          "detail": "Simpler release tooling if exact pre-audited archive publication is no longer required. Still use npm trusted publishing and test installed public packages; changes the release contract."
+        },
+        {
+          "id": "two-paths",
+          "label": "Keep an explicit emergency local path",
+          "detail": "Document who can use it, how source/bytes are checked, and when it is allowed. Adds a second supported procedure and needs periodic verification."
+        }
+      ],
+      "recommendation": "workflow-only",
+      "counterexample": "An emergency package release during a GitHub Actions outage may need another path. If this is a supported requirement, choose and test it explicitly rather than leaving a convenient script that omits the normal guards.",
+      "migration": "Remove or rename the direct script to state that publication is workflow-only. Preserve version-packages. No npm credentials, releases, or package versions need to change.",
+      "tests": [
+        "Documented commands match package.json and the trusted publishing workflow.",
+        "Existing 11 deployment/release guard tests continue to pass.",
+        "Installed tarball smoke tests and source/hash checks remain in release verification."
+      ],
+      "reversibility": "A documentation/package-script change; trivially reversible.",
+      "snippet": {
+        "language": "json",
+        "code": "{\n  \"changeset\": \"changeset\",\n  \"version-packages\": \"changeset version\"\n}"
+      },
+      "demo": {
+        "title": "Which release checks does this path run?",
+        "inputs": [
+          "Workflow / direct Changesets / emergency path"
+        ],
+        "outputs": [
+          "Exact source",
+          "Audited bytes",
+          "Provenance",
+          "Required authority"
+        ],
+        "note": "Policy comparison; the demo never invokes a release."
+      }
+    }
+  ]
+}

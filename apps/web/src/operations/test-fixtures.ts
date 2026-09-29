@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import {
@@ -37,44 +37,14 @@ class SqliteStatement implements Statement {
 }
 
 export class TestDatabase implements Database {
-  readonly connection = new DatabaseSync(":memory:");
+  readonly connection: DatabaseSync;
   beforeBatch: (() => void) | null = null;
   preparedQueries = 0;
-  constructor() {
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0001_service.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0002_work.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0003_auth.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0004_ingest.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(readFileSync(new URL("./schema.sql", import.meta.url), "utf8"));
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0006_acceptance.sql", import.meta.url), "utf8"),
-    );
-    this.connection.exec(
-      readFileSync(new URL("../../migrations/0007_backup_inventory.sql", import.meta.url), "utf8"),
-    );
-    for (const migration of [
-      "0008_capture_profiles",
-      "0009_retention_history",
-      "0010_run_history",
-      "0011_backup_groups",
-      "0012_historical_comparisons",
-      "0013_promotion_scans",
-      "0014_visonaut_brand",
-      "0016_comparison_publication",
-      "0020_pre_run_checks",
-      "0022_review_links",
-    ]) {
-      this.connection.exec(
-        readFileSync(new URL(`../../migrations/${migration}.sql`, import.meta.url), "utf8"),
-      );
+  constructor(connection?: DatabaseSync) {
+    this.connection = connection ?? new DatabaseSync(":memory:");
+    if (connection) return;
+    for (const migration of readTestMigrations()) {
+      this.connection.exec(migration.sql);
     }
   }
   prepare(sql: string) {
@@ -186,7 +156,6 @@ export function digest(value: string | Uint8Array) {
 }
 export function context(database: TestDatabase) {
   const images = new MemoryStore();
-  const backups = new MemoryStore();
   const quarantine = new MemoryStore();
   const state = {
     time: Date.UTC(2026, 8, 22),
@@ -199,7 +168,6 @@ export function context(database: TestDatabase) {
   const value: OperationsContext = {
     database,
     images,
-    backups,
     quarantine,
     comparisons: { async send() {} },
     origin: "https://visonaut.example",
@@ -209,7 +177,7 @@ export function context(database: TestDatabase) {
       leaseMilliseconds: 60_000,
       maxAttempts: 2,
       maximumObjectBytes: 1024 * 1024,
-      maximumDatabaseBytes: 8 * 1024 * 1024,
+      maximumMetadataBytes: 8 * 1024 * 1024,
       maximumExportEntries: 100,
     },
     now: () => state.time,
@@ -236,7 +204,7 @@ export function context(database: TestDatabase) {
       },
     },
   };
-  return { context: value, images, backups, quarantine, state };
+  return { context: value, images, quarantine, state };
 }
 export async function reserve(
   context: OperationsContext,

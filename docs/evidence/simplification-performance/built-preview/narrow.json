@@ -1,0 +1,408 @@
+{
+  "scope": "Actual locally built preview Worker and client assets; synthetic read-only preview data; no network interception",
+  "hashLimit": "Hashes identify built files on disk. The separate runtime receipt records that Wrangler was freshly started after this build; HTTP does not expose a Worker hash attestation.",
+  "browser": "154.0.8037.92",
+  "headless": true,
+  "viewport": {
+    "name": "narrow",
+    "width": 390,
+    "height": 844
+  },
+  "originalBuild": {
+    "server": "c023f645d4dd83927e73b3d7079c972a19bf1a309a8eeb12b293671e9e7f532d",
+    "manifest": "9b78bbc971df4140d7b0bcf7275f8125017cd2eac261bc4647aaba87c685bcd5"
+  },
+  "expectedBuild": {
+    "server": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+    "manifest": "35f2ebbd0bca98640a45bc2a33e88a697991e67a36e8a42b3a711748fe2b9b88"
+  },
+  "finalBuild": {
+    "server": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+    "manifest": "35f2ebbd0bca98640a45bc2a33e88a697991e67a36e8a42b3a711748fe2b9b88"
+  },
+  "dashboardHref": "/runs/00000000-0000-4000-8000-000000000001",
+  "darkHref": "/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+  "variantURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+  "popupURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Light",
+  "firstDecoded": [
+    {
+      "alt": "Reference",
+      "width": 640,
+      "height": 400,
+      "at": 242.69999992847443
+    },
+    {
+      "alt": "New image",
+      "width": 640,
+      "height": 400,
+      "at": 242.79999995231628
+    }
+  ],
+  "geometry": {
+    "viewportWidth": 390,
+    "documentWidth": 390,
+    "bodyWidth": 390
+  },
+  "reviewBoxes": {
+    "sidebar": {
+      "x": 0,
+      "y": 72,
+      "width": 390,
+      "height": 144,
+      "gridColumn": "auto"
+    },
+    "main": {
+      "x": 0,
+      "y": 216,
+      "width": 390,
+      "height": 1559.25,
+      "gridColumn": "main-start / shell-end"
+    },
+    "header": {
+      "x": 0,
+      "y": 216,
+      "width": 390,
+      "height": 157,
+      "gridColumn": "1 / 4"
+    },
+    "body": {
+      "x": 0,
+      "y": 373,
+      "width": 390,
+      "height": 1402.25,
+      "gridColumn": "main"
+    },
+    "scroll": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "documentResponses": [
+    {
+      "url": "http://localhost:4184/",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:4184/",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+      "status": 200
+    }
+  ],
+  "assets": [
+    {
+      "url": "http://localhost:4184/assets/review-PI6rgGLB.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-CaJ_2b8I.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/model-BtVQP8zL.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/preload-helper-CLaZYkgu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/shell.ariakit.react-CMuZVxjP.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-DiI3wmkw.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/control-button-K5B54tgR.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/react-y1c93css.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/routes-D4-CEJJV.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/text-DTeyWM8X.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-Dnf55FQx.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/review-PI6rgGLB.css",
+      "status": 304,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-CaJ_2b8I.css",
+      "status": 304,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/model-BtVQP8zL.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-Dnf55FQx.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-DiI3wmkw.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/shell.ariakit.react-CMuZVxjP.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/preload-helper-CLaZYkgu.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/control-button-K5B54tgR.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/text-DTeyWM8X.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-r3hlwqNu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/react-y1c93css.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/review-PI6rgGLB.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-CaJ_2b8I.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/model-BtVQP8zL.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/preload-helper-CLaZYkgu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-Dnf55FQx.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/shell.ariakit.react-CMuZVxjP.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-DiI3wmkw.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/control-button-K5B54tgR.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-r3hlwqNu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/text-DTeyWM8X.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/react-y1c93css.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/review-PI6rgGLB.css",
+      "status": 304,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-CaJ_2b8I.css",
+      "status": 304,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/preload-helper-CLaZYkgu.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/model-BtVQP8zL.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-DiI3wmkw.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/shell.ariakit.react-CMuZVxjP.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/routes-D4-CEJJV.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/control-button-K5B54tgR.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/text-DTeyWM8X.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/react-y1c93css.js",
+      "status": 304,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/review-PI6rgGLB.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-CaJ_2b8I.css",
+      "status": 200,
+      "contentType": "text/css; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/index-DiI3wmkw.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/shell.ariakit.react-CMuZVxjP.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/preload-helper-CLaZYkgu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/model-BtVQP8zL.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-Dnf55FQx.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/control-button-K5B54tgR.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/text-DTeyWM8X.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/react-y1c93css.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:4184/assets/runs._runId-r3hlwqNu.js",
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8"
+    }
+  ],
+  "apiRequests": [
+    {
+      "method": "GET",
+      "pathname": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "pathname": "/api/runs/00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "method": "GET",
+      "pathname": "/api/runs/00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "method": "GET",
+      "pathname": "/api/runs/00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "method": "GET",
+      "pathname": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "pathname": "/api/runs/00000000-0000-4000-8000-000000000001"
+    }
+  ],
+  "failures": [],
+  "badResponses": [],
+  "pageErrors": [],
+  "consoleErrors": [],
+  "externalRequests": [],
+  "actualSaveAttempted": false,
+  "manualIABUsed": false,
+  "manualIABStatus": "Separate parent evidence: the initial local origin block was resolved, and the parent completed an in-app browser smoke. This runner uses headless Playwright only.",
+  "screenshots": [
+    "/tmp/visonaut-built-preview-smoke/narrow-dashboard.png",
+    "/tmp/visonaut-built-preview-smoke/narrow-review.png"
+  ]
+}

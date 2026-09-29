@@ -19,8 +19,7 @@ export const selectedComparisonPolicy = {
   maxChangedRatio: 0.0005,
 } satisfies ComparisonPolicy;
 
-export interface ComparisonResult {
-  outcome: "unchanged" | "changed";
+interface ComparisonSummary {
   changedPixels: number;
   ratio: number;
   sizeChanged: boolean;
@@ -29,8 +28,10 @@ export interface ComparisonResult {
   engineVersion: string;
   codecVersion: string;
   policy: ComparisonPolicy;
-  mask: Pixels;
 }
+
+export type ComparisonResult = ComparisonSummary &
+  ({ outcome: "unchanged"; mask: null } | { outcome: "changed"; mask: Pixels });
 
 export function validatePolicy(policy: ComparisonPolicy) {
   if (
@@ -80,25 +81,19 @@ export function compareImages(
   validatePixels(reference);
   validatePixels(candidate);
   const sizeChanged = reference.width !== candidate.width || reference.height !== candidate.height;
-  const data = new Uint8ClampedArray(candidate.data.length);
-  let changedPixels = 0;
-  for (let offset = 0; offset < candidate.data.length; offset += 4) {
-    if (
-      !sizeChanged &&
-      visibleDelta(reference.data, candidate.data, offset) <= policy.channelThreshold * 255
-    )
-      continue;
-    data[offset] = 255;
-    data[offset + 3] = 255;
-    changedPixels += 1;
+  let changedPixels = candidate.width * candidate.height;
+  if (!sizeChanged) {
+    changedPixels = 0;
+    for (let offset = 0; offset < candidate.data.length; offset += 4) {
+      if (visibleDelta(reference.data, candidate.data, offset) <= policy.channelThreshold * 255)
+        continue;
+      changedPixels += 1;
+    }
   }
   const ratio = changedPixels / (candidate.width * candidate.height);
   const exceedsPixelLimit =
     policy.maxChangedPixels !== undefined && changedPixels > policy.maxChangedPixels;
-  const outcome =
-    sizeChanged || exceedsPixelLimit || ratio > policy.maxChangedRatio ? "changed" : "unchanged";
-  return {
-    outcome,
+  const summary = {
     changedPixels,
     ratio,
     sizeChanged,
@@ -107,6 +102,24 @@ export function compareImages(
     engineVersion,
     codecVersion,
     policy: { ...policy },
+  };
+  if (!sizeChanged && !exceedsPixelLimit && ratio <= policy.maxChangedRatio) {
+    return { ...summary, outcome: "unchanged", mask: null };
+  }
+  // An unchanged pair needs no review pixels.
+  const data = new Uint8ClampedArray(candidate.data.length);
+  for (let offset = 0; offset < candidate.data.length; offset += 4) {
+    if (
+      !sizeChanged &&
+      visibleDelta(reference.data, candidate.data, offset) <= policy.channelThreshold * 255
+    )
+      continue;
+    data[offset] = 255;
+    data[offset + 3] = 255;
+  }
+  return {
+    ...summary,
+    outcome: "changed",
     mask: { width: candidate.width, height: candidate.height, data },
   };
 }

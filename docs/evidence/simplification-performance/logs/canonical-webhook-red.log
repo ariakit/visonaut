@@ -1,0 +1,37 @@
+
+ RUN  v5.0.1 /Users/diegohaz/.codex/worktrees/1de3/visonaut
+
+stderr | apps/web/src/api/api.test.ts > Private HTTP boundary with real local D1 and R2 > accepts signed App pings at the canonical webhook route without a maintainer session
+{"event":"api_rejected","code":"sign_in_required","status":401}
+
+ ❯ apps/web/src/api/api.test.ts (25 tests | 1 failed | 24 skipped) 2800ms
+   ❯ Private HTTP boundary with real local D1 and R2 (22)
+     × accepts signed App pings at the canonical webhook route without a maintainer session 1244ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  apps/web/src/api/api.test.ts > Private HTTP boundary with real local D1 and R2 > accepts signed App pings at the canonical webhook route without a maintainer session
+AssertionError: expected 401 to be 202 // Object.is equality
+
+- Expected
++ Received
+
+- 202
++ 401
+
+ ❯ apps/web/src/api/api.test.ts:514:32
+    512|         lifetime,
+    513|       );
+    514|       expect(response?.status).toBe(202);
+       |                                ^
+    515|       expect(
+    516|         await database
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 24 skipped (25)
+   Start at  19:06:42
+   Duration  3.65s (tests 78%, import 16%, transform 6%)
+

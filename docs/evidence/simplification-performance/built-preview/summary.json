@@ -1,0 +1,230 @@
+{
+  "checkedAt": "2026-09-29T19:47:06.644665+00:00",
+  "scope": "Actual locally built, read-only preview Worker served by fresh local Wrangler; no API or asset interception; headless Playwright.",
+  "result": {
+    "functionalCasesPassed": 3,
+    "geometryDiagnosticPassed": 1,
+    "totalPassed": 4,
+    "failed": 0,
+    "durationMs": 9380.056
+  },
+  "browser": "154.0.8037.92",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "name": "narrow",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "originalBuild": {
+    "server": "c023f645d4dd83927e73b3d7079c972a19bf1a309a8eeb12b293671e9e7f532d",
+    "manifest": "9b78bbc971df4140d7b0bcf7275f8125017cd2eac261bc4647aaba87c685bcd5"
+  },
+  "finalBuild": {
+    "server": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+    "manifest": "35f2ebbd0bca98640a45bc2a33e88a697991e67a36e8a42b3a711748fe2b9b88"
+  },
+  "restartReceipt": {
+    "checkedAt": "2026-09-29T19:39:57.386Z",
+    "afterBuild": true,
+    "sourceCheckLog": "/tmp/visonaut-final-check.log",
+    "serverSession": 19033,
+    "command": "wrangler dev --config apps/web/dist/server/wrangler.json --local --port 4184 --local-upstream localhost:4184 --upstream-protocol http --var VISONAUT_ORIGIN:http://localhost:4184 --persist-to /tmp/visonaut-manual-preview-state",
+    "workerSha256": "484200c3a6b0a86290893478c8f4dab19e1c0d28c49809ef801fdf2ab5afa7c3",
+    "localApiStatus": 200
+  },
+  "restartReceiptSha256": "b118a72ef8aa3b9a54038cb9aa61a3e36edc2fb2f5cbde82b42b1be2abf16e1b",
+  "verified": [
+    "Home and client-only review route HTML documents return HTTP 200 and client boot loads.",
+    "Favicon SVG returns HTTP 200; no missing or failed client asset response.",
+    "Reference and candidate SVG images resolve native HTMLImageElement.decode at 640 by 400.",
+    "ArrowRight focuses/selects Dark and follows its real URL without refetching the run model.",
+    "Tab and dashboard href values are real destinations; native middle-click opens Light while Dark stays selected on the original page.",
+    "Reload retains Dark; Dashboard navigation and browser Back restore the same URL and selected variant.",
+    "Review actions are disabled; login/logout/export/recompare are absent; all API requests are read-only GET run/model calls.",
+    "Desktop main/header/body boxes start after the sidebar edge; narrow document width matches the viewport with no horizontal overflow."
+  ],
+  "documents": {
+    "home": 200,
+    "run": 200,
+    "model": 200,
+    "favicon": 200
+  },
+  "perViewport": {
+    "desktop": {
+      "assetResponses": 43,
+      "uniqueAssets": 12,
+      "assetStatuses": [200, 304],
+      "documentResponses": 4,
+      "documentStatuses": [200],
+      "apiRequests": 6,
+      "apiMethods": ["GET"],
+      "errors": {
+        "failures": 0,
+        "badResponses": 0,
+        "pageErrors": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0
+      },
+      "firstDecoded": [
+        {
+          "alt": "Reference",
+          "width": 640,
+          "height": 400,
+          "at": 239.80000007152557
+        },
+        {
+          "alt": "New image",
+          "width": 640,
+          "height": 400,
+          "at": 239.80000007152557
+        }
+      ],
+      "geometry": {
+        "viewportWidth": 1280,
+        "documentWidth": 1280,
+        "bodyWidth": 1280
+      },
+      "reviewBoxes": {
+        "sidebar": {
+          "x": 0,
+          "y": 72,
+          "width": 256,
+          "height": 828,
+          "gridColumn": "auto"
+        },
+        "main": {
+          "x": 256,
+          "y": 72,
+          "width": 1024,
+          "height": 897,
+          "gridColumn": "main-start / shell-end"
+        },
+        "header": {
+          "x": 256,
+          "y": 72,
+          "width": 1024,
+          "height": 105,
+          "gridColumn": "1 / 4"
+        },
+        "body": {
+          "x": 256,
+          "y": 177,
+          "width": 1024,
+          "height": 792,
+          "gridColumn": "main"
+        },
+        "scroll": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "variantURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+      "popupURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Light"
+    },
+    "narrow": {
+      "assetResponses": 54,
+      "uniqueAssets": 12,
+      "assetStatuses": [200, 304],
+      "documentResponses": 4,
+      "documentStatuses": [200],
+      "apiRequests": 6,
+      "apiMethods": ["GET"],
+      "errors": {
+        "failures": 0,
+        "badResponses": 0,
+        "pageErrors": 0,
+        "consoleErrors": 0,
+        "externalRequests": 0
+      },
+      "firstDecoded": [
+        {
+          "alt": "Reference",
+          "width": 640,
+          "height": 400,
+          "at": 242.69999992847443
+        },
+        {
+          "alt": "New image",
+          "width": 640,
+          "height": 400,
+          "at": 242.79999995231628
+        }
+      ],
+      "geometry": {
+        "viewportWidth": 390,
+        "documentWidth": 390,
+        "bodyWidth": 390
+      },
+      "reviewBoxes": {
+        "sidebar": {
+          "x": 0,
+          "y": 72,
+          "width": 390,
+          "height": 144,
+          "gridColumn": "auto"
+        },
+        "main": {
+          "x": 0,
+          "y": 216,
+          "width": 390,
+          "height": 1559.25,
+          "gridColumn": "main-start / shell-end"
+        },
+        "header": {
+          "x": 0,
+          "y": 216,
+          "width": 390,
+          "height": 157,
+          "gridColumn": "1 / 4"
+        },
+        "body": {
+          "x": 0,
+          "y": 373,
+          "width": 390,
+          "height": 1402.25,
+          "gridColumn": "main"
+        },
+        "scroll": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "variantURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Dark",
+      "popupURL": "http://localhost:4184/runs/00000000-0000-4000-8000-000000000001?item=dialog%2Fopen&variant=Light"
+    }
+  },
+  "limits": [
+    "The run route has ssr:false. The server document check covers the HTML shell and client boot, not server-rendered review content.",
+    "Hashes identify files on disk and are linked to the runtime by the recorded fresh Wrangler restart. HTTP does not expose a Worker hash attestation.",
+    "The preview uses synthetic read-only fixtures. No save or forced write/auth request was attempted; the separate native D1/R2 harness covers save/Undo.",
+    "Decode receipts establish successful native decoding, not decode latency, application speedup, or production timings.",
+    "Parent IAB manual evidence is separate. This runner is headless Chrome 154.0.8037.92 on the local Mac.",
+    "One headless full-page capture showed a visual overlap. Measured DOM boxes, subsequent viewport/full-page captures and independent parent IAB reproduction were correct without product CSS changes. The anomalous image remains preserved."
+  ],
+  "initialFailure": "/tmp/visonaut-built-preview-smoke/initial-failure.json",
+  "captureObservation": "/tmp/visonaut-built-preview-smoke/capture-observation.json",
+  "screenshots": [
+    "/tmp/visonaut-built-preview-smoke/desktop-dashboard.png",
+    "/tmp/visonaut-built-preview-smoke/desktop-review-viewport.png",
+    "/tmp/visonaut-built-preview-smoke/desktop-review.png",
+    "/tmp/visonaut-built-preview-smoke/narrow-dashboard.png",
+    "/tmp/visonaut-built-preview-smoke/narrow-review-viewport.png",
+    "/tmp/visonaut-built-preview-smoke/narrow-review.png"
+  ],
+  "files": {
+    "smoke.browser.test.ts": "/tmp/visonaut-built-preview-smoke/smoke.browser.test.ts",
+    "playwright.config.ts": "/tmp/visonaut-built-preview-smoke/playwright.config.ts",
+    "playwright-results.json": "/tmp/visonaut-built-preview-smoke/playwright-results.json",
+    "ssr.json": "/tmp/visonaut-built-preview-smoke/ssr.json",
+    "desktop.json": "/tmp/visonaut-built-preview-smoke/desktop.json",
+    "narrow.json": "/tmp/visonaut-built-preview-smoke/narrow.json",
+    "desktop-geometry.json": "/tmp/visonaut-built-preview-smoke/desktop-geometry.json",
+    "runtime-receipt.json": "/tmp/visonaut-built-preview-smoke/runtime-receipt.json"
+  }
+}

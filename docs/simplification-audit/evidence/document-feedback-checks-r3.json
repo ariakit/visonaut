@@ -1,0 +1,169 @@
+{
+  "revision": "3",
+  "environment": "Chrome, isolated playwright-cli browser at http://127.0.0.1:4319/",
+  "sourceBuild": "Passed: Vite8.3.0, output in /tmp/visonaut-r3-qa-build",
+  "typecheck": "Passed: main, schema, both prototype files and copied Ariakit UI component types",
+  "portable": {
+    "builtJSMatches": true,
+    "builtCSSMatches": true,
+    "externalScripts": [],
+    "externalStyles": [],
+    "fileURLBrowserTest": "Not run: prior browser policy denied file://; no alternate surface attempted."
+  },
+  "interactions": {
+    "initial": {
+      "progress": "43 / 44 answered",
+      "emptyPrompt": true
+    },
+    "tabs": {
+      "U03": {
+        "arrow": {
+          "url": "http://127.0.0.1:4319/#U03-item-1-dark",
+          "selected": "Chrome \u00b7 Dark",
+          "focused": "Chrome \u00b7 Dark"
+        },
+        "panels": 1,
+        "back": {
+          "url": "http://127.0.0.1:4319/#U03-item-1-light",
+          "selected": "Chrome \u00b7 Light"
+        },
+        "newTabs": [
+          {
+            "click": "modifiers",
+            "parentUnchanged": true,
+            "parentSelected": "Chrome \u00b7 Light",
+            "popupUrl": "http://127.0.0.1:4319/#U03-item-1-dark"
+          },
+          {
+            "click": "button",
+            "parentUnchanged": true,
+            "parentSelected": "Chrome \u00b7 Light",
+            "popupUrl": "http://127.0.0.1:4319/#U03-item-1-dark"
+          }
+        ],
+        "otherDemoSelected": "Chrome \u00b7 Light"
+      },
+      "U06": {
+        "arrow": {
+          "url": "http://127.0.0.1:4319/#U06-item-1-dark",
+          "selected": "Chrome \u00b7 Dark",
+          "focused": "Chrome \u00b7 Dark"
+        },
+        "panels": 1,
+        "back": {
+          "url": "http://127.0.0.1:4319/#U06-item-1-light",
+          "selected": "Chrome \u00b7 Light"
+        },
+        "newTabs": [
+          {
+            "click": "modifiers",
+            "parentUnchanged": true,
+            "parentSelected": "Chrome \u00b7 Light",
+            "popupUrl": "http://127.0.0.1:4319/#U06-item-1-dark"
+          },
+          {
+            "click": "button",
+            "parentUnchanged": true,
+            "parentSelected": "Chrome \u00b7 Light",
+            "popupUrl": "http://127.0.0.1:4319/#U06-item-1-dark"
+          }
+        ],
+        "otherDemoSelected": "Chrome \u00b7 Light"
+      }
+    },
+    "duplicateTabIds": [],
+    "code": {
+      "O08": {
+        "matchesRecord": true,
+        "source": "const key = `${session.id}:${repository.id}:${user.id}`;\nconst cached = readPermissions.get(key);\nif (!cached || cached.expiresAt <= Date.now()) {\n  await requireRepositoryWrite(github, user.id);\n  readPermissions.set(key, { expiresAt: Date.now() + 60_000 });\n}\n// Validate the session on each read; protected writes check permission live."
+      },
+      "O09": {
+        "matchesRecord": true,
+        "source": "# Selected source-based path in Visonaut's manual trusted job:\nnode scripts/check-release-plan.mjs \"$RELEASE_TAG\"\npnpm exec changeset publish --tag \"$RELEASE_TAG\" --no-git-tag\nnode scripts/check-release-result.mjs \"$RELEASE_TAG\"\n# Provenance identifies the workflow and source, not an earlier tarball."
+      }
+    },
+    "narrow": {
+      "viewport": 390,
+      "document": 390,
+      "headerHeight": 72
+    }
+  },
+  "feedback": {
+    "cases": [
+      {
+        "name": "fresh",
+        "progress": "43 / 44 answered",
+        "open": [
+          "O10"
+        ],
+        "emptyPrompt": true,
+        "choices": {
+          "U06": "automatic",
+          "A07": "ordinary",
+          "O08": "60s",
+          "O09": "source"
+        }
+      },
+      {
+        "name": "r2-recorded-baseline",
+        "progress": "43 / 44 answered",
+        "open": [
+          "O10"
+        ],
+        "emptyPrompt": true,
+        "choices": {
+          "U06": "automatic",
+          "A07": "ordinary",
+          "O08": "60s",
+          "O09": "source"
+        }
+      },
+      {
+        "name": "r2-submitted-four",
+        "progress": "43 / 44 answered",
+        "open": [
+          "O10"
+        ],
+        "emptyPrompt": true,
+        "choices": {
+          "U06": "automatic",
+          "A07": "ordinary",
+          "O08": "60s",
+          "O09": "source"
+        }
+      }
+    ],
+    "notesOnly": {
+      "progress": "43 / 44 answered",
+      "openPrompt": true
+    },
+    "persisted": {
+      "progress": "44 / 44 answered",
+      "selection": "plan-all",
+      "notes": "QA note: retain source simplicity"
+    },
+    "copy": {
+      "matchesPreview": true,
+      "repeatedSame": true,
+      "baselineUnchanged": true,
+      "onlyChanged": true
+    },
+    "cleared": {
+      "progress": "43 / 44 answered",
+      "notesPreserved": true,
+      "openPrompt": true
+    }
+  },
+  "feedbackSeed": "Exact revision2 JSON preserved before source update; feedback baseline, values, per-option fingerprints and mergedRevision=2. Stored state restored after checks.",
+  "screenshots": [
+    "document-desktop-r3.png",
+    "document-narrow-r3.png",
+    "document-U06-r3.png",
+    "document-O10-r3.png"
+  ],
+  "limits": [
+    "This tests local artifact behavior, not implemented product behavior or production latency.",
+    "No file URL browser test was attempted.",
+    "No product, record, or main source file was modified by the QA pass."
+  ]
+}

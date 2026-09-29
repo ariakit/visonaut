@@ -1,0 +1,88 @@
+{
+  "run": 36640799784,
+  "url": "https://github.com/ariakit/visonaut/actions/runs/36640799784",
+  "head": "c319790c6264a613457961b832e1bae4dbbb1c4c",
+  "status": "completed",
+  "conclusion": "failure",
+  "checks": [
+    {
+      "name": "Gate",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109653436389",
+      "started_at": "2026-09-29T22:42:33Z",
+      "completed_at": "2026-09-29T22:42:40Z"
+    },
+    {
+      "name": "Lint",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341217",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:39:21Z"
+    },
+    {
+      "name": "Test 1/3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341192",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:42:30Z"
+    },
+    {
+      "name": "Build",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341183",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:39:31Z"
+    },
+    {
+      "name": "Browser",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341151",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:41:35Z"
+    },
+    {
+      "name": "Test 3/3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341130",
+      "started_at": "2026-09-29T22:38:57Z",
+      "completed_at": "2026-09-29T22:41:06Z"
+    },
+    {
+      "name": "Typecheck",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341121",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:39:38Z"
+    },
+    {
+      "name": "Release guards",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341091",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:39:16Z"
+    },
+    {
+      "name": "Test 2/3",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/ariakit/visonaut/actions/runs/36640799784/job/109652341062",
+      "started_at": "2026-09-29T22:38:56Z",
+      "completed_at": "2026-09-29T22:40:58Z"
+    }
+  ],
+  "browser": {
+    "passed": 101,
+    "failed": 1,
+    "case": "a diff loads on first use and keeps pan until the variant changes",
+    "failure": "Final request count expected 2, received 1."
+  },
+  "artifactLimit": "The run uploaded no failure artifact. The logged screenshot and error-context paths cannot prove the final hosted rendered state."
+}

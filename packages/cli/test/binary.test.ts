@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { fixture } from "./fixture.js";
 
 const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const bin = join(packageDirectory, "dist", "bin.js");
@@ -62,8 +62,8 @@ it("runs the built executable with a shebang and returns exact usage exit codes"
   expect((await readFile(bin, "utf8")).startsWith("#!/usr/bin/env node\n")).toBe(true);
   const help = await command({ argv: [bin, "--help"] });
   expect(help.code).toBe(0);
-  expect(help.stdout).toContain("visonaut upload [--dir");
-  expect(help.stdout).toContain("visonaut submit [--run");
+  expect(help.stdout).toContain("visonaut begin --run");
+  expect(help.stdout).toContain("visonaut submit --shard");
   expect(help.stdout).not.toContain("visonaut finalize");
   const invalid = await command({ argv: [bin, "approve", "--json"] });
   expect(invalid.code).toBe(2);
@@ -106,72 +106,17 @@ it("reads status through the built executable and a real HTTP boundary", async (
   expect(JSON.parse(result.stdout)).toMatchObject({ state: "needs-review", runId: "run-123" });
 });
 
-it("stages the reporter's default capture directory through the built binary", async () => {
-  const local = await fixture();
-  temporary.push(local.directory);
-  const captureDirectory = join(local.directory, "visonaut");
-  await mkdir(captureDirectory);
-  await copyFile(local.manifestPath, join(captureDirectory, "manifest.json"));
-  await copyFile(join(local.directory, "capture.png"), join(captureDirectory, "capture.png"));
-  // The preload models GitHub's HTTPS endpoint; production has no fetch override.
-  const preload = join(local.directory, "service.mjs");
-  await writeFile(
-    preload,
-    `
-import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-const manifest = ${JSON.stringify(local.manifest)};
-const canonical = (value) => value && typeof value === 'object' ? Array.isArray(value) ? '[' + value.map(canonical).join(',') + ']' : '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + canonical(value[key])).join(',') + '}' : JSON.stringify(value);
-const digest = createHash('sha256').update(canonical(manifest)).digest('hex');
-globalThis.fetch = async (input, options) => {
-  const url = new URL(input);
-  assert.equal(options.redirect, 'error');
-  const authorization = new Headers(options.headers).get('Authorization');
-  let result;
-  if (url.hostname === 'run.actions.githubusercontent.com') {
-    assert.equal(url.searchParams.get('audience'), 'https://review.example.test');
-    assert.equal(authorization, 'Bearer request-secret');
-    result = { value: 'oidc-secret' };
-  } else if (url.pathname === '/v1/runs') {
-    assert.equal(authorization, 'Bearer oidc-secret');
-    result = { schemaVersion:'1.0', runId:'run-123', capability:'capability-secret', expiresAt:new Date(Date.now()+60000).toISOString() };
-  } else {
-    assert.equal(authorization, 'Bearer capability-secret');
-    if (url.pathname.endsWith('/shards/chrome-1')) {
-      assert.deepEqual(JSON.parse(options.body), manifest);
-      result = { schemaVersion:'1.0', manifestDigest:digest, uploads:[{imageDigest:manifest.captures[0].image.digest,ticket:'ticket-1',maxBytes:manifest.captures[0].image.bytes}] };
-    } else if (url.pathname === '/v1/uploads/ticket-1') {
-      assert.equal(createHash('sha256').update(options.body).digest('hex'),manifest.captures[0].image.digest);
-      return new Response(null,{status:204});
-    } else if (url.pathname.endsWith('/finalize')) {
-      assert.equal(JSON.parse(options.body).manifestDigest,digest);
-      result = {schemaVersion:'1.0',runId:'run-123',shardKey:'chrome-1',manifestDigest:digest,state:'staged'};
-    } else throw new Error('Unexpected request');
+it("rejects retired direct upload entry points through the installed binary", async () => {
+  for (const argv of [
+    ["pack", "--dir", "/tmp/capture"],
+    ["upload", "--dir", "/tmp/capture"],
+    ["submit", "--dir", "/tmp/capture"],
+    ["submit", "--run", "123"],
+  ]) {
+    const result = await command({ argv: [bin, ...argv, "--json"] });
+    expect(result.code).toBe(2);
+    expect(JSON.parse(result.stderr)).toMatchObject({ exitCode: 2 });
   }
-  return new Response(JSON.stringify(result), {headers:{'Content-Type':'application/json'}});
-};
-`,
-  );
-  const environment = {
-    VISONAUT_SERVER: "https://review.example.test",
-    ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
-  };
-  const result = await command({
-    argv: ["--import", preload, bin, "upload", "--json"],
-    cwd: local.directory,
-    environment,
-  });
-  expect(result.stderr).toBe("");
-  expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
-    operation: "upload",
-    runId: "run-123",
-    shardKey: "chrome-1",
-    shardStaged: true,
-    visualApproval: false,
-  });
-  expect(result.stdout).not.toContain("secret");
 });
 
 it("packs both public packages and runs a clean install", async () => {
@@ -206,34 +151,60 @@ it("packs both public packages and runs a clean install", async () => {
       /^(dist\/[^/]+\.(js|d\.ts)|README\.md|LICENSE|package\.json)$/u.test(file.path),
     ),
   ).toBe(true);
-  const cliArchive = join(directory, "visonaut.tgz");
-  const adapterArchive = join(directory, "visonaut-playwright.tgz");
-  for (const [packagePath, archive] of [
-    [packageDirectory, cliArchive],
-    [resolve(packageDirectory, "../playwright"), adapterArchive],
-  ] as const) {
+  async function pack(packagePath: string) {
     const result = await command({
-      executable: "pnpm",
-      argv: ["--dir", packagePath, "pack", "--out", archive],
+      executable: "npm",
+      argv: [
+        "pack",
+        "--json",
+        "--ignore-scripts",
+        "--pack-destination",
+        directory,
+        "--cache",
+        join(directory, "npm-cache"),
+      ],
+      cwd: packagePath,
     });
     expect(result.code, result.stderr).toBe(0);
+    const report = JSON.parse(result.stdout);
+    const details = Array.isArray(report) ? report[0] : Object.values(report)[0];
+    return join(directory, details.filename);
   }
+  const cliArchive = join(directory, details.filename);
+  const adapterDirectory = resolve(packageDirectory, "../playwright");
+  const adapterArchive = await pack(adapterDirectory);
+  // Pack exact installed runtime dependencies so this boundary test never needs registry access.
+  const adapterRequire = createRequire(join(adapterDirectory, "package.json"));
+  const testRequire = createRequire(adapterRequire.resolve("@playwright/test/package.json"));
+  const playwrightRequire = createRequire(testRequire.resolve("playwright/package.json"));
+  const runtimeArchives = await Promise.all([
+    pack(dirname(adapterRequire.resolve("pngjs/package.json"))),
+    pack(dirname(adapterRequire.resolve("@playwright/test/package.json"))),
+    pack(dirname(testRequire.resolve("playwright/package.json"))),
+    pack(dirname(playwrightRequire.resolve("playwright-core/package.json"))),
+  ]);
   await writeFile(
     join(directory, "package.json"),
-    JSON.stringify({
-      name: "visonaut-clean-install",
-      private: true,
-      packageManager: "pnpm@12.5.1",
-    }),
+    JSON.stringify({ name: "visonaut-clean-install", private: true, type: "module" }),
   );
   const installed = await command({
     executable: "npm",
-    argv: ["install", "--ignore-scripts", "--no-audit", "--no-fund", adapterArchive, cliArchive],
+    argv: [
+      "install",
+      "--offline",
+      "--ignore-scripts",
+      "--omit=optional",
+      "--no-audit",
+      "--no-fund",
+      "--cache",
+      join(directory, "npm-cache"),
+      adapterArchive,
+      cliArchive,
+      ...runtimeArchives,
+    ],
     cwd: directory,
   });
   expect(installed.code, installed.stderr).toBe(0);
-  const packageManager = await command({ executable: "pnpm", argv: ["--version"], cwd: directory });
-  expect(packageManager.stdout.trim()).toBe("12.5.1");
   await writeFile(
     join(directory, "types.mts"),
     'import { runCli } from "visonaut"; const code: Promise<0 | 1 | 2 | 3 | 4> = runCli({ argv: ["--help"], environment: {} }); void code;',
@@ -272,12 +243,22 @@ it("packs both public packages and runs a clean install", async () => {
   const installedPackage = JSON.parse(
     await readFile(join(directory, "node_modules/visonaut/package.json"), "utf8"),
   );
-  const adapterPackage = JSON.parse(
-    await readFile(resolve(packageDirectory, "../playwright/package.json"), "utf8"),
-  );
   expect(installedPackage.name).toBe("visonaut");
-  expect(installedPackage.dependencies).toEqual({
-    "@visonaut/playwright": adapterPackage.version,
-  });
+  expect(installedPackage.dependencies).toBeUndefined();
   expect(installedPackage.bin).toEqual({ visonaut: "./dist/bin.js" });
+  const adapterPackage = JSON.parse(
+    await readFile(join(directory, "node_modules/@visonaut/playwright/package.json"), "utf8"),
+  );
+  expect(adapterPackage.exports["./environment"].import).toBe("./dist/environment.js");
+  expect(adapterPackage.exports["./ci"]).toBeUndefined();
+  expect(adapterPackage.bin).toBeUndefined();
+  const measure = await command({
+    argv: [
+      "--input-type=module",
+      "-e",
+      'import { measureEnvironment } from "@visonaut/playwright/environment"; if(typeof measureEnvironment !== "function") process.exit(1)',
+    ],
+    cwd: directory,
+  });
+  expect(measure.code, measure.stderr).toBe(0);
 }, 30_000);
