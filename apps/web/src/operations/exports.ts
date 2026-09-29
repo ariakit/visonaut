@@ -332,7 +332,7 @@ export async function streamRunExport(context: OperationsContext, exportId: stri
     .bind(expires, exportId, context.now())
     .first<{ run_id: string }>();
   if (!row) throw new ConflictError("This export expired or is not ready. Create a new export.");
-  const object = await context.backups.get(`exports/${exportId}.json`);
+  const object = await context.images.get(`exports/${exportId}.json`);
   if (!object || object.size > 20 * 1024 * 1024) {
     await object?.body.cancel();
     throw new Error("Export metadata is missing.");
@@ -557,15 +557,15 @@ export async function expireExports(context: OperationsContext) {
       .bind(row.id, context.now(), context.now())
       .first();
     if (!claimed) continue;
-    const pages = await context.backups.list({
+    const pages = await context.images.list({
       prefix: `exports/${row.id}/`,
       limit: Math.min(1000, context.budget.objectsPerStep),
     });
     if (pages.objects.length) {
-      await context.backups.delete(pages.objects.map((page) => page.key));
+      await context.images.delete(pages.objects.map((page) => page.key));
     }
     if (pages.truncated) continue;
-    await context.backups.delete(`exports/${row.id}.json`);
+    await context.images.delete(`exports/${row.id}.json`);
     await context.database
       .prepare("DELETE FROM visonaut_pins WHERE owner_id=? AND reason='export'")
       .bind(`export:${row.id}`)

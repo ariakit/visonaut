@@ -277,34 +277,20 @@ it("expires half-day sets by completion age while retaining newer sets and live 
   expect(fixture.images.objects.has("runs/run/original")).toBe(true);
 });
 
-it("does not start a new scheduled backup and resolves the old freshness alert", async () => {
+it("does not start a new scheduled backup", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  database.connection.exec(
-    "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES('backup:freshness:rpo-exceeded','backup','freshness','rpo-exceeded',1,1)",
-  );
-  const source = exporter("unused");
-  await runOperations(fixture.context, source);
-  expect(source.export).not.toHaveBeenCalled();
+  await runOperations(fixture.context);
   expect(database.connection.prepare("SELECT id FROM operations_backups").all()).toEqual([]);
-  expect(
-    database.connection
-      .prepare("SELECT resolved_at FROM operations_events WHERE id='backup:freshness:rpo-exceeded'")
-      .get(),
-  ).toEqual({ resolved_at: fixture.state.time });
 });
 
 it("does not report a grouped-backup failure with no backup and a one-object budget", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   fixture.context.budget.objectsPerStep = 1;
-  const report = await runOperations(fixture.context, exporter("unused"));
-  expect(report.reports.backup).toEqual({
-    completed: [],
-    deferred: [],
-    attention: [],
-    hasMore: false,
-  });
+  const report = await runOperations(fixture.context);
+  expect(report.reports).not.toHaveProperty("backup");
+  expect(report.reports).not.toHaveProperty("backup-retention");
   expect(
     database.connection
       .prepare("SELECT code FROM operations_events WHERE kind='backup' AND subject_id='scheduler'")
@@ -312,7 +298,7 @@ it("does not report a grouped-backup failure with no backup and a one-object bud
   ).toBeUndefined();
 });
 
-it("finishes a previously started backup without opening the next slot", async () => {
+it("leaves a legacy backup untouched after the scheduler retires", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
@@ -321,26 +307,20 @@ it("finishes a previously started backup without opening the next slot", async (
   expect(database.connection.prepare("SELECT state FROM operations_backups").get()).toEqual({
     state: "copying",
   });
+  const get = vi.spyOn(fixture.backups, "get");
+  const put = vi.spyOn(fixture.backups, "put");
+  const list = vi.spyOn(fixture.backups, "list");
+  const remove = vi.spyOn(fixture.backups, "delete");
   fixture.state.time = start + 12 * hour;
-  let completed = false;
-  for (let step = 0; step < 150; step++) {
-    const result = await runOperations(fixture.context, source);
-    if (result.reports.backup?.completed.length) {
-      completed = true;
-      break;
-    }
-  }
-  expect(completed).toBe(true);
+  await runOperations(fixture.context);
   expect(source.export).toHaveBeenCalledTimes(1);
   expect(
     database.connection.prepare("SELECT id,state FROM operations_backups ORDER BY id").all(),
-  ).toEqual([{ id: "2026-09-22T00Z", state: "complete" }]);
-  expect(
-    database.connection
-      .prepare("SELECT COUNT(*) AS count FROM work_retention_pins WHERE reason='recovery'")
-      .get(),
-  ).toEqual({ count: 0 });
-  await runOperations(fixture.context, source);
+  ).toEqual([{ id: "2026-09-22T00Z", state: "copying" }]);
+  expect(get).not.toHaveBeenCalled();
+  expect(put).not.toHaveBeenCalled();
+  expect(list).not.toHaveBeenCalled();
+  expect(remove).not.toHaveBeenCalled();
   expect(
     database.connection.prepare("SELECT COUNT(*) AS count FROM operations_backups").get(),
   ).toEqual({ count: 1 });

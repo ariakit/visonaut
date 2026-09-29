@@ -64,7 +64,7 @@ export function createExportWriter(context: OperationsContext, id: string, runId
     const name = `${kind}/${String(pages.length).padStart(6, "0")}.json`;
     const key = `exports/${id}/${name}`;
     const digest = hash(bytes);
-    await context.backups.put(key, bytes, {
+    await context.images.put(key, bytes, {
       onlyIf: { etagDoesNotMatch: "*" },
       httpMetadata: { contentType: "application/json" },
       sha256: digest,
@@ -112,7 +112,7 @@ export function createExportWriter(context: OperationsContext, id: string, runId
     if (bytes.length > maximumExportRootBytes) {
       throw new Error("Export root exceeds the bounded metadata limit.");
     }
-    await context.backups.put(`exports/${id}.json`, bytes, {
+    await context.images.put(`exports/${id}.json`, bytes, {
       onlyIf: { etagDoesNotMatch: "*" },
       httpMetadata: { contentType: "application/json" },
       sha256: hash(bytes),
@@ -122,7 +122,7 @@ export function createExportWriter(context: OperationsContext, id: string, runId
 }
 
 export async function readExportPage(context: OperationsContext, page: ExportPageReference) {
-  const object = await context.backups.get(page.key);
+  const object = await context.images.get(page.key);
   if (!object || object.size !== page.bytes || object.size > context.budget.maximumObjectBytes) {
     await object?.body.cancel();
     throw new Error("Export page is missing or has changed.");

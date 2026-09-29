@@ -29,9 +29,6 @@
     "VISONAUT_REUSABLE_WORKFLOW_SHA": "bea39018ccd6f902c2c904afa263b3d01f99c017",
     "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
     "VISONAUT_ALLOW_MAIN_DISPATCH": "true",
-    "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
-    "D1_DATABASE_ID": "395b539c-c423-4ce4-887c-a5792792a63b",
-    "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS": "420000",
     "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}",
     "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
   },
@@ -51,10 +48,6 @@
     {
       "bucket_name": "visonaut-preview-quarantine",
       "binding": "QUARANTINE",
-    },
-    {
-      "bucket_name": "visonaut-preview-backups",
-      "binding": "BACKUPS",
     },
   ],
   "services": [
@@ -115,9 +108,6 @@
         "VISONAUT_REUSABLE_WORKFLOW_SHA": "697172dfed281348d79bfe8ce61f9ccf21537c5f",
         "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "8c21bbd9df89e5996a1f6ca8c87ed5d755b00c5ab0769bfcd31848f01b0ab68f",
         "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
-        "CLOUDFLARE_ACCOUNT_ID": "b04f3af3f0f10a6b9481bc23ba974eca",
-        "D1_DATABASE_ID": "15fcd402-dccb-4359-a1ce-280ff67ca596",
-        "VISONAUT_DATABASE_EXPORT_TIMEOUT_MS": "420000",
         "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}",
         "VISONAUT_OPERATIONS_BUDGET": "{\"tasksPerStep\":25,\"objectsPerStep\":1000,\"leaseMilliseconds\":720000,\"maxAttempts\":5,\"maximumObjectBytes\":16777216,\"maximumDatabaseBytes\":2147483648,\"maximumExportEntries\":200000}",
       },
@@ -137,10 +127,6 @@
         {
           "bucket_name": "visonaut-production-quarantine",
           "binding": "QUARANTINE",
-        },
-        {
-          "bucket_name": "visonaut-production-backups",
-          "binding": "BACKUPS",
         },
       ],
       "services": [
@@ -182,7 +168,6 @@
           "GITHUB_CLIENT_SECRET",
           "GITHUB_APP_PRIVATE_KEY",
           "GITHUB_WEBHOOK_SECRET",
-          "D1_BACKUP_API_TOKEN",
           "VISONAUT_TRANSFER_PRIVATE_KEY",
         ],
       },
@@ -195,7 +180,6 @@
       "GITHUB_CLIENT_SECRET",
       "GITHUB_APP_PRIVATE_KEY",
       "GITHUB_WEBHOOK_SECRET",
-      "D1_BACKUP_API_TOKEN",
       "VISONAUT_TRANSFER_PRIVATE_KEY",
     ],
   },

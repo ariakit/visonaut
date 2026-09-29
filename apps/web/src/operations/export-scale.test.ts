@@ -51,7 +51,7 @@ for (const kind of ["metadata", "entries"]) {
         runId: fixture.runId,
         actorId: "maintainer",
       });
-      const stored = fixture.backups.objects.get(`exports/${exported.exportId}.json`);
+      const stored = fixture.images.objects.get(`exports/${exported.exportId}.json`);
       expect(stored).toBeDefined();
       if (!stored) throw new Error("Export root is missing.");
       const root = record(JSON.parse(new TextDecoder().decode(stored.bytes)));
@@ -61,13 +61,13 @@ for (const kind of ["metadata", "entries"]) {
       if (!reference || typeof reference.key !== "string")
         throw new Error("Expected an export page.");
       if (failure === "missing") {
-        fixture.backups.objects.delete(reference.key);
+        fixture.images.objects.delete(reference.key);
       } else {
-        const page = fixture.backups.objects.get(reference.key);
+        const page = fixture.images.objects.get(reference.key);
         if (!page) throw new Error("Expected stored page bytes.");
         const bytes = page.bytes.slice();
         bytes[bytes.length - 1] = 32;
-        fixture.backups.objects.set(reference.key, { ...page, bytes });
+        fixture.images.objects.set(reference.key, { ...page, bytes });
       }
       let complete = false;
       const response = await streamRunExport(fixture.context, exported.exportId);
@@ -94,6 +94,7 @@ it("cancels every open payload stream when a paged download disconnects", async 
   let opened = 0;
   let cancelled = 0;
   fixture.images.get = async (key) => {
+    if (key.startsWith("exports/")) return original(key);
     const object = await original(key);
     if (!object) return null;
     await object.body.cancel();
@@ -132,7 +133,7 @@ it("removes expired paged export objects and releases retention ownership", asyn
   const owner = `export:${exported.exportId}`;
   const prefix = `exports/${exported.exportId}`;
   expect(
-    [...fixture.backups.objects.keys()].filter((key) => key.startsWith(prefix)).length,
+    [...fixture.images.objects.keys()].filter((key) => key.startsWith(prefix)).length,
   ).toBeGreaterThan(3);
   expect(
     fixture.database.connection
@@ -153,7 +154,7 @@ it("removes expired paged export objects and releases retention ownership", asyn
     }
   }
   expect(expired).toBe(true);
-  expect([...fixture.backups.objects.keys()].filter((key) => key.startsWith(prefix))).toEqual([]);
+  expect([...fixture.images.objects.keys()].filter((key) => key.startsWith(prefix))).toEqual([]);
   expect(
     fixture.database.connection
       .prepare("SELECT COUNT(*) AS count FROM work_retention_pins WHERE owner=?")
