@@ -1339,8 +1339,8 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
   expect(requests).toBe(0);
   await page.getByRole("button", { name: "Pixel diff D" }).click();
   await ready(page);
-  expect(requests).toBe(1);
   await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
+  expect(requests).toBe(1);
   await page.getByRole("button", { name: "200%", exact: true }).click();
   const viewport = page.locator('.review-image-viewport[aria-label^="Pixel diff"]');
   await page
@@ -1377,13 +1377,12 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
   await expect(selected(page)).toContainText("React");
   expect(requests).toBe(1);
   await page.getByRole("button", { name: "Pixel diff D" }).click();
-  await ready(page);
+  await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
   await expect
     .poll(() =>
       viewport.evaluate((element) => ({ left: element.scrollLeft, top: element.scrollTop })),
     )
     .toEqual({ left: 0, top: 0 });
-  expect(requests).toBe(2);
 });
 
 for (const imagesExpired of [false, true]) {

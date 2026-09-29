@@ -2,6 +2,16 @@
 
 Verified on 29 September 2026. The source audit reads Visonaut commit `7e23173d11b1081f55021ef498e4c5c6d6a08131` and Ariakit commit `fe73331c833108a7ce18e0df6ba04af9e83776b9`.
 
+## Post-publication follow-up
+
+The historical revision checks below retain their original scope and results. The first [hosted CI run](https://github.com/ariakit/visonaut/actions/runs/36640799784) for [`c319790`](https://github.com/ariakit/visonaut/commit/c319790c6264a613457961b832e1bae4dbbb1c4c) passed all three unit shards, lint, build, types, and release guards. The browser job passed 101 tests and failed one test. The hosted rerun remains pending.
+
+The browser test now waits for visible diff evidence before its first request-count check and final pan check. Initial load, same-variant reuse, and pan checks remain. The final `expect(requests).toBe(2)` is removed because the browser can reuse the same loaded URL. A [controlled decoded-image reuse case](../evidence/simplification-performance/logs/ci-browser-diagnosis.json) failed the [old count assertion](../evidence/simplification-performance/logs/ci-browser-red.log), then passed three times with the final assertions. The [focused repeats](../evidence/simplification-performance/logs/ci-browser-focused-green.log) passed 10/10, and the [complete local browser suite](../evidence/simplification-performance/logs/ci-browser-full-green.log) passed all 102 tests. The controlled case does not reproduce the exact hosted timing.
+
+The earlier `pnpm check` receipt identifies source snapshot SHA-256 `e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e`. Its 898 unit tests across 64 files, build, and type results still apply to the unchanged production sources. This follow-up does not claim another complete `pnpm check` run or an overall performance gain.
+
+The [public attachment readback](../evidence/simplification-performance/public-attachments-readback.json) records successful anonymous GETs for all 39 media files, with matching bytes and SHA-256 hashes. Two swapped image URL mappings were corrected without another upload. The audit's 45 selected choices and 61 prior decisions remain unchanged. No production deployment, npm publication, Infisical, GitHub App, required rule, or resource change is part of this follow-up.
+
 ## Revision 6
 
 - O11 records the explicit `fixtures-only` answer. The record has 45 unique decisions, 45 recorded choices, and no open policy decision. All 44 earlier selections and notes, their feedback baseline entries, the 61 historical choices, and the issue #1 snapshot remain unchanged. Only O11 was incorporated in this feedback round.

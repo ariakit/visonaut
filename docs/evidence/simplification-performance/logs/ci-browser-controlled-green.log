@@ -1,0 +1,17 @@
+$ playwright test --config apps/web/src/review/__tests__/playwright.config.ts --grep 'a diff loads on first use and keeps pan until the variant changes' --repeat-each=3
+[WebServer] (node:43269) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 3 workers
+
+(node:43277) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:43278) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:43276) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.4s)
+  ✓  3 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.4s)
+  ✓  1 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.4s)
+
+  3 passed (2.6s)

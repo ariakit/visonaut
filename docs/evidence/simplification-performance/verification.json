@@ -1,14 +1,14 @@
 {
-  "recordedAt": "2026-09-29T22:18:39.956693+00:00",
-  "scope": "Local checked implementation prepared for an authorized draft PR. No production deployment, live conversion, secret move, App/rule change, npm release, consumer migration, or resource retirement is claimed.",
+  "recordedAt": "2026-09-29T23:17:14.983001+00:00",
+  "scope": "Published draft PR implementation with a verified browser-test and attachment-mapping follow-up. No production deployment, live conversion, secret move, App/rule change, npm release, consumer migration, or resource retirement is claimed.",
   "baselineCommit": "7e23173d11b1081f55021ef498e4c5c6d6a08131",
   "source": {
-    "fingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+    "fingerprint": "8b80f37c1b99d59994fbaa25da04ca8f1ab40d6ea2feefe5f0e7d0cb6a5d28d2",
     "algorithm": "SHA-256 of UTF-8 compact JSON (sort_keys=true, separators=comma/colon) of the manifest array, ordered by path",
     "manifest": {
       "file": "docs/evidence/simplification-performance/source-manifest.json",
       "bytes": 106241,
-      "sha256": "a93c18d7be426fc63412aade981291880b2159f79e0c33989dc6b97812a8dd6a"
+      "sha256": "0df218da65a4ea6ac2e0552c2fe089dc730fa877aef0aefb26dd20aed6fbb4d8"
     },
     "fileCount": 559,
     "untrackedSourceFileCount": 0,
@@ -38,6 +38,12 @@
         "sha256": "6d8b85e429a6c45176eacc5004d456f43a86b6d6568a01d7276b179d25660723"
       },
       "scope": "Source of the preserved history-corrected whole check, native route timings, and last manual preview before formal gate repairs."
+    },
+    "priorImplementationCheckpoint": {
+      "fingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+      "commit": "c319790c6264a613457961b832e1bae4dbbb1c4c",
+      "manifestUrl": "https://github.com/ariakit/visonaut/blob/c319790c6264a613457961b832e1bae4dbbb1c4c/docs/evidence/simplification-performance/source-manifest.json",
+      "scope": "Immutable source of the passing 898-unit/64-file/102-browser full check. Only the browser test changes in the follow-up; unit, production, build, release and measured UI inputs are unchanged. Current browser and web compiler checks are recorded separately."
     }
   },
   "audit": {
@@ -236,8 +242,8 @@
   },
   "checkReceipts": {
     "file": "docs/evidence/simplification-performance/check-receipts.json",
-    "bytes": 5748,
-    "sha256": "62aeaa131636feb763da59eb99638f232762f4164126c1b2e08ff25db0307b4b"
+    "bytes": 7146,
+    "sha256": "dadb19506a99f4a8bd233749dfc02e9c40fa65dfd9048a696d0a7004996f0b34"
   },
   "build": {
     "durableWholeCheckLog": "docs/evidence/simplification-performance/logs/pr-gate-check.log",
@@ -1352,6 +1358,55 @@
     "sourceRestoration": {
       "scope": "RED used copies of the original staged production files and restored the fixed files byte for byte without changing the index.",
       "privateReceipt": "/tmp/visonaut-s06-cleanup-red-restoration.json"
+    }
+  },
+  "postPublicationFollowup": {
+    "originalImplementationCommit": "c319790c6264a613457961b832e1bae4dbbb1c4c",
+    "sourceFingerprint": "8b80f37c1b99d59994fbaa25da04ca8f1ab40d6ea2feefe5f0e7d0cb6a5d28d2",
+    "changedSourcePaths": ["apps/web/src/review/__tests__/review.browser.test.ts"],
+    "diagnosis": {
+      "file": "docs/evidence/simplification-performance/logs/ci-browser-diagnosis.json",
+      "bytes": 7045,
+      "sha256": "4b4976316d6b39335cba6e3be7e448fba7ae543ce28689445e4e2c7f328b7cfe"
+    },
+    "logs": [
+      {
+        "file": "docs/evidence/simplification-performance/logs/ci-browser-red.log",
+        "bytes": 2199,
+        "sha256": "440c12a787236b74cca86c18c483a6e5c57051c0a887f28c46b5ab765d14cdea"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/ci-browser-focused-green.log",
+        "bytes": 3523,
+        "sha256": "1508c7d12ecab21623495b96fcc28e29c7083f482e8aacc059100986662f3c60"
+      },
+      {
+        "file": "docs/evidence/simplification-performance/logs/ci-browser-full-green.log",
+        "bytes": 16119,
+        "sha256": "b4803084a4e6b3e8013600dba596bdadb67b8aeed4360bfd572e3b81f43f0215"
+      }
+    ],
+    "hostedFirstRun": {
+      "file": "docs/evidence/simplification-performance/hosted-ci-first-run.json",
+      "bytes": 3150,
+      "sha256": "91652557ee02daed8d79874e94c44780d467d44230c07418f1618deba8f3293a"
+    },
+    "hostedFailureLog": {
+      "file": "docs/evidence/simplification-performance/logs/hosted-ci-first-failure.log",
+      "bytes": 28600,
+      "sha256": "f418116f813f0deead5ba511d2d37b17c6a1b4c3482cde6292b86bebd9db9907"
+    },
+    "publicMediaReadback": {
+      "file": "docs/evidence/simplification-performance/public-attachments-readback.json",
+      "bytes": 24716,
+      "sha256": "bd5d7a9d9acff533123d0dc2d1b7ec1b24b30acf1cdeec7aaa9df36b2ea12f69"
+    },
+    "scope": "Test synchronization and public attachment mapping only. Earlier production/unit/build/type checks and dated measurements are reused; no overall performance gain or latest hosted rerun is claimed.",
+    "hostedRerun": "Pending at this pre-commit verification checkpoint; consult PR checks for later execution.",
+    "controlledGreenLog": {
+      "file": "docs/evidence/simplification-performance/logs/ci-browser-controlled-green.log",
+      "bytes": 1340,
+      "sha256": "15361ae2a335301d74c5d09a85edf567a1cdfb89fa699a42c9675e26dfd211a7"
     }
   }
 }

@@ -1,6 +1,32 @@
 {
-  "sourceFingerprint": "e29e5f64ae9f70489a76c422efb0aa9e1e3d88cade40d1df23f55d66b5fafe4e",
+  "sourceFingerprint": "8b80f37c1b99d59994fbaa25da04ca8f1ab40d6ea2feefe5f0e7d0cb6a5d28d2",
   "checks": [
+    {
+      "id": "ci-followup-web-compiler",
+      "status": "passed",
+      "sourceFingerprint": "8b80f37c1b99d59994fbaa25da04ca8f1ab40d6ea2feefe5f0e7d0cb6a5d28d2",
+      "commandScope": "pnpm --filter @visonaut/web exec tsc6 --noEmit",
+      "exitCode": 0,
+      "output": "No diagnostics.",
+      "scope": "Fresh web compiler check after the browser-test change. Unchanged package compiler and generated-binding checks retain their earlier scope. This does not regenerate bindings or repeat the full workspace check.",
+      "originalPrivatePath": "/tmp/visonaut-ci-followup-web-types.log"
+    },
+    {
+      "id": "ci-browser-followup",
+      "status": "passed",
+      "sourceFingerprint": "8b80f37c1b99d59994fbaa25da04ca8f1ab40d6ea2feefe5f0e7d0cb6a5d28d2",
+      "commandScope": "pnpm test:browser",
+      "counts": {
+        "browser": 102
+      },
+      "scope": "Full browser suite after the targeted test repair. No production or shared fixture change; the earlier full lint/types/build/898-unit result remains valid for its unchanged inputs. This is not a repeated whole pnpm check.",
+      "log": {
+        "file": "docs/evidence/simplification-performance/logs/ci-browser-full-green.log",
+        "bytes": 16119,
+        "sha256": "b4803084a4e6b3e8013600dba596bdadb67b8aeed4360bfd572e3b81f43f0215"
+      },
+      "originalPrivatePath": "/tmp/visonaut-ci-browser-full-green.log"
+    },
     {
       "id": "pr-gate-fixes-whole-check",
       "status": "passed",

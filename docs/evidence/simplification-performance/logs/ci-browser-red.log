@@ -1,0 +1,36 @@
+$ playwright test --config apps/web/src/review/__tests__/playwright.config.ts --grep 'a diff loads on first use and keeps pan until the variant changes'
+[WebServer] (node:42344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:42362) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (1.1s)
+
+
+  1) apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 1
+
+      1392 |     )
+      1393 |     .toEqual({ left: 0, top: 0 });
+    > 1394 |   expect(requests).toBe(2);
+           |                    ^
+      1395 | });
+      1396 |
+      1397 | for (const imagesExpired of [false, true]) {
+        at /Users/diegohaz/.codex/worktrees/1de3/visonaut/apps/web/src/review/__tests__/review.browser.test.ts:1394:20
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    apps/web/test-results/review.browser-a-diff-load-7615f-n-until-the-variant-changes/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: apps/web/test-results/review.browser-a-diff-load-7615f-n-until-the-variant-changes/error-context.md
+
+  1 failed
+    apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes 
+[ELIFECYCLE] Command failed with exit code 1.

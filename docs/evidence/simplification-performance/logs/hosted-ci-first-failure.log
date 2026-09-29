@@ -1,0 +1,187 @@
+Browser	Run pnpm test:browser	﻿2026-09-29T22:39:58.4807747Z ##[group]Run pnpm test:browser
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4808080Z ^[[36;1mpnpm test:browser^[[0m
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4876585Z shell: /usr/bin/bash -e {0}
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4876863Z env:
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4877067Z   CI: true
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4877283Z   WRANGLER_SEND_METRICS: false
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4877601Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.4877919Z ##[endgroup]
+Browser	Run pnpm test:browser	2026-09-29T22:39:58.5148290Z $ playwright test --config apps/web/src/review/__tests__/playwright.config.ts
+Browser	Run pnpm test:browser	2026-09-29T22:40:01.3854264Z 
+Browser	Run pnpm test:browser	2026-09-29T22:40:01.3880318Z Running 102 tests using 3 workers
+Browser	Run pnpm test:browser	2026-09-29T22:40:01.3881020Z 
+Browser	Run pnpm test:browser	2026-09-29T22:40:04.1539425Z   ✓    1 apps/web/src/review/__tests__/operations.browser.test.ts:47:1 › a new incident is announced while the alert popover is closed (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:04.2287390Z   ✓    3 apps/web/src/review/__tests__/operations.browser.test.ts:72:1 › same-title incidents each update the live status (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:04.5832623Z   ✓    2 apps/web/src/review/__tests__/operations.browser.test.ts:18:1 › operation alerts explain recovery and poll resolved events while the dashboard is open (2.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:05.6736085Z   ✓    4 apps/web/src/review/__tests__/operations.browser.test.ts:106:1 › an older alert entering the bounded list is announced as visible (1.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:06.5910313Z   ✓    7 apps/web/src/review/__tests__/operations.browser.test.ts:182:1 › capacity alerts show measured usage, admission headroom, and capture slots (897ms)
+Browser	Run pnpm test:browser	2026-09-29T22:40:07.0746223Z   ✓    6 apps/web/src/review/__tests__/operations.browser.test.ts:168:1 › permission denial on refresh removes private alert content (2.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:07.6126144Z   ✓    5 apps/web/src/review/__tests__/operations.browser.test.ts:138:1 › alert refresh failure stays explicit and Retry alerts works with the keyboard (3.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:07.8227544Z   ✓    8 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook production-receiver-mismatch alerts give the matching recovery action (1.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:08.6836348Z   ✓    9 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook redelivery-exhausted alerts give the matching recovery action (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:09.3190486Z   ✓   10 apps/web/src/review/__tests__/operations.browser.test.ts:226:3 › GitHub webhook recovery-unavailable alerts give the matching recovery action (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:10.0913141Z   ✓   12 apps/web/src/review/__tests__/pulls.browser.test.ts:32:1 › a PR page explains pending capture and can refresh (1.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:10.2306975Z   ✓   11 apps/web/src/review/__tests__/pulls.browser.test.ts:8:1 › a pull-request check opens its current Visonaut review (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:11.3133779Z   ✓   14 apps/web/src/review/__tests__/pulls.browser.test.ts:99:1 › a failed capture explains that no review is ready (1.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:11.4029375Z   ✓   13 apps/web/src/review/__tests__/pulls.browser.test.ts:56:1 › a pending PR pauses polling while hidden and refreshes on return (2.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:11.5959170Z   ✓   15 apps/web/src/review/__tests__/pulls.browser.test.ts:116:1 › a PR deep link preserves its path through sign-in (1.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:13.5776555Z   ✓   17 apps/web/src/review/__tests__/review.browser.test.ts:51:1 › valid prototype names stay visible in compact variant labels (2.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:13.8502476Z   ✓   16 apps/web/src/review/__tests__/review.browser.test.ts:27:1 › review surfaces remain dark when the system uses dark mode (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:13.9448735Z   ✓   18 apps/web/src/review/__tests__/review.browser.test.ts:64:1 › variant icons use brand marks and explain display preferences (2.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:15.4790776Z   ✓   19 apps/web/src/review/__tests__/review.browser.test.ts:107:1 › variant keys do not claim an omitted display preference (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:16.1848176Z   ✓   21 apps/web/src/review/__tests__/review.browser.test.ts:150:1 › comparison errors stay visible ahead of accepted items (2.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:16.2422931Z   ✓   20 apps/web/src/review/__tests__/review.browser.test.ts:128:1 › framework names do not display browser marks (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:18.1013922Z   ✓   23 apps/web/src/review/__tests__/review.browser.test.ts:192:1 › a pending comparison stays visible without an evidence error (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:18.1676494Z   ✓   22 apps/web/src/review/__tests__/review.browser.test.ts:167:1 › an accepted first item does not hide the initial attention selection (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:19.8133140Z   ✓   24 apps/web/src/review/__tests__/review.browser.test.ts:215:1 › keyboard item navigation follows attention items before accepted items (3.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:21.1144420Z   ✓   26 apps/web/src/review/__tests__/review.browser.test.ts:275:1 › item navigation picks the first variant needing review unless one was chosen (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:22.5953725Z   ✓   25 apps/web/src/review/__tests__/review.browser.test.ts:250:1 › item and variant navigation stops at ends and remembers each item (4.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:22.6476372Z   ✓   27 apps/web/src/review/__tests__/review.browser.test.ts:294:1 › a missing remembered key falls back and announces the first variant (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:24.3835992Z   ✓   28 apps/web/src/review/__tests__/review.browser.test.ts:310:1 › save confirmation gates verdicts and navigation, and repeat keys do nothing (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:25.8006089Z   ✓   29 apps/web/src/review/__tests__/review.browser.test.ts:334:1 › a saved review keeps its reviewer visible when revisited (3.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:25.9872316Z   ✓   30 apps/web/src/review/__tests__/review.browser.test.ts:342:1 › whole item freezes all changed IDs in one undoable command (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:27.6484654Z   ✓   31 apps/web/src/review/__tests__/review.browser.test.ts:362:1 › next pending wraps, skips automatic verdicts and reviewed rejections (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:28.9949893Z   ✓   33 apps/web/src/review/__tests__/review.browser.test.ts:396:1 › protected whole-item rejection refuses every target, while individual actions stay usable (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:29.8299842Z   ✓   32 apps/web/src/review/__tests__/review.browser.test.ts:385:1 › undo restores automatic acceptance and the original selection (4.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:29.9893279Z   ✓   34 apps/web/src/review/__tests__/review.browser.test.ts:419:1 › already accepted history creates no session undo command (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:31.9746499Z   ✓   35 apps/web/src/review/__tests__/review.browser.test.ts:428:1 › decoded panes appear independently while review waits for all evidence (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:32.6180415Z   ✓   36 apps/web/src/review/__tests__/review.browser.test.ts:458:1 › the new image appears while the reference is still loading (2.7s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:33.2410171Z   ✓   37 apps/web/src/review/__tests__/review.browser.test.ts:485:1 › load errors block review and retry loads the same evidence (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:34.7880495Z   ✓   38 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › failed comparisons explain their state without offering image retry (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:34.9925789Z   ✓   39 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › superseded comparisons explain their state without offering image retry (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:35.8825105Z   ✓   40 apps/web/src/review/__tests__/review.browser.test.ts:518:3 › needs-recompare comparisons explain their state without offering image retry (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:37.2649067Z   ✓   41 apps/web/src/review/__tests__/review.browser.test.ts:546:1 › unavailable stored captures do not offer recompare for a failed comparison (2.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:37.7100160Z   ✓   42 apps/web/src/review/__tests__/review.browser.test.ts:564:1 › stale pull request captures explain how to get a new comparison (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:38.7755893Z   ✓   43 apps/web/src/review/__tests__/review.browser.test.ts:581:1 › a dimension mismatch cannot be fixed with image retry (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:39.9488633Z   ✓   44 apps/web/src/review/__tests__/review.browser.test.ts:596:1 › a decode failure offers image retry (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:40.8148009Z   ✓   45 apps/web/src/review/__tests__/review.browser.test.ts:616:3 › unchanged comparisons with zero changed pixels show diff without a mask (3.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:41.8638191Z   ✓   46 apps/web/src/review/__tests__/review.browser.test.ts:616:3 › changed comparisons with zero changed pixels show diff without a mask (3.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:42.5412008Z   ✓   47 apps/web/src/review/__tests__/review.browser.test.ts:650:3 › unchanged comparisons with tolerated pixels show intentional mask absence (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:43.6994679Z   ✓   48 apps/web/src/review/__tests__/review.browser.test.ts:650:3 › changed comparisons with tolerated pixels show intentional mask absence (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:44.2264569Z   ✓   49 apps/web/src/review/__tests__/review.browser.test.ts:686:1 › an explicitly required mask fails closed even with zero changed pixels (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:44.9530441Z   ✓   50 apps/web/src/review/__tests__/review.browser.test.ts:703:3 › a missing diff mask blocks review when changed pixels are 120 (2.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:46.1999541Z   ✓   51 apps/web/src/review/__tests__/review.browser.test.ts:703:3 › a missing diff mask blocks review when changed pixels are undefined (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:46.8426052Z   ✓   52 apps/web/src/review/__tests__/review.browser.test.ts:729:3 › 0-pixel diff still waits for original images and blocks failed evidence (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:47.4321826Z   ✓   53 apps/web/src/review/__tests__/review.browser.test.ts:729:3 › 1-pixel diff still waits for original images and blocks failed evidence (2.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:48.7621051Z   ✓   55 apps/web/src/review/__tests__/review.browser.test.ts:793:1 › Original only shows the reference image and G switches from the other views (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:49.4623224Z   ✓   54 apps/web/src/review/__tests__/review.browser.test.ts:768:1 › addition and removal empty panes remain distinct and D keeps the current view (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:50.7136154Z   ✓   57 apps/web/src/review/__tests__/review.browser.test.ts:851:1 › conflict identifies reviewer and does not advance or save a partial item (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:51.3718984Z   ✓   56 apps/web/src/review/__tests__/review.browser.test.ts:809:1 › shortcut scope, native modifiers, editing exclusions, and toggle (3.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:51.9832854Z   ✓   58 apps/web/src/review/__tests__/review.browser.test.ts:862:1 › disconnect shows unsaved state and retries the same frozen command (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:53.2276027Z   ✓   59 apps/web/src/review/__tests__/review.browser.test.ts:876:1 › Undo conflict preserves the selection and later reviewer state (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:53.6873471Z   ✓   60 apps/web/src/review/__tests__/review.browser.test.ts:885:1 › help closes with Escape and keeps native focus without rejecting (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:55.2292071Z   ✓   61 apps/web/src/review/__tests__/review.browser.test.ts:895:1 › fit, 100%, 200%, and narrow layout preserve inspectable original images (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:55.9072000Z   ✓   62 apps/web/src/review/__tests__/review.browser.test.ts:923:1 › stale decode completion cannot make a returned selection ready (2.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:56.6077793Z   ✓   63 apps/web/src/review/__tests__/review.browser.test.ts:979:1 › keyboard pan preserves image position across modes and item thumbnails stay stable (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:58.4960992Z   ✓   64 apps/web/src/review/__tests__/review.browser.test.ts:1005:1 › session Undo ends on reload (3.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:58.9217474Z   ✓   65 apps/web/src/review/__tests__/review.browser.test.ts:1014:1 › a stale latest Undo does not block an older independent session command (3.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:40:59.5462575Z   ✓   66 apps/web/src/review/__tests__/review.browser.test.ts:1033:1 › failed Undo retries its original command identity (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:01.1968855Z   ✓   68 apps/web/src/review/__tests__/review.browser.test.ts:1061:1 › pending comparisons poll only status and pause while the page is hidden (2.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:01.8476685Z   ✓   69 apps/web/src/review/__tests__/review.browser.test.ts:1094:1 › a superseded comparison stops status polling after one final model load (2.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:03.3557542Z   ✓   67 apps/web/src/review/__tests__/review.browser.test.ts:1046:1 › recompare keeps prior evidence visible and blocks review until the new comparison is ready (4.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:03.7399327Z   ✓   70 apps/web/src/review/__tests__/review.browser.test.ts:1119:1 › archived history keeps navigation and export while blocking review, Undo, and recompare (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:03.7656622Z   ✓   71 apps/web/src/review/__tests__/review.browser.test.ts:1153:1 › export gives pending and failure feedback without changing review verdicts (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:05.7346166Z   ✓   73 apps/web/src/review/__tests__/review.browser.test.ts:1225:1 › expired historical images show the server reason and do not permit recompare (2.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:06.5450816Z   ✓   72 apps/web/src/review/__tests__/review.browser.test.ts:1173:1 › closed retained runs can recompare while historical results remain read-only (3.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:06.5846398Z   ✓   74 apps/web/src/review/__tests__/review.browser.test.ts:1242:1 › a failed historical comparison stops polling and shows its failure reason (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:08.5312502Z   ✓   75 apps/web/src/review/__tests__/review.browser.test.ts:1278:1 › a run that closes before recompare also disables the previous Undo while comparing (2.8s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:09.3114403Z   ✓   76 apps/web/src/review/__tests__/review.browser.test.ts:1301:1 › page-wide arrows work from body focus and the off switch preserves native keys (2.7s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:10.5339925Z   ✓   78 apps/web/src/review/__tests__/review.browser.test.ts:1390:3 › closed summaries preserve verdicts without requesting pinned image history (2.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:11.3576062Z   ✘   77 apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes (4.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:11.3589265Z   ✓   79 apps/web/src/review/__tests__/review.browser.test.ts:1390:3 › closed summaries preserve verdicts without requesting expired image history (2.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:12.6217222Z   ✓   81 apps/web/src/review/__tests__/route.browser.test.ts:9:1 › dashboard loads its protected run list without a separate identity request (1.2s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:13.3319337Z   ✓   80 apps/web/src/review/__tests__/review.browser.test.ts:1423:3 › long review context and recovery controls reflow at 200% CSS zoom with none forced colors (2.7s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:14.1152617Z   ✓   83 apps/web/src/review/__tests__/route.browser.test.ts:26:1 › dashboard offers sign-in when the run list rejects its session (1.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:15.5576194Z   ✓   82 apps/web/src/review/__tests__/review.browser.test.ts:1423:3 › long review context and recovery controls reflow at 200% CSS zoom with active forced colors (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:16.2381643Z   ✓   85 apps/web/src/review/__tests__/route.browser.test.ts:127:1 › opening a historical link loads its selected comparison (2.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:17.4007095Z   ✓   84 apps/web/src/review/__tests__/route.browser.test.ts:38:1 › dashboard keeps runs in a table and operation alerts in the header (4.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:19.0115551Z   ✓   88 apps/web/src/review/__tests__/route.browser.test.ts:229:1 › a stale variant link keeps its valid item selected (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:19.1380329Z   ✓   87 apps/web/src/review/__tests__/route.browser.test.ts:203:1 › item links return to the first variant needing review after selecting an unchanged variant (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:20.2610929Z   ✓   86 apps/web/src/review/__tests__/route.browser.test.ts:161:1 › item and variant links open a direct selection without reloading the run (4.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:20.6562721Z   ✓   89 apps/web/src/review/__tests__/route.browser.test.ts:251:1 › sign-in keeps a direct item and variant link (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:20.9256304Z   ✓   90 apps/web/src/review/__tests__/route.browser.test.ts:273:1 › historical sign-in preserves the selected comparison in its return path (1.7s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:21.8759330Z   ✓   91 apps/web/src/review/__tests__/route.browser.test.ts:298:1 › the sign-in page follows the system dark color scheme (1.6s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:22.8776050Z   ✓   93 apps/web/src/review/__tests__/route.browser.test.ts:345:1 › the work list shows an old PR title while recent history stays separate (1.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:23.3137049Z   ✓   94 apps/web/src/review/__tests__/route.browser.test.ts:395:1 › preview fixtures have no GitHub login, logout or live operations requests (1.4s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:24.9510804Z   ✓   92 apps/web/src/review/__tests__/route.browser.test.ts:318:1 › variant links preserve native new-tab activation and keyboard routes (4.3s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:25.4174711Z   ✓   95 apps/web/src/review/__tests__/route.browser.test.ts:416:1 › a preview review has image fixtures and no live actions or login (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:27.2648714Z   ✓   96 apps/web/src/review/__tests__/scale.browser.test.ts:38:1 › the complete virtual list has bounded rows and arrow, Home and End navigation (3.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:28.5281014Z   ✓   98 apps/web/src/review/__tests__/scale.browser.test.ts:77:1 › accepted items mount only when opened and focus spans both groups (3.0s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:28.7112449Z   ✓   97 apps/web/src/review/__tests__/scale.browser.test.ts:60:1 › page-wide navigation remembers variants and leaves focus outside the virtual list (3.7s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:31.0555945Z   ✓  100 apps/web/src/review/__tests__/scale.browser.test.ts:136:1 › long names have measured height and do not overlap at browser zoom (2.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:31.4084952Z   ✓   99 apps/web/src/review/__tests__/scale.browser.test.ts:101:1 › approval, Undo and removal retain useful focus and stable identities (4.1s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:31.5953814Z   ✓  101 apps/web/src/review/__tests__/scale.browser.test.ts:166:1 › narrow layout keeps items, tabs and image controls inside the page (2.9s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.5333984Z   ✓  102 apps/web/src/review/__tests__/scale.browser.test.ts:177:1 › removing the full model focuses the empty navigation region (1.5s)
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6623704Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6630999Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6640994Z   1) apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6641633Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6641891Z     Error: expect(received).toBe(expected) // Object.is equality
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6642169Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6642270Z     Expected: 2
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6642501Z     Received: 1
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6642626Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6642717Z       1384 |     )
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6643012Z       1385 |     .toEqual({ left: 0, top: 0 });
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6643352Z     > 1386 |   expect(requests).toBe(2);
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6643958Z            |                    ^
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6644224Z       1387 | });
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6644440Z       1388 |
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6644733Z       1389 | for (const imagesExpired of [false, true]) {
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6645341Z         at /home/runner/work/visonaut/visonaut/apps/web/src/review/__tests__/review.browser.test.ts:1386:20
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6645757Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6646216Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6646975Z     apps/web/test-results/review.browser-a-diff-load-7615f-n-until-the-variant-changes/test-failed-1.png
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6647767Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6648051Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6648497Z     Error Context: apps/web/test-results/review.browser-a-diff-load-7615f-n-until-the-variant-changes/error-context.md
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6648976Z 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6649062Z   1 failed
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6649838Z     apps/web/src/review/__tests__/review.browser.test.ts:1321:1 › a diff loads on first use and keeps pan until the variant changes 
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6650427Z   101 passed (1.6m)
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6950602Z [ELIFECYCLE] Command failed with exit code 1.
+Browser	Run pnpm test:browser	2026-09-29T22:41:32.6980410Z ##[error]Process completed with exit code 1.
+Gate	Require every check to pass	﻿2026-09-29T22:42:39.0451670Z ##[group]Run node -e '
+Gate	Require every check to pass	2026-09-29T22:42:39.0452077Z ^[[36;1mnode -e '^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0452442Z ^[[36;1m  const jobs = JSON.parse(process.env.CI_RESULTS);^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0452866Z ^[[36;1m  const failed = Object.entries(jobs)^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0453286Z ^[[36;1m    .filter(([, job]) => job.result !== "success")^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0453707Z ^[[36;1m    .map(([name, job]) => `${name}: ${job.result}`);^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0454104Z ^[[36;1m  if (failed.length) {^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0454532Z ^[[36;1m    console.error(`Required jobs did not succeed: ${failed.join(", ")}`);^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0454987Z ^[[36;1m    process.exit(1);^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0455266Z ^[[36;1m  }^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0455492Z ^[[36;1m'^[[0m
+Gate	Require every check to pass	2026-09-29T22:42:39.0718566Z shell: /usr/bin/bash -e {0}
+Gate	Require every check to pass	2026-09-29T22:42:39.0719003Z env:
+Gate	Require every check to pass	2026-09-29T22:42:39.0719298Z   CI: true
+Gate	Require every check to pass	2026-09-29T22:42:39.0719866Z   WRANGLER_SEND_METRICS: false
+Gate	Require every check to pass	2026-09-29T22:42:39.0721414Z   CI_RESULTS: {
+Gate	Require every check to pass	  "lint": {
+Gate	Require every check to pass	    "result": "success",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  },
+Gate	Require every check to pass	  "typecheck": {
+Gate	Require every check to pass	    "result": "success",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  },
+Gate	Require every check to pass	  "build": {
+Gate	Require every check to pass	    "result": "success",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  },
+Gate	Require every check to pass	  "test": {
+Gate	Require every check to pass	    "result": "success",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  },
+Gate	Require every check to pass	  "browser": {
+Gate	Require every check to pass	    "result": "failure",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  },
+Gate	Require every check to pass	  "release-guards": {
+Gate	Require every check to pass	    "result": "success",
+Gate	Require every check to pass	    "outputs": {}
+Gate	Require every check to pass	  }
+Gate	Require every check to pass	}
+Gate	Require every check to pass	2026-09-29T22:42:39.0723103Z ##[endgroup]
+Gate	Require every check to pass	2026-09-29T22:42:39.1064577Z Required jobs did not succeed: browser: failure
+Gate	Require every check to pass	2026-09-29T22:42:39.1088851Z ##[error]Process completed with exit code 1.
