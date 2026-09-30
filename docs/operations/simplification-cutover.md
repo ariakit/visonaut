@@ -42,6 +42,8 @@ pnpm exec node apps/web/tooling/simplification-cutover/run.mjs inspect \
 
 Remote application inspection does not change application data. Wrangler session setup uploads an ephemeral edge-preview proxy and can register a `workers.dev` subdomain if the account has none. Session setup is a provider write and requires separate authorization and credentials that permit the binding session as well as D1/R2 access. Do not assume a D1 read token can start this session. Keep Wrangler diagnostic logs private and outside Git; the report does not contain session credentials or its temporary hostname.
 
+Before remote session setup, read back the selected comparator Worker's current production and preview-base runtime metadata. Production uses `visonaut-compare`; preview uses `visonaut-preview-compare`. Require no secrets and no plain variables except `VISONAUT_CODEC_BACKEND=worker` and `VISONAUT_COMPARISON_DEAD_LETTER_QUEUE` with the matching environment's queue name. The stock Wrangler proxy inherits `plain_text`, `json`, `secret_text`, and `secret_key` bindings and can expose arbitrary inherited names, so unknown or unexpected metadata blocks setup. Local mode keeps a random isolated name. This check does not expand the credential's existing Worker-name scope.
+
 Before conversion, the external owner must coordinate the selected target's HTTP writers, cron, queue consumers, and old workflow attempts. Keep ordinary recovery and retention offline until the selected gates and byte readback pass. `VISONAUT_LAUNCH_ENABLED=false` does not fence writes. The runner cannot establish or verify this fence. `--acknowledge-write-fence` records the operator's acknowledgement; it is not fence evidence.
 
 ```sh
