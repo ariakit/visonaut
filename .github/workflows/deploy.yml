@@ -309,12 +309,14 @@ jobs:
           const invalid = () => {
             const stderrPath = join(process.env.RUNNER_TEMP, 'visonaut-cutover-stderr.log');
             const markers = statSync(stderrPath).size <= 1048576
-              ? [...readFileSync(stderrPath, 'utf8').matchAll(/^\{"code":"cutover-runner-failed","stage":"(before-bindings|binding-setup|after-bindings)","knownApiAuthorizationError":(true|false)\}$/gm)] : [];
+              ? [...readFileSync(stderrPath, 'utf8').matchAll(/^\{"code":"cutover-runner-failed","stage":"(before-bindings|binding-setup|after-bindings)","knownApiAuthorizationError":(true|false),"bindingFailureSource":"(local-proxy|remote-preview|unclassified)","knownApiFailure":(true|false)\}$/gm)] : [];
             console.log(JSON.stringify({
               commandExit: Number(process.env.VISONAUT_CUTOVER_EXIT),
               stdoutBytes: statSync(join(process.env.RUNNER_TEMP, 'visonaut-cutover-report.log')).size,
               failureStage: markers.length === 1 ? markers[0][1] : 'unclassified',
               knownApiAuthorizationError: markers.length === 1 && markers[0][2] === 'true',
+              bindingFailureSource: markers.length === 1 ? markers[0][3] : 'unclassified',
+              knownApiFailure: markers.length === 1 && markers[0][4] === 'true',
               reportStatus: 'missing-or-invalid'
             }));
             throw new Error('Cutover report is missing or invalid. State and remote cleanup are unknown; inspect before retry.');
