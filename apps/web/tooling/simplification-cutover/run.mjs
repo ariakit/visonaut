@@ -52,9 +52,19 @@ try {
     console.error("Invalid cutover options. Run --help.");
   } else {
     let knownApiAuthorizationError = false;
+    let bindingFailureSource = "unclassified";
+    let knownApiFailure = false;
     if (failureStage === "binding-setup") {
       let cause = error;
       for (let index = 0; index < 3 && cause !== null && typeof cause === "object"; index++) {
+        const name = Object.getOwnPropertyDescriptor(cause, "name")?.value;
+        knownApiFailure ||= name === "APIError";
+        const source = Object.getOwnPropertyDescriptor(cause, "source")?.value;
+        if (source === "ProxyController") {
+          bindingFailureSource = "local-proxy";
+        } else if (source === "RemoteRuntimeController") {
+          bindingFailureSource = "remote-preview";
+        }
         const code = Object.getOwnPropertyDescriptor(cause, "code")?.value;
         // Pinned Wrangler preserves these remote session authorization codes.
         if ([9106, 10000, 10405].includes(code)) {
@@ -69,6 +79,8 @@ try {
         code: "cutover-runner-failed",
         stage: failureStage,
         knownApiAuthorizationError,
+        bindingFailureSource,
+        knownApiFailure,
       }),
     );
   }
