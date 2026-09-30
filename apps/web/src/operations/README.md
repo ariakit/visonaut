@@ -23,6 +23,8 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 ## Conversion before deployment
 
+Use the standalone [cutover runner commands](../../../../docs/operations/simplification-cutover.md#one-time-conversion-runner) for a selected direct DB/IMAGES binding session. Local inspection is the default. Remote selection and conversion each require explicit options; conversion also requires acknowledgement of the external write fence. The runner does not use the ordinary recovery path.
+
 Drain or cancel old workflow attempts before switching to the combined Submit path. Release their obsolete `workflow-rerun:` retention pins only after those attempts are terminal. Do not discard an unfinished attempt merely because its old writer was removed.
 
 Required old protected snapshots must pass `convertSourceBaselines`. It installs pins for live owners, verifies an existing source original or restores it from the protected copy, and verifies destination readback. An already deleted source owner can become live only with a one-use verified baseline-conversion receipt. The receipt, source pins, and snapshot switch settle in one transaction. A run being deleted cannot be restored. Normal byte resurrection remains prohibited. Old protected objects are not deleted by this conversion.
