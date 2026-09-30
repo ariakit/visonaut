@@ -310,6 +310,74 @@ async function migrated(platform: { env: CutoverBindings }) {
   }
 }
 
+it("resumes a large protected baseline without releasing its source objects", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  database.connection.exec(
+    "CREATE TABLE d1_migrations(name TEXT); INSERT INTO d1_migrations VALUES('0024_core_simplification.sql')",
+  );
+  const service = await captured(fixture.context, "main", "main");
+  await service.preparePromotion({
+    snapshotId: "legacy",
+    comparisonId: "comparison-main",
+    prefix: "baselines/legacy",
+    now: 1,
+  });
+  await fixture.images.put("baselines/legacy/image-main", "original-image-bytes");
+  database.connection.exec(
+    "UPDATE visonaut_snapshots SET storage_mode='protected',state='accepted',reference_eligible=1; UPDATE visonaut_snapshot_images SET object_key='baselines/legacy/image-main',copied=1",
+  );
+  // Extend the one-capture service fixture beyond one production conversion turn.
+  const insertImage = database.connection
+    .prepare(`INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,bytes_present,role,validated)
+    SELECT ?,run_id,digest,?,content_type,bytes,width,height,bytes_present,role,validated FROM visonaut_images WHERE id='image-main'`);
+  const insertCapture = database.connection
+    .prepare(`INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json)
+    SELECT ?,run_id,shard_key,item_key,?,ordinal,?,profile_digest,test_id,test_retry,metadata_json FROM visonaut_captures WHERE id='capture-main'`);
+  const insertPointer = database.connection
+    .prepare(`INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied)
+    SELECT 'legacy',?,?,?,digest,1 FROM visonaut_images WHERE id=?`);
+  for (let index = 1; index <= 1000; index++) {
+    const suffix = String(index).padStart(5, "0");
+    const imageId = `image-${suffix}`;
+    const sourceKey = `runs/main/original-${suffix}`;
+    const protectedKey = `baselines/legacy/${suffix}`;
+    insertImage.run(imageId, sourceKey);
+    insertCapture.run(`capture-${suffix}`, `variant-${suffix}`, imageId);
+    insertPointer.run(`capture-${suffix}`, imageId, protectedKey, imageId);
+    await fixture.images.put(sourceKey, "original-image-bytes");
+    await fixture.images.put(protectedKey, "original-image-bytes");
+  }
+  const get = vi.spyOn(fixture.images, "get");
+  const put = vi.spyOn(fixture.images, "put");
+  const deleteObjects = vi.spyOn(fixture.images, "delete");
+  const createPlatform = async () => ({
+    env: { DB: database, IMAGES: fixture.images },
+    async dispose() {},
+  });
+  const argumentsList = ["convert", "--persist-path", tmpdir(), "--acknowledge-write-fence"];
+  const first = await runCutover(argumentsList, createPlatform);
+  expect(first).toMatchObject({
+    stop: "turn-limit",
+    turns: [{ report: { completed: [], deferred: ["legacy"], attention: [] } }],
+    readback: { requiredProtectedSnapshots: 1, gatesReady: false },
+  });
+  expect(get).toHaveBeenCalledTimes(1000);
+  expect(
+    await database
+      .prepare(`SELECT COUNT(*) AS count FROM visonaut_snapshot_images copy
+      JOIN visonaut_images image ON image.id=copy.image_id WHERE copy.object_key!=image.object_key`)
+      .first(),
+  ).toEqual({ count: 1 });
+  expect((await runCutover(argumentsList, createPlatform)).stop).toBe("no-progress");
+  const last = await runCutover(argumentsList, createPlatform);
+  expect(last).toMatchObject({ stop: "ready", readback: { gatesReady: true } });
+  expect(get).toHaveBeenCalledTimes(1001);
+  expect(fixture.images.objects.size).toBe(2002);
+  expect(put).not.toHaveBeenCalled();
+  expect(deleteObjects).not.toHaveBeenCalled();
+});
+
 it("repairs a protected original with native D1/R2, preserves bytes and restores the stream global", async () => {
   const directory = await mkdtemp(join(tmpdir(), "visonaut-cutover-test-"));
   const previousDescriptor = Object.getOwnPropertyDescriptor(globalThis, "FixedLengthStream");
@@ -403,7 +471,98 @@ it("repairs a protected original with native D1/R2, preserves bytes and restores
   }
 });
 
-it("resumes bounded native archive conversion and keeps exact decisions, tuples and original R2 bytes", async () => {
+it("resumes a large archive after the bounded page turn without expiring its source", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  fixture.state.time = Date.now() - 2_592_000_001;
+  database.connection.exec(
+    "CREATE TABLE d1_migrations(name TEXT); INSERT INTO d1_migrations VALUES('0024_core_simplification.sql')",
+  );
+  const service = await captured(fixture.context, "closed");
+  await service.retireRun({ runId: "closed", now: fixture.state.time });
+  const rows =
+    (await database.prepare("SELECT * FROM visonaut_comparison_rows").all()).results ?? [];
+  const decisions =
+    (await database.prepare("SELECT * FROM visonaut_decisions").all()).results ?? [];
+  const pages: HistoryPageReference[] = [];
+  for (const [section, records] of [
+    ["comparisonRows", rows],
+    ["decisions", decisions],
+    // One root and 999 pages fit; the remaining pages require another call.
+    ...Array.from(
+      { length: 999 },
+      (_, index) => ["audit", [{ id: `proof-${index}`, action: "proof" }]] as const,
+    ),
+  ] as const) {
+    const key = `history/closed/fixture/${String(pages.length).padStart(6, "0")}.json`;
+    const data = JSON.stringify({
+      version: 1,
+      runId: "closed",
+      generation: "fixture",
+      section,
+      rows: records,
+    });
+    await fixture.images.put(key, data);
+    pages.push({
+      key,
+      digest: digest(data),
+      bytes: Buffer.byteLength(data),
+      section,
+      rows: records.length,
+      firstCursor: "first",
+      lastCursor: "last",
+    });
+  }
+  const rootKey = "history/closed/fixture/manifest.json";
+  const root = JSON.stringify({
+    version: 1,
+    runId: "closed",
+    generation: "fixture",
+    pages,
+    counts: { comparisonRows: rows.length, decisions: decisions.length, audit: 999 },
+  });
+  await fixture.images.put(rootKey, root);
+  await database
+    .prepare(
+      "INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,digest,bytes,page_count,progress_json,created_at,verified_at) VALUES('closed','fixture','ready',0,0,?,?,?,?, '{}',0,0)",
+    )
+    .bind(rootKey, digest(root), Buffer.byteLength(root), pages.length)
+    .run();
+  database.connection.exec("UPDATE visonaut_runs SET detail_archived=1 WHERE id='closed'");
+  const get = vi.spyOn(fixture.images, "get");
+  const put = vi.spyOn(fixture.images, "put");
+  const deleteObjects = vi.spyOn(fixture.images, "delete");
+  const createPlatform = async () => ({
+    env: { DB: database, IMAGES: fixture.images },
+    async dispose() {},
+  });
+  const argumentsList = ["convert", "--persist-path", tmpdir(), "--acknowledge-write-fence"];
+  const first = await runCutover(argumentsList, createPlatform);
+  expect(first).toMatchObject({
+    stop: "turn-limit",
+    turns: [{ family: "history", report: { deferred: ["closed"], attention: [] } }],
+    readback: { unconvertedClosedRecords: 1, gatesReady: false },
+  });
+  expect(get).toHaveBeenCalledTimes(1000);
+  expect(await database.prepare("SELECT COUNT(*) AS count FROM visonaut_captures").first()).toEqual(
+    {
+      count: 1,
+    },
+  );
+  const last = await runCutover(argumentsList, createPlatform);
+  expect(last).toMatchObject({ stop: "ready", readback: { gatesReady: true } });
+  expect(get).toHaveBeenCalledTimes(1003);
+  expect(
+    await database
+      .prepare("SELECT audit_json FROM visonaut_closed_summaries WHERE run_id='closed'")
+      .first(),
+  ).toEqual({ audit_json: '[{"action":"proof","count":999}]' });
+  expect(fixture.images.objects.size).toBe(1003);
+  expect(put).not.toHaveBeenCalled();
+  expect(deleteObjects).not.toHaveBeenCalled();
+});
+
+it("converts a native archive in one turn and keeps exact decisions, tuples and original R2 bytes", async () => {
   const directory = await mkdtemp(join(tmpdir(), "visonaut-cutover-test-"));
   using template = new TestDatabase();
   const fixture = context(template);
@@ -517,18 +676,10 @@ it("resumes bounded native archive conversion and keeps exact decisions, tuples 
     const argumentsList = ["convert", "--persist-path", directory, "--acknowledge-write-fence"];
     const first = await runCutover(argumentsList, createPlatform);
     expect(first).toMatchObject({
-      stop: "turn-limit",
-      turns: [{ family: "history", report: { deferred: ["closed"], attention: [] } }],
-      readback: { unconvertedClosedRecords: 1 },
+      stop: "ready",
+      turns: [{ family: "history", report: { completed: ["closed"], attention: [] } }],
+      readback: { gatesReady: true },
     });
-    const skipped = await runCutover([...argumentsList, "--max-turns", "3"], createPlatform);
-    expect(skipped).toMatchObject({
-      stop: "no-progress",
-      turns: [{ report: { completed: [], deferred: [] } }],
-      readback: { unconvertedClosedRecords: 1 },
-    });
-    const last = await runCutover([...argumentsList, "--max-turns", "3"], createPlatform);
-    expect(last).toMatchObject({ stop: "ready", readback: { gatesReady: true } });
     expect(finalDecision).toEqual({ actor_id: "reviewer", verdict: "approved", tuple_json: tuple });
     expect(original).toBe("original-image-bytes");
     expect(puts).not.toHaveBeenCalled();
