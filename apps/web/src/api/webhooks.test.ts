@@ -8,6 +8,8 @@ import * as security from "@visonaut/security";
 import carriedJobs from "./fixtures/failed-job-rerun.json";
 import { handleApi, apiContext, type ApiBindings } from "./index.ts";
 import { processWebhook, reconcileWebhooks } from "./webhooks.ts";
+import { sanitizeRestoredDatabase } from "../operations/recovery.ts";
+import { reconcileStagedWorkflows } from "./workflow-materialize.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
   candidateForWebhook,
@@ -3157,7 +3159,12 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
 });
 
 describe("trusted Plan report with native D1", () => {
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await database
+      .prepare("DELETE FROM operations_events WHERE id='restore:activation:secrets-required'")
+      .run();
+  });
 
   function planFixture() {
     const fixture = preRunFixture();
@@ -3185,7 +3192,7 @@ describe("trusted Plan report with native D1", () => {
         targetHead: baseSha,
         pullRequestNumber: 7,
       }));
-    const report = (visualRequired: boolean, planResult = "success") =>
+    const report = (visualRequired: boolean, planResult = "success", workflowAttempt = 1) =>
       reportVisualPlan(
         new Request("https://preview.example/v1/plan", {
           method: "POST",
@@ -3196,7 +3203,7 @@ describe("trusted Plan report with native D1", () => {
           body: JSON.stringify({
             schemaVersion: 1,
             workflowRunId: "77",
-            workflowAttempt: 1,
+            workflowAttempt,
             testedSha: mergeSha,
             visualRequired,
             planResult,
@@ -3206,6 +3213,166 @@ describe("trusted Plan report with native D1", () => {
       );
     return { fixture, plan, report, identity };
   }
+
+  it("requires a fresh Plan and check generation for the same SHA after recovery", async () => {
+    const { fixture, plan, report, identity } = planFixture();
+    expect((await report(true)).status).toBe(204);
+    await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
+    const restoredAt = Date.now() - 1000;
+    await sanitizeRestoredDatabase(database, restoredAt);
+    fixture.state.run.run_attempt = 2;
+    plan.run_attempt = 2;
+    expect((await report(true, "success", 2)).status).toBe(204);
+    expect(identity).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        configuration: expect.objectContaining({ issuedAfter: restoredAt }),
+      }),
+    );
+    expect(
+      await database
+        .prepare(
+          "SELECT generation,workflow_attempt,plan_visual_required FROM pre_run_checks ORDER BY generation",
+        )
+        .all(),
+    ).toMatchObject({
+      results: [
+        { generation: 0, workflow_attempt: 1, plan_visual_required: 1 },
+        { generation: 1, workflow_attempt: 2, plan_visual_required: 1 },
+      ],
+    });
+    expect(fixture.state.posts).toBe(2);
+  });
+
+  async function restoredMergePlanFixture() {
+    const { fixture, plan, report, identity } = planFixture();
+    const group = {
+      repositoryId: "100",
+      headSha: mergeSha,
+      headRef: "refs/heads/gh-readonly-queue/main/pr-7",
+      baseSha,
+      baseRef: "refs/heads/main",
+    };
+    await database
+      .prepare(
+        "INSERT INTO ingest_merge_groups(head_sha,metadata_json,delivery_id) VALUES(?,?,'old-group-delivery') ON CONFLICT(head_sha) DO UPDATE SET metadata_json=excluded.metadata_json,active=1",
+      )
+      .bind(mergeSha, JSON.stringify(group))
+      .run();
+    fixture.state.run.event = "merge_group";
+    fixture.state.run.head_sha = mergeSha;
+    fixture.state.run.head_branch = group.headRef.slice("refs/heads/".length);
+    identity.mockImplementation(async ({ request }) => ({
+      ...request,
+      jobId: "104",
+      checkRunId: "104",
+      event: "merge_group",
+      ref: group.headRef,
+      sourceHead: mergeSha,
+      targetHead: baseSha,
+      mergeGroup: group,
+    }));
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
+      testedSha: mergeSha,
+      sourceSha: mergeSha,
+      baseSha,
+      kind: "merge_group",
+      ref: group.headRef,
+      pullRequestNumber: null,
+      docsOnly: false,
+    });
+    expect((await report(true)).status).toBe(204);
+    const original = await database
+      .prepare("SELECT * FROM pre_run_checks WHERE generation=0")
+      .first();
+    await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    const restored = await database
+      .prepare("SELECT * FROM pre_run_checks WHERE generation=0")
+      .first();
+    fixture.state.run.run_attempt = 2;
+    plan.run_attempt = 2;
+    return { fixture, plan, report, identity, group, original, restored };
+  }
+
+  it("recreates a merge-group Plan after recovery without another checks-requested delivery", async () => {
+    const { fixture, report, original, restored } = await restoredMergePlanFixture();
+    expect((await report(true, "success", 2)).status).toBe(204);
+    expect(
+      await database.prepare("SELECT * FROM pre_run_checks WHERE generation=0").first(),
+    ).toEqual(restored);
+    expect(original).toMatchObject({ workflow_attempt: 1, plan_visual_required: 1 });
+    expect(
+      await database
+        .prepare(
+          "SELECT generation,workflow_attempt,plan_visual_required FROM pre_run_checks ORDER BY generation",
+        )
+        .all(),
+    ).toMatchObject({
+      results: [
+        { generation: 0, workflow_attempt: 1, plan_visual_required: 1 },
+        { generation: 1, workflow_attempt: 2, plan_visual_required: 1 },
+      ],
+    });
+    expect(fixture.state.posts).toBe(2);
+    expect((await report(true, "success", 2)).status).toBe(204);
+    expect(fixture.state.posts).toBe(2);
+  });
+
+  it.each(["missing metadata", "inactive metadata", "repository", "base", "changed ref"])(
+    "does not create a merge-group check after recovery with %s",
+    async (change) => {
+      const { fixture, report, group } = await restoredMergePlanFixture();
+      if (change === "missing metadata") {
+        await database
+          .prepare("DELETE FROM ingest_merge_groups WHERE head_sha=?")
+          .bind(mergeSha)
+          .run();
+      } else if (change === "inactive metadata") {
+        await database
+          .prepare("UPDATE ingest_merge_groups SET active=0 WHERE head_sha=?")
+          .bind(mergeSha)
+          .run();
+      } else if (change === "changed ref") {
+        fixture.state.refSha = "f".repeat(40);
+      } else {
+        const metadata = {
+          ...group,
+          repositoryId: change === "repository" ? "999" : group.repositoryId,
+          baseSha: change === "base" ? "f".repeat(40) : group.baseSha,
+        };
+        await database
+          .prepare("UPDATE ingest_merge_groups SET metadata_json=? WHERE head_sha=?")
+          .bind(JSON.stringify(metadata), mergeSha)
+          .run();
+      }
+      await expect(report(true, "success", 2)).rejects.toMatchObject({
+        code: "workflow_candidate",
+      });
+      expect(fixture.state.posts).toBe(1);
+      expect(
+        await database
+          .prepare(
+            "SELECT workflow_attempt,plan_visual_required FROM pre_run_checks WHERE generation=0",
+          )
+          .first(),
+      ).toEqual({ workflow_attempt: 1, plan_visual_required: 1 });
+    },
+  );
+
+  it("rejects a fresh token for a fixed restored attempt before creating another check", async () => {
+    const { fixture, plan, report, restored } = await restoredMergePlanFixture();
+    fixture.state.run.run_attempt = 1;
+    plan.run_attempt = 1;
+    await expect(report(true, "success", 1)).rejects.toMatchObject({
+      code: "restored_attempt",
+      status: 409,
+    });
+    expect(fixture.state.posts).toBe(1);
+    expect(
+      await database.prepare("SELECT * FROM pre_run_checks WHERE generation=0").first(),
+    ).toEqual(restored);
+    expect(await count("pre_run_checks")).toBe(1);
+  });
 
   it.each([false, true])(
     "records explicit app=%s for the current signed attempt",
@@ -3399,5 +3566,317 @@ describe("trusted Plan report with native D1", () => {
     expect(
       await database.prepare("SELECT plan_visual_required FROM pre_run_checks").first(),
     ).toEqual({ plan_visual_required: 1 });
+  });
+});
+
+describe("restored workflow and delivery fencing", () => {
+  afterEach(async () => {
+    await database
+      .prepare("DELETE FROM operations_events WHERE id='restore:activation:secrets-required'")
+      .run();
+    await database.prepare("DELETE FROM github_webhook_recovery").run();
+    vi.restoreAllMocks();
+  });
+
+  it("terminalizes a signed post-restore redelivery of an old charged GUID without replaying it", async () => {
+    const guid = crypto.randomUUID();
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'old-delivery',1,1)",
+      )
+      .bind(guid)
+      .run();
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    await session("after-restore");
+    const result = await deliver("installation", { action: "deleted", installation, sender }, guid);
+    expect(result.response?.status).toBe(202);
+    expect(await count("session")).toBe(1);
+    expect(await count("auth_audit")).toBe(0);
+    expect(await processed(guid)).toBeTypeOf("number");
+    expect(
+      await database
+        .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+        .bind(guid)
+        .first(),
+    ).toEqual({ payload_json: "{}" });
+    expect(
+      await database
+        .prepare(
+          "SELECT attempts,last_requested_at,resolved_at FROM github_webhook_recovery WHERE guid=?",
+        )
+        .bind(guid)
+        .first(),
+    ).toEqual({ attempts: 1, last_requested_at: 1, resolved_at: null });
+    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
+  });
+
+  it.each([
+    { timing: "before the cutoff", offset: -1, sessions: 1, audits: 0 },
+    { timing: "at the cutoff", offset: 0, sessions: 1, audits: 0 },
+    { timing: "after the cutoff", offset: 1, sessions: 0, audits: 1 },
+  ])(
+    "uses a late receipt stored $timing for a later signed duplicate",
+    async ({ offset, sessions, audits }) => {
+      const cutoff = Date.now() - 1000;
+      await sanitizeRestoredDatabase(database, cutoff);
+      await session("after-restore");
+      const guid = crypto.randomUUID();
+      const payload = { action: "deleted", installation, sender };
+      const webhook = await security.verifyGitHubWebhook({
+        request: await request("installation", payload, guid),
+        secret,
+        repositoryId: bindings.configuration.github.repositoryId,
+      });
+      // Insert the original receipt after sanitation, before its signed replay.
+      const receivedAt = cutoff + offset;
+      await persistWebhook(database, { ...webhook, receivedAt });
+      expect(await processed(guid)).toBeNull();
+      expect(await count("github_webhook_recovery")).toBe(0);
+
+      const result = await deliver("installation", payload, guid);
+      expect(result.response?.status).toBe(202);
+      expect(await count("session")).toBe(sessions);
+      expect(await count("auth_audit")).toBe(audits);
+      expect(await processed(guid)).toBeTypeOf("number");
+      expect(
+        await database
+          .prepare(
+            "SELECT delivery_id,event,payload_digest,received_at,payload_json FROM github_webhook_delivery WHERE delivery_id=?",
+          )
+          .bind(guid)
+          .first(),
+      ).toEqual({
+        delivery_id: guid,
+        event: webhook.event,
+        payload_digest: webhook.payloadDigest,
+        received_at: receivedAt,
+        payload_json: "{}",
+      });
+      expect(await count("github_webhook_recovery")).toBe(0);
+      expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
+    },
+  );
+
+  it.each(["direct", "reconciled"])(
+    "terminalizes an old charged GUID through %s processing",
+    async (path) => {
+      const guid = crypto.randomUUID();
+      await database
+        .prepare(
+          "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'old-delivery',1,1)",
+        )
+        .bind(guid)
+        .run();
+      await sanitizeRestoredDatabase(database, Date.now() - 1000);
+      await session("after-restore");
+      const webhook = {
+        deliveryId: guid,
+        event: "installation",
+        payloadDigest: "a".repeat(64),
+        payload: { action: "deleted", installation, sender },
+        receivedAt: Date.now(),
+      };
+      await persistWebhook(database, webhook);
+      if (path === "direct") {
+        await processWebhook(apiContext(bindings), webhook);
+      } else {
+        expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 1, pending: [] });
+      }
+      expect(await count("session")).toBe(1);
+      expect(await count("auth_audit")).toBe(0);
+      expect(await processed(guid)).toBeTypeOf("number");
+      expect(
+        await database
+          .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+          .bind(guid)
+          .first(),
+      ).toEqual({ payload_json: "{}" });
+      expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
+    },
+  );
+
+  it("settles late pre-cutoff receipts within the requested batch without replaying them", async () => {
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    await session("after-restore");
+    const guids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+    for (const guid of guids) {
+      await persistWebhook(database, {
+        deliveryId: guid,
+        event: "installation",
+        payloadDigest: "a".repeat(64),
+        payload: { action: "deleted", installation, sender },
+        receivedAt: 1,
+      });
+    }
+    const report = await reconcileWebhooks(apiContext(bindings), 2);
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM github_webhook_delivery WHERE processed_at IS NULL")
+        .first(),
+    ).toEqual({ count: 1 });
+    expect(report).toEqual({ checked: 2, pending: [] });
+    expect(await count("session")).toBe(1);
+    expect(await count("auth_audit")).toBe(0);
+    expect(await reconcileWebhooks(apiContext(bindings), 2)).toEqual({ checked: 1, pending: [] });
+    expect(await reconcileWebhooks(apiContext(bindings), 2)).toEqual({ checked: 0, pending: [] });
+    expect(await count("session")).toBe(1);
+    expect(await count("auth_audit")).toBe(0);
+    for (const guid of guids) {
+      expect(await processed(guid)).toBeTypeOf("number");
+      expect(
+        await database
+          .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+          .bind(guid)
+          .first(),
+      ).toEqual({ payload_json: "{}" });
+    }
+  });
+
+  it("processes a fresh signed GUID after recovery while keeping old charges", async () => {
+    const oldGuid = crypto.randomUUID();
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'old-delivery',1,1)",
+      )
+      .bind(oldGuid)
+      .run();
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    await session("after-restore");
+    const result = await deliver("installation", { action: "deleted", installation, sender });
+    expect(result.response?.status).toBe(202);
+    expect(await count("session")).toBe(0);
+    expect(await count("auth_audit")).toBe(1);
+    expect(await processed(result.deliveryId)).toBeTypeOf("number");
+    expect(
+      await database
+        .prepare(
+          "SELECT attempts,last_requested_at,resolved_at FROM github_webhook_recovery WHERE guid=?",
+        )
+        .bind(oldGuid)
+        .first(),
+    ).toEqual({ attempts: 1, last_requested_at: 1, resolved_at: null });
+  });
+
+  it("does not replay an old lifecycle delivery against a new session", async () => {
+    const payload = { action: "deleted", installation, sender };
+    await persistWebhook(database, {
+      deliveryId: crypto.randomUUID(),
+      event: "installation",
+      payloadDigest: "a".repeat(64),
+      payload,
+      receivedAt: 1,
+    });
+    await sanitizeRestoredDatabase(database, Date.now());
+    await session("after-restore");
+    const report = await reconcileWebhooks(apiContext(bindings));
+    expect(await count("session")).toBe(1);
+    expect(await count("auth_audit")).toBe(0);
+    expect(report).toEqual({ checked: 0, pending: [] });
+    const fresh = {
+      deliveryId: crypto.randomUUID(),
+      event: "installation",
+      payloadDigest: "b".repeat(64),
+      payload,
+      receivedAt: Date.now() + 1,
+    };
+    await persistWebhook(database, fresh);
+    await processWebhook(apiContext(bindings), fresh);
+    expect(await count("session")).toBe(0);
+    expect(await count("auth_audit")).toBe(1);
+  });
+
+  it.each(["active", "ambiguous", "creating"])(
+    "keeps a restored %s unbound main check read-only",
+    async (state) => {
+      const fixture = preRunFixture();
+      await database
+        .prepare(
+          "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,state,lease_until,created_at,updated_at) VALUES(?,0,'100',?,?,'main','refs/heads/main',0,'old-main',?,0,1,1)",
+        )
+        .bind(mergeSha, mergeSha, mergeSha, state)
+        .run();
+      await sanitizeRestoredDatabase(database, Date.now());
+      const request = vi.spyOn(fixture.github, "request");
+      const context = apiContext({
+        ...preRunBindings,
+        configuration: {
+          ...preRunBindings.configuration,
+          workflowOwned: {
+            ...preRunConfiguration,
+            trustedWorkflowPath: ".github/workflows/app.yml",
+          },
+        },
+      });
+      expect(await retireUnpinnedMainChecks(context, 25, fixture.github)).toEqual({
+        checked: 0,
+        pending: [],
+      });
+      expect(request).not.toHaveBeenCalled();
+      expect(
+        await database
+          .prepare("SELECT state FROM pre_run_checks WHERE external_id='old-main'")
+          .first(),
+      ).toEqual({ state });
+    },
+  );
+
+  it("does not lease or reconcile a submitted stage from before the restore", async () => {
+    const createdAt = Date.now() - 1000;
+    await database
+      .prepare(
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at) VALUES('old-stage','100','321',1,?,'digest',?,?,?,?, '{}',?,?)",
+      )
+      .bind(
+        mergeSha,
+        preRunConfiguration.callerWorkflowPath,
+        preRunConfiguration.reusableWorkflowRef,
+        preRunConfiguration.captureJobPrefix,
+        preRunConfiguration.submitJobName,
+        createdAt,
+        createdAt,
+      )
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at,plan_visual_required) VALUES(?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,'old-stage-check','active','321',1,?,?,1)",
+      )
+      .bind(mergeSha, sourceSha, baseSha, createdAt, createdAt)
+      .run();
+    await sanitizeRestoredDatabase(database, Date.now());
+    const report = await reconcileStagedWorkflows(apiContext(preRunBindings));
+    expect(
+      await database.prepare("SELECT materialization_lease_until FROM ingest_staged_runs").first(),
+    ).toEqual({
+      materialization_lease_until: null,
+    });
+    expect(await count("visonaut_runs")).toBe(0);
+    expect(report).toEqual({ checked: 0, progressed: 0, errors: [] });
+  });
+
+  it("creates a fresh check generation for a new capture at the same tested SHA", async () => {
+    const fixture = preRunFixture();
+    const candidate = {
+      testedSha: mergeSha,
+      sourceSha,
+      baseSha,
+      kind: "pull_request" as const,
+      ref: "refs/pull/7/merge",
+      pullRequestNumber: 7,
+      docsOnly: false,
+    };
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    expect(
+      await database
+        .prepare("SELECT generation,external_id FROM pre_run_checks ORDER BY generation")
+        .all(),
+    ).toMatchObject({
+      results: [
+        { generation: 0, external_id: `visonaut:pre:${mergeSha}` },
+        { generation: 1, external_id: `visonaut:pre:${mergeSha}:1` },
+      ],
+    });
   });
 });

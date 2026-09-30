@@ -6,6 +6,7 @@ import {
 } from "@visonaut/security";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationsContext } from "./types.ts";
+import { restoreCutoffSql, restoredDeliveryGuidSql } from "./recovery.ts";
 
 interface Delivery {
   id: number;
@@ -113,8 +114,10 @@ export async function recoverGitHubDeliveries({
   }
   await resolveEvents(context.database, "upstream-webhook", "receiver", context.now());
   const cursor = await context.database
-    .prepare("SELECT value FROM operations_cursors WHERE id='github-delivery-page'")
-    .first<{ value: string | null }>();
+    .prepare(
+      `SELECT (SELECT value FROM operations_cursors WHERE id='github-delivery-page') AS value,${restoreCutoffSql} AS restored_at`,
+    )
+    .first<{ value: string | null; restored_at: number }>();
   const query = new URLSearchParams({ per_page: "100" });
   if (cursor?.value) query.set("cursor", cursor.value);
   const response = await request(`/app/hook/deliveries?${query}`);
@@ -143,6 +146,7 @@ export async function recoverGitHubDeliveries({
   )) {
     if (seen.has(delivery.guid)) continue;
     seen.add(delivery.guid);
+    if (Date.parse(delivery.delivered_at) <= (cursor?.restored_at ?? 0)) continue;
     if (
       delivery.repository_id !== null &&
       String(delivery.repository_id) !== configuration.repositoryId
@@ -153,12 +157,15 @@ export async function recoverGitHubDeliveries({
       String(delivery.installation_id) !== configuration.installationId
     )
       continue;
-    const received = await context.database
-      .prepare("SELECT 1 AS found FROM github_webhook_delivery WHERE delivery_id=?")
-      .bind(delivery.guid)
-      .first();
+    const receipt = await context.database
+      .prepare(`SELECT EXISTS(SELECT 1 FROM github_webhook_delivery WHERE delivery_id=?) AS received,
+        ${restoredDeliveryGuidSql("?")} AS restored`)
+      .bind(delivery.guid, delivery.guid)
+      .first<{ received: number; restored: number }>();
+    // A later redelivery time must not restart an already charged restored GUID.
+    if (receipt?.restored) continue;
     if (
-      received ||
+      receipt?.received ||
       (delivery.status_code !== null && delivery.status_code >= 200 && delivery.status_code < 400)
     ) {
       await context.database

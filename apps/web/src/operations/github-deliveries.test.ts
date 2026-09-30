@@ -1,6 +1,7 @@
 import { exportPKCS8, generateKeyPair } from "jose";
 import { afterEach, beforeAll, expect, it } from "vitest";
 import { recoverGitHubDeliveries } from "./github-deliveries.ts";
+import { sanitizeRestoredDatabase } from "./recovery.ts";
 import { context, TestDatabase } from "./test-fixtures.ts";
 
 let privateKey: string;
@@ -28,6 +29,8 @@ function fixture() {
   let status = 503;
   let posts = 0;
   let receiver = `${operations.origin}/v1/webhooks`;
+  let deliveredAt = "2026-09-29T12:00:00Z";
+  let deliveryGuid = guid;
   const fetcher: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const headers = new Headers(init?.headers);
@@ -40,8 +43,8 @@ function fixture() {
     return Response.json([
       {
         id: 1,
-        guid,
-        delivered_at: "2026-09-29T12:00:00Z",
+        guid: deliveryGuid,
+        delivered_at: deliveredAt,
         event: "workflow_run",
         repository_id: 100,
         installation_id: 456,
@@ -60,6 +63,12 @@ function fixture() {
     },
     setReceiver: (value: string) => {
       receiver = value;
+    },
+    setDeliveredAt: (value: string) => {
+      deliveredAt = value;
+    },
+    setGuid: (value: string) => {
+      deliveryGuid = value;
     },
   };
 }
@@ -144,4 +153,73 @@ it("charges an ambiguous POST and does not retry before the cooldown", async () 
   expect(
     test.database.connection.prepare("SELECT attempts FROM github_webhook_recovery").get(),
   ).toEqual({ attempts: 1 });
+});
+
+it("does not replay pre-restore deliveries or reset their charged attempts", async () => {
+  const test = fixture();
+  const restoredAt = Date.UTC(2026, 8, 30);
+  test.operations.now = () => restoredAt;
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,?,1,0)",
+    )
+    .run(guid, "1");
+  await sanitizeRestoredDatabase(test.database, restoredAt);
+  expect(
+    await recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher: test.fetcher,
+    }),
+  ).toEqual({ checked: 1, requested: 0 });
+  expect(test.posts()).toBe(0);
+  expect(
+    test.database.connection
+      .prepare("SELECT attempts,last_requested_at FROM github_webhook_recovery")
+      .get(),
+  ).toEqual({ attempts: 1, last_requested_at: 0 });
+  // A new redelivery timestamp does not make the old GUID a new event.
+  test.setDeliveredAt(new Date(restoredAt + 1000).toISOString());
+  expect(
+    await recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher: test.fetcher,
+    }),
+  ).toEqual({ checked: 1, requested: 0 });
+  expect(
+    test.database.connection
+      .prepare("SELECT attempts,last_requested_at,resolved_at FROM github_webhook_recovery")
+      .get(),
+  ).toEqual({ attempts: 1, last_requested_at: 0, resolved_at: null });
+});
+
+it("can recover a new delivery after restore without erasing earlier charges", async () => {
+  const test = fixture();
+  const restoredAt = Date.UTC(2026, 8, 30);
+  test.operations.now = () => restoredAt + 2000;
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,?,1,0)",
+    )
+    .run(guid, "1");
+  await sanitizeRestoredDatabase(test.database, restoredAt);
+  test.setDeliveredAt(new Date(restoredAt + 1000).toISOString());
+  test.setGuid("12345678-1234-1234-1234-123456789abd");
+  expect(
+    await recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher: test.fetcher,
+    }),
+  ).toEqual({ checked: 1, requested: 1 });
+  expect(test.posts()).toBe(1);
+  expect(
+    test.database.connection
+      .prepare("SELECT guid,attempts FROM github_webhook_recovery ORDER BY guid")
+      .all(),
+  ).toEqual([
+    { guid, attempts: 1 },
+    { guid: "12345678-1234-1234-1234-123456789abd", attempts: 1 },
+  ]);
 });

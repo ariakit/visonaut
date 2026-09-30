@@ -3,12 +3,105 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
-import { sanitizeRestoredDatabase, inspectRecoveryImages } from "./recovery.ts";
+import { sanitizeRestoredDatabase, inspectRecoveryImages, readRestoreCutoff } from "./recovery.ts";
 import { TestDatabase, captured, context } from "./test-fixtures.ts";
 import { archiveClosedRuns } from "./history.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
+import { publishReviewLinks } from "./review-links.ts";
+import { createRunExport, streamRunExport } from "./exports.ts";
+import { readTar } from "./export-scale-reader.ts";
+import { profile, sha256 } from "./export-scale-fixture.ts";
+import { digestJson } from "@visonaut/protocol";
+import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
+
+it("keeps an accepted restored PR read-only without preventing a fresh capture", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context, "restored-pr");
+  database.connection.exec(`
+    UPDATE visonaut_runs SET state='accepted',lineage_key='pr:7' WHERE id='restored-pr';
+    INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at)
+      VALUES('${"a".repeat(40)}',0,'123','${"b".repeat(40)}','${"c".repeat(40)}','pull_request','refs/pull/7/merge',7,0,'old-check','active','restored-pr',1,1,1);
+  `);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    if (path === "/repos/owner/repo/pulls/7") {
+      return {
+        state: "open",
+        head: { sha: "b".repeat(40), repo: { id: 123 } },
+        base: { ref: "main", repo: { id: 123 } },
+      };
+    }
+    return request(path, init);
+  };
+  await sanitizeRestoredDatabase(database, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  expect(fixture.state.posts).toBe(0);
+  expect(fixture.state.patches).toBe(0);
+  expect(await database.prepare("SELECT state,active FROM visonaut_runs").first()).toEqual({
+    state: "accepted",
+    active: 0,
+  });
+  fixture.state.time += 1;
+  await captured(fixture.context, "fresh-pr");
+  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='fresh-pr'").run();
+  await database
+    .prepare(
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES(?,1,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'new-check','active','fresh-pr',1,?,?)",
+    )
+    .bind("a".repeat(40), "b".repeat(40), "c".repeat(40), fixture.state.time, fixture.state.time)
+    .run();
+  await publishReviewLinks(fixture.context);
+  expect(fixture.state.posts).toBe(1);
+  expect(
+    await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
+  ).toEqual({
+    target_external_id: "new-check",
+  });
+});
+
+it("retains the latest cutoff and permits a fresh capture and complete manual export", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context, "old");
+  const oldBytes = fixture.images.objects.get("runs/old/original");
+  await sanitizeRestoredDatabase(database, fixture.state.time);
+  await database
+    .prepare(
+      "UPDATE operations_events SET resolved_at=? WHERE id='restore:activation:secrets-required'",
+    )
+    .bind(fixture.state.time)
+    .run();
+  expect(await readRestoreCutoff(database)).toBe(fixture.state.time);
+  fixture.state.time += 1;
+  await sanitizeRestoredDatabase(database, fixture.state.time);
+  expect(await readRestoreCutoff(database)).toBe(fixture.state.time);
+  await sanitizeRestoredDatabase(database, fixture.state.time - 1);
+  expect(await readRestoreCutoff(database)).toBe(fixture.state.time);
+  fixture.state.time += 1;
+  await captured(fixture.context, "fresh");
+  const digest = await digestJson(profile);
+  await storeCaptureProfiles(database, [{ digest, profile }]);
+  await database
+    .prepare("UPDATE visonaut_captures SET profile_digest=?,metadata_json=? WHERE run_id='fresh'")
+    .bind(digest, JSON.stringify({ profile: captureProfileReference(digest) }))
+    .run();
+  const exported = await createRunExport(fixture.context, {
+    runId: "fresh",
+    actorId: "maintainer",
+  });
+  const result = await readTar({
+    response: await streamRunExport(fixture.context, exported.exportId),
+  });
+  expect(result.entries.has("complete.json")).toBe(true);
+  expect([...result.entries.values()].filter((entry) => entry.name.startsWith("images/"))).toEqual([
+    expect.objectContaining({ digest: sha256("original-image-bytes"), bytes: 20 }),
+  ]);
+  expect(fixture.images.objects.get("runs/old/original")).toEqual(oldBytes);
+  expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+});
 
 it.each(["building", "ready", "failed", "expired"])(
   "releases %s export ownership so restored snapshot bytes can expire",
@@ -258,8 +351,8 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
   const before = database.connection
     .prepare("SELECT active,state,closed_at FROM visonaut_runs")
     .all();
-  database.connection.exec(`CREATE TRIGGER interrupt_restore BEFORE DELETE ON work_retention_pins
-    WHEN OLD.reason='review' BEGIN SELECT RAISE(ABORT,'injected restore failure'); END`);
+  database.connection.exec(`CREATE TRIGGER interrupt_restore BEFORE INSERT ON operations_events
+    WHEN NEW.id='restore:activation:secrets-required' BEGIN SELECT RAISE(ABORT,'injected restore failure'); END`);
   await expect(sanitizeRestoredDatabase(database, fixture.state.time)).rejects.toThrow(
     "injected restore failure",
   );
@@ -274,6 +367,7 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
   ]);
   expect(database.connection.prepare("SELECT * FROM operations_exports").all()).toEqual(exports);
   expect(database.connection.prepare("SELECT * FROM visonaut_pins").all()).toEqual(snapshotPins);
+  expect(await readRestoreCutoff(database)).toBe(0);
 });
 
 it("keeps verified history and drops unfinished run and comparison archives independently of auth tables", async () => {

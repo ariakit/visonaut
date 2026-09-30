@@ -16,6 +16,7 @@ import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
 import { reconcileWorkflowJobSet, type ReconciledBundle } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
+import { afterRestoreSql } from "../operations/recovery.ts";
 
 interface StagedImage {
   digest: string;
@@ -111,7 +112,7 @@ export function materializationBatchEnd(images: readonly { bytes: number }[], of
 async function leaseStagedSources(context: ApiContext, stagedRunId: string) {
   const target = await context.database
     .prepare(
-      "SELECT repository_id, workflow_run_id, workflow_attempt, tested_sha, workflow_source_digest, created_at FROM ingest_staged_runs WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL",
+      `SELECT repository_id, workflow_run_id, workflow_attempt, tested_sha, workflow_source_digest, created_at FROM ingest_staged_runs WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL AND ${afterRestoreSql("ingest_staged_runs.created_at")}`,
     )
     .bind(stagedRunId)
     .first<{
@@ -362,7 +363,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   await assertConfiguredProject(context);
   const identity = await context.database
     .prepare(
-      "SELECT tested_sha,workflow_run_id,workflow_attempt FROM ingest_staged_runs WHERE id=?",
+      `SELECT tested_sha,workflow_run_id,workflow_attempt FROM ingest_staged_runs WHERE id=? AND ${afterRestoreSql("ingest_staged_runs.created_at")}`,
     )
     .bind(stagedRunId)
     .first<{ tested_sha: string; workflow_run_id: string; workflow_attempt: number }>();
@@ -634,7 +635,7 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
     .run();
   const runs = await context.database
     .prepare(
-      `SELECT staged.id, staged.workflow_run_id, staged.workflow_attempt, staged.reconcile_failures, staged.missing_original_failures FROM ingest_staged_runs staged LEFT JOIN visonaut_runs run ON run.id = staged.id WHERE staged.repository_id = ? AND staged.retention_state = 'live' AND staged.submitted_at IS NOT NULL AND staged.created_at > ? AND (run.id IS NULL OR (run.active = 1 AND run.sealed_at IS NULL AND run.state = 'uploading')) AND NOT (${failedUnmaterializedStage}) AND NOT EXISTS (SELECT 1 FROM visonaut_runs newer WHERE newer.project_id = ? AND newer.external_run_id = staged.workflow_run_id AND newer.attempt > staged.workflow_attempt AND newer.sealed_at IS NOT NULL) AND (staged.reconcile_failures < ? OR staged.last_checked_at <= ?) ORDER BY COALESCE(staged.last_checked_at, 0), staged.created_at LIMIT ?`,
+      `SELECT staged.id, staged.workflow_run_id, staged.workflow_attempt, staged.reconcile_failures, staged.missing_original_failures FROM ingest_staged_runs staged LEFT JOIN visonaut_runs run ON run.id = staged.id WHERE staged.repository_id = ? AND staged.retention_state = 'live' AND staged.submitted_at IS NOT NULL AND staged.created_at > ? AND ${afterRestoreSql("staged.created_at")} AND (run.id IS NULL OR (run.active = 1 AND run.sealed_at IS NULL AND run.state = 'uploading')) AND NOT (${failedUnmaterializedStage}) AND NOT EXISTS (SELECT 1 FROM visonaut_runs newer WHERE newer.project_id = ? AND newer.external_run_id = staged.workflow_run_id AND newer.attempt > staged.workflow_attempt AND newer.sealed_at IS NOT NULL) AND (staged.reconcile_failures < ? OR staged.last_checked_at <= ?) ORDER BY COALESCE(staged.last_checked_at, 0), staged.created_at LIMIT ?`,
     )
     .bind(
       context.configuration.github.repositoryId,
