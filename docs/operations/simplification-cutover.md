@@ -13,3 +13,52 @@ This sequence separates checked source from external changes. Do not deploy befo
 9. Run package registry preflight, content smoke checks, source readiness checks, and provenance verification for every manual release.
 
 GitHub App webhook mutation, production migrations, deployment, required rules, secret moves, resource retirement, hosted restore drills, and npm publication need separate external authorization and one external owner. These steps cannot be replaced by a local build result. Worker code rollback does not revert database or resource changes. Record the source, exact environment/resources, date, outcome, and readback evidence after each step.
+
+## One-time conversion runner
+
+Use the standalone [runner](../../apps/web/tooling/simplification-cutover/run.mjs) before deployment. Run it from the repository root with the pinned Node 24.18.0 and pnpm 12.5.1. It bundles only its selected conversion imports with the web workspace's existing Vite dependency. It does not load the web Vite configuration or environment files. The default action is local inspection against empty ephemeral D1/R2 state. This default is not a remote readiness check.
+
+```sh
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs --help
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs inspect \
+  --local --environment preview --persist-path /absolute/path/to/.wrangler/state/v3
+```
+
+Inspection reads the applied migration names and table columns before it runs readiness SQL. An absent `0024_core_simplification.sql` record, missing table, or missing required column produces `schemaReady:false`, `gatesReady:false`, and null readiness counts. It cannot turn unknown counts into zero. Apply the pending numbered migrations as a separate authorized step against the same checked target. The 2026-09-29 inventory has production through `0023` and preview through `0022`; both targets require the new schema before conversion.
+
+Remote inspection requires an explicit action, environment, D1 UUID, and IMAGES bucket. The account is fixed to the checked inventory account. The temporary private Wrangler config contains only DB and IMAGES with each binding set to `remote:true`; it contains no preview ID overrides, routes, consumers, cron, Containers, secrets, quarantine, or service bindings. Local data persistence and environment files are disabled for remote use. The runner disposes the binding session and removes its temporary config.
+
+```sh
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs inspect \
+  --remote --environment preview \
+  --database-id 395b539c-c423-4ce4-887c-a5792792a63b \
+  --images-bucket visonaut-preview-images
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs inspect \
+  --remote --environment production \
+  --database-id 15fcd402-dccb-4359-a1ce-280ff67ca596 \
+  --images-bucket visonaut-production-images
+```
+
+Remote application inspection does not change application data. Wrangler session setup uploads an ephemeral edge-preview proxy and can register a `workers.dev` subdomain if the account has none. Session setup is a provider write and requires separate authorization and credentials that permit the binding session as well as D1/R2 access. Do not assume a D1 read token can start this session. Keep Wrangler diagnostic logs private and outside Git; the report does not contain session credentials or its temporary hostname.
+
+Before conversion, the external owner must coordinate the selected target's HTTP writers, cron, queue consumers, and old workflow attempts. Keep ordinary recovery and retention offline until the selected gates and byte readback pass. `VISONAUT_LAUNCH_ENABLED=false` does not fence writes. The runner cannot establish or verify this fence. `--acknowledge-write-fence` records the operator's acknowledgement; it is not fence evidence.
+
+```sh
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs convert \
+  --remote --environment preview \
+  --database-id 395b539c-c423-4ce4-887c-a5792792a63b \
+  --images-bucket visonaut-preview-images \
+  --acknowledge-write-fence
+pnpm exec node apps/web/tooling/simplification-cutover/run.mjs convert \
+  --remote --environment production \
+  --database-id 15fcd402-dccb-4359-a1ce-280ff67ca596 \
+  --images-bucket visonaut-production-images \
+  --acknowledge-write-fence
+```
+
+Conversion calls only `convertSourceBaselines` and `summarizeClosedRuns`. Each turn selects baseline conversion while required protected snapshots remain, then closed history. A turn uses one candidate and two objects, with the existing 16 MiB object bound and 12-minute error backoff. One turn is the default; `--max-turns 2` through `--max-turns 10` sets a finite cap. Attention or no progress stops the loop. Repeat bounded calls from saved progress after inspecting the report. Do not clear cursors or resolve events manually to force readiness. The runner makes no queue publication, GitHub request, promotion, ordinary recovery, retention, schema migration, restore, access change, or R2 deletion.
+
+Baseline conversion writes D1 owner pins, pointers, restoration receipts, and cursors. It can copy a missing original from a protected R2 object and keeps the protected bytes. The Node adapter buffers at most one object within the configured bound; it preserves conditional upload options and the existing SHA-256 verification and destination readback. Summary completion writes permanent rows and decisions, then removes detailed native D1 state. This D1 change is destructive. An incomplete conversion keeps its source evidence and reports attention.
+
+Exit `0` means the selected aggregate conversion gates pass. Exit `2` means they do not pass, including missing schema, a turn cap, attention, or no progress. Exit `1` means an invalid option or runtime/binding failure. Save the JSON report beside the dated target receipt. Aggregate gates do not prove the selected R2 inventory, complete rendering/profile conversion, hosted recovery, Container drain, upstream authorization checks, or the write fence. Keep those separate evidence requirements in the cutover sequence.
