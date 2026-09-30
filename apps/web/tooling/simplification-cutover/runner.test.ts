@@ -44,41 +44,112 @@ it.each([
   expect(createPlatform).not.toHaveBeenCalled();
 });
 
-it("creates only the exact DB and IMAGES config for an explicitly selected remote inspect", async () => {
+it.each([
+  {
+    environment: "production",
+    workerName: "visonaut-compare",
+    databaseName: "visonaut-production",
+    databaseId: "15fcd402-dccb-4359-a1ce-280ff67ca596",
+    imagesBucket: "visonaut-production-images",
+  },
+  {
+    environment: "preview",
+    workerName: "visonaut-preview-compare",
+    databaseName: "visonaut-preview",
+    databaseId: "395b539c-c423-4ce4-887c-a5792792a63b",
+    imagesBucket: "visonaut-preview-images",
+  },
+])(
+  "uses the existing $workerName with only the exact DB and IMAGES remote bindings",
+  async (target) => {
+    using database = new TestDatabase();
+    const imageCalls = { get: vi.fn(), put: vi.fn() };
+    const dispose = vi.fn(async () => {});
+    let configPath = "";
+    const report = await runCutover(
+      [
+        "inspect",
+        "--remote",
+        "--environment",
+        target.environment,
+        "--database-id",
+        target.databaseId,
+        "--images-bucket",
+        target.imagesBucket,
+      ],
+      async (options) => {
+        configPath = options.configPath ?? "";
+        const config = JSON.parse(await readFile(configPath, "utf8"));
+        expect(config).toEqual({
+          name: target.workerName,
+          account_id: "b04f3af3f0f10a6b9481bc23ba974eca",
+          compatibility_date: "2026-09-22",
+          compatibility_flags: ["nodejs_compat"],
+          d1_databases: [
+            {
+              binding: "DB",
+              database_name: target.databaseName,
+              database_id: target.databaseId,
+              remote: true,
+            },
+          ],
+          r2_buckets: [{ binding: "IMAGES", bucket_name: target.imagesBucket, remote: true }],
+        });
+        expect((await stat(configPath)).mode & 0o777).toBe(0o600);
+        expect(options).toEqual({ configPath, envFiles: [], persist: false, remoteBindings: true });
+        return { env: { DB: database, IMAGES: imageCalls }, dispose };
+      },
+    );
+    expect(report.readback.schemaReady).toBe(false);
+    expect(imageCalls.get).not.toHaveBeenCalled();
+    expect(imageCalls.put).not.toHaveBeenCalled();
+    expect(dispose).toHaveBeenCalledOnce();
+    await expect(stat(configPath)).rejects.toMatchObject({ code: "ENOENT" });
+  },
+);
+
+it("keeps repeated local sessions random and isolated from existing comparator names", async () => {
   using database = new TestDatabase();
-  const imageCalls = { get: vi.fn(), put: vi.fn() };
+  const names: string[] = [];
   const dispose = vi.fn(async () => {});
-  let configPath = "";
-  const report = await runCutover(["inspect", ...remoteSelection], async (options) => {
-    configPath = options.configPath ?? "";
-    const config = JSON.parse(await readFile(configPath, "utf8"));
-    expect(Object.keys(config).sort()).toEqual([
-      "account_id",
-      "compatibility_date",
-      "compatibility_flags",
-      "d1_databases",
-      "name",
-      "r2_buckets",
-    ]);
-    expect(config).toMatchObject({
-      account_id: "b04f3af3f0f10a6b9481bc23ba974eca",
-      d1_databases: [
+  for (let index = 0; index < 2; index++) {
+    await runCutover([], async (options) => {
+      const config = JSON.parse(await readFile(options.configPath ?? "", "utf8"));
+      expect(config.name).toMatch(/^visonaut-cutover-[a-f0-9-]{36}$/);
+      names.push(config.name);
+      expect(config.d1_databases).toEqual([
         {
           binding: "DB",
-          database_name: "visonaut-production",
-          database_id: "15fcd402-dccb-4359-a1ce-280ff67ca596",
-          remote: true,
+          database_name: "visonaut-preview",
+          database_id: "395b539c-c423-4ce4-887c-a5792792a63b",
+          remote: false,
         },
-      ],
-      r2_buckets: [{ binding: "IMAGES", bucket_name: "visonaut-production-images", remote: true }],
+      ]);
+      expect(config.r2_buckets).toEqual([
+        { binding: "IMAGES", bucket_name: "visonaut-preview-images", remote: false },
+      ]);
+      expect(options).toMatchObject({ envFiles: [], persist: false, remoteBindings: false });
+      return { env: { DB: database, IMAGES: { get: vi.fn(), put: vi.fn() } }, dispose };
     });
-    expect((await stat(configPath)).mode & 0o777).toBe(0o600);
-    expect(options).toMatchObject({ envFiles: [], persist: false, remoteBindings: true });
-    return { env: { DB: database, IMAGES: imageCalls }, dispose };
+  }
+  expect(names[0]).not.toBe(names[1]);
+  expect(dispose).toHaveBeenCalledTimes(2);
+});
+
+it("disposes a selected remote session and removes its config after inspection fails", async () => {
+  using database = new TestDatabase();
+  vi.spyOn(database, "prepare").mockImplementation(() => {
+    throw new Error("inspection failed");
   });
-  expect(report.readback.schemaReady).toBe(false);
-  expect(imageCalls.get).not.toHaveBeenCalled();
-  expect(imageCalls.put).not.toHaveBeenCalled();
+  const dispose = vi.fn(async () => {});
+  let configPath = "";
+  await expect(
+    runCutover(["inspect", ...remoteSelection], async (options) => {
+      configPath = options.configPath ?? "";
+      expect(JSON.parse(await readFile(configPath, "utf8")).name).toBe("visonaut-compare");
+      return { env: { DB: database, IMAGES: { get: vi.fn(), put: vi.fn() } }, dispose };
+    }),
+  ).rejects.toThrow("inspection failed");
   expect(dispose).toHaveBeenCalledOnce();
   await expect(stat(configPath)).rejects.toMatchObject({ code: "ENOENT" });
 });
