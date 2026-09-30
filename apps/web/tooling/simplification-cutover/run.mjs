@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const webRequire = createRequire(new URL("../../package.json", import.meta.url));
+let failureStage = "before-bindings";
 
 try {
   if (process.versions.node !== "24.18.0") {
@@ -33,16 +34,43 @@ try {
     console.log(help);
   } else {
     const { getPlatformProxy } = webRequire("wrangler");
-    const report = await runCutover(argumentsList, getPlatformProxy);
+    const report = await runCutover(argumentsList, async (options) => {
+      failureStage = "binding-setup";
+      const platform = await getPlatformProxy(options);
+      failureStage = "after-bindings";
+      return platform;
+    });
     console.log(JSON.stringify(report, null, 2));
     process.exitCode = report.readback.gatesReady ? 0 : 2;
   }
 } catch (error) {
   // Proxy failures can contain session credentials. Do not print their contents.
-  if (error instanceof Error && error.name === "CutoverOptionsError") {
-    console.error(error.message);
+  if (
+    error instanceof Error &&
+    Object.getOwnPropertyDescriptor(error, "name")?.value === "CutoverOptionsError"
+  ) {
+    console.error("Invalid cutover options. Run --help.");
   } else {
-    console.error("Cutover runner failed. Check the selected local runtime or binding session.");
+    let knownApiAuthorizationError = false;
+    if (failureStage === "binding-setup") {
+      let cause = error;
+      for (let index = 0; index < 3 && cause !== null && typeof cause === "object"; index++) {
+        const code = Object.getOwnPropertyDescriptor(cause, "code")?.value;
+        // Pinned Wrangler preserves these remote session authorization codes.
+        if ([9106, 10000, 10405].includes(code)) {
+          knownApiAuthorizationError = true;
+          break;
+        }
+        cause = Object.getOwnPropertyDescriptor(cause, "cause")?.value;
+      }
+    }
+    console.error(
+      JSON.stringify({
+        code: "cutover-runner-failed",
+        stage: failureStage,
+        knownApiAuthorizationError,
+      }),
+    );
   }
   process.exitCode = 1;
 }
