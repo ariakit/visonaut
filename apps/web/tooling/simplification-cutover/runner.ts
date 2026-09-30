@@ -27,8 +27,8 @@ const targets = {
 } as const;
 
 const budget = {
-  tasksPerStep: 1,
-  objectsPerStep: 2,
+  tasksPerStep: 25,
+  objectsPerStep: 1000,
   leaseMilliseconds: 720_000,
   maxAttempts: 5,
   maximumObjectBytes: 16_777_216,
