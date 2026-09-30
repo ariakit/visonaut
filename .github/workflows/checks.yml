@@ -75,6 +75,12 @@ jobs:
   test:
     name: Test ${{ matrix.shard }}/3
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init --shm-size=1g
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -93,7 +99,6 @@ jobs:
           cache: pnpm
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium webkit
       - run: pnpm build
       - run: pnpm exec vitest run --shard=${{ matrix.shard }}/3
 
