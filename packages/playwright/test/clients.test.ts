@@ -220,23 +220,33 @@ describe("published adapter and reporter", () => {
 
   it("rejects a batch when its second screenshot returns after the deadline", async () => {
     await using fixture = await runFixture(`
+      import { performance } from 'node:perf_hooks';
       test('late batch screenshot', async ({ page }) => {
         await page.setContent('<p>Capture</p>');
         const screenshot = page.screenshot.bind(page);
+        const now = performance.now.bind(performance);
+        const timeout = 120_000;
         let calls = 0;
         page.screenshot = async (options) => {
           const bytes = await screenshot(options);
           if (++calls === 2) {
-            const finish = Date.now() + 700;
-            while (Date.now() < finish) {}
+            // Expire the adapter clock after the second real screenshot returns.
+            Object.defineProperty(performance, 'now', {
+              configurable: true,
+              value: () => now() + timeout,
+            });
           }
           return bytes;
         };
-        await visualBatch(page, {
-          variant: { key: 'light', browser: 'chromium' },
-          timeout: 500,
-          items: [{ item: 'card/late', clip: { x: 0, y: 0, width: 32, height: 32 } }],
-        }).catch(() => {});
+        try {
+          await expect(visualBatch(page, {
+            variant: { key: 'light', browser: 'chromium' },
+            timeout,
+            items: [{ item: 'card/late', clip: { x: 0, y: 0, width: 32, height: 32 } }],
+          })).rejects.toThrow('Visual capture timed out before pixels stabilized');
+        } finally {
+          Reflect.deleteProperty(performance, 'now');
+        }
         expect(calls).toBe(2);
         console.log('late second screenshot reached');
       });
