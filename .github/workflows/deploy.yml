@@ -8,7 +8,7 @@ on:
       action:
         description: Temporary cutover action; normal deployment remains held
         type: choice
-        options: [inspect, convert]
+        options: [inspect, convert, preview-web, production-fence]
         default: inspect
         required: true
       target:
@@ -19,6 +19,11 @@ on:
         required: true
       write_fence:
         description: HTTP writers, cron, consumers and old attempts are fenced/drained
+        type: boolean
+        default: false
+        required: true
+      consumers_paused:
+        description: Existing consumer queues are paused and their live state was read back
         type: boolean
         default: false
         required: true
@@ -265,4 +270,125 @@ jobs:
           if [ "$cutover_exit" -ne 0 ]; then
             printf '%s\n' 'Cutover stopped; inspect the saved D1 state before another explicit dispatch. No automatic retry.'
             exit 1
+          fi
+
+  web-cutover:
+    needs: verify
+    if: >-
+      github.repository_id == '1380751023' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.consumers_paused == true &&
+      ((inputs.action == 'preview-web' && inputs.target == 'preview') ||
+       (inputs.action == 'production-fence' && inputs.target == 'production'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CI: true
+      WRANGLER_SEND_METRICS: false
+      CLOUDFLARE_ACCOUNT_ID: b04f3af3f0f10a6b9481bc23ba974eca
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 12.5.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Build only the preview application before loading secrets
+        if: inputs.action == 'preview-web'
+        run: env -u CLOUDFLARE_ENV pnpm build
+      - name: Require current main
+        run: node .github/workflows/scripts/deploy-source.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VISONAUT_RELEASE_SOURCE_ONLY: "true"
+      - name: Verify the exact existing secret scope
+        run: node .github/workflows/scripts/deploy-scope.mjs
+        env:
+          INFISICAL_ENVIRONMENT: ${{ vars.INFISICAL_ENVIRONMENT }}
+          INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
+          INFISICAL_DEPLOY_IDENTITY_ID: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
+      - name: Check the exact web target before loading secrets
+        env:
+          VISONAUT_WEB_ACTION: ${{ inputs.action }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { existsSync, readFileSync } from 'node:fs';
+          import { unstable_readConfig } from 'wrangler';
+          const preview = process.env.VISONAUT_WEB_ACTION === 'preview-web';
+          const configuration = preview
+            ? JSON.parse(readFileSync('apps/web/dist/server/wrangler.json', 'utf8'))
+            : unstable_readConfig({ config: 'apps/web/wrangler.jsonc', env: 'production' });
+          if (!preview) {
+            assert.equal(existsSync('apps/web/.wrangler/deploy/config.json'), false, 'The fence must not use a redirected application build');
+          }
+          const prefix = preview ? 'visonaut-preview' : 'visonaut-production';
+          assert.equal(configuration.name, preview ? 'visonaut-preview' : 'visonaut');
+          assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, preview ? 'preview' : 'production');
+          assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
+            binding: 'DB', database_id: preview ? '395b539c-c423-4ce4-887c-a5792792a63b' : '15fcd402-dccb-4359-a1ce-280ff67ca596'
+          }]);
+          assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), [
+            { binding: 'IMAGES', bucket_name: `${prefix}-images` },
+            { binding: 'QUARANTINE', bucket_name: `${prefix}-quarantine` }
+          ]);
+          assert.deepEqual(configuration.services.map(({ binding, service }) => ({ binding, service })), [
+            { binding: 'COMPARATOR', service: preview ? 'visonaut-preview-compare' : 'visonaut-compare' }
+          ]);
+          assert.deepEqual(configuration.queues.consumers.map(({ queue }) => queue), [`${prefix}-operations`]);
+          assert.deepEqual(configuration.triggers.crons, preview ? [] : ['*/5 * * * *']);
+          assert.equal(configuration.observability.enabled, true);
+          assert.equal(configuration.observability.traces.enabled, true);
+          assert.equal(configuration.preview_urls, false);
+          assert.equal(configuration.workers_dev, true);
+          assert.deepEqual(configuration.routes, [{ pattern: preview ? 'preview.visonaut.com' : 'visonaut.com', custom_domain: true }]);
+          assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
+            { binding: 'COMPARISONS', queue: `${prefix}-comparisons` },
+            { binding: 'OPERATIONS', queue: `${prefix}-operations` }
+          ]);
+          assert.equal(configuration.migrations?.length ?? 0, 0);
+          assert.equal(configuration.containers?.length ?? 0, 0);
+          assert.equal(configuration.durable_objects?.bindings?.length ?? 0, 0);
+          JS
+      - name: Dry-run only the selected web deployment
+        env:
+          VISONAUT_WEB_ACTION: ${{ inputs.action }}
+        run: |
+          if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
+            pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json --dry-run
+          else
+            pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/wrangler.jsonc --env production --dry-run
+          fi
+      - name: Load only the existing deployment key at its reviewed old path
+        uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
+        with:
+          method: oidc
+          identity-id: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
+          oidc-audience: visonaut-deploy
+          domain: https://eu.infisical.com
+          project-id: ${{ vars.INFISICAL_PROJECT_ID }}
+          env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
+          secret-path: /ci/visonaut-deploy
+          secret-name: CLOUDFLARE_API_TOKEN
+          include-imports: "false"
+          recursive: "false"
+          export-type: env
+      - name: Deploy only the selected web Worker
+        env:
+          VISONAUT_WEB_ACTION: ${{ inputs.action }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
+            pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
+          else
+            pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/wrangler.jsonc --env production
           fi
