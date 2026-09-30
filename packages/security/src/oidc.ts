@@ -17,6 +17,8 @@ export interface MergeGroupIdentity {
 
 export interface OidcConfiguration {
   audience: string;
+  /** Restored targets reject tokens issued at or before this millisecond cutoff. */
+  issuedAfter?: number;
   /** Preview diagnostics only; still requires main and the immutable executor. */
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
@@ -131,6 +133,16 @@ export async function verifyGitHubOidc({
       "invalid_oidc",
       401,
       "The GitHub identity token is invalid or expired.",
+    );
+  }
+  if (
+    configuration.issuedAfter !== undefined &&
+    (typeof claims.iat !== "number" || claims.iat * 1000 <= configuration.issuedAfter)
+  ) {
+    throw new SecurityError(
+      "restored_identity",
+      401,
+      "The workflow identity predates database recovery. Start a new capture.",
     );
   }
   requireEqual(numericId(claims.repository_id), github.repositoryId, "claim.repository_id");

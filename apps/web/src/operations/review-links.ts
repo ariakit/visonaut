@@ -1,5 +1,6 @@
 import { findGitHubCheck, numericId, record, REVIEW_LINK_CHECK_NAME } from "@visonaut/security";
 import type { OperationsContext, OperationReport } from "./types.ts";
+import { afterRestoreSql } from "./recovery.ts";
 
 interface Candidate {
   repositoryId: string;
@@ -42,6 +43,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
         "FROM pre_run_checks source WHERE source.kind='pull_request' " +
         "AND source.repository_id=? AND source.docs_only=0 " +
         "AND source.state IN ('active','failed') " +
+        `AND ${afterRestoreSql("source.created_at")} ` +
         "AND EXISTS (SELECT 1 FROM visonaut_runs run WHERE run.kind='pull_request' " +
         "AND run.sealed_at IS NOT NULL " +
         "AND run.state!='failed' AND run.tested_sha=source.tested_sha " +

@@ -17,6 +17,7 @@ import { integer, jsonBody, object, string } from "./input.js";
 import { completeWorkflowJobs, jobExecutedInAttempt, verifyCarriedExecution } from "./jobs.js";
 import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
 import { stagedAttemptRetentionMs } from "./workflow-retention.js";
+import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
 
 interface Candidate {
   testedSha: string;
@@ -211,7 +212,7 @@ export async function retireUnpinnedMainChecks(
   }
   const rows = await context.database
     .prepare(
-      "SELECT * FROM pre_run_checks WHERE kind='main' AND workflow_run_id IS NULL AND created_at < ? AND (state IN ('active','ambiguous') OR (state='creating' AND lease_until < ?)) ORDER BY updated_at,created_at",
+      `SELECT * FROM pre_run_checks WHERE kind='main' AND workflow_run_id IS NULL AND created_at < ? AND ${afterRestoreSql("pre_run_checks.created_at")} AND (state IN ('active','ambiguous') OR (state='creating' AND lease_until < ?)) ORDER BY updated_at,created_at`,
     )
     .bind(Date.now() - 120_000, Date.now())
     .all<PreRunCheck>();
@@ -284,14 +285,18 @@ function externalId(testedSha: string, generation: number) {
 
 async function storedCheck(context: ApiContext, testedSha: string) {
   return context.database
-    .prepare("SELECT * FROM pre_run_checks WHERE tested_sha = ? ORDER BY generation DESC LIMIT 1")
+    .prepare(
+      `SELECT * FROM pre_run_checks WHERE tested_sha = ? AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY generation DESC LIMIT 1`,
+    )
     .bind(testedSha)
     .first<PreRunCheck>();
 }
 
 async function attemptCheck(context: ApiContext, workflowRunId: string, workflowAttempt: number) {
   return context.database
-    .prepare("SELECT * FROM pre_run_checks WHERE workflow_run_id = ? AND workflow_attempt = ?")
+    .prepare(
+      `SELECT * FROM pre_run_checks WHERE workflow_run_id = ? AND workflow_attempt = ? AND ${afterRestoreSql("pre_run_checks.created_at")}`,
+    )
     .bind(workflowRunId, workflowAttempt)
     .first<PreRunCheck>();
 }
@@ -319,6 +324,7 @@ export async function reconcileEquivalentPullRequestChecks(
   if (!context.configuration.workflowOwned) return { checked: 0, pending: [] as string[] };
   const rows = await context.database
     .prepare(`SELECT alias.* FROM pre_run_checks alias WHERE alias.kind='pull_request'
+      AND ${afterRestoreSql("alias.created_at")}
       AND (alias.state='active' OR
         (alias.state='docs_complete' AND alias.docs_only=0 AND alias.lease_until<=?))
       AND alias.workflow_run_id IS NULL AND alias.check_id IS NOT NULL
@@ -326,6 +332,7 @@ export async function reconcileEquivalentPullRequestChecks(
         JOIN visonaut_runs run ON run.external_run_id=source.workflow_run_id
           AND run.attempt=source.workflow_attempt AND run.tested_sha=source.tested_sha
         WHERE source.repository_id=alias.repository_id
+        AND ${afterRestoreSql("source.created_at")}
         AND source.kind='pull_request' AND source.pull_request_number=alias.pull_request_number
         AND source.source_sha=alias.source_sha AND source.base_sha=alias.base_sha
         AND source.tested_sha!=alias.tested_sha AND source.state='active'
@@ -350,6 +357,7 @@ export async function reconcileEquivalentPullRequestChecks(
           JOIN visonaut_runs run ON run.external_run_id=source.workflow_run_id
             AND run.attempt=source.workflow_attempt AND run.tested_sha=source.tested_sha
           WHERE source.repository_id=? AND source.kind='pull_request'
+            AND ${afterRestoreSql("source.created_at")}
             AND source.pull_request_number=? AND source.source_sha=? AND source.base_sha=?
             AND source.tested_sha!=? AND source.state='active'
             AND source.workflow_run_id IS NOT NULL AND source.check_id IS NOT NULL
@@ -544,7 +552,9 @@ function sameCandidate(row: PreRunCheck, candidate: Candidate) {
 
 async function storedExternalId(context: ApiContext, externalId: string) {
   return context.database
-    .prepare("SELECT * FROM pre_run_checks WHERE external_id = ?")
+    .prepare(
+      `SELECT * FROM pre_run_checks WHERE external_id = ? AND ${afterRestoreSql("pre_run_checks.created_at")}`,
+    )
     .bind(externalId)
     .first<PreRunCheck>();
 }
@@ -777,11 +787,16 @@ async function storeCandidateCheck({
 }: StoreCandidateCheckParams) {
   const now = Date.now();
   await mainSuccessor(context, github, candidate);
+  // A restored check keeps its identity; a new capture gets a new generation.
   await context.database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,created_at,updated_at) SELECT ?,0,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=?) ON CONFLICT DO NOTHING",
+      `WITH next_generation AS (SELECT COALESCE(MAX(generation),-1)+1 AS value FROM pre_run_checks WHERE tested_sha=?)
+      INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,created_at,updated_at)
+      SELECT ?,value,?,?,?,?,?,?,?,'visonaut:pre:'||?||CASE WHEN value=0 THEN '' ELSE ':'||value END,?,?
+      FROM next_generation WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")}) ON CONFLICT DO NOTHING`,
     )
     .bind(
+      candidate.testedSha,
       candidate.testedSha,
       github.repositoryId,
       candidate.sourceSha,
@@ -790,7 +805,7 @@ async function storeCandidateCheck({
       candidate.ref,
       candidate.pullRequestNumber,
       Number(candidate.docsOnly),
-      externalId(candidate.testedSha, 0),
+      candidate.testedSha,
       now,
       now,
       candidate.testedSha,
@@ -800,7 +815,7 @@ async function storeCandidateCheck({
   if (row?.kind === "main" && candidate.kind !== "main") {
     const earlier = await context.database
       .prepare(
-        "SELECT * FROM pre_run_checks WHERE tested_sha=? AND kind=? ORDER BY generation DESC LIMIT 1",
+        `SELECT * FROM pre_run_checks WHERE tested_sha=? AND kind=? AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY generation DESC LIMIT 1`,
       )
       .bind(candidate.testedSha, candidate.kind)
       .first<PreRunCheck>();
@@ -997,7 +1012,7 @@ async function workflowCandidate({
       testedSha &&
       (await context.database
         .prepare(
-          "SELECT * FROM pre_run_checks WHERE tested_sha=? AND kind='merge_group' ORDER BY generation DESC LIMIT 1",
+          `SELECT * FROM pre_run_checks WHERE tested_sha=? AND kind='merge_group' AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY generation DESC LIMIT 1`,
         )
         .bind(testedSha)
         .first<PreRunCheck>());
@@ -1062,7 +1077,7 @@ async function workflowCandidate({
       if (selectedSha) {
         row = await context.database
           .prepare(
-            "SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? AND tested_sha=? ORDER BY generation DESC LIMIT 1",
+            `SELECT * FROM pre_run_checks WHERE kind='pull_request' AND pull_request_number=? AND source_sha=? AND tested_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY generation DESC LIMIT 1`,
           )
           .bind(number, sourceSha, selectedSha)
           .first<PreRunCheck>();
@@ -1071,7 +1086,7 @@ async function workflowCandidate({
         // Only one initial, unbound check may be failed; live attempts wait for OIDC.
         const rows = await context.database
           .prepare(
-            "SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request' AND pull_request_number=? AND source_sha=? ORDER BY generation DESC LIMIT 2",
+            `SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request' AND pull_request_number=? AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY generation DESC LIMIT 2`,
           )
           .bind(github.repositoryId, number, sourceSha)
           .all<PreRunCheck>();
@@ -1410,7 +1425,7 @@ async function retireUnboundTerminalPullRequestAttempt(
   if (await attemptCheck(context, runId, attempt)) return false;
   const previous = await context.database
     .prepare(
-      "SELECT * FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt<? ORDER BY workflow_attempt DESC",
+      `SELECT * FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt<? AND ${afterRestoreSql("pre_run_checks.created_at")} ORDER BY workflow_attempt DESC`,
     )
     .bind(runId, attempt)
     .all<PreRunCheck>();
@@ -1637,7 +1652,19 @@ export async function ensureSignedAttemptCheck(
   ) {
     throw new SecurityError("workflow_identity", 503, "The signed workflow attempt changed.");
   }
-  const reported = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
+  const reported = await context.database
+    .prepare(`SELECT *,${afterRestoreSql("pre_run_checks.created_at")} AS current_epoch
+    FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt=?`)
+    .bind(identity.workflowRunId, identity.workflowAttempt)
+    .first<PreRunCheck & { current_epoch: number }>();
+  // Restored attempt identities stay fixed, even when a new token is issued.
+  if (reported && !reported.current_epoch) {
+    throw new SecurityError(
+      "restored_attempt",
+      409,
+      "The workflow attempt predates recovery. Start a new attempt.",
+    );
+  }
   if (reported?.plan_visual_required === 0)
     throw new SecurityError(
       "visual_not_required",
@@ -1704,6 +1731,41 @@ export async function ensureSignedAttemptCheck(
       createCheck: true,
     });
   }
+  if (identity.event === "merge_group" && !(await storedCheck(context, identity.testedSha))) {
+    const group = await loadVerifiedMergeGroup(context, identity.testedSha);
+    if (
+      !group ||
+      group.repositoryId !== github.repositoryId ||
+      group.headSha !== identity.testedSha ||
+      group.headRef !== identity.ref ||
+      group.baseRef !== "refs/heads/main" ||
+      group.baseSha !== identity.targetHead ||
+      identity.sourceHead !== identity.testedSha ||
+      !identity.ref.startsWith("refs/heads/gh-readonly-queue/main/")
+    ) {
+      throw new SecurityError("workflow_candidate", 503, "The verified merge group changed.");
+    }
+    const signedCandidate: Candidate = {
+      testedSha: identity.testedSha,
+      sourceSha: identity.sourceHead,
+      baseSha: identity.targetHead,
+      kind: "merge_group",
+      ref: identity.ref,
+      pullRequestNumber: null,
+      docsOnly: false,
+    };
+    await storeCandidateCheck({
+      context,
+      github,
+      candidate: signedCandidate,
+      currentCandidate: async () => {
+        const current = await workflowCandidate({ context, github, run });
+        return current && sameCandidate(current, signedCandidate) ? signedCandidate : null;
+      },
+      validateBeforeCreation: true,
+      createCheck: true,
+    });
+  }
   const candidate = await workflowCandidate({
     context,
     github,
@@ -1722,6 +1784,15 @@ export async function ensureSignedAttemptCheck(
       candidate.source_sha !== identity.sourceHead)
   ) {
     throw new SecurityError("workflow_candidate", 503, "The signed pull request changed.");
+  }
+  if (
+    identity.event === "merge_group" &&
+    (candidate.kind !== "merge_group" ||
+      candidate.ref !== identity.ref ||
+      candidate.base_sha !== identity.targetHead ||
+      candidate.source_sha !== identity.sourceHead)
+  ) {
+    throw new SecurityError("workflow_candidate", 503, "The signed merge group changed.");
   }
   await ensureStoredCheck(context, github, candidate, async () => {
     const current = await workflowCandidate({
@@ -1936,6 +2007,7 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
     },
     configuration: {
       audience: `${context.configuration.origin}/plan-report`,
+      issuedAfter: await readRestoreCutoff(context.database),
       repositoryOwnerId: context.configuration.repositoryOwnerId,
       workflowPath: configuration.callerWorkflowPath,
       reusableWorkflowRef: configuration.reusableWorkflowRef,
@@ -2047,6 +2119,7 @@ async function inheritVisualPlan(
   if (!configuration) return;
   const prior = await context.database
     .prepare(`SELECT * FROM pre_run_checks WHERE tested_sha=? AND workflow_run_id=?
+    AND ${afterRestoreSql("pre_run_checks.created_at")}
     AND workflow_attempt<? AND plan_visual_required IS NOT NULL AND plan_job_id IS NOT NULL AND plan_workflow_sha=?
     ORDER BY workflow_attempt DESC LIMIT 1`)
     .bind(

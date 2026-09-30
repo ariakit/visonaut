@@ -2,6 +2,28 @@ import { digestStream } from "./common.ts";
 import type { OperationsContext } from "./types.ts";
 import type { Database } from "@visonaut/service";
 
+export const restoreCutoffSql =
+  "COALESCE((SELECT last_seen_at FROM operations_events WHERE id='restore:activation:secrets-required'),0)";
+
+/** Keep restored evidence outside work selection without changing its history. */
+export function afterRestoreSql(timestampColumn: string) {
+  return `NOT EXISTS(SELECT 1 FROM operations_events restore WHERE restore.id='restore:activation:secrets-required' AND ${timestampColumn}<=restore.last_seen_at)`;
+}
+
+/** A newer HTTP receipt cannot renew an already charged restored delivery. */
+export function restoredDeliveryGuidSql(guidExpression: string) {
+  return `EXISTS(SELECT 1 FROM github_webhook_recovery recovery JOIN operations_events restore
+    ON restore.id='restore:activation:secrets-required'
+    WHERE recovery.guid=${guidExpression} AND COALESCE(recovery.last_requested_at,0)<=restore.last_seen_at)`;
+}
+
+export async function readRestoreCutoff(database: Database) {
+  return (
+    (await database.prepare(`SELECT ${restoreCutoffSql} AS cutoff`).first<{ cutoff: number }>())
+      ?.cutoff ?? 0
+  );
+}
+
 /** Run only in the isolated restore target, before deploying new secrets and activating it. */
 export async function sanitizeRestoredDatabase(database: Database, now: number) {
   const tables = await database
@@ -45,13 +67,18 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
         AND EXISTS(SELECT 1 FROM visonaut_runs run
           WHERE run.id=work_retention_pins.run_id AND run.active=0 AND run.closed_at IS NOT NULL)`,
     ),
+    database
+      .prepare(
+        "UPDATE github_webhook_delivery SET processed_at=COALESCE(processed_at,?),payload_json='{}'",
+      )
+      .bind(now),
+    // The cutoff must commit with access/work fencing, before any new capture.
+    database
+      .prepare(
+        "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES('restore:activation:secrets-required','restore','activation','secrets-required',?,?) ON CONFLICT(id) DO UPDATE SET resolved_at=NULL,last_seen_at=MAX(last_seen_at,excluded.last_seen_at)",
+      )
+      .bind(now, now),
   ]);
-  await database
-    .prepare(
-      "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES('restore:activation:secrets-required','restore','activation','secrets-required',?,?) ON CONFLICT(id) DO UPDATE SET resolved_at=NULL,last_seen_at=excluded.last_seen_at",
-    )
-    .bind(now, now)
-    .run();
   const violations = await database.prepare("PRAGMA foreign_key_check").all();
   if (violations.results?.length) throw new Error("Restored database contains broken references.");
 }

@@ -19,6 +19,7 @@ import {
   settlePreRunWorkflow,
 } from "./pre-run.js";
 import { materializeWorkflowRun } from "./workflow-materialize.js";
+import { restoreCutoffSql, restoredDeliveryGuidSql } from "../operations/recovery.ts";
 
 interface AppLifecycle {
   action: string | null;
@@ -151,6 +152,25 @@ async function settleAppLifecycle(
 export async function processWebhook(context: ApiContext, webhook: VerifiedWebhook) {
   await assertConfiguredProject(context);
   const lifecycle = assertWebhookScope(context, webhook);
+  const fence = await context.database
+    .prepare(
+      `SELECT ${restoreCutoffSql} AS cutoff,${restoredDeliveryGuidSql("?")} AS restored,
+        (SELECT received_at FROM github_webhook_delivery WHERE delivery_id=? AND event=? AND payload_digest=?) AS received_at`,
+    )
+    .bind(webhook.deliveryId, webhook.deliveryId, webhook.event, webhook.payloadDigest)
+    .first<{ cutoff: number; restored: number; received_at: number | null }>();
+  const cutoff = fence?.cutoff ?? 0;
+  // A signed redelivery cannot renew the original durable receipt time.
+  const restoredReceipt = fence?.received_at != null && fence.received_at <= cutoff;
+  if (webhook.receivedAt <= cutoff || restoredReceipt || fence?.restored) {
+    await context.database
+      .prepare(
+        "UPDATE github_webhook_delivery SET processed_at=COALESCE(processed_at,?),payload_json='{}' WHERE delivery_id=? AND event=? AND payload_digest=?",
+      )
+      .bind(Date.now(), webhook.deliveryId, webhook.event, webhook.payloadDigest)
+      .run();
+    return;
+  }
   if (lifecycle) {
     await settleAppLifecycle(context, webhook, lifecycle);
     return;

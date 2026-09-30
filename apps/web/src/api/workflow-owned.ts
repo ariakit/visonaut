@@ -36,6 +36,7 @@ import {
 } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { ensureSignedAttemptCheck, requireVisualPlan } from "./pre-run.js";
+import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
 
 interface StagedRun {
   id: string;
@@ -177,6 +178,7 @@ async function verifyWorkflowJob(
     github,
     configuration: {
       audience,
+      issuedAfter: await readRestoreCutoff(context.database),
       allowMainDispatch:
         context.configuration.auth.environment === "preview" &&
         context.configuration.allowMainDispatch === true,
@@ -194,7 +196,9 @@ async function verifyWorkflowJob(
 
 async function stagedRun(context: ApiContext, runId: string): Promise<StagedRun> {
   const run = await context.database
-    .prepare("SELECT * FROM ingest_staged_runs WHERE id = ?")
+    .prepare(
+      `SELECT * FROM ingest_staged_runs WHERE id = ? AND ${afterRestoreSql("ingest_staged_runs.created_at")}`,
+    )
     .bind(runId)
     .first<StagedRun>();
   if (
@@ -395,7 +399,7 @@ export async function reserveVerifiedStagedRun(
   }
   const run = await context.database
     .prepare(
-      "SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ?",
+      `SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND ${afterRestoreSql("ingest_staged_runs.created_at")}`,
     )
     .bind(verified.repositoryId, verified.workflowRunId, verified.workflowAttempt)
     .first<StagedRun>();
@@ -987,7 +991,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
   const workflowAttempt = integer(body.workflowAttempt, 1);
   let run = await context.database
     .prepare(
-      "SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ?",
+      `SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt = ? AND ${afterRestoreSql("ingest_staged_runs.created_at")}`,
     )
     .bind(context.configuration.github.repositoryId, externalRunId, workflowAttempt)
     .first<StagedRun>();
@@ -998,7 +1002,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     run ??
     (await context.database
       .prepare(
-        "SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt < ? ORDER BY workflow_attempt DESC LIMIT 1",
+        `SELECT * FROM ingest_staged_runs WHERE repository_id = ? AND workflow_run_id = ? AND workflow_attempt < ? AND ${afterRestoreSql("ingest_staged_runs.created_at")} ORDER BY workflow_attempt DESC LIMIT 1`,
       )
       .bind(context.configuration.github.repositoryId, externalRunId, workflowAttempt)
       .first<StagedRun>());

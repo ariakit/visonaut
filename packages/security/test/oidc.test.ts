@@ -825,3 +825,30 @@ it("allows diagnostic dispatch only with explicit opt-in and main ref", async ()
     }),
   ).rejects.toMatchObject({ code: "untrusted_run" });
 });
+
+it("rejects a still-valid identity token issued before database recovery", async () => {
+  const signed = await token();
+  const client = github();
+  await expect(
+    verifyGitHubOidc({
+      token: signed,
+      request,
+      configuration: { ...configuration, issuedAfter: Date.now() },
+      github: client,
+      keySet,
+    }),
+  ).rejects.toMatchObject({ code: "restored_identity", status: 401 });
+  expect(client.request).not.toHaveBeenCalled();
+});
+
+it("accepts a newly issued identity token after database recovery", async () => {
+  await expect(
+    verifyGitHubOidc({
+      token: await token(),
+      request,
+      configuration: { ...configuration, issuedAfter: Date.now() - 2000 },
+      github: github(),
+      keySet,
+    }),
+  ).resolves.toMatchObject({ testedSha, workflowRunId: "20", workflowAttempt: 2 });
+});
