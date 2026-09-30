@@ -49,7 +49,12 @@ Default: local inspect, preview identity, empty ephemeral D1/R2. No application 
                                   consumers and old attempts are fenced/drained.
 Remote mode requires an explicit action, environment and both target identifiers.
 Remote inspect reads application data, but Wrangler creates an ephemeral edge-preview
-binding session. Its credential needs session access as well as D1/R2 access.
+binding session under the selected environment's existing comparator Worker name.
+Before setup, verify its production and preview-base runtime metadata: no secrets,
+and only VISONAUT_CODEC_BACKEND=worker and the matching dead-letter queue variable.
+Wrangler inherits plain_text, json, secret_text and secret_key; the proxy exposes
+arbitrary inherited binding names. Unknown or unexpected metadata blocks setup.
+Its credential needs session access as well as D1/R2 access.
 Session setup can register a workers.dev subdomain if the account has none.
 Convert writes baseline pins/pointers/receipts/cursors and can restore an original R2
 object from a protected copy. Summary completion removes detailed native D1 records.
@@ -436,13 +441,16 @@ export async function runCutover(argumentsList: string[], createPlatform: Platfo
     throw new CutoverOptionsError("--persist-path must be an existing directory.");
   }
   const target = targets[options.environment];
+  // Keep remote uploads within the existing credential's Worker-name scope.
+  const remoteSessionName =
+    options.environment === "production" ? "visonaut-compare" : "visonaut-preview-compare";
   const directory = await mkdtemp(join(tmpdir(), "visonaut-cutover-"));
   try {
     const configPath = join(directory, "wrangler.json");
     await writeFile(
       configPath,
       JSON.stringify({
-        name: `visonaut-cutover-${randomUUID()}`,
+        name: options.remote ? remoteSessionName : `visonaut-cutover-${randomUUID()}`,
         account_id: accountId,
         compatibility_date: "2026-09-22",
         compatibility_flags: ["nodejs_compat"],
