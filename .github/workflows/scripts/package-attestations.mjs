@@ -90,7 +90,10 @@ export async function assertReleaseProvenance({ audit, records, expectedSourceSh
       "Published package used another release workflow",
     );
     assert.equal(definition.internalParameters?.github?.repository_id, "1380751023");
-    assert.equal(definition.internalParameters?.github?.event_name, "workflow_dispatch");
+    assert(
+      ["push", "workflow_dispatch"].includes(definition.internalParameters?.github?.event_name),
+      "Published package used another release event",
+    );
     const dependencies = definition.resolvedDependencies;
     assert(Array.isArray(dependencies) && dependencies.length === 1, "Ambiguous source dependency");
     const sourceSha = dependencies[0]?.digest?.gitCommit;

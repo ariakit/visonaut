@@ -12,7 +12,7 @@
     "format": "oxfmt",
     "check": "pnpm lint && pnpm typecheck && pnpm build && pnpm test && pnpm test:browser",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && pnpm install --lockfile-only --ignore-scripts",
     "test:release-guards": "node --test .github/workflows/scripts/*.test.mjs",
     "test:container": "npm test --prefix apps/compare/container",
     "check:container-image": "docker build --platform linux/amd64 --file apps/compare/container/Dockerfile --tag visonaut-compare-check:local .",
