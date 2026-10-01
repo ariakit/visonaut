@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalJson,
+  captureManifestDigest,
+  uploadImages,
+  LOCAL_COMPARISON_MODE,
+  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_CODEC,
   digestJson,
   digestEnvironmentProfile,
   identityKey,
@@ -120,6 +125,37 @@ function first<T>(values: T[]): T {
 }
 
 describe("versioned manifests", () => {
+  it.each([
+    { threshold: 0.2, maxDiffPixels: 0 },
+    { threshold: 0, maxDiffPixelRatio: 0.1 },
+    { threshold: 1, maxDiffPixels: 5, maxDiffPixelRatio: 0.5 },
+  ])("preserves exact consumer screenshot settings %j", async (comparison) => {
+    const { manifest } = await fixture();
+    first(manifest.captures).comparison = comparison;
+    const parsed = parseManifest(JSON.parse(JSON.stringify(manifest)));
+    expect(first(parsed.captures).comparison).toEqual(comparison);
+    expect(parsed.profiles).toEqual(manifest.profiles);
+  });
+
+  it.each([
+    {},
+    { threshold: -0.1 },
+    { threshold: 1.1 },
+    { threshold: NaN },
+    { threshold: Infinity },
+    { threshold: "0.2" },
+    { threshold: 0.2, maxDiffPixels: -1 },
+    { threshold: 0.2, maxDiffPixels: 0.5 },
+    { threshold: 0.2, maxDiffPixels: NaN },
+    { threshold: 0.2, maxDiffPixelRatio: -0.1 },
+    { threshold: 0.2, maxDiffPixelRatio: 1.1 },
+    { threshold: 0.2, maxDiffPixelRatio: NaN },
+  ])("rejects invalid consumer screenshot settings %j", async (comparison) => {
+    const { manifest } = await fixture();
+    const capture = first(manifest.captures);
+    expect(() => parseManifest({ ...manifest, captures: [{ ...capture, comparison }] })).toThrow();
+  });
+
   it("accepts old clients and preserves optional additions from compatible clients", async () => {
     const { manifest } = await fixture();
     expect(parseManifest(manifest)).toEqual(manifest);
@@ -423,4 +459,113 @@ it("separates rendering identity from comparison policy and engine evidence", as
   ]) {
     expect(await digestRenderingProfile({ ...profile, ...changed })).not.toBe(digest);
   }
+});
+
+it("preserves the complete manifest while selective local uploads deduplicate changed originals and masks", async () => {
+  const { manifest } = await fixture();
+  const originalDigest = await captureManifestDigest(manifest);
+  const matched = manifest.captures[0]!;
+  const changed = structuredClone(matched);
+  changed.itemKey = "changed-dialog";
+  changed.ordinal = 1;
+  const introduced = structuredClone(changed);
+  introduced.itemKey = "new-dialog";
+  introduced.ordinal = 2;
+  manifest.captures.push(changed, introduced);
+  const manifestDigest = await captureManifestDigest(manifest);
+  expect(manifestDigest).not.toBe(originalDigest);
+  manifest.localComparison = {
+    mode: LOCAL_COMPARISON_MODE,
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    reference: {
+      manifestDigest,
+      snapshotId: "snapshot",
+      baselineRevision: 1,
+      inventoryDigest: "a".repeat(64),
+      captureCount: 2,
+    },
+    captures: [
+      {
+        itemKey: matched.itemKey,
+        variantKey: matched.variant.key,
+        candidateDigest: matched.image.digest,
+        referenceDigest: "b".repeat(64),
+        outcome: "unchanged",
+        changedPixels: 1,
+        ratio: 1 / 6,
+        sizeChanged: false,
+      },
+      {
+        itemKey: changed.itemKey,
+        variantKey: changed.variant.key,
+        candidateDigest: changed.image.digest,
+        referenceDigest: "c".repeat(64),
+        outcome: "changed",
+        changedPixels: 2,
+        ratio: 2 / 6,
+        sizeChanged: false,
+        mask: { ...changed.image, digest: "f".repeat(64), path: "images/mask.png" },
+      },
+      {
+        itemKey: introduced.itemKey,
+        variantKey: introduced.variant.key,
+        candidateDigest: introduced.image.digest,
+        referenceDigest: null,
+        outcome: "changed",
+        changedPixels: 6,
+        ratio: 1,
+        sizeChanged: false,
+      },
+    ],
+    removals: [],
+  };
+  expect(parseManifest(manifest).captures).toHaveLength(3);
+  expect([...uploadImages(manifest).keys()]).toEqual([changed.image.digest, "f".repeat(64)]);
+  expect(await captureManifestDigest(manifest)).toBe(manifestDigest);
+  expect(await digestJson(manifest)).not.toBe(manifestDigest);
+  manifest.localComparison.captures[1]!.mask!.bytes++;
+  manifest.localComparison.captures[1]!.mask!.digest = changed.image.digest;
+  expect(() => uploadImages(manifest)).toThrow("Shared image metadata differs");
+});
+
+it("rejects duplicate local identities, overlapping removals, and masks on omitted captures", async () => {
+  const { manifest } = await fixture();
+  const capture = manifest.captures[0]!;
+  const result = {
+    itemKey: capture.itemKey,
+    variantKey: capture.variant.key,
+    candidateDigest: capture.image.digest,
+    referenceDigest: "b".repeat(64),
+    outcome: "unchanged" as const,
+    changedPixels: 0,
+    ratio: 0,
+    sizeChanged: false,
+  };
+  manifest.localComparison = {
+    mode: LOCAL_COMPARISON_MODE,
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    reference: {
+      manifestDigest: await captureManifestDigest(manifest),
+      snapshotId: "snapshot",
+      baselineRevision: 0,
+      inventoryDigest: "a".repeat(64),
+      captureCount: 1,
+    },
+    captures: [result],
+    removals: [],
+  };
+  const duplicate = structuredClone(manifest);
+  duplicate.localComparison!.captures.push(result);
+  expect(() => parseManifest(duplicate)).toThrow("local result identity");
+  const removed = structuredClone(manifest);
+  removed.localComparison!.removals.push({
+    itemKey: capture.itemKey,
+    variantKey: capture.variant.key,
+  });
+  expect(() => parseManifest(removed)).toThrow("cannot also be removed");
+  const masked = structuredClone(manifest);
+  masked.localComparison!.captures[0]!.mask = capture.image;
+  expect(() => parseManifest(masked)).toThrow("Only changed matched captures");
 });
