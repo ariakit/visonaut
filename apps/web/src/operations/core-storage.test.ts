@@ -683,3 +683,231 @@ it("exports a completed native historical comparison before the retention bounda
     database.connection.prepare("SELECT comparison_id FROM operations_comparison_archives").all(),
   ).toEqual([]);
 });
+
+async function prepared(database: TestDatabase, count: number) {
+  const fixture = context(database);
+  const service = await captured(fixture.context, "main", "main");
+  await service.preparePromotion({
+    snapshotId: "legacy",
+    comparisonId: "comparison-main",
+    prefix: "baselines/legacy",
+    now: 1,
+  });
+  await fixture.images.put("baselines/legacy/main", "original-image-bytes");
+  database.connection.exec(
+    "UPDATE visonaut_snapshots SET storage_mode='protected',state='accepted',reference_eligible=1 WHERE id='legacy'; UPDATE visonaut_snapshot_images SET object_key='baselines/legacy/main',copied=1 WHERE snapshot_id='legacy';",
+  );
+  for (let index = 1; index < count; index++) {
+    const suffix = String(index).padStart(4, "0");
+    const imageId = `extra-image-${suffix}`;
+    const captureId = `extra-capture-${suffix}`;
+    const sourceKey = `runs/main/source-${suffix}`;
+    const protectedKey = `baselines/legacy/${suffix}`;
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,bytes_present,role,validated) SELECT ?,run_id,digest,?,content_type,bytes,width,height,bytes_present,role,validated FROM visonaut_images WHERE id='image-main'",
+      )
+      .run(imageId, sourceKey);
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT ?,run_id,shard_key,item_key,?,ordinal,?,profile_digest,test_id,test_retry,metadata_json FROM visonaut_captures WHERE id='capture-main'",
+      )
+      .run(captureId, suffix, imageId);
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT 'legacy',?,?,?,digest,1 FROM visonaut_images WHERE id=?",
+      )
+      .run(captureId, imageId, protectedKey, imageId);
+    await fixture.images.put(sourceKey, "original-image-bytes");
+    await fixture.images.put(protectedKey, "original-image-bytes");
+  }
+  fixture.context.budget.objectsPerStep = count;
+  const pointers = database.connection
+    .prepare(
+      "SELECT copy.capture_id,image.object_key AS source_key,copy.object_key AS protected_key FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id WHERE snapshot_id='legacy' ORDER BY capture_id",
+    )
+    .all() as { capture_id: string; source_key: string; protected_key: string }[];
+  return { ...fixture, pointers };
+}
+
+function remaining(database: TestDatabase) {
+  return database.connection
+    .prepare(
+      "SELECT COUNT(*) AS count FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id WHERE copy.object_key!=image.object_key",
+    )
+    .get();
+}
+
+describe("bounded baseline groups", () => {
+  it("pins before I/O, commits four pointers once, preserves the exact budget and resumes", async () => {
+    using database = new TestDatabase();
+    const fixture = await prepared(database, 6);
+    fixture.context.budget.objectsPerStep = 5;
+    const originalGet = fixture.images.get.bind(fixture.images);
+    const get = vi.spyOn(fixture.images, "get").mockImplementation(async (key) => {
+      expect(
+        database.connection
+          .prepare(
+            "SELECT COUNT(*) AS count FROM work_retention_pins WHERE run_id='main' AND owner='promotion:legacy'",
+          )
+          .get(),
+      ).toEqual({ count: 1 });
+      return originalGet(key);
+    });
+    const batch = vi.spyOn(database, "batch");
+    const remove = vi.spyOn(fixture.images, "delete");
+    const first = await convertSourceBaselines(fixture.context);
+    expect(first).toMatchObject({
+      completed: [],
+      deferred: ["legacy"],
+      attention: [],
+      hasMore: true,
+    });
+    expect(get).toHaveBeenCalledTimes(5);
+    expect(batch).toHaveBeenCalledTimes(3);
+    expect(remaining(database)).toEqual({ count: 1 });
+    expect(
+      database.connection
+        .prepare("SELECT storage_mode FROM visonaut_snapshots WHERE id='legacy'")
+        .get(),
+    ).toEqual({ storage_mode: "protected" });
+    expect((await convertSourceBaselines(fixture.context)).hasMore).toBe(true);
+    expect((await convertSourceBaselines(fixture.context)).completed).toEqual(["legacy"]);
+    expect(get).toHaveBeenCalledTimes(6);
+    expect(remaining(database)).toEqual({ count: 0 });
+    expect(remove).not.toHaveBeenCalled();
+    for (const pointer of fixture.pointers) {
+      expect(fixture.images.objects.has(pointer.protected_key)).toBe(true);
+    }
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
+  it("restores a shared missing original once and converts both captures", async () => {
+    using database = new TestDatabase();
+    const fixture = await prepared(database, 1);
+    const sourceKey = "runs/main/original";
+    const protectedKey = "baselines/legacy/shared";
+    database.connection.exec(
+      "INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json) SELECT 'capture-shared',run_id,shard_key,item_key,'shared',ordinal,image_id,profile_digest,test_id,test_retry,metadata_json FROM visonaut_captures WHERE id='capture-main';",
+    );
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT 'legacy','capture-shared',id,?,digest,1 FROM visonaut_images WHERE id='image-main'",
+      )
+      .run(protectedKey);
+    await fixture.images.put(protectedKey, "original-image-bytes");
+    await fixture.images.delete(sourceKey);
+    database.connection.exec("UPDATE visonaut_images SET bytes_present=0 WHERE id='image-main';");
+    fixture.context.budget.objectsPerStep = 2;
+    const originalPut = fixture.images.put.bind(fixture.images);
+    let creating = false;
+    const put = vi.spyOn(fixture.images, "put").mockImplementation(async (key, value, options) => {
+      if (key !== sourceKey || !options?.onlyIf) return originalPut(key, value, options);
+      // Enforce one conditional writer while its streamed body is consumed.
+      if (creating || fixture.images.objects.has(key)) return null;
+      creating = true;
+      try {
+        return await originalPut(key, value, options);
+      } finally {
+        creating = false;
+      }
+    });
+    const report = await convertSourceBaselines(fixture.context);
+    expect(report.completed).toEqual(["legacy"]);
+    expect(report.attention).toEqual([]);
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(put.mock.calls[0]?.[2]?.onlyIf).toEqual({ etagDoesNotMatch: "*" });
+    expect(remaining(database)).toEqual({ count: 0 });
+    expect(await new Response((await fixture.images.get(sourceKey))?.body).text()).toBe(
+      "original-image-bytes",
+    );
+    expect(fixture.images.objects.has("baselines/legacy/main")).toBe(true);
+    expect(fixture.images.objects.has(protectedKey)).toBe(true);
+    expect(
+      database.connection
+        .prepare("SELECT storage_mode FROM visonaut_snapshots WHERE id='legacy'")
+        .get(),
+    ).toEqual({ storage_mode: "source" });
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
+  it("keeps a group protected when its second original read fails", async () => {
+    using database = new TestDatabase();
+    const fixture = await prepared(database, 4);
+    const first = fixture.pointers[0];
+    const second = fixture.pointers[1];
+    if (!first || !second) throw new Error("Missing selected pointers.");
+    const originalGet = fixture.images.get.bind(fixture.images);
+    const get = vi.spyOn(fixture.images, "get").mockImplementation(async (key) => {
+      if (key === second.source_key) throw new Error("Injected source read failure.");
+      return originalGet(key);
+    });
+    const batch = vi.spyOn(database, "batch");
+    expect((await convertSourceBaselines(fixture.context)).attention).toEqual(["legacy"]);
+    expect(get.mock.calls.map(([key]) => key)).toEqual([first.source_key, second.source_key]);
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(remaining(database)).toEqual({ count: 4 });
+    expect(
+      database.connection
+        .prepare("SELECT storage_mode FROM visonaut_snapshots WHERE id='legacy'")
+        .get(),
+    ).toEqual({ storage_mode: "protected" });
+    expect(
+      database.connection
+        .prepare(
+          "SELECT COUNT(*) AS count FROM work_retention_pins WHERE run_id='main' AND owner='promotion:legacy'",
+        )
+        .get(),
+    ).toEqual({ count: 1 });
+    for (const pointer of fixture.pointers) {
+      expect(fixture.images.objects.has(pointer.protected_key)).toBe(true);
+    }
+  });
+
+  it("rolls back every group pointer when its protected-snapshot assertion fails", async () => {
+    using database = new TestDatabase();
+    const fixture = await prepared(database, 4);
+    database.connection.exec("UPDATE visonaut_images SET bytes_present=0;");
+    const originalBatch = database.batch.bind(database);
+    vi.spyOn(database, "batch").mockImplementation(async (statements) => {
+      if (
+        statements.some((statement) =>
+          String(Reflect.get(statement, "sql")).startsWith("UPDATE visonaut_snapshot_images"),
+        )
+      ) {
+        database.connection.exec(
+          "UPDATE visonaut_snapshots SET storage_mode='source' WHERE id='legacy';",
+        );
+      }
+      return originalBatch(statements);
+    });
+    expect((await convertSourceBaselines(fixture.context)).attention).toEqual(["legacy"]);
+    expect(remaining(database)).toEqual({ count: 4 });
+    expect(
+      database.connection
+        .prepare("SELECT SUM(bytes_present) AS present FROM visonaut_images")
+        .get(),
+    ).toEqual({ present: 0 });
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
+  it("consumes failed group slots instead of exceeding the selected I/O budget", async () => {
+    using database = new TestDatabase();
+    const fixture = await prepared(database, 4);
+    fixture.context.budget.objectsPerStep = 2;
+    const first = fixture.pointers[0];
+    if (!first) {
+      throw new Error("Missing selected pointer.");
+    }
+    await fixture.images.put(first.source_key, "corrupt");
+    const get = vi.spyOn(fixture.images, "get");
+    expect((await convertSourceBaselines(fixture.context)).attention).toEqual(["legacy"]);
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(remaining(database)).toEqual({ count: 4 });
+    expect(
+      database.connection
+        .prepare("SELECT value FROM operations_cursors WHERE id='baseline-conversion'")
+        .get(),
+    ).toEqual({ value: "legacy" });
+  });
+});
