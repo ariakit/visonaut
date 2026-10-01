@@ -11,7 +11,7 @@ let occupied = false;
 let released = Promise.resolve();
 
 export async function withCodecCapacity<T>(
-  operation: () => Promise<T>,
+  operation: (release: () => void) => Promise<T>,
   waitMilliseconds = 0,
 ): Promise<T> {
   if (occupied) {
@@ -31,10 +31,17 @@ export async function withCodecCapacity<T>(
   occupied = true;
   const { promise, resolve } = Promise.withResolvers<void>();
   released = promise;
-  try {
-    return await operation();
-  } finally {
+  let active = true;
+  // Completion may run after another request has acquired the codec.
+  const release = () => {
+    if (!active) return;
+    active = false;
     occupied = false;
     resolve();
+  };
+  try {
+    return await operation(release);
+  } finally {
+    release();
   }
 }

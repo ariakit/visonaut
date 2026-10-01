@@ -85,6 +85,116 @@ it("acknowledges committed work when the status wake fails", async () => {
   );
 });
 
+it("keeps codec ownership with the next task when an earlier commit finishes", async () => {
+  vi.spyOn(Service.prototype, "claimComparisonTask").mockResolvedValue({
+    comparisonId: "comparison",
+  } as never);
+  vi.spyOn(Service.prototype, "finalizeComparison").mockResolvedValue({
+    reviewReadyTransitioned: false,
+  } as never);
+  const committed = Promise.withResolvers<void>();
+  const commit = vi
+    .spyOn(Service.prototype, "commitComparisonResult")
+    .mockImplementationOnce(() => committed.promise)
+    .mockResolvedValue(undefined as never);
+  const processed = { result: { outcome: "unchanged" }, artifacts: [] };
+  const processing = Promise.withResolvers<typeof processed>();
+  processComparisonTask
+    .mockResolvedValueOnce(processed)
+    .mockImplementationOnce(() => processing.promise);
+  const first = comparisonMessage();
+  const second = comparisonMessage();
+  const deliver = (message: ReturnType<typeof comparisonMessage>) =>
+    worker.queue({ queue: "comparisons", messages: [message] } as MessageBatch<unknown>, env);
+  const firstDelivery = deliver(first);
+  let secondDelivery: Promise<void> | undefined;
+  try {
+    await vi.waitFor(() => expect(commit).toHaveBeenCalledOnce());
+    secondDelivery = deliver(second);
+    await vi.waitFor(() => expect(processComparisonTask).toHaveBeenCalledTimes(2));
+    committed.resolve();
+    await firstDelivery;
+    expect(first.ack).toHaveBeenCalledOnce();
+    const response = await worker.fetch(
+      new Request("https://compare/validate", { method: "POST", body: new Uint8Array([1]) }),
+    );
+    expect(response.status).toBe(503);
+    expect(second.ack).not.toHaveBeenCalled();
+  } finally {
+    committed.resolve();
+    processing.resolve(processed);
+    await Promise.all([firstDelivery, secondDelivery]);
+  }
+  expect(second.ack).toHaveBeenCalledOnce();
+  expect(first.retry).not.toHaveBeenCalled();
+  expect(second.retry).not.toHaveBeenCalled();
+});
+
+it("does not hold codec capacity while a completed task finalizes", async () => {
+  vi.spyOn(Service.prototype, "claimComparisonTask").mockResolvedValue(null);
+  vi.spyOn(Service.prototype, "getComparisonTaskState").mockResolvedValue({
+    state: "complete",
+  } as never);
+  vi.spyOn(Service.prototype, "getComparisonTask").mockResolvedValue({
+    comparisonId: "comparison",
+  } as never);
+  const finalized = Promise.withResolvers<{ reviewReadyTransitioned: boolean }>();
+  const finalize = vi
+    .spyOn(Service.prototype, "finalizeComparison")
+    .mockImplementation(() => finalized.promise);
+  const message = comparisonMessage();
+  const delivery = worker.queue(
+    { queue: "comparisons", messages: [message] } as MessageBatch<unknown>,
+    env,
+  );
+  try {
+    await vi.waitFor(() => expect(finalize).toHaveBeenCalledOnce());
+    const response = await worker.fetch(
+      new Request("https://compare/validate", { method: "POST", body: new Uint8Array([1]) }),
+    );
+    expect(response.status).toBe(422);
+    expect(message.ack).not.toHaveBeenCalled();
+  } finally {
+    finalized.resolve({ reviewReadyTransitioned: false });
+    await delivery;
+  }
+  expect(message.ack).toHaveBeenCalledOnce();
+  expect(message.retry).not.toHaveBeenCalled();
+});
+
+it("releases codec capacity before recording an image processing failure", async () => {
+  vi.spyOn(Service.prototype, "claimComparisonTask").mockResolvedValue({
+    comparisonId: "comparison",
+  } as never);
+  processComparisonTask.mockRejectedValue(new Error("Image read failed"));
+  const failed = Promise.withResolvers<boolean>();
+  const failure = vi
+    .spyOn(Service.prototype, "failComparisonTask")
+    .mockImplementation(() => failed.promise);
+  vi.spyOn(Service.prototype, "getComparisonTaskState").mockResolvedValue({
+    state: "queued",
+  } as never);
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  const message = comparisonMessage();
+  const delivery = worker.queue(
+    { queue: "comparisons", messages: [message] } as MessageBatch<unknown>,
+    env,
+  );
+  try {
+    await vi.waitFor(() => expect(failure).toHaveBeenCalledOnce());
+    const response = await worker.fetch(
+      new Request("https://compare/validate", { method: "POST", body: new Uint8Array([1]) }),
+    );
+    expect(response.status).toBe(422);
+    expect(message.retry).not.toHaveBeenCalled();
+  } finally {
+    failed.resolve(true);
+    await delivery;
+  }
+  expect(message.ack).not.toHaveBeenCalled();
+  expect(message.retry).toHaveBeenCalledExactlyOnceWith({ delaySeconds: 60 });
+});
+
 it("waits for a busy codec without retrying the queued message", async () => {
   claimedTask();
   vi.spyOn(Service.prototype, "finalizeComparison").mockResolvedValue({
