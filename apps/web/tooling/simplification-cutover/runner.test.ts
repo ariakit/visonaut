@@ -280,9 +280,8 @@ it("reports old schema and missing columns as unknown counts before running read
   });
   expect(old.missingSchema).toContain("visonaut_snapshots.storage_mode");
   expect(old.missingSchema).toContain("visonaut_closed_summaries");
-  expect(
-    queries.every((sql) => sql.startsWith("SELECT name") || sql.startsWith("PRAGMA table_info")),
-  ).toBe(true);
+  expect(queries).toHaveLength(1);
+  expect(queries[0]).toContain("pragma_table_info");
 });
 
 it("preserves upload conditions, metadata and checksums while enforcing the one-object bound", async () => {
@@ -400,7 +399,8 @@ it("uses real local Wrangler bindings for default inspection without changing ap
       unconvertedClosedRecords: null,
     },
   });
-  expect(calls).toEqual(["SELECT name FROM sqlite_master WHERE type='table'"]);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toContain("pragma_table_info");
 });
 
 async function migrated(platform: { env: CutoverBindings }) {

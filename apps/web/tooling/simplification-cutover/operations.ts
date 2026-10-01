@@ -87,22 +87,27 @@ interface Readback {
 }
 
 export async function inspect(database: Database, now: number): Promise<Readback> {
-  const tables =
+  // D1 rejects metadata reads for some internal table names.
+  const requiredTables = Object.keys(requiredColumns);
+  const schema =
     (
       await database
-        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
-        .all<{ name: string }>()
+        .prepare(`SELECT tables.name AS table_name, columns.name AS column_name
+        FROM sqlite_master AS tables LEFT JOIN pragma_table_info(tables.name) AS columns
+        WHERE tables.type='table' AND tables.name IN (${requiredTables.map(() => "?").join(",")})`)
+        .bind(...requiredTables)
+        .all<{ table_name: string; column_name: string | null }>()
     ).results ?? [];
-  const tableNames = new Set(tables.map((row) => row.name));
+  const tableNames = new Set(schema.map((row) => row.table_name));
   const missingSchema: string[] = [];
   for (const [table, columns] of Object.entries(requiredColumns)) {
     if (!tableNames.has(table)) {
       missingSchema.push(table);
       continue;
     }
-    const actual =
-      (await database.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>()).results ?? [];
-    const names = new Set(actual.map((row) => row.name));
+    const names = new Set(
+      schema.filter((row) => row.table_name === table).map((row) => row.column_name),
+    );
     for (const column of columns.split(" ")) {
       if (!names.has(column)) {
         missingSchema.push(`${table}.${column}`);
