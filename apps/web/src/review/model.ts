@@ -36,6 +36,7 @@ export interface ReviewVariant {
   thumbnail?: string;
   changedPixels?: number;
   maskExpected?: boolean;
+  candidateOmitted?: boolean;
   ratio?: number;
   engine?: string;
   codec?: string;
