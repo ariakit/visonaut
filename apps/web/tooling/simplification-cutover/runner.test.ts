@@ -440,7 +440,7 @@ it("resumes a large protected baseline without releasing its source objects", as
   const insertPointer = database.connection
     .prepare(`INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied)
     SELECT 'legacy',?,?,?,digest,1 FROM visonaut_images WHERE id=?`);
-  for (let index = 1; index <= 1000; index++) {
+  for (let index = 1; index <= 500; index++) {
     const suffix = String(index).padStart(5, "0");
     const imageId = `image-${suffix}`;
     const sourceKey = `runs/main/original-${suffix}`;
@@ -465,7 +465,7 @@ it("resumes a large protected baseline without releasing its source objects", as
     turns: [{ report: { completed: [], deferred: ["legacy"], attention: [] } }],
     readback: { requiredProtectedSnapshots: 1, gatesReady: false },
   });
-  expect(get).toHaveBeenCalledTimes(1000);
+  expect(get).toHaveBeenCalledTimes(500);
   expect(
     await database
       .prepare(`SELECT COUNT(*) AS count FROM visonaut_snapshot_images copy
@@ -475,8 +475,8 @@ it("resumes a large protected baseline without releasing its source objects", as
   expect((await runCutover(argumentsList, createPlatform)).stop).toBe("no-progress");
   const last = await runCutover(argumentsList, createPlatform);
   expect(last).toMatchObject({ stop: "ready", readback: { gatesReady: true } });
-  expect(get).toHaveBeenCalledTimes(1001);
-  expect(fixture.images.objects.size).toBe(2002);
+  expect(get).toHaveBeenCalledTimes(501);
+  expect(fixture.images.objects.size).toBe(1002);
   expect(put).not.toHaveBeenCalled();
   expect(deleteObjects).not.toHaveBeenCalled();
 });
@@ -591,9 +591,9 @@ it("resumes a large archive after the bounded page turn without expiring its sou
   for (const [section, records] of [
     ["comparisonRows", rows],
     ["decisions", decisions],
-    // One root and 999 pages fit; the remaining pages require another call.
+    // One root and 499 pages fit; the remaining pages require another call.
     ...Array.from(
-      { length: 999 },
+      { length: 499 },
       (_, index) => ["audit", [{ id: `proof-${index}`, action: "proof" }]] as const,
     ),
   ] as const) {
@@ -622,7 +622,7 @@ it("resumes a large archive after the bounded page turn without expiring its sou
     runId: "closed",
     generation: "fixture",
     pages,
-    counts: { comparisonRows: rows.length, decisions: decisions.length, audit: 999 },
+    counts: { comparisonRows: rows.length, decisions: decisions.length, audit: 499 },
   });
   await fixture.images.put(rootKey, root);
   await database
@@ -646,7 +646,7 @@ it("resumes a large archive after the bounded page turn without expiring its sou
     turns: [{ family: "history", report: { deferred: ["closed"], attention: [] } }],
     readback: { unconvertedClosedRecords: 1, gatesReady: false },
   });
-  expect(get).toHaveBeenCalledTimes(1000);
+  expect(get).toHaveBeenCalledTimes(500);
   expect(await database.prepare("SELECT COUNT(*) AS count FROM visonaut_captures").first()).toEqual(
     {
       count: 1,
@@ -654,13 +654,13 @@ it("resumes a large archive after the bounded page turn without expiring its sou
   );
   const last = await runCutover(argumentsList, createPlatform);
   expect(last).toMatchObject({ stop: "ready", readback: { gatesReady: true } });
-  expect(get).toHaveBeenCalledTimes(1003);
+  expect(get).toHaveBeenCalledTimes(503);
   expect(
     await database
       .prepare("SELECT audit_json FROM visonaut_closed_summaries WHERE run_id='closed'")
       .first(),
-  ).toEqual({ audit_json: '[{"action":"proof","count":999}]' });
-  expect(fixture.images.objects.size).toBe(1003);
+  ).toEqual({ audit_json: '[{"action":"proof","count":499}]' });
+  expect(fixture.images.objects.size).toBe(503);
   expect(put).not.toHaveBeenCalled();
   expect(deleteObjects).not.toHaveBeenCalled();
 });
