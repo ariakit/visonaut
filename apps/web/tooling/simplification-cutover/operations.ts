@@ -24,7 +24,7 @@ export const targets = {
 
 export const budget = {
   tasksPerStep: 25,
-  objectsPerStep: 1000,
+  objectsPerStep: 500,
   leaseMilliseconds: 720_000,
   maxAttempts: 5,
   maximumObjectBytes: 16_777_216,

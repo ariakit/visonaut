@@ -20,7 +20,7 @@ const launch = new AsyncFunction(
   source,
 );
 
-async function failure(error, remote = false) {
+async function failure(error, remote = false, failureAt = "controller") {
   const messages = [];
   const runtime = {
     versions: { node: "24.18.0" },
@@ -29,6 +29,7 @@ async function failure(error, remote = false) {
     exitCode: 0,
   };
   let disposed = false;
+  let fetchCalls = 0;
   const handlers = new Map();
   const webRequire = (name) => {
     assert.equal(name, "wrangler");
@@ -37,7 +38,20 @@ async function failure(error, remote = false) {
         throw error;
       },
       async unstable_startWorker() {
+        if (failureAt === "start") {
+          throw error;
+        }
         return {
+          get ready() {
+            if (failureAt === "ready") {
+              return Promise.reject(error);
+            }
+            if (failureAt === "pending-ready") {
+              queueMicrotask(() => handlers.get("error")(error));
+              return new Promise(() => {});
+            }
+            return Promise.resolve();
+          },
           raw: {
             on(name, listener) {
               handlers.set(name, listener);
@@ -48,12 +62,22 @@ async function failure(error, remote = false) {
             },
           },
           async fetch() {
+            fetchCalls++;
+            if (failureAt === "fetch") {
+              throw error;
+            }
+            if (failureAt === "dispose") {
+              return { readback: { gatesReady: true } };
+            }
             handlers.get("error")(error);
             return new Promise(() => {});
           },
           async dispose() {
             disposed = true;
             assert.equal(handlers.size, 0);
+            if (failureAt === "dispose") {
+              throw error;
+            }
           },
         };
       },
@@ -107,9 +131,11 @@ async function failure(error, remote = false) {
   );
   assert.equal(runtime.exitCode, 1);
   assert.equal(runtime.env.WRANGLER_WRITE_LOGS, "false");
-  if (remote) assert.equal(disposed, true);
+  if (remote) {
+    assert.equal(disposed, failureAt !== "start");
+  }
   assert.equal(messages.length, 1);
-  return { marker: JSON.parse(messages[0]), text: messages[0] };
+  return { marker: JSON.parse(messages[0]), text: messages[0], fetchCalls };
 }
 
 test("reports only the fixed remote source and API failure facts", async () => {
@@ -220,7 +246,7 @@ test("the workflow accepts only the fixed marker shape and rejects added private
   assert.equal([...unknownSource.matchAll(pattern)].length, 0);
 });
 
-test("forwards public Worker controller events before claiming bindings and awaits disposal", async () => {
+test("labels public Worker controller failures after startup and awaits disposal", async () => {
   const api = new Error("private-preview-token-fixture");
   api.name = "APIError";
   api.code = 10021;
@@ -234,13 +260,36 @@ test("forwards public Worker controller events before claiming bindings and awai
   );
   assert.deepEqual(result.marker, {
     code: "cutover-runner-failed",
-    stage: "binding-setup",
+    stage: "after-bindings",
     knownApiAuthorizationError: false,
-    bindingFailureSource: "remote-preview",
-    knownApiFailure: true,
+    bindingFailureSource: "unclassified",
+    knownApiFailure: false,
   });
   assert.equal(result.text.includes("private"), false);
 });
+
+for (const failureAt of ["pending-ready", "ready"]) {
+  test(`keeps public Worker ${failureAt} failures in binding setup and disposes`, async () => {
+    const api = new Error("private-readiness-fixture");
+    api.name = "APIError";
+    api.code = failureAt === "ready" ? 10000 : 10021;
+    const result = await failure(
+      { source: "RemoteRuntimeController", cause: api },
+      true,
+      failureAt,
+    );
+    assert.deepEqual(result.marker, {
+      code: "cutover-runner-failed",
+      stage: "binding-setup",
+      knownApiAuthorizationError: failureAt === "ready",
+      bindingFailureSource: "remote-preview",
+      knownApiFailure: true,
+    });
+    assert.equal(result.fetchCalls, 0);
+    assert.equal(result.text.includes("private"), false);
+    assert.equal(result.text.includes(String(api.code)), false);
+  });
+}
 
 test("marks a fixed Worker operation failure after bindings without printing its details", async () => {
   const error = new Error("private-native-operation-fixture");
@@ -250,3 +299,39 @@ test("marks a fixed Worker operation failure after bindings without printing its
   assert.equal(result.marker.knownApiFailure, false);
   assert.equal(result.text.includes("private"), false);
 });
+
+test("keeps rejected public Worker startup in binding setup", async () => {
+  const api = new Error("private-startup-fixture");
+  api.name = "APIError";
+  api.code = 10000;
+  const result = await failure({ source: "RemoteRuntimeController", cause: api }, true, "start");
+  assert.deepEqual(result.marker, {
+    code: "cutover-runner-failed",
+    stage: "binding-setup",
+    knownApiAuthorizationError: true,
+    bindingFailureSource: "remote-preview",
+    knownApiFailure: true,
+  });
+  assert.equal(result.text.includes("private"), false);
+});
+
+for (const failureAt of ["fetch", "dispose"]) {
+  test(`labels public Worker ${failureAt} failures after startup`, async () => {
+    const api = new Error("private-operation-fixture");
+    api.name = "APIError";
+    api.code = 10000;
+    const result = await failure(
+      { source: "RemoteRuntimeController", cause: api },
+      true,
+      failureAt,
+    );
+    assert.deepEqual(result.marker, {
+      code: "cutover-runner-failed",
+      stage: "after-bindings",
+      knownApiAuthorizationError: false,
+      bindingFailureSource: "unclassified",
+      knownApiFailure: false,
+    });
+    assert.equal(result.text.includes("private"), false);
+  });
+}
