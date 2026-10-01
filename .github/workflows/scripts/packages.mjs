@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempDisposable, readFile, readdir, writeFile } from "node:fs/promises";
+import { appendFile, mkdtempDisposable, readFile, readdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -14,10 +14,9 @@ const publicPackages = [
 export function assertRelease(environment) {
   assert.equal(environment.GITHUB_REPOSITORY_ID, "1380751023", "Release repository mismatch");
   assert.equal(environment.GITHUB_REF, "refs/heads/main", "Release requires main");
-  assert.equal(
-    environment.GITHUB_EVENT_NAME,
-    "workflow_dispatch",
-    "Release requires manual dispatch",
+  assert(
+    ["push", "workflow_dispatch"].includes(environment.GITHUB_EVENT_NAME),
+    "Release requires a main push or manual dispatch",
   );
   assert(/^[a-f0-9]{40}$/.test(environment.GITHUB_SHA ?? ""), "Invalid release commit");
   assert.equal(
@@ -26,6 +25,15 @@ export function assertRelease(environment) {
     "Source commit has not passed release readiness",
   );
   assert(["latest", "next"].includes(environment.VISONAUT_RELEASE_TAG), "Invalid npm tag");
+  if (environment.GITHUB_EVENT_NAME === "push") {
+    assert.equal(environment.VISONAUT_RELEASE_TAG, "latest", "Automatic release requires latest");
+  }
+}
+
+/** Pending private-only Changesets do not require a version PR. */
+export function versioningNeeded(plan) {
+  assert(Array.isArray(plan.releases), "Invalid Changesets version plan");
+  return plan.releases.length > 0;
 }
 
 export function publicationNeeded(record, registry, tag) {
@@ -131,6 +139,7 @@ export async function releasePlan({
   read = registryPackage,
   verify = verifiedPackages,
   unchanged = unchangedPackage,
+  allowEmpty = false,
 }) {
   const metadata = await Promise.all(records.map((record) => read(record.name)));
   const existing = records.flatMap((record, index) => {
@@ -158,7 +167,7 @@ export async function releasePlan({
   };
   if (existing.length) await verify(existing, select);
   else await select([]);
-  assert(packages.length, "No package version is eligible for this release");
+  assert(allowEmpty || packages.length, "No package version is eligible for this release");
   return { schemaVersion: 1, sourceSha, tag, packages };
 }
 
@@ -292,7 +301,14 @@ export async function smokePackages() {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const command = process.argv[2];
-  if (command === "smoke") {
+  if (command === "version-needed") {
+    const plan = JSON.parse(await readFile(process.argv[3], "utf8"));
+    const needed = versioningNeeded(plan);
+    if (process.env.GITHUB_OUTPUT) {
+      await appendFile(process.env.GITHUB_OUTPUT, `needed=${needed}\n`);
+    }
+    console.log(JSON.stringify({ event: command, needed }));
+  } else if (command === "smoke") {
     await smokePackages();
   } else if (command === "preflight" || command === "result") {
     assertRelease(process.env);
@@ -305,8 +321,19 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const tag = process.env.VISONAUT_RELEASE_TAG;
     const receipt = resolve(process.env.RUNNER_TEMP ?? tmpdir(), "visonaut-release-plan.json");
     if (command === "preflight") {
-      const plan = await releasePlan({ records, sourceSha, tag });
-      await writeFile(receipt, `${JSON.stringify(plan)}\n`, { mode: 0o600 });
+      const plan = await releasePlan({
+        records,
+        sourceSha,
+        tag,
+        allowEmpty: process.env.GITHUB_EVENT_NAME === "push",
+      });
+      const eligible = plan.packages.length > 0;
+      if (eligible) {
+        await writeFile(receipt, `${JSON.stringify(plan)}\n`, { mode: 0o600 });
+      }
+      if (process.env.GITHUB_OUTPUT) {
+        await appendFile(process.env.GITHUB_OUTPUT, `eligible=${eligible}\n`);
+      }
       console.log(JSON.stringify({ event: command, packages: plan.packages }));
     } else {
       const plan = JSON.parse(await readFile(receipt, "utf8"));
@@ -339,6 +366,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       console.log(JSON.stringify({ event: command, packages: plan.packages, sourceSha }));
     }
   } else {
-    throw new Error("Expected smoke, preflight, or result");
+    throw new Error("Expected version-needed, smoke, preflight, or result");
   }
 }

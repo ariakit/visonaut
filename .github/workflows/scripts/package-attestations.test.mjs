@@ -93,6 +93,32 @@ test("verified provenance binds the exact registry package, checked source and s
   ]);
 });
 
+test("automatic main release provenance retains checked source and certificate verification", async () => {
+  const example = fixture();
+  example.statement.predicate.buildDefinition.internalParameters.github.event_name = "push";
+  assert.deepEqual(await example.execute(), [{ ...record, sourceSha }]);
+  assert.equal(example.verified.length, 1);
+  example.statement.predicate.buildDefinition.resolvedDependencies[0].digest.gitCommit = "b".repeat(
+    40,
+  );
+  await assert.rejects(example.execute(), /another source commit/);
+});
+
+test("unapproved publication events fail before the signer verifier runs", async () => {
+  for (const event of [
+    "pull_request",
+    "pull_request_target",
+    "workflow_call",
+    "workflow_run",
+    "schedule",
+  ]) {
+    const example = fixture();
+    example.statement.predicate.buildDefinition.internalParameters.github.event_name = event;
+    await assert.rejects(example.execute());
+    assert.deepEqual(example.verified, []);
+  }
+});
+
 test("older verified source can be inspected but cannot satisfy this commit's publication", async () => {
   const example = fixture();
   const older = "b".repeat(40);
