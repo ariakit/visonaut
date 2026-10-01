@@ -205,7 +205,8 @@ export async function createArchivedRunExport(
     }
     await writer.finish({
       archived: true,
-      imageBytes: "Only retained image bytes are included. Expired images remain unavailable.",
+      imageBytes:
+        "Only retained image bytes are included. Expired images and candidates omitted by local Submit are unavailable. Accepted representatives cannot reproduce omitted candidates; capture metadata retains their observed digests.",
     });
     await atomic(context.database, [
       assertion(
