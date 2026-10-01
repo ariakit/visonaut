@@ -86,7 +86,7 @@ async function finishComparison(
   }
 }
 
-async function consume(message: Message<unknown>, env: Env) {
+async function consume(message: Message<unknown>, env: Env, release: () => void) {
   if (!validMessage(message.body)) {
     console.error(JSON.stringify({ event: "comparison-invalid-message" }));
     message.retry({ delaySeconds: 60 });
@@ -103,6 +103,7 @@ async function consume(message: Message<unknown>, env: Env) {
       leaseMilliseconds: 120_000,
     });
     if (!task) {
+      release();
       const state = await service.getComparisonTaskState(taskId);
       if (state?.state === "complete") {
         const completedTask = await service.getComparisonTask(taskId);
@@ -120,6 +121,8 @@ async function consume(message: Message<unknown>, env: Env) {
       images: env.IMAGES,
       codecs: await codecsReady,
     });
+    // Only metadata escapes image processing; later I/O must not retain the codec token.
+    release();
     await service.commitComparisonResult({
       taskId,
       leaseOwner: owner,
@@ -130,6 +133,7 @@ async function consume(message: Message<unknown>, env: Env) {
     await finishComparison(service, task.comparisonId, env.OPERATIONS);
     message.ack();
   } catch (error) {
+    release();
     const code =
       error instanceof ImageValidationError
         ? error.code
@@ -166,7 +170,7 @@ export default {
     }
     for (const message of batch.messages) {
       try {
-        await withCodecCapacity(() => consume(message, env), 120_000);
+        await withCodecCapacity((release) => consume(message, env, release), 120_000);
       } catch (error) {
         if (!(error instanceof CodecBusyError)) {
           throw error;
