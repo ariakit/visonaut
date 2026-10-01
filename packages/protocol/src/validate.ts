@@ -6,13 +6,17 @@ import {
   isJson,
 } from "./hash.js";
 import type {
+  CaptureComparison,
   CaptureProfile,
   ComparisonPolicy,
   Manifest,
   TrustedCollection,
   TrustedPlan,
   VerifiedDiscoveryEvidence,
+  LocalComparisonReceipt,
+  LocalReferenceBinding,
 } from "./types.js";
+import { LOCAL_COMPARISON_MODE, LOCAL_COMPARISON_ENGINE, LOCAL_COMPARISON_CODEC } from "./types.js";
 
 export class ProtocolError extends Error {
   constructor(
@@ -34,6 +38,28 @@ function object(value: unknown, label: string): asserts value is Record<string, 
   }
   if (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null) {
     fail(`${label} must be a plain object`);
+  }
+}
+
+export function validateCaptureComparison(value: unknown): asserts value is CaptureComparison {
+  object(value, "capture comparison");
+  const threshold = field(value, "threshold");
+  if (
+    typeof threshold !== "number" ||
+    !Number.isFinite(threshold) ||
+    threshold < 0 ||
+    threshold > 1
+  ) {
+    fail("Capture comparison threshold must be between 0 and 1");
+  }
+  if (Object.hasOwn(value, "maxDiffPixels")) {
+    integer(value.maxDiffPixels, "maxDiffPixels");
+  }
+  if (Object.hasOwn(value, "maxDiffPixelRatio")) {
+    const ratio = value.maxDiffPixelRatio;
+    if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio < 0 || ratio > 1) {
+      fail("Capture comparison maxDiffPixelRatio must be between 0 and 1");
+    }
   }
 }
 
@@ -300,6 +326,9 @@ function assertManifest(value: unknown): asserts value is Manifest {
       fail("Capture must use the selected successful test attempt");
     }
     required(capture, "profileDigest", validateDigest);
+    if (Object.hasOwn(capture, "comparison")) {
+      validateCaptureComparison(capture.comparison);
+    }
     if (!profilesByDigest.has(capture.profileDigest)) {
       fail("Capture refers to a missing profile");
     }
@@ -322,6 +351,7 @@ function assertManifest(value: unknown): asserts value is Manifest {
     validateKey(field(image, "path"), "image.path");
   }
   unique(identities, "item/variant identity");
+  if (Object.hasOwn(value, "localComparison")) validateLocalComparison(value.localComparison);
   if (Object.hasOwn(value, "captureSources")) {
     const sources = field(value, "captureSources");
     list(sources, "captureSources", 1, 16);
@@ -357,6 +387,97 @@ function assertManifest(value: unknown): asserts value is Manifest {
 export function parseManifest(value: unknown): Manifest {
   assertManifest(value);
   return value;
+}
+
+export function validateLocalReference(value: unknown): asserts value is LocalReferenceBinding {
+  object(value, "local reference");
+  for (const key of ["manifestDigest", "inventoryDigest"]) validateDigest(field(value, key), key);
+  const snapshotId = field(value, "snapshotId");
+  if (snapshotId !== null) string(snapshotId, "snapshotId", 256);
+  integer(field(value, "baselineRevision"), "baselineRevision");
+  integer(field(value, "captureCount"), "captureCount", 0, 100_000);
+}
+
+export function validateLocalComparison(value: unknown): asserts value is LocalComparisonReceipt {
+  object(value, "local comparison");
+  member(field(value, "mode"), [LOCAL_COMPARISON_MODE], "local comparison mode");
+  member(field(value, "engineVersion"), [LOCAL_COMPARISON_ENGINE], "local engine");
+  member(field(value, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
+  validateLocalReference(field(value, "reference"));
+  const captures = field(value, "captures");
+  list(captures, "local results", 1);
+  const identities: string[] = [];
+  for (const result of captures) {
+    object(result, "local result");
+    required(result, "itemKey", validateKey);
+    required(result, "variantKey", validateKey);
+    identities.push(identityKey({ itemKey: result.itemKey, variantKey: result.variantKey }));
+    required(result, "candidateDigest", validateDigest);
+    if (field(result, "referenceDigest") !== null) validateDigest(result.referenceDigest);
+    member(field(result, "outcome"), ["unchanged", "changed"], "local outcome");
+    integer(field(result, "changedPixels"), "changedPixels");
+    const ratio = field(result, "ratio");
+    if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio < 0 || ratio > 1)
+      fail("Local ratio is invalid");
+    if (typeof field(result, "sizeChanged") !== "boolean")
+      fail("Local sizeChanged must be boolean");
+    if (Object.hasOwn(result, "mask")) {
+      const mask = field(result, "mask");
+      object(mask, "local mask");
+      validateDigest(field(mask, "digest"));
+      member(field(mask, "mediaType"), ["image/png"], "mask media type");
+      integer(field(mask, "bytes"), "mask bytes", 1, 20 * 1024 * 1024);
+      integer(field(mask, "width"), "mask width", 1, 100_000);
+      integer(field(mask, "height"), "mask height", 1, 100_000);
+      validateKey(field(mask, "path"), "mask path");
+      if (result.outcome !== "changed" || result.referenceDigest === null)
+        fail("Only changed matched captures can have a mask");
+    }
+  }
+  unique(identities, "local result identity");
+  const identitySet = new Set(identities);
+  const removals = field(value, "removals");
+  list(removals, "local removals", 0);
+  const removed: string[] = [];
+  for (const removal of removals) {
+    object(removal, "local removal");
+    required(removal, "itemKey", validateKey);
+    required(removal, "variantKey", validateKey);
+    const key = identityKey({ itemKey: removal.itemKey, variantKey: removal.variantKey });
+    if (identitySet.has(key)) fail("A capture cannot also be removed");
+    removed.push(key);
+  }
+  unique(removed, "local removal identity");
+}
+
+/** Full capture inventory stays intact; only this byte set needs upload tickets. */
+export function uploadImages(
+  manifest: Manifest,
+): Map<string, Manifest["captures"][number]["image"]> {
+  const results = new Map(
+    manifest.localComparison?.captures.map((result) => [identityKey(result), result]),
+  );
+  const images = new Map<string, Manifest["captures"][number]["image"]>();
+  const add = (image: Manifest["captures"][number]["image"]) => {
+    const existing = images.get(image.digest);
+    if (
+      existing &&
+      (existing.bytes !== image.bytes ||
+        existing.width !== image.width ||
+        existing.height !== image.height ||
+        existing.mediaType !== image.mediaType)
+    )
+      fail("Shared image metadata differs");
+    images.set(image.digest, image);
+  };
+  for (const capture of manifest.captures) {
+    const result = results.get(
+      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+    );
+    if (!manifest.localComparison || result?.outcome !== "unchanged") add(capture.image);
+    if (result?.mask) add(result.mask);
+  }
+  return images;
 }
 
 export function validateCollection(value: unknown): asserts value is TrustedCollection {

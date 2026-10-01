@@ -83,6 +83,13 @@ export interface TestOutcome {
   status: "passed";
 }
 
+/** Effective consumer screenshot settings, separate from rendering identity. */
+export interface CaptureComparison {
+  threshold: number;
+  maxDiffPixels?: number;
+  maxDiffPixelRatio?: number;
+}
+
 export interface Capture {
   itemKey: string;
   name?: string;
@@ -91,6 +98,8 @@ export interface Capture {
   testId: string;
   testRetry: number;
   profileDigest: string;
+  /** Absent in captures made before consumer screenshot settings were recorded. */
+  comparison?: CaptureComparison;
   image: {
     digest: string;
     mediaType: ImageMediaType;
@@ -113,6 +122,60 @@ export interface Manifest {
   discovery?: CandidateDiscovery;
   /** Added only by the pinned signed Submit job after GitHub artifact verification. */
   captureSources?: CaptureSource[];
+  /** Added only by the pinned signed Submit executor after local comparison. */
+  localComparison?: LocalComparisonReceipt;
+}
+
+export const LOCAL_COMPARISON_MODE = "local-v1";
+export const LOCAL_COMPARISON_ENGINE = "playwright-pixelmatch-1.63.0";
+export const LOCAL_COMPARISON_CODEC = "pngjs-7.0.0";
+
+export interface LocalReferenceBinding {
+  /** Digest of the complete capture manifest without localComparison. */
+  manifestDigest: string;
+  snapshotId: string | null;
+  baselineRevision: number;
+  inventoryDigest: string;
+  captureCount: number;
+}
+
+export interface LocalReferenceCapture extends CaptureIdentity {
+  captureId: string;
+  imageId: string;
+  profileDigest: string;
+  image: Omit<Capture["image"], "path">;
+  /** Same-origin path authorized only for this pinned reference. */
+  path: string;
+}
+
+export interface LocalReferencePage {
+  schemaVersion: string;
+  comparisonMode: typeof LOCAL_COMPARISON_MODE;
+  reference: LocalReferenceBinding;
+  captures: LocalReferenceCapture[];
+  nextCursor: string | null;
+  capability: string;
+  expiresAt: string;
+}
+
+export interface LocalCaptureResult extends CaptureIdentity {
+  candidateDigest: string;
+  referenceDigest: string | null;
+  outcome: "unchanged" | "changed";
+  changedPixels: number;
+  ratio: number;
+  sizeChanged: boolean;
+  /** Present only when pixel differences need a review mask. */
+  mask?: Capture["image"];
+}
+
+export interface LocalComparisonReceipt {
+  mode: typeof LOCAL_COMPARISON_MODE;
+  reference: LocalReferenceBinding;
+  engineVersion: typeof LOCAL_COMPARISON_ENGINE;
+  codecVersion: typeof LOCAL_COMPARISON_CODEC;
+  captures: LocalCaptureResult[];
+  removals: CaptureIdentity[];
 }
 
 export interface PlannedTest {
@@ -193,6 +256,7 @@ export interface TrustedPlan {
 export interface ReserveRunRequest extends RunProvenance {
   schemaVersion: string;
   shardKey: string;
+  comparisonMode?: typeof LOCAL_COMPARISON_MODE;
 }
 
 export interface ReserveRunResponse {
@@ -200,6 +264,7 @@ export interface ReserveRunResponse {
   runId: string;
   capability: string;
   expiresAt: string;
+  comparisonMode?: typeof LOCAL_COMPARISON_MODE;
 }
 
 export interface UploadTicket {
@@ -280,6 +345,7 @@ export interface ProtocolErrorBody {
 }
 
 export const TRANSPORT = {
+  reference: (runId: string) => `/v1/runs/${runId}/reference`,
   reserve: "/v1/runs",
   shard: (runId: string, key: string) =>
     `/v1/runs/${encodeURIComponent(runId)}/shards/${encodeURIComponent(key)}`,
