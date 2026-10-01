@@ -124,32 +124,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
       - name: Deploy production comparator
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          const account = 'b04f3af3f0f10a6b9481bc23ba974eca';
-          assert.equal(process.env.CLOUDFLARE_ACCOUNT_ID, account);
-          assert(process.env.CLOUDFLARE_API_TOKEN, 'The deployment credential is missing');
-          const service = `/accounts/${account}/workers/services/visonaut-compare/environments/production`;
-          // Label each status before Wrangler's concurrent dashboard reads hide the failed endpoint.
-          for (const [name, path] of [
-            ['bindings', `${service}/bindings`],
-            ['routes', `${service}/routes?show_zonename=true`],
-            ['custom domains', `/accounts/${account}/workers/domains/records?page=0&per_page=5&service=visonaut-compare&environment=production`],
-            ['subdomain', `${service}/subdomain`],
-            ['service environment', service],
-            ['schedules', `/accounts/${account}/workers/scripts/visonaut-compare/schedules`]
-          ]) {
-            const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
-              headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
-              redirect: 'error', signal: AbortSignal.timeout(15_000)
-            });
-            console.log(`Comparator metadata ${name}: HTTP ${response.status}`);
-            await response.body?.cancel();
-            assert(response.ok, `Cannot read comparator metadata: ${name} (HTTP ${response.status})`);
-          }
-          JS
-          pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
+        run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
         run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
   cutover:
