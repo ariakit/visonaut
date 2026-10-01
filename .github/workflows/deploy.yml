@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Temporary cutover action; normal deployment remains held
+        description: Temporary cutover action
         type: choice
         options: [inspect, convert, migrate, preview-web, production-fence]
         default: inspect
@@ -47,9 +47,8 @@ jobs:
       contents: read
   deploy:
     needs: verify
-    # Temporary hold: remove only after reviewed same-target conversion and fence proof.
     # Manual cutover dispatch never activates this job.
-    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && github.event_name == 'push' && false
+    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -211,7 +210,7 @@ jobs:
       - name: Verify the runner launcher before loading the credential
         if: inputs.action == 'inspect' || inputs.action == 'convert'
         run: pnpm exec node apps/web/tooling/simplification-cutover/run.mjs --help >/dev/null
-      - name: Load only the existing deployment key at its reviewed old path
+      - name: Load only the existing deployment key at its reviewed root path
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
           method: oidc
@@ -220,12 +219,12 @@ jobs:
           domain: https://eu.infisical.com
           project-id: ${{ vars.INFISICAL_PROJECT_ID }}
           env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
-          secret-path: /ci/visonaut-deploy
+          secret-path: /
           secret-name: CLOUDFLARE_API_TOKEN
           include-imports: "false"
           recursive: "false"
           export-type: env
-      - name: Load only the existing independent migration key at its reviewed old path
+      - name: Load only the existing independent migration key at its reviewed root path
         if: inputs.action == 'migrate'
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
@@ -235,7 +234,7 @@ jobs:
           domain: https://eu.infisical.com
           project-id: ${{ vars.INFISICAL_PROJECT_ID }}
           env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
-          secret-path: /ci/visonaut-deploy
+          secret-path: /
           secret-name: CLOUDFLARE_MIGRATIONS_API_TOKEN
           include-imports: "false"
           recursive: "false"
@@ -484,7 +483,7 @@ jobs:
           else
             pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/cutover-wrangler.jsonc --env production --dry-run
           fi
-      - name: Load only the existing deployment key at its reviewed old path
+      - name: Load only the existing deployment key at its reviewed root path
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
           method: oidc
@@ -493,7 +492,7 @@ jobs:
           domain: https://eu.infisical.com
           project-id: ${{ vars.INFISICAL_PROJECT_ID }}
           env-slug: ${{ vars.INFISICAL_ENVIRONMENT }}
-          secret-path: /ci/visonaut-deploy
+          secret-path: /
           secret-name: CLOUDFLARE_API_TOKEN
           include-imports: "false"
           recursive: "false"
