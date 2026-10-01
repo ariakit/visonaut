@@ -423,7 +423,14 @@ jobs:
             ? JSON.parse(readFileSync(original, 'utf8'))
             : unstable_readConfig({ config: original, env: 'production' });
           const prefix = preview ? 'visonaut-preview' : 'visonaut-production';
-          assert.deepEqual(originalConfiguration.queues.consumers.map(({ queue }) => queue), [`${prefix}-operations`]);
+          assert.deepEqual(originalConfiguration.queues.consumers, [{
+            queue: `${prefix}-operations`,
+            max_batch_size: 1,
+            max_batch_timeout: 1,
+            max_concurrency: 1,
+            max_retries: 5,
+            dead_letter_queue: `${prefix}-dead-letter`
+          }]);
           // Deploy must not restore a consumer removed for the cutover fence.
           // Sibling copies preserve relative entrypoint, asset, and migration paths.
           copyFileSync(original, temporary, constants.COPYFILE_EXCL);
@@ -451,7 +458,9 @@ jobs:
           assert.equal(configuration.observability.traces.enabled, true);
           assert.equal(configuration.preview_urls, false);
           assert.equal(configuration.workers_dev, true);
-          assert.deepEqual(configuration.routes, [{ pattern: preview ? 'preview.visonaut.com' : 'visonaut.com', custom_domain: true }]);
+          assert.deepEqual(configuration.routes, preview
+            ? [{ pattern: 'preview.visonaut.com', custom_domain: true, zone_name: 'visonaut.com' }]
+            : [{ pattern: 'visonaut.com', custom_domain: true }]);
           assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
             { binding: 'COMPARISONS', queue: `${prefix}-comparisons` },
             { binding: 'OPERATIONS', queue: `${prefix}-operations` }
