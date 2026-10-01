@@ -739,10 +739,10 @@ function remaining(database: TestDatabase) {
 }
 
 describe("bounded baseline groups", () => {
-  it("pins before I/O, commits four pointers once, preserves the exact budget and resumes", async () => {
+  it("pins before I/O, commits sixteen pointers once, preserves the exact budget and resumes", async () => {
     using database = new TestDatabase();
-    const fixture = await prepared(database, 6);
-    fixture.context.budget.objectsPerStep = 5;
+    const fixture = await prepared(database, 20);
+    fixture.context.budget.objectsPerStep = 18;
     const originalGet = fixture.images.get.bind(fixture.images);
     const get = vi.spyOn(fixture.images, "get").mockImplementation(async (key) => {
       expect(
@@ -763,9 +763,9 @@ describe("bounded baseline groups", () => {
       attention: [],
       hasMore: true,
     });
-    expect(get).toHaveBeenCalledTimes(5);
+    expect(get).toHaveBeenCalledTimes(18);
     expect(batch).toHaveBeenCalledTimes(3);
-    expect(remaining(database)).toEqual({ count: 1 });
+    expect(remaining(database)).toEqual({ count: 2 });
     expect(
       database.connection
         .prepare("SELECT storage_mode FROM visonaut_snapshots WHERE id='legacy'")
@@ -773,7 +773,7 @@ describe("bounded baseline groups", () => {
     ).toEqual({ storage_mode: "protected" });
     expect((await convertSourceBaselines(fixture.context)).hasMore).toBe(true);
     expect((await convertSourceBaselines(fixture.context)).completed).toEqual(["legacy"]);
-    expect(get).toHaveBeenCalledTimes(6);
+    expect(get).toHaveBeenCalledTimes(20);
     expect(remaining(database)).toEqual({ count: 0 });
     expect(remove).not.toHaveBeenCalled();
     for (const pointer of fixture.pointers) {
@@ -833,7 +833,7 @@ describe("bounded baseline groups", () => {
 
   it("keeps a group protected when its second original read fails", async () => {
     using database = new TestDatabase();
-    const fixture = await prepared(database, 4);
+    const fixture = await prepared(database, 16);
     const first = fixture.pointers[0];
     const second = fixture.pointers[1];
     if (!first || !second) throw new Error("Missing selected pointers.");
@@ -846,7 +846,7 @@ describe("bounded baseline groups", () => {
     expect((await convertSourceBaselines(fixture.context)).attention).toEqual(["legacy"]);
     expect(get.mock.calls.map(([key]) => key)).toEqual([first.source_key, second.source_key]);
     expect(batch).toHaveBeenCalledTimes(1);
-    expect(remaining(database)).toEqual({ count: 4 });
+    expect(remaining(database)).toEqual({ count: 16 });
     expect(
       database.connection
         .prepare("SELECT storage_mode FROM visonaut_snapshots WHERE id='legacy'")
@@ -866,7 +866,7 @@ describe("bounded baseline groups", () => {
 
   it("rolls back every group pointer when its protected-snapshot assertion fails", async () => {
     using database = new TestDatabase();
-    const fixture = await prepared(database, 4);
+    const fixture = await prepared(database, 16);
     database.connection.exec("UPDATE visonaut_images SET bytes_present=0;");
     const originalBatch = database.batch.bind(database);
     vi.spyOn(database, "batch").mockImplementation(async (statements) => {
@@ -882,7 +882,7 @@ describe("bounded baseline groups", () => {
       return originalBatch(statements);
     });
     expect((await convertSourceBaselines(fixture.context)).attention).toEqual(["legacy"]);
-    expect(remaining(database)).toEqual({ count: 4 });
+    expect(remaining(database)).toEqual({ count: 16 });
     expect(
       database.connection
         .prepare("SELECT SUM(bytes_present) AS present FROM visonaut_images")

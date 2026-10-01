@@ -518,6 +518,22 @@ it("repairs a protected original with native D1/R2, preserves bytes and restores
           await platform.env.DB.prepare(
             "UPDATE visonaut_images SET object_key='runs/main/repaired',bytes_present=0 WHERE id='image-main'",
           ).run();
+          // Shared captures fill one checkpoint while retaining one original object.
+          for (let index = 1; index < 16; index++) {
+            const captureId = `capture-shared-${index}`;
+            await platform.env.DB.prepare(
+              `INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json)
+              SELECT ?,run_id,shard_key,item_key,?,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json FROM visonaut_captures WHERE id='capture-main'`,
+            )
+              .bind(captureId, `variant-shared-${index}`)
+              .run();
+            await platform.env.DB.prepare(
+              `INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied)
+              SELECT snapshot_id,?,image_id,object_key,digest,copied FROM visonaut_snapshot_images WHERE snapshot_id='legacy' AND capture_id='capture-main'`,
+            )
+              .bind(captureId)
+              .run();
+          }
           return {
             env: {
               DB: platform.env.DB,
@@ -540,9 +556,9 @@ it("repairs a protected original with native D1/R2, preserves bytes and restores
               expect(source?.httpMetadata?.contentType).toBe("image/png");
               expect(
                 await platform.env.DB.prepare(
-                  "SELECT object_key FROM visonaut_snapshot_images WHERE snapshot_id='legacy'",
+                  "SELECT COUNT(*) AS count FROM visonaut_snapshot_images WHERE snapshot_id='legacy' AND object_key='runs/main/repaired' AND copied=1",
                 ).first(),
-              ).toEqual({ object_key: "runs/main/repaired" });
+              ).toEqual({ count: 16 });
               expect(
                 await platform.env.DB.prepare(
                   "SELECT run_id FROM work_retention_pins WHERE owner='promotion:legacy'",

@@ -2,6 +2,9 @@ import { atomic, assertion } from "@visonaut/service";
 import { digestStream, copyVerifiedObject, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationsContext, OperationReport } from "./types.ts";
 
+// Sixteen images keep each atomic checkpoint to 34 statements.
+const imageGroupSize = 16;
+
 /** One-time conversion. Keep protected bytes until source readback and all owner pins pass. */
 export async function convertSourceBaselines(context: OperationsContext): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
@@ -53,8 +56,8 @@ export async function convertSourceBaselines(context: OperationsContext): Promis
           id: string;
         }>();
       const images = pending.results ?? [];
-      for (let index = 0; index < images.length; index += 4) {
-        const group = images.slice(index, index + 4);
+      for (let index = 0; index < images.length; index += imageGroupSize) {
+        const group = images.slice(index, index + imageGroupSize);
         remaining -= group.length;
         // Captures can share an original. Finish its restore before the next read.
         for (const image of group) {
