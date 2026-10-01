@@ -59,7 +59,11 @@ try {
           void failure.catch(() => {});
           return {
             failure,
-            fetch: (url, init) => worker.fetch(url, init),
+            async fetch(url, init) {
+              await worker.ready;
+              failureStage = "after-bindings";
+              return worker.fetch(url, init);
+            },
             async dispose() {
               worker.raw.off("error", onFailure);
               worker.raw.off("buildFailed", onFailure);
