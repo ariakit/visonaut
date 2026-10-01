@@ -7,7 +7,14 @@ import { expect, it, vi } from "vitest";
 import { applyTestMigrations, readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { captured, context, digest, TestDatabase } from "../../src/operations/test-fixtures.ts";
 import type { HistoryPageReference } from "../../src/operations/history-format.ts";
-import { boundedImages, inspect, runCutover, type CutoverBindings } from "./runner.ts";
+import {
+  boundedImages,
+  inspect,
+  runCutover,
+  parseOptions,
+  type CutoverBindings,
+} from "./runner.ts";
+import { executeCutover } from "./operations.ts";
 
 const remoteSelection = [
   "--remote",
@@ -44,6 +51,49 @@ it.each([
   expect(createPlatform).not.toHaveBeenCalled();
 });
 
+it.each(["2", "10"])(
+  "rejects remote conversions with %s turns before Worker setup",
+  async (maxTurns) => {
+    const createPlatform = vi.fn();
+    const start = vi.fn(async () => {
+      throw new Error("Unexpected remote Worker setup.");
+    });
+    await expect(
+      runCutover(
+        ["convert", ...remoteSelection, "--acknowledge-write-fence", "--max-turns", maxTurns],
+        createPlatform,
+        { entrypoint: new URL("./operations.ts", import.meta.url).pathname, start },
+      ),
+    ).rejects.toMatchObject({
+      name: "CutoverOptionsError",
+      message: "--max-turns must be 1 for remote conversion.",
+    });
+    expect(createPlatform).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  },
+);
+
+it("allows one remote conversion turn", () => {
+  expect(
+    parseOptions(["convert", ...remoteSelection, "--acknowledge-write-fence", "--max-turns", "1"]),
+  ).toMatchObject({ remote: true, maxTurns: 1 });
+});
+
+it("preserves local conversion turns from 1 to 10", () => {
+  for (let maxTurns = 1; maxTurns <= 10; maxTurns++) {
+    expect(
+      parseOptions([
+        "convert",
+        "--persist-path",
+        tmpdir(),
+        "--acknowledge-write-fence",
+        "--max-turns",
+        String(maxTurns),
+      ]),
+    ).toMatchObject({ remote: false, maxTurns });
+  }
+});
+
 it.each([
   {
     environment: "production",
@@ -77,27 +127,61 @@ it.each([
         "--images-bucket",
         target.imagesBucket,
       ],
-      async (options) => {
-        configPath = options.configPath ?? "";
-        const config = JSON.parse(await readFile(configPath, "utf8"));
-        expect(config).toEqual({
-          name: target.workerName,
-          account_id: "b04f3af3f0f10a6b9481bc23ba974eca",
-          compatibility_date: "2026-09-22",
-          compatibility_flags: ["nodejs_compat"],
-          d1_databases: [
-            {
-              binding: "DB",
-              database_name: target.databaseName,
-              database_id: target.databaseId,
-              remote: true,
+      vi.fn(async () => {
+        throw new Error("Remote mode cannot create a binding proxy.");
+      }),
+      {
+        entrypoint: new URL("./operations.ts", import.meta.url).pathname,
+        async start(options) {
+          configPath = options.config;
+          const config = JSON.parse(await readFile(configPath, "utf8"));
+          const main = config.main;
+          expect(config).toEqual({
+            name: target.workerName,
+            account_id: "b04f3af3f0f10a6b9481bc23ba974eca",
+            main,
+            compatibility_date: "2026-09-22",
+            compatibility_flags: ["nodejs_compat"],
+            d1_databases: [
+              {
+                binding: "DB",
+                database_name: target.databaseName,
+                database_id: target.databaseId,
+                remote: true,
+              },
+            ],
+            r2_buckets: [{ binding: "IMAGES", bucket_name: target.imagesBucket, remote: true }],
+          });
+          expect((await stat(configPath)).mode & 0o777).toBe(0o600);
+          expect((await stat(main)).mode & 0o777).toBe(0o600);
+          expect(await readFile(main, "utf8")).toContain("const options = ");
+          expect(await readFile(main, "utf8")).not.toContain("request.json");
+          expect(options).toEqual({
+            config: configPath,
+            envFiles: [],
+            dev: { remote: true, watch: false, persist: false, logLevel: "none" },
+          });
+          const selection = parseOptions([
+            "inspect",
+            "--remote",
+            "--environment",
+            target.environment,
+            "--database-id",
+            target.databaseId,
+            "--images-bucket",
+            target.imagesBucket,
+          ]);
+          return {
+            fetch: async (_url, init) => {
+              expect(init.body).toBeUndefined();
+              return Response.json(
+                await executeCutover(selection, { DB: database, IMAGES: imageCalls }),
+              );
             },
-          ],
-          r2_buckets: [{ binding: "IMAGES", bucket_name: target.imagesBucket, remote: true }],
-        });
-        expect((await stat(configPath)).mode & 0o777).toBe(0o600);
-        expect(options).toEqual({ configPath, envFiles: [], persist: false, remoteBindings: true });
-        return { env: { DB: database, IMAGES: imageCalls }, dispose };
+            failure: new Promise<never>(() => {}),
+            dispose,
+          };
+        },
       },
     );
     expect(report.readback.schemaReady).toBe(false);
@@ -144,12 +228,31 @@ it("disposes a selected remote session and removes its config after inspection f
   const dispose = vi.fn(async () => {});
   let configPath = "";
   await expect(
-    runCutover(["inspect", ...remoteSelection], async (options) => {
-      configPath = options.configPath ?? "";
-      expect(JSON.parse(await readFile(configPath, "utf8")).name).toBe("visonaut-compare");
-      return { env: { DB: database, IMAGES: { get: vi.fn(), put: vi.fn() } }, dispose };
+    runCutover(["inspect", ...remoteSelection], vi.fn(), {
+      entrypoint: new URL("./operations.ts", import.meta.url).pathname,
+      async start(options) {
+        configPath = options.config;
+        expect(JSON.parse(await readFile(configPath, "utf8")).name).toBe("visonaut-compare");
+        const selection = parseOptions(["inspect", ...remoteSelection]);
+        return {
+          async fetch() {
+            try {
+              return Response.json(
+                await executeCutover(selection, {
+                  DB: database,
+                  IMAGES: { get: vi.fn(), put: vi.fn() },
+                }),
+              );
+            } catch {
+              return Response.json({ code: "cutover-worker-failed" }, { status: 500 });
+            }
+          },
+          failure: new Promise<never>(() => {}),
+          dispose,
+        };
+      },
     }),
-  ).rejects.toThrow("inspection failed");
+  ).rejects.toMatchObject({ name: "CutoverExecutionError" });
   expect(dispose).toHaveBeenCalledOnce();
   await expect(stat(configPath)).rejects.toMatchObject({ code: "ENOENT" });
 });
@@ -687,4 +790,51 @@ it("converts a native archive in one turn and keeps exact decisions, tuples and 
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+it("disposes the public Worker and removes its config on a controller failure during body readback", async () => {
+  const event = { source: "RemoteRuntimeController", cause: new Error("private-fixture-details") };
+  let rejectFailure: (reason: unknown) => void = () => {};
+  let configPath = "";
+  const dispose = vi.fn(async () => {});
+  await expect(
+    runCutover(["inspect", ...remoteSelection], vi.fn(), {
+      entrypoint: new URL("./operations.ts", import.meta.url).pathname,
+      async start(options) {
+        configPath = options.config;
+        const failure = new Promise<never>((_, reject) => {
+          rejectFailure = reject;
+        });
+        return {
+          async fetch() {
+            return new Response(
+              new ReadableStream<Uint8Array>({
+                start() {
+                  rejectFailure(event);
+                },
+              }),
+            );
+          },
+          failure,
+          dispose,
+        };
+      },
+    }),
+  ).rejects.toBe(event);
+  expect(dispose).toHaveBeenCalledOnce();
+  await expect(stat(configPath)).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("removes the private config when the public Worker start promise rejects", async () => {
+  let configPath = "";
+  await expect(
+    runCutover(["inspect", ...remoteSelection], vi.fn(), {
+      entrypoint: new URL("./operations.ts", import.meta.url).pathname,
+      async start(options) {
+        configPath = options.config;
+        throw new Error("private-start-fixture");
+      },
+    }),
+  ).rejects.toThrow("private-start-fixture");
+  await expect(stat(configPath)).rejects.toMatchObject({ code: "ENOENT" });
 });
