@@ -33,17 +33,55 @@ try {
   if (argumentsList.length === 1 && argumentsList[0] === "--help") {
     console.log(help);
   } else {
-    const { getPlatformProxy } = webRequire("wrangler");
-    const report = await runCutover(argumentsList, async (options) => {
-      failureStage = "binding-setup";
-      const platform = await getPlatformProxy(options);
-      failureStage = "after-bindings";
-      return platform;
-    });
-    console.log(JSON.stringify(report, null, 2));
+    // Wrangler's disk logs can include private preview details even at logLevel none.
+    process.env.WRANGLER_WRITE_LOGS = "false";
+    const { getPlatformProxy, unstable_startWorker } = webRequire("wrangler");
+    const report = await runCutover(
+      argumentsList,
+      async (options) => {
+        failureStage = "binding-setup";
+        const platform = await getPlatformProxy(options);
+        failureStage = "after-bindings";
+        return platform;
+      },
+      {
+        entrypoint: fileURLToPath(new URL("./operations.ts", import.meta.url)),
+        async start(options) {
+          failureStage = "binding-setup";
+          const worker = await unstable_startWorker(options);
+          let onFailure;
+          const failure = new Promise((_, reject) => {
+            onFailure = reject;
+          });
+          worker.raw.on("error", onFailure);
+          worker.raw.on("buildFailed", onFailure);
+          // An event can arrive between requests. Its promise remains handled.
+          void failure.catch(() => {});
+          return {
+            failure,
+            fetch: (url, init) => worker.fetch(url, init),
+            async dispose() {
+              worker.raw.off("error", onFailure);
+              worker.raw.off("buildFailed", onFailure);
+              await worker.dispose();
+            },
+          };
+        },
+      },
+    );
+    failureStage = "after-bindings";
+    const text = JSON.stringify(report, null, 2);
+    if (Buffer.byteLength(text) > 1_048_576) throw new Error("Cutover report exceeds its bound.");
+    console.log(text);
     process.exitCode = report.readback.gatesReady ? 0 : 2;
   }
 } catch (error) {
+  if (
+    error instanceof Error &&
+    Object.getOwnPropertyDescriptor(error, "name")?.value === "CutoverExecutionError"
+  ) {
+    failureStage = "after-bindings";
+  }
   // Proxy failures can contain session credentials. Do not print their contents.
   if (
     error instanceof Error &&
