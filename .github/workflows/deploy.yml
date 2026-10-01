@@ -8,7 +8,7 @@ on:
       action:
         description: Temporary cutover action
         type: choice
-        options: [inspect, convert, migrate, preview-web, production-fence]
+        options: [inspect, convert, migrate, preview-web, preview-comparator, production-fence]
         default: inspect
         required: true
       target:
@@ -124,6 +124,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
       - name: Deploy production comparator
+        env:
+          WRANGLER_LOG: debug
+          WRANGLER_LOG_SANITIZE: true
         run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
         run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
@@ -374,6 +377,7 @@ jobs:
       github.event_name == 'workflow_dispatch' &&
       inputs.consumers_fenced == true &&
       ((inputs.action == 'preview-web' && inputs.target == 'preview') ||
+       (inputs.action == 'preview-comparator' && inputs.target == 'preview' && inputs.write_fence == true) ||
        (inputs.action == 'production-fence' && inputs.target == 'production'))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -411,6 +415,7 @@ jobs:
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
           INFISICAL_DEPLOY_IDENTITY_ID: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
       - name: Check the exact web target before loading secrets
+        if: inputs.action != 'preview-comparator'
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
         run: |
@@ -474,12 +479,66 @@ jobs:
           assert.equal(configuration.containers?.length ?? 0, 0);
           assert.equal(configuration.durable_objects?.bindings?.length ?? 0, 0);
           JS
-      - name: Dry-run only the selected web deployment
+      - name: Check the exact preview comparator before loading secrets
+        if: inputs.action == 'preview-comparator'
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { constants, copyFileSync, existsSync } from 'node:fs';
+          import { experimental_patchConfig, unstable_readConfig } from 'wrangler';
+          assert.equal(existsSync('apps/compare/.wrangler/deploy/config.json'), false,
+            'The comparator must not use a redirected application build');
+          const original = 'apps/compare/wrangler.jsonc';
+          const temporary = 'apps/compare/cutover-wrangler.jsonc';
+          const originalConfiguration = unstable_readConfig({ config: original, env: '' });
+          assert.deepEqual(originalConfiguration.queues.consumers, [{
+            queue: 'visonaut-preview-comparisons', max_batch_size: 1,
+            max_batch_timeout: 1, max_concurrency: 1, max_retries: 10,
+            retry_delay: 60, dead_letter_queue: 'visonaut-preview-comparison-dead-letter'
+          }, {
+            queue: 'visonaut-preview-comparison-dead-letter', max_batch_size: 1,
+            max_batch_timeout: 1, max_concurrency: 1, max_retries: 10, retry_delay: 60
+          }]);
+          // Keep consumers removed for the cutover fence absent from this deployment.
+          copyFileSync(original, temporary, constants.COPYFILE_EXCL);
+          experimental_patchConfig(temporary, { queues: { consumers: [] } }, false);
+          const configuration = unstable_readConfig({ config: temporary, env: '' });
+          assert.equal(configuration.name, 'visonaut-preview-compare');
+          assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
+            binding: 'DB', database_id: '395b539c-c423-4ce4-887c-a5792792a63b'
+          }]);
+          assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), [{
+            binding: 'IMAGES', bucket_name: 'visonaut-preview-images'
+          }]);
+          assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
+            { binding: 'COMPARISONS', queue: 'visonaut-preview-comparisons' },
+            { binding: 'OPERATIONS', queue: 'visonaut-preview-operations' }
+          ]);
+          assert.deepEqual(configuration.queues.consumers, []);
+          assert.deepEqual(configuration.migrations, [
+            { tag: 'container-v1', new_sqlite_classes: ['ComparisonContainer'] },
+            { tag: 'worker-only-v2', deleted_classes: ['ComparisonContainer'] }
+          ]);
+          assert.equal(configuration.vars?.VISONAUT_COMPARISON_DEAD_LETTER_QUEUE,
+            'visonaut-preview-comparison-dead-letter');
+          assert.equal(configuration.observability.enabled, true);
+          assert.equal(configuration.observability.traces.enabled, true);
+          assert.equal(configuration.workers_dev, false);
+          assert.equal(configuration.preview_urls, false);
+          assert.deepEqual(configuration.triggers.crons ?? [], []);
+          assert.equal(configuration.routes?.length ?? 0, 0);
+          assert.equal(configuration.services?.length ?? 0, 0);
+          assert.equal(configuration.containers?.length ?? 0, 0);
+          assert.equal(configuration.durable_objects?.bindings?.length ?? 0, 0);
+          JS
+      - name: Dry-run only the selected deployment
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
         run: |
           if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
             pnpm exec wrangler deploy --config apps/web/dist/server/cutover-wrangler.json --dry-run
+          elif [ "$VISONAUT_WEB_ACTION" = preview-comparator ]; then
+            pnpm exec wrangler deploy --config apps/compare/cutover-wrangler.jsonc --env "" --dry-run
           else
             pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/cutover-wrangler.jsonc --env production --dry-run
           fi
@@ -497,16 +556,49 @@ jobs:
           include-imports: "false"
           recursive: "false"
           export-type: env
-      - name: Deploy only the selected web Worker
+      - name: Require current preview Container drain evidence before class retirement
+        if: inputs.action == 'preview-comparator'
+        env:
+          VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED: ${{ vars.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED }}
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { assertContainerRetirement } from './.github/workflows/scripts/deploy-infrastructure.mjs';
+          assert.equal(process.env.CLOUDFLARE_ACCOUNT_ID, 'b04f3af3f0f10a6b9481bc23ba974eca');
+          assert(process.env.CLOUDFLARE_API_TOKEN, 'The existing deployment credential is missing');
+          const response = await fetch(
+            'https://api.cloudflare.com/client/v4/accounts/b04f3af3f0f10a6b9481bc23ba974eca/workers/scripts/visonaut-preview-compare/settings', {
+              headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
+              redirect: 'error', signal: AbortSignal.timeout(15_000)
+            });
+          assert(response.ok, 'Cannot read the existing preview comparator bindings');
+          const metadata = await response.json();
+          assert(metadata.success && metadata.result, 'Preview comparator settings are unavailable');
+          const container = metadata.result.bindings?.find((binding) => binding.name === 'CODEC_CONTAINER');
+          assert.equal(container?.namespace_id, 'ce5039e5f4664419a341fcef053b4b78',
+            'The preview namespace is absent or changed; inspect before a new dispatch');
+          const receipt = process.env.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED
+            ? JSON.parse(process.env.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED) : null;
+          assertContainerRetirement(metadata.result, receipt);
+          JS
+      - name: Require current main immediately before preview comparator deployment
+        if: inputs.action == 'preview-comparator'
+        run: node .github/workflows/scripts/deploy-source.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VISONAUT_RELEASE_SOURCE_ONLY: "true"
+      - name: Deploy only the selected Worker
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
             pnpm exec wrangler deploy --config apps/web/dist/server/cutover-wrangler.json
+          elif [ "$VISONAUT_WEB_ACTION" = preview-comparator ]; then
+            pnpm exec wrangler deploy --config apps/compare/cutover-wrangler.jsonc --env ""
           else
             pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/cutover-wrangler.jsonc --env production
           fi
       - name: Remove temporary consumer-free deployment configs
         if: always()
-        run: rm -f -- apps/web/dist/server/cutover-wrangler.json apps/web/cutover-wrangler.jsonc
+        run: rm -f -- apps/web/dist/server/cutover-wrangler.json apps/web/cutover-wrangler.jsonc apps/compare/cutover-wrangler.jsonc
