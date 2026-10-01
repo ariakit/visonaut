@@ -76,7 +76,7 @@ export async function recoverGitHubDeliveries({
   const request = async (path: string, method = "GET") => {
     const response = await fetcher(new URL(path, "https://api.github.com"), {
       method,
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15_000),
       headers: {
         Accept: "application/vnd.github+json",
