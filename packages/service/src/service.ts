@@ -4,6 +4,9 @@ import {
   validateProfile,
   COMPARISON_ENGINE_VERSION,
   IMAGE_CODEC_VERSION,
+  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_CODEC,
+  type LocalComparisonReceipt,
   validateComparisonPolicy,
   type ComparisonPolicy,
 } from "@visonaut/protocol";
@@ -622,7 +625,7 @@ export class Service {
     await this.registerImages([image]);
   }
 
-  /** Register a bounded set only after every original has passed its R2 check. */
+  /** Register bounded images only after each has passed its R2 check. */
   async registerImages(images: readonly ValidatedImage[]) {
     const first = images[0];
     if (
@@ -644,11 +647,11 @@ export class Service {
         run.id,
       ]),
       this.sql(
-        `INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height)
+        `INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role)
           SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'),
             json_extract(value, '$.digest'), json_extract(value, '$.objectKey'),
             json_extract(value, '$.contentType'), json_extract(value, '$.bytes'),
-            json_extract(value, '$.width'), json_extract(value, '$.height')
+            json_extract(value, '$.width'), json_extract(value, '$.height'), COALESCE(json_extract(value,'$.role'),'original')
           FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING`,
         [entries],
       ),
@@ -661,7 +664,8 @@ export class Service {
             AND image.bytes = json_extract(entry.value, '$.bytes')
             AND image.width = json_extract(entry.value, '$.width')
             AND image.height = json_extract(entry.value, '$.height')
-            AND image.content_type = json_extract(entry.value, '$.contentType')))`,
+            AND image.content_type = json_extract(entry.value, '$.contentType')
+            AND image.role = COALESCE(json_extract(entry.value,'$.role'),'original')))`,
         [entries, run.id],
       ),
     ]);
@@ -775,8 +779,13 @@ export class Service {
           [run.id],
         ),
         this.guard(
-          "NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM visonaut_images image WHERE image.id = json_extract(staged.value, '$.imageId') AND image.run_id = ? AND image.bytes_present = 1))",
-          [captures, run.id],
+          `NOT EXISTS (SELECT 1 FROM json_each(?) staged WHERE NOT EXISTS (SELECT 1 FROM visonaut_images image WHERE image.id = json_extract(staged.value, '$.imageId') AND image.bytes_present = 1 AND image.validated=1 AND (image.run_id = ? OR (
+            json_extract(staged.value,'$.metadata.candidateStored')=0 AND json_extract(staged.value,'$.metadata.localResult.outcome')='unchanged'
+            AND EXISTS(SELECT 1 FROM visonaut_snapshot_images member JOIN visonaut_captures reference ON reference.id=member.capture_id
+              WHERE member.snapshot_id=? AND member.image_id=image.id AND member.copied=1
+              AND reference.item_key=json_extract(staged.value,'$.itemKey') AND reference.variant_key=json_extract(staged.value,'$.variantKey')
+              AND COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=reference.profile_digest),reference.profile_digest)=json_extract(staged.value,'$.profileDigest'))))))`,
+          [captures, run.id, input.localReferenceSnapshotId ?? null],
         ),
         this.sql(
           "INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extract(value, '$.itemKey'), json_extract(value, '$.variantKey'), json_extract(value, '$.ordinal'), json_extract(value, '$.imageId'), json_extract(value, '$.profileDigest'), json_extract(value, '$.testId'), json_extract(value, '$.testRetry'), json_extract(value, '$.metadataJson') FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING",
@@ -788,6 +797,14 @@ export class Service {
         ),
       ]);
     }
+    if (input.localReferenceSnapshotId)
+      await atomic(this.database, [
+        this.activeGuard(run),
+        this.sql(
+          "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT image.run_id,?,'comparison' FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id WHERE capture.run_id=? AND image.run_id!=?",
+          [`inherited-by:${run.id}`, run.id, run.id],
+        ),
+      ]);
     const profileDigest = await captureProfilesDigest(input.captures);
     await atomic(this.database, [
       this.activeGuard(run),
@@ -918,10 +935,21 @@ export class Service {
     purpose?: "review" | "historical";
     expectedCaptureCount?: number;
     requireCurrentCapturePolicy?: boolean;
+    localComparison?: LocalComparisonReceipt;
   }) {
     const run = await this.run(input.runId);
     const project = await this.project(run.project_id);
     const historical = input.purpose === "historical";
+    if (!input.localComparison) {
+      const local = await this.sql(
+        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+        [run.id],
+      ).first();
+      if (local)
+        throw new IncompleteError(
+          "This run was compared in trusted Submit. Submit the complete CI bundle again, or capture a new run; stored representatives cannot replace omitted candidate bytes.",
+        );
+    }
     await this.convertRenderingProfiles(run.id, input.referenceSnapshotId);
     if (run.detail_archived)
       throw new ConflictError("Closed history is a read-only summary. Capture a new run.");
@@ -1028,12 +1056,31 @@ export class Service {
         this.sql("DELETE FROM visonaut_historical_preparations WHERE id = ?", [input.id]),
       );
     }
-    const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', ci.digest, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', '${COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${IMAGE_CODEC_VERSION}')`;
-    const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', '${COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${IMAGE_CODEC_VERSION}')`;
+    const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', ${input.localComparison ? "json_extract(c.metadata_json,'$.observedImage.digest')" : "ci.digest"}, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', ${input.localComparison ? "COALESCE(json_extract(c.metadata_json,'$.comparisonDigest'),?)" : "?"}, 'comparisonEngineVersion', '${input.localComparison ? LOCAL_COMPARISON_ENGINE : COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${input.localComparison ? LOCAL_COMPARISON_CODEC : IMAGE_CODEC_VERSION}')`;
+    const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', '${input.localComparison ? LOCAL_COMPARISON_ENGINE : COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${input.localComparison ? LOCAL_COMPARISON_CODEC : IMAGE_CODEC_VERSION}')`;
     const matchingProfiles = `COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest)
       = COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest)`;
     const identicalOriginals = `r.id IS NOT NULL AND length(ci.digest) = 64 AND ci.digest NOT GLOB '*[^0-9a-f]*' AND ri.digest = ci.digest AND ri.bytes = ci.bytes AND ri.width = ci.width AND ri.height = ci.height AND ri.content_type = ci.content_type AND ri.role = 'original' AND ci.role = 'original' AND ri.validated = 1 AND ci.validated = 1 AND ri.bytes_present = 1 AND (${matchingProfiles})`;
     const identicalResult = `json_object('outcome', 'unchanged', 'changedPixels', 0, 'ratio', 0, 'engineVersion', 'sha256-identical-1', 'codecVersion', 'not-decoded', 'maskExpected', json('false'))`;
+    if (input.localComparison) {
+      if (
+        input.localComparison.reference.snapshotId !== input.referenceSnapshotId ||
+        input.localComparison.reference.baselineRevision !== input.expectedBaselineRevision
+      )
+        throw new IncompleteError("The local result is bound to another reference.");
+      guards.push(
+        this.guard(
+          "(SELECT count(*) FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' AND json_extract(metadata_json,'$.localResult.outcome') IN('changed','unchanged'))=?",
+          [run.id, input.localComparison.captures.length],
+        ),
+      );
+    }
+    const outcome = input.localComparison
+      ? "json_extract(c.metadata_json,'$.localResult.outcome')"
+      : `CASE WHEN r.id IS NULL THEN 'changed' WHEN ${identicalOriginals} THEN 'unchanged' ELSE 'pending' END`;
+    const result = input.localComparison
+      ? "json_extract(c.metadata_json,'$.localResult')"
+      : `CASE WHEN ${identicalOriginals} THEN ${identicalResult} ELSE NULL END`;
     await atomic(this.database, [
       ...guards,
       this.sql(
@@ -1050,7 +1097,7 @@ export class Service {
         ],
       ),
       this.sql(
-        `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome, result_json) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, CASE WHEN r.id IS NULL THEN 'changed' WHEN ${identicalOriginals} THEN 'unchanged' ELSE 'pending' END, CASE WHEN ${identicalOriginals} THEN ${identicalResult} ELSE NULL END FROM visonaut_captures c JOIN visonaut_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM visonaut_snapshot_images si JOIN visonaut_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN visonaut_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
+        `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome, result_json) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, ${outcome}, ${result} FROM visonaut_captures c JOIN visonaut_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM visonaut_snapshot_images si JOIN visonaut_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN visonaut_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
         [input.id, input.id, project.id, project.policy_digest, input.referenceSnapshotId, run.id],
       ),
       this.sql(

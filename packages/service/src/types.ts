@@ -77,6 +77,7 @@ export interface ValidatedImage {
   bytes: number;
   width: number;
   height: number;
+  role?: "original" | "thumbnail" | "mask";
 }
 
 export interface CaptureInput extends CaptureIdentity {
@@ -115,6 +116,8 @@ export interface CommitShardParams {
   key: string;
   manifestDigest: string;
   captures: CaptureInput[];
+  /** Only a verified local Submit can reuse this pinned accepted representative. */
+  localReferenceSnapshotId?: string | null;
   finalTestOutcomes: TestOutcome[];
   /** Server evidence from the trusted executor after GitHub confirms success. */
   verifiedDiscovery?: VerifiedDiscovery;
