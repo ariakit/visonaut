@@ -33,7 +33,7 @@ export async function combineBundles({
   const profiles = new Map<string, Manifest["profiles"][number]>();
   const tests: Manifest["tests"] = [];
   const captures: Manifest["captures"] = [];
-  const images = new Map<string, { bytes: number; mediaType: string }>();
+  const images = new Map<string, Manifest["captures"][number]["image"]>();
   const configurations: { shard: string; digest: string }[] = [];
   let first: Manifest | undefined;
   let sourceAttempt = 0;
@@ -83,7 +83,13 @@ export async function combineBundles({
     for (const capture of manifest.captures) {
       const image = capture.image;
       const previous = images.get(image.digest);
-      if (previous && (previous.bytes !== image.bytes || previous.mediaType !== image.mediaType)) {
+      if (
+        previous &&
+        (previous.bytes !== image.bytes ||
+          previous.mediaType !== image.mediaType ||
+          previous.width !== image.width ||
+          previous.height !== image.height)
+      ) {
         throw new CliError("Capture bundles disagree about a shared image.", 4);
       }
       const extension = image.mediaType === "image/webp" ? "webp" : "png";
@@ -95,7 +101,7 @@ export async function combineBundles({
         image: { ...capture.image, path: imagePath },
       });
       if (previous) continue;
-      images.set(image.digest, { bytes: image.bytes, mediaType: image.mediaType });
+      images.set(image.digest, image);
       await copyFile(join(local.directory, image.path), join(directory, imagePath));
     }
   }

@@ -20,11 +20,14 @@ export async function runCli(options: CliOptions) {
     if (!prepared) {
       throw new CliError("Choose begin, submit --shard, or status. Use --help for usage.", 2);
     }
-    return runInternalCli({
-      ...options,
-      argv: ["submit", "--dir", prepared.directory],
-      environment: { ...environment, VISONAUT_SERVER: prepared.server },
-    });
+    return runInternalCli(
+      {
+        ...options,
+        argv: ["submit", "--dir", prepared.directory],
+        environment: { ...environment, VISONAUT_SERVER: prepared.server },
+      },
+      true,
+    );
   } catch (error) {
     const failure =
       error instanceof CliError ? error : new CliError("The verified capture submission failed.");

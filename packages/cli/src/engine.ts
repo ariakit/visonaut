@@ -1,7 +1,14 @@
 import { createHmac } from "node:crypto";
-import { digestJson, SCHEMA_VERSION, TRANSPORT } from "@visonaut/protocol";
+import {
+  digestJson,
+  LOCAL_COMPARISON_MODE,
+  SCHEMA_VERSION,
+  TRANSPORT,
+  uploadImages,
+} from "@visonaut/protocol";
 import type {
   DeclareShardResponse,
+  LocalReferenceBinding,
   Manifest,
   ReserveRunResponse,
   RunStatus,
@@ -9,9 +16,11 @@ import type {
 import { beginSubmission } from "./bundle-submit.js";
 import { CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
-import { loadCapture, readImage, validateImages } from "./files.js";
+import { loadCapture, readImageFile, validateImages } from "./files.js";
 import type { LocalManifest } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
+import { compareLocally, readReference, validateLocalImages } from "./local-comparison.js";
+import { refreshSubmissionReceipt } from "./signed-context.js";
 
 export type { ExitCode } from "./errors.js";
 
@@ -94,7 +103,7 @@ function argumentsFrom(argv: string[], environment: Record<string, string | unde
   return result;
 }
 
-function reservedRun(value: unknown): ReserveRunResponse {
+function reservedRun(value: unknown, localComparison = false): ReserveRunResponse {
   protocolVersion(value);
   if (
     !record(value) ||
@@ -112,11 +121,17 @@ function reservedRun(value: unknown): ReserveRunResponse {
       4,
     );
   }
+  if (localComparison && value.comparisonMode !== LOCAL_COMPARISON_MODE) {
+    throw new CliError(
+      "The service does not support local comparison. Update the service before Submit.",
+    );
+  }
   return {
     schemaVersion: value.schemaVersion,
     runId: value.runId,
     capability: value.capability,
     expiresAt: value.expiresAt,
+    ...(localComparison ? { comparisonMode: LOCAL_COMPARISON_MODE } : {}),
   };
 }
 
@@ -126,13 +141,13 @@ function shardDeclaration(
   manifest: Manifest,
 ): DeclareShardResponse {
   protocolVersion(value);
-  const captures = new Map(manifest.captures.map((capture) => [capture.image.digest, capture]));
+  const images = uploadImages(manifest);
   if (
     !record(value) ||
     !text(value.schemaVersion) ||
     value.manifestDigest !== digest ||
     !Array.isArray(value.uploads) ||
-    value.uploads.length > captures.size
+    value.uploads.length > images.size
   ) {
     throw new CliError("The service returned an invalid shard declaration.");
   }
@@ -158,7 +173,7 @@ function shardDeclaration(
       };
     }
   }
-  const images = new Set<string>();
+  const imageDigests = new Set<string>();
   const tickets = new Set<string>();
   const uploads: DeclareShardResponse["uploads"] = [];
   for (const upload of value.uploads) {
@@ -173,16 +188,16 @@ function shardDeclaration(
     ) {
       throw new CliError("The service returned an invalid upload ticket.");
     }
-    const capture = captures.get(upload.imageDigest);
+    const image = images.get(upload.imageDigest);
     if (
-      !capture ||
-      images.has(upload.imageDigest) ||
+      !image ||
+      imageDigests.has(upload.imageDigest) ||
       tickets.has(upload.ticket) ||
-      upload.maxBytes < capture.image.bytes
+      upload.maxBytes < image.bytes
     ) {
       throw new CliError("An upload ticket does not match the declared images.");
     }
-    images.add(upload.imageDigest);
+    imageDigests.add(upload.imageDigest);
     tickets.add(upload.ticket);
     uploads.push({
       imageDigest: upload.imageDigest,
@@ -367,6 +382,7 @@ interface ReserveParams {
   manifest: Manifest;
   environment: NodeJS.ProcessEnv;
   secrets: Set<string>;
+  localComparison?: boolean;
 }
 
 async function reserve({
@@ -374,6 +390,7 @@ async function reserve({
   manifest,
   environment,
   secrets,
+  localComparison = Boolean(manifest.localComparison),
 }: ReserveParams): Promise<ReserveRunResponse> {
   const token = await githubToken(origin, environment, "submit");
   secrets.add(token);
@@ -386,11 +403,27 @@ async function reserve({
       schemaVersion: SCHEMA_VERSION,
       ...manifest.run,
       shardKey: manifest.shard.key,
+      ...(localComparison ? { comparisonMode: LOCAL_COMPARISON_MODE } : {}),
     }),
   });
-  const reservation = reservedRun(response);
+  const reservation = reservedRun(response, localComparison);
   secrets.add(reservation.capability);
   return reservation;
+}
+
+async function renewReservation(
+  params: ReserveParams,
+  reference: LocalReferenceBinding | undefined = params.manifest.localComparison?.reference,
+): Promise<ReserveRunResponse> {
+  const reservation = await reserve(params);
+  if (!reference) return reservation;
+  const selected = await readReference({ ...params, reservation });
+  if ((await digestJson(selected.reference)) !== (await digestJson(reference))) {
+    throw new CliError(
+      "The accepted reference changed. Rerun Submit to compare the verified captures again.",
+    );
+  }
+  return selected.reservation;
 }
 
 interface UploadShardParams extends ReserveParams {
@@ -421,10 +454,10 @@ async function uploadShard({
 }> {
   const started = performance.now();
   const runId = reservation.runId;
-  const captures = new Map(manifest.captures.map((capture) => [capture.image.digest, capture]));
+  const images = uploadImages(manifest);
   // Tickets contain ASCII only. Allow each bounded ticket plus its digest,
   // byte count, JSON syntax, and a separate bounded response envelope.
-  const maximumResponseBytes = 8192 + captures.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
+  const maximumResponseBytes = 8192 + images.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
   const body = JSON.stringify(manifest);
   const completed = new Set<string>();
   let uploadedImages = 0;
@@ -463,18 +496,15 @@ async function uploadShard({
       let page: typeof declaration.uploads = [];
       let pageBytes = 0;
       for (const upload of declaration.uploads) {
-        const capture = captures.get(upload.imageDigest);
-        if (!capture) throw new CliError("A reuse challenge refers to an unknown image.");
-        if (
-          page.length &&
-          (page.length === 32 || pageBytes + capture.image.bytes > 8 * 1024 * 1024)
-        ) {
+        const image = images.get(upload.imageDigest);
+        if (!image) throw new CliError("A reuse challenge refers to an unknown image.");
+        if (page.length && (page.length === 32 || pageBytes + image.bytes > 8 * 1024 * 1024)) {
           pages.push(page);
           page = [];
           pageBytes = 0;
         }
         page.push(upload);
-        pageBytes += capture.image.bytes;
+        pageBytes += image.bytes;
       }
       if (page.length) pages.push(page);
       const expiresSoon = (expiresAt: string) =>
@@ -487,9 +517,9 @@ async function uploadShard({
         }
         const proofs = [];
         for (const upload of entries) {
-          const capture = captures.get(upload.imageDigest);
-          if (!capture) throw new CliError("A reuse challenge refers to an unknown image.");
-          const bytes = await readImage(local.directory, capture);
+          const image = images.get(upload.imageDigest);
+          if (!image) throw new CliError("A reuse challenge refers to an unknown image.");
+          const bytes = await readImageFile(local.directory, image);
           proofs.push({
             imageDigest: upload.imageDigest,
             proof: createHmac("sha256", Buffer.from(reuse.nonce, "hex"))
@@ -548,7 +578,7 @@ async function uploadShard({
       if (!completedSinceReservation) {
         throw new CliError("The upload capability expired before any image could be staged.", 4);
       }
-      reservation = await reserve({ origin, manifest, environment, secrets });
+      reservation = await renewReservation({ origin, manifest, environment, secrets });
       if (reservation.runId !== runId) {
         throw new CliError("The service changed the run identity during upload renewal.");
       }
@@ -566,11 +596,11 @@ async function uploadShard({
       const batch = pendingUploads.slice(offset, offset + IMAGE_PUT_CONCURRENCY);
       const results = await Promise.allSettled(
         batch.map(async (upload) => {
-          const capture = captures.get(upload.imageDigest);
-          if (!capture) {
+          const image = images.get(upload.imageDigest);
+          if (!image) {
             throw new CliError("An upload ticket refers to an unknown image.");
           }
-          const bytes = await readImage(local.directory, capture);
+          const bytes = await readImageFile(local.directory, image);
           if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
             return false;
           }
@@ -580,7 +610,7 @@ async function uploadShard({
             token: reservation.capability,
             method: "PUT",
             body: bytes,
-            mediaType: capture.image.mediaType,
+            mediaType: image.mediaType,
             empty: true,
             retryUnavailable: true,
             onAttempt: () => {
@@ -643,7 +673,7 @@ async function uploadShard({
         4,
       );
     }
-    reservation = await reserve({ origin, manifest, environment, secrets });
+    reservation = await renewReservation({ origin, manifest, environment, secrets });
     if (reservation.runId !== runId) {
       throw new CliError("The service changed the run identity during upload renewal.");
     }
@@ -660,12 +690,15 @@ export interface CliOptions {
 }
 
 /** Execute one CLI command without terminating the caller's process. */
-export async function runInternalCli({
-  argv,
-  environment = process.env,
-  stdout = (value) => process.stdout.write(value),
-  stderr = (value) => process.stderr.write(value),
-}: CliOptions): Promise<ExitCode> {
+export async function runInternalCli(
+  {
+    argv,
+    environment = process.env,
+    stdout = (value) => process.stdout.write(value),
+    stderr = (value) => process.stderr.write(value),
+  }: CliOptions,
+  trustedSubmit = false,
+): Promise<ExitCode> {
   const secrets = new Set(
     [environment.VISONAUT_TOKEN, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
       (value): value is string => Boolean(value),
@@ -742,8 +775,12 @@ export async function runInternalCli({
     }
     const local = await loadCapture(options.directory ?? DEFAULT_CAPTURE_DIRECTORY);
     // Validate every input before sending credentials or mutating remote data.
-    await validateImages(local);
-    const { manifest } = local;
+    if (trustedSubmit) {
+      await validateLocalImages(local);
+    } else {
+      await validateImages(local);
+    }
+    let { manifest } = local;
     if (
       options.command === "submit" &&
       (environment.GITHUB_RUN_ID !== manifest.run.workflowRunId ||
@@ -751,8 +788,43 @@ export async function runInternalCli({
     ) {
       throw new CliError("The capture does not match this GitHub workflow attempt.", 4);
     }
+    let reservation = await reserve({
+      origin,
+      manifest,
+      environment,
+      secrets,
+      localComparison: trustedSubmit,
+    });
+    if (trustedSubmit) {
+      const selected = await readReference({ origin, manifest, reservation, secrets });
+      const localComparison = await compareLocally({
+        origin,
+        manifest,
+        reservation: selected.reservation,
+        secrets,
+        local,
+        selected,
+        renew: () =>
+          renewReservation(
+            { origin, manifest, environment, secrets, localComparison: true },
+            selected.reference,
+          ),
+      });
+      reservation = selected.reservation;
+      manifest = { ...manifest, localComparison };
+      await refreshSubmissionReceipt(manifest, local.directory, environment);
+    }
     const manifestDigest = await digestJson(manifest);
-    let reservation = await reserve({ origin, manifest, environment, secrets });
+    if (
+      trustedSubmit &&
+      Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS
+    ) {
+      const renewed = await renewReservation({ origin, manifest, environment, secrets });
+      if (renewed.runId !== reservation.runId) {
+        throw new CliError("The service changed the run identity after local comparison.");
+      }
+      reservation = renewed;
+    }
     const uploaded = await uploadShard({
       origin,
       manifest,
@@ -765,7 +837,7 @@ export async function runInternalCli({
     });
     reservation = uploaded.reservation;
     if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-      const renewed = await reserve({ origin, manifest, environment, secrets });
+      const renewed = await renewReservation({ origin, manifest, environment, secrets });
       if (renewed.runId !== reservation.runId) {
         throw new CliError("The service changed the run identity before shard submission.");
       }

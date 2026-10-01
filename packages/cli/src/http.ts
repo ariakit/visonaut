@@ -47,20 +47,17 @@ interface RequestParams {
   maximumResponseBytes?: number;
   onAttempt?: () => void;
   onRetryWait?: (code: unknown, elapsedMs: number) => void;
+  responseMediaType?: string;
 }
 
-async function responseJson(
+async function responseBytes(
   response: Response,
   maximumBytes = MAX_RESPONSE_BYTES,
-): Promise<unknown> {
+): Promise<Buffer<ArrayBuffer>> {
   const advertisedLength = response.headers.get("Content-Length");
   if (advertisedLength && Number(advertisedLength) > maximumBytes) {
     await response.body?.cancel();
     throw new CliError("The service response exceeds the supported size.");
-  }
-  if (!response.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
-    await response.body?.cancel();
-    throw new CliError("The service did not return JSON.");
   }
   if (!response.body) {
     throw new CliError("The service returned an empty response.");
@@ -78,9 +75,21 @@ async function responseJson(
     }
     chunks.push(chunk.value);
   }
+  return Buffer.concat(chunks);
+}
+
+async function responseJson(
+  response: Response,
+  maximumBytes = MAX_RESPONSE_BYTES,
+): Promise<unknown> {
+  if (!response.headers.get("Content-Type")?.toLowerCase().startsWith("application/json")) {
+    await response.body?.cancel();
+    throw new CliError("The service did not return JSON.");
+  }
   try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
+    return JSON.parse((await responseBytes(response, maximumBytes)).toString("utf8"));
+  } catch (error) {
+    if (error instanceof CliError) throw error;
     throw new CliError("The service returned invalid JSON.");
   }
 }
@@ -111,6 +120,7 @@ export async function request({
   maximumResponseBytes = MAX_RESPONSE_BYTES,
   onAttempt,
   onRetryWait,
+  responseMediaType,
 }: RequestParams): Promise<unknown> {
   if (!Number.isSafeInteger(maximumResponseBytes) || maximumResponseBytes < 1) {
     throw new CliError("The response size limit is invalid.");
@@ -145,6 +155,13 @@ export async function request({
           await response.body?.cancel();
           return;
         }
+        if (responseMediaType) {
+          if (response.headers.get("Content-Type")?.split(";")[0]?.trim() !== responseMediaType) {
+            await response.body?.cancel();
+            throw new CliError("The reference image has an unexpected media type.");
+          }
+          return await responseBytes(response, maximumResponseBytes);
+        }
         return await responseJson(response, maximumResponseBytes);
       }
       if (response.status === 401 || response.status === 403) {
@@ -155,7 +172,7 @@ export async function request({
         );
       }
       let failure: unknown;
-      if (response.status === 503) {
+      if (response.status === 503 || response.status === 409) {
         try {
           failure = await responseJson(response, 16 * 1024);
         } catch {
@@ -165,6 +182,11 @@ export async function request({
         await response.body?.cancel();
       }
       const error = record(failure) && record(failure.error) ? failure.error : undefined;
+      if (response.status === 409 && error?.code === "stale_reference") {
+        throw new CliError(
+          "The accepted reference changed. Rerun Submit to compare the verified captures again.",
+        );
+      }
       if (method === "POST" && url.pathname === "/v1/runs" && error?.code === "capacity_exceeded") {
         throw new CliError(
           "Visonaut has paused new capture runs at its capacity limit. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.",

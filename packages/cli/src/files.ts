@@ -58,8 +58,15 @@ export async function loadCapture(directory: string): Promise<LocalManifest> {
 }
 
 export async function readImage(directory: string, capture: Capture): Promise<Buffer<ArrayBuffer>> {
+  return readImageFile(directory, capture.image);
+}
+
+export async function readImageFile(
+  directory: string,
+  image: Capture["image"],
+): Promise<Buffer<ArrayBuffer>> {
   try {
-    const imagePath = capture.image.path;
+    const imagePath = image.path;
     if (
       isAbsolute(imagePath) ||
       imagePath.includes("\\") ||
@@ -84,10 +91,10 @@ export async function readImage(directory: string, capture: Capture): Promise<Bu
     ) {
       throw new CliError("An image path leaves the manifest directory.");
     }
-    const bytes = await readBounded(resolved, Math.min(capture.image.bytes, MAX_IMAGE_BYTES));
+    const bytes = await readBounded(resolved, Math.min(image.bytes, MAX_IMAGE_BYTES));
     if (
-      bytes.length !== capture.image.bytes ||
-      createHash("sha256").update(bytes).digest("hex") !== capture.image.digest
+      bytes.length !== image.bytes ||
+      createHash("sha256").update(bytes).digest("hex") !== image.digest
     ) {
       throw new CliError("An image does not match its manifest size or digest. Run capture again.");
     }
