@@ -20,18 +20,42 @@ const launch = new AsyncFunction(
   source,
 );
 
-async function failure(error) {
+async function failure(error, remote = false) {
   const messages = [];
   const runtime = {
     versions: { node: "24.18.0" },
+    env: {},
     argv: ["node", "run.mjs", "inspect", "--remote"],
     exitCode: 0,
   };
+  let disposed = false;
+  const handlers = new Map();
   const webRequire = (name) => {
     assert.equal(name, "wrangler");
     return {
       async getPlatformProxy() {
         throw error;
+      },
+      async unstable_startWorker() {
+        return {
+          raw: {
+            on(name, listener) {
+              handlers.set(name, listener);
+            },
+            off(name, listener) {
+              assert.equal(handlers.get(name), listener);
+              handlers.delete(name);
+            },
+          },
+          async fetch() {
+            handlers.get("error")(error);
+            return new Promise(() => {});
+          },
+          async dispose() {
+            disposed = true;
+            assert.equal(handlers.size, 0);
+          },
+        };
       },
     };
   };
@@ -52,8 +76,17 @@ async function failure(error) {
       `data:text/javascript;base64,${Buffer.from("fixture").toString("base64")}`,
     );
     return {
-      async runCutover(_arguments, createPlatform) {
-        return createPlatform({});
+      async runCutover(_arguments, createPlatform, remoteFactory) {
+        if (!remote) return createPlatform({});
+        const worker = await remoteFactory.start({});
+        try {
+          return await Promise.race([
+            worker.fetch("http://cutover.invalid/cutover", { method: "POST" }),
+            worker.failure,
+          ]);
+        } finally {
+          await worker.dispose();
+        }
       },
     };
   };
@@ -73,6 +106,8 @@ async function failure(error) {
     loadModule,
   );
   assert.equal(runtime.exitCode, 1);
+  assert.equal(runtime.env.WRANGLER_WRITE_LOGS, "false");
+  if (remote) assert.equal(disposed, true);
   assert.equal(messages.length, 1);
   return { marker: JSON.parse(messages[0]), text: messages[0] };
 }
@@ -183,4 +218,35 @@ test("the workflow accepts only the fixed marker shape and rejects added private
     bindingFailureSource: "private-fixture",
   });
   assert.equal([...unknownSource.matchAll(pattern)].length, 0);
+});
+
+test("forwards public Worker controller events before claiming bindings and awaits disposal", async () => {
+  const api = new Error("private-preview-token-fixture");
+  api.name = "APIError";
+  api.code = 10021;
+  const result = await failure(
+    {
+      source: "RemoteRuntimeController",
+      cause: api,
+      data: { token: "private-preview-token-fixture" },
+    },
+    true,
+  );
+  assert.deepEqual(result.marker, {
+    code: "cutover-runner-failed",
+    stage: "binding-setup",
+    knownApiAuthorizationError: false,
+    bindingFailureSource: "remote-preview",
+    knownApiFailure: true,
+  });
+  assert.equal(result.text.includes("private"), false);
+});
+
+test("marks a fixed Worker operation failure after bindings without printing its details", async () => {
+  const error = new Error("private-native-operation-fixture");
+  error.name = "CutoverExecutionError";
+  const result = await failure(error);
+  assert.equal(result.marker.stage, "after-bindings");
+  assert.equal(result.marker.knownApiFailure, false);
+  assert.equal(result.text.includes("private"), false);
 });
