@@ -93,7 +93,8 @@ jobs:
       contents: read
   publish:
     needs: verify
-    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main'
+    # Version PRs can run before the first cutover release is ready.
+    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.VISONAUT_AUTOMATIC_PUBLICATION == 'true')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: npm
