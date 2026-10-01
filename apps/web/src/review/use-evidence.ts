@@ -85,7 +85,10 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
     }
     if (variant.candidate) {
       required.push("candidate");
-    } else if (variant.kind !== "removed") {
+    } else if (
+      variant.kind !== "removed" &&
+      !(variant.kind === "unchanged" && variant.candidateOmitted)
+    ) {
       error ??= "Required candidate evidence is unavailable in this comparison.";
       failure ??= "missing";
     }

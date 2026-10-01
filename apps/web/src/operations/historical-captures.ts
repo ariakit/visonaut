@@ -26,6 +26,16 @@ export async function prepareHistoricalCaptures(
     maximumCaptures: number;
   },
 ) {
+  const local = await context.database
+    .prepare(
+      "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+    )
+    .bind(input.runId)
+    .first();
+  if (local)
+    throw new IncompleteError(
+      "Local Submit captures require a complete CI bundle or a new capture; retained representatives are not omitted candidate originals.",
+    );
   await beginHistoricalPreparation(context.database, {
     id: input.comparisonId,
     runId: input.runId,
@@ -86,6 +96,16 @@ export async function prepareHistoricalCaptures(
     }
     let count = 0;
     for await (const rows of readArchivedSection(context, input.runId, "captures")) {
+      if (
+        rows.some(
+          (row) =>
+            typeof row.metadata_json === "string" &&
+            JSON.parse(row.metadata_json).localMode === "local-v1",
+        )
+      )
+        throw new IncompleteError(
+          "Local Submit captures require the complete CI bundle or a new capture; retained representatives are not omitted candidate originals.",
+        );
       count += rows.length;
       if (count > input.maximumCaptures)
         throw new IncompleteError("The stored capture inventory exceeds the configured limit.");

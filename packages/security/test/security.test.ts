@@ -201,6 +201,29 @@ describe("bounded ingest credentials", () => {
       status: 401,
     });
   });
+  it("keeps local mode and immutable reference inside the signed ingest credential", async () => {
+    const reference = {
+      manifestDigest: "c".repeat(64),
+      snapshotId: "snapshot",
+      baselineRevision: 2,
+      inventoryDigest: "d".repeat(64),
+      captureCount: 3,
+    };
+    const scoped = { ...capability, comparisonMode: "local-v1" as const, reference };
+    const token = await issueIngestCapability(configuration, scoped);
+    expect(await verifyIngestCapability(configuration, token)).toEqual(scoped);
+    expect(() => issueIngestCapability(configuration, { ...capability, reference })).toThrow(
+      "not scoped to local comparison",
+    );
+    const parts = token.split(".");
+    const claims = JSON.parse(Buffer.from(parts[1]!, "base64url").toString());
+    claims.reference.baselineRevision++;
+    parts[1] = Buffer.from(JSON.stringify(claims)).toString("base64url");
+    await expect(verifyIngestCapability(configuration, parts.join("."))).rejects.toMatchObject({
+      status: 401,
+    });
+  });
+
   it("refuses excessive credential lifetime", async () => {
     await expect(issueIngestCapability(configuration, capability, 901)).rejects.toThrow(
       "15 minutes",

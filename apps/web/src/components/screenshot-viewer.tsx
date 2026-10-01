@@ -197,7 +197,11 @@ export function ScreenshotViewer({
       <ImagePane
         image={variant.candidate}
         label="New image"
-        empty="Removed, no new image"
+        empty={
+          variant.kind === "unchanged" && variant.candidateOmitted
+            ? "New image not uploaded"
+            : "Removed, no new image"
+        }
         zoom={zoom}
         hidden={mode === "diff" || mode === "original"}
         identity={identity}

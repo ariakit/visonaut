@@ -20,7 +20,21 @@ await visual(page, {
 
 Configure `@visonaut/playwright/reporter` in the caller's normal Playwright configuration. Set `outputFile`, the exact GitHub run and tested commit, the shard key and source attempt, and trusted discovery options. Candidate discovery uses the pinned package digest and the complete selected suite. Keep expected invocation and project checks explicit in the local Ariakit setup helper.
 
-The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Comparison policy and engine identity belong to the service comparison and do not change the captured rendering identity.
+The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Each capture stores effective consumer comparison settings in `comparison`, separate from its rendering profile. The comparison engine identity belongs to the trusted comparison.
+
+Captures inherit `maxDiffPixels`, `maxDiffPixelRatio`, and `threshold` from the current project's resolved `expect.toHaveScreenshot` settings. Override each setting on a capture:
+
+```ts
+await visual(page, {
+  item: "button",
+  variant: { key: "react-light", browser: "chromium" },
+  maxDiffPixels: 5,
+});
+```
+
+`visualBatch` accepts these settings for the batch and for each item. An omitted field inherits its value. An explicit `undefined` clears its inherited value. Playwright uses the smaller limit when both pixel limits are set. The threshold defaults to `0.2`; with no pixel limit, the allowed count is zero. These settings do not change the requirement for two consecutive identical capture images.
+
+The adapter reads resolved defaults from the pinned Playwright `1.63.0` worker because the public project object does not expose `expect`. It fails if this bridge is unavailable. A later Playwright version requires a verified adapter update.
 
 Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 

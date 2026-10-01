@@ -261,7 +261,23 @@ export async function createRunExport(
         });
       }
     }
-    await writer.finish({ run, project });
+    const omitted = await context.database
+      .prepare(
+        "SELECT count(*) AS count FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id WHERE capture.run_id=? AND json_extract(capture.metadata_json,'$.candidateStored')=0 AND json_extract(capture.metadata_json,'$.observedImage.digest')!=image.digest",
+      )
+      .bind(run.id)
+      .first<{ count: number }>();
+    await writer.finish({
+      run,
+      project,
+      ...(omitted?.count
+        ? {
+            omittedCandidateImages: omitted.count,
+            imageStorage:
+              "Accepted representatives are retained for locally matched captures. Actual omitted candidate bytes are unavailable; observed image metadata remains in captures.",
+          }
+        : {}),
+    });
     await atomic(context.database, [
       assertion(
         context.database,

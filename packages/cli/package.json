@@ -1,6 +1,6 @@
 {
   "name": "visonaut",
-  "version": "0.4.0",
+  "version": "0.3.6",
   "description": "Upload visual captures and inspect Visonaut review status",
   "license": "MIT",
   "repository": {
@@ -33,7 +33,12 @@
   },
   "devDependencies": {
     "@types/node": "24.13.6",
+    "@types/pixelmatch": "5.2.6",
+    "@types/pngjs": "6.0.5",
+    "@visonaut/compare": "workspace:*",
     "@visonaut/protocol": "workspace:*",
+    "pixelmatch": "5.3.0",
+    "pngjs": "7.0.0",
     "tsup": "8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "5.0.1"

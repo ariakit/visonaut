@@ -102,3 +102,28 @@ export async function bindSubmission(
   );
   return rebound;
 }
+
+/** Keep the signed job's ordinary discovery artifact bound to the final receipt. */
+export async function refreshSubmissionReceipt(
+  manifest: Manifest,
+  directory: string,
+  environment: Record<string, string | undefined>,
+) {
+  if (!environment.GITHUB_OUTPUT) {
+    throw new CliError("GITHUB_OUTPUT is required.", 2);
+  }
+  parseManifest(manifest);
+  const file = join(directory, "manifest.json");
+  const temporary = `${file}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(manifest)}\n`, { flag: "wx", mode: 0o600 });
+  await rename(temporary, file);
+  const receipt = await createDiscoveryReceipt(manifest);
+  const receiptFile = join(directory, "receipt.json");
+  const receiptTemporary = `${receiptFile}.tmp`;
+  await writeFile(receiptTemporary, `${JSON.stringify(receipt)}\n`, { flag: "wx", mode: 0o600 });
+  await rename(receiptTemporary, receiptFile);
+  await appendFile(
+    environment.GITHUB_OUTPUT,
+    `name=${receipt.artifactName}\npath=${receiptFile}\n`,
+  );
+}

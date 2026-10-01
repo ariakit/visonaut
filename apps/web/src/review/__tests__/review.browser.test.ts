@@ -24,6 +24,23 @@ test.beforeEach(async ({ page }) => {
   await focusWorkspace(page);
 });
 
+test("a locally matched capture does not show the reference as a new image", async ({ page }) => {
+  await page.goto("/src/review/__tests__/index.html?localComparison");
+  await page.getByRole("tab", { name: /React/ }).click();
+  await expect(page.getByText("Matched locally. The new image was not uploaded.")).toBeVisible();
+  await ready(page);
+  await expect(
+    page.getByRole("button", { name: "Recompare stored run", exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "New image", exact: true })).toHaveCount(0);
+  await expect(page.getByText("Removed, no new image", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("Pixel diff requires both a reference and a new image.")).toHaveCount(
+    0,
+  );
+});
+
 test("review surfaces remain dark when the system uses dark mode", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.getByRole("button", { name: "Keyboard help" }).click();
@@ -782,6 +799,7 @@ test("addition and removal empty panes remain distinct and D keeps the current v
   await page.keyboard.press("ArrowDown");
   await ready(page);
   await expect(page.getByText("Removed, no new image", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Matched locally/)).not.toBeVisible();
   await page.keyboard.press("s");
   await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Pixel diff D" })).toHaveAttribute(

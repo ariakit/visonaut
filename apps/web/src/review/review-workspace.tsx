@@ -945,7 +945,9 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                       </div>
                       {(!variant.reference || !variant.candidate) && (
                         <p className="text-xs ak-ink-60 px-3 pb-3">
-                          Pixel diff requires both a reference and a new image.
+                          {variant.candidateOmitted
+                            ? "Matched locally. The new image was not uploaded."
+                            : "Pixel diff requires both a reference and a new image."}
                         </p>
                       )}
                       <Frame

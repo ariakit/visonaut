@@ -7,5 +7,9 @@ export default defineConfig({
   format: "esm",
   dts: { compilerOptions: { ignoreDeprecations: "6.0" } },
   clean: true,
-  noExternal: ["@visonaut/protocol"],
+  // Bundled pngjs uses CommonJS require for Node built-in modules.
+  banner: {
+    js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
+  },
+  noExternal: ["@visonaut/protocol", "@visonaut/compare", "pixelmatch", "pngjs"],
 });

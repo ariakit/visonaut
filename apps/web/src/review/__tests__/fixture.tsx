@@ -12,6 +12,26 @@ import type {
 import { fixtureModel } from "./fixture-model.ts";
 
 let model = fixtureModel();
+if (new URLSearchParams(window.location.search).has("localComparison")) {
+  const variant = model.items[0]?.variants[0];
+  if (!variant) throw new Error("Local comparison fixture is missing.");
+  Object.assign(variant, {
+    kind: "unchanged",
+    verdict: null,
+    source: null,
+    candidate: null,
+    candidateOmitted: true,
+    diff: null,
+    maskExpected: false,
+    changedPixels: 1,
+    ratio: 1 / 240000,
+    engine: "playwright-pixelmatch-1.63.0",
+    codec: "pngjs-7.0.0",
+    threshold: "Color threshold 0.2; maximum 5 pixels",
+  });
+  model.recompareAllowed = false;
+  model.recompareDisabledReason = "Rerun trusted Submit to compare locally again.";
+}
 const saved = new Map<string, { model: ReviewModel; result: ReviewSaveResult }>();
 const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];

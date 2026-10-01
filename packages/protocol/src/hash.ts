@@ -52,6 +52,12 @@ export async function digestJson(value: unknown): Promise<string> {
   return sha256(new TextEncoder().encode(canonicalJson(value)));
 }
 
+/** The server reference is bound before the signed Submit adds its receipt. */
+export function captureManifestDigest(manifest: Manifest): Promise<string> {
+  const { localComparison: _localComparison, ...capture } = manifest;
+  return digestJson(capture);
+}
+
 export function identityKey(identity: CaptureIdentity): string {
   return JSON.stringify([identity.itemKey, identity.variantKey]);
 }

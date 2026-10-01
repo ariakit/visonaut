@@ -129,6 +129,7 @@ function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
     thumbnail: optionalString(data.thumbnail),
     changedPixels: optionalNumber(data.changedPixels),
     maskExpected: data.maskExpected == null ? undefined : boolean(data.maskExpected),
+    candidateOmitted: data.candidateOmitted == null ? undefined : boolean(data.candidateOmitted),
     ratio: optionalNumber(data.ratio),
     engine: optionalString(metadata.engine),
     codec: optionalString(metadata.codec),

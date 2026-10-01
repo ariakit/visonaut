@@ -1,4 +1,5 @@
 import {
+  uploadImages,
   digestJson,
   parseManifest,
   validateKey,
@@ -163,7 +164,7 @@ async function stagedBundle(
     .prepare("SELECT digest, complete FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
     .bind(bundle.run_id, bundle.job_id)
     .all<{ digest: string; complete: number }>();
-  const expected = new Set(manifest.captures.map((capture) => capture.image.digest));
+  const expected = new Set(uploadImages(manifest).keys());
   if (
     images.results.length !== expected.size ||
     images.results.some((image) => image.complete !== 1 || !expected.has(image.digest))

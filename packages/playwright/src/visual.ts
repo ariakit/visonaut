@@ -8,13 +8,15 @@ import type { Capture, CaptureProfile, Json, ProfileRecord, Variant } from "@vis
 import { test } from "@playwright/test";
 import type { Page, PageScreenshotOptions, TestInfo } from "@playwright/test";
 import { PNG } from "pngjs";
+import { comparisonOptions } from "./comparison.js";
+import type { ComparisonOptions } from "./comparison.js";
 
 export interface EnvironmentProfile {
   osImageDigest: string;
   fontsDigest: string;
 }
 
-export interface VisualOptions {
+export interface VisualOptions extends ComparisonOptions {
   item: string;
   name?: string;
   variant: Variant;
@@ -30,10 +32,15 @@ export interface VisualOptions {
   >;
 }
 
-export interface VisualBatchOptions extends Pick<VisualOptions, "variant" | "profile" | "timeout"> {
+export interface VisualBatchOptions extends Pick<
+  VisualOptions,
+  "variant" | "profile" | "timeout" | "threshold" | "maxDiffPixels" | "maxDiffPixelRatio"
+> {
   /** Each clip uses integer CSS-pixel coordinates in the document. */
   items: Array<
-    Pick<VisualOptions, "item" | "name"> & { clip: NonNullable<PageScreenshotOptions["clip"]> }
+    Pick<VisualOptions, "item" | "name" | "threshold" | "maxDiffPixels" | "maxDiffPixelRatio"> & {
+      clip: NonNullable<PageScreenshotOptions["clip"]>;
+    }
   >;
   screenshot?: Partial<Pick<PageScreenshotOptions, "omitBackground" | "caret" | "style">>;
 }
@@ -227,7 +234,7 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
     captureOptions.captureMethod = "shared-full-page-crop-v1";
     const profile: CaptureProfile = { ...baseProfile, captureOptions };
     validateProfile(profile);
-    return { options: itemOptions, profile };
+    return { options: itemOptions, profile, comparison: comparisonOptions(info, item, options) };
   });
   const source = await getStableScreenshot(page, sourceOptions, deadline);
   for (const [index, item] of options.items.entries()) {
@@ -249,6 +256,7 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
       bytes: image.bytes,
       decoded: image.pixels,
       profile: prepared.profile,
+      comparison: prepared.comparison,
     });
   }
 }
@@ -401,6 +409,7 @@ async function capturePrepared({
   attemptToken,
 }: CapturePreparedParams): Promise<void> {
   const ordinal = reserveIdentity(info, options);
+  const comparison = comparisonOptions(info, options);
   const deadline = getDeadline(options.timeout);
   await waitForPreparedPage(page, deadline);
   const profile = await beforeDeadline(getProfile(page, options, info), deadline);
@@ -416,6 +425,7 @@ async function capturePrepared({
     bytes: screenshot.bytes,
     decoded: screenshot.pixels,
     profile,
+    comparison,
   });
 }
 
@@ -427,6 +437,7 @@ interface AttachCaptureParams {
   bytes: Buffer;
   decoded: PNG;
   profile: CaptureProfile;
+  comparison: NonNullable<Capture["comparison"]>;
 }
 
 async function attachCapture({
@@ -437,6 +448,7 @@ async function attachCapture({
   bytes,
   decoded,
   profile,
+  comparison,
 }: AttachCaptureParams) {
   const profileDigest = await digestJson(profile);
   const imageAttachment = `visonaut-image-${ordinal}`;
@@ -449,6 +461,7 @@ async function attachCapture({
       testId: info.testId,
       testRetry: info.retry,
       profileDigest,
+      comparison,
     },
     profile: { digest: profileDigest, profile },
     image: {
