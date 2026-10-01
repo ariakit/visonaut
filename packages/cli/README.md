@@ -14,7 +14,13 @@ visonaut status --run <service-run-id> --json
 
 Download and ZIP extraction enforce encoded byte, expanded byte, entry count, path, and per-file limits before extracting candidate files. No external archive tool is required.
 
-Each capture artifact contains `manifest.json`, `environment.json`, and digest-named image files. Submit checks their hashes, sizes, test inventory, rendering profiles, repository, tested commit, package digest, and source attempt. It forms a fresh combined manifest, records every verified source, uploads private service data, and submits only from the signed trusted job. Candidate code cannot choose its upload authority.
+Each capture artifact contains `manifest.json`, `environment.json`, and digest-named image files. Submit checks their hashes, sizes, test inventory, rendering profiles, repository, tested commit, package digest, and source attempt. It forms a fresh combined manifest, records every verified source, and submits only from the signed trusted job. Candidate code cannot choose its upload authority.
+
+Submit uses local comparison after these checks. The service pins the accepted reference for the complete capture manifest. The CLI compares each capture with that reference using the consumer's recorded screenshot settings. The pixel threshold defaults to `0.2`. An absolute pixel limit and a ratio limit both apply when both are set. A dimension or rendering profile change always requires review.
+
+The final manifest keeps every observed capture and its original digest. Submit uploads only new or changed originals and changed masks. A tolerated image keeps its observed metadata, but its bytes are not uploaded. For example, a capture with `comparison: { threshold: 0.2, maxDiffPixels: 2 }` can remain unchanged when the comparator finds two different pixels.
+
+Local comparison requires PNG captures and PNG references. It checks each candidate before it requests image staging credentials. The limits are 2 MiB per encoded image, 2.1 million pixels, and 8192 pixels per dimension. WebP is supported by the legacy upload protocol, but local Submit fails clearly for WebP; it does not switch upload modes. Use PNG captures and an accepted PNG reference. If the accepted reference changes during Submit, rerun Submit to compare against the new reference.
 
 The pinned workflow supplies `GH_TOKEN`, GitHub Actions OIDC, `VISONAUT_SERVER`, `VISONAUT_PACKAGE_SHA256`, `VISONAUT_WORKFLOW_SOURCE_SHA`, `VISONAUT_CAPTURE_JOB_PREFIX`, and `VISONAUT_SUBMIT_JOB_NAME`. GitHub supplies repository, run, attempt, and tested-commit fields. `RUNNER_TEMP` holds isolated downloaded and combined files. `GITHUB_OUTPUT` receives the signed discovery receipt name and path. Upload that receipt as an ordinary one-day artifact.
 
