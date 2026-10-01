@@ -6,7 +6,7 @@ The web build selects its Cloudflare environment before deployment. Its generate
 
 ## Flat deployment credentials
 
-The intended Infisical target is the dedicated deployment project, environment `prod`, path `/`. Do not use the workspace's development project. Disable imports and recursive reads. The dedicated project must contain only `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_MIGRATIONS_API_TOKEN`. The workflow requests each key by its explicit name. The scope guard pins the project, identity, and `prod` environment. Verify key names, current Viewer role, other project memberships, and exact OIDC claims before moving keys or enabling the workflow. Retain the reviewed role; the move must not broaden its grants. Do not retrieve values for the inventory.
+The intended Infisical target is the dedicated deployment project, environment `prod`, path `/`. Do not use the workspace's development project. Disable imports and recursive reads. The dedicated project must contain only `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_MIGRATIONS_API_TOKEN`. The workflow requests each key by its explicit name. The scope guard pins the project, identity, and `prod` environment. Verify key names, current Viewer role, other project memberships, and exact OIDC claims before copying keys or enabling the workflow. Retain the reviewed role; the copy must not broaden its grants. Do not retrieve values for the inventory.
 
 Use these GitHub variables:
 
