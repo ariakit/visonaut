@@ -12,6 +12,7 @@
     "typecheck": "tsc6 --noEmit"
   },
   "dependencies": {
+    "@visonaut/protocol": "workspace:*",
     "better-auth": "1.7.5",
     "jose": "6.2.12"
   },
