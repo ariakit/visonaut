@@ -52,22 +52,29 @@ export async function convertSourceBaselines(context: OperationsContext): Promis
           bytes: number;
           id: string;
         }>();
-      for (const image of pending.results ?? []) {
-        const original = await context.images.get(image.source_key);
-        if (original) {
-          const verified = await digestStream(original.body, context.budget.maximumObjectBytes);
-          if (verified.digest !== image.digest || verified.bytes !== image.bytes)
-            throw new Error("Source baseline original is corrupt.");
-        } else {
-          await copyVerifiedObject({
-            source: context.images,
-            destination: context.images,
-            sourceKey: image.protected_key,
-            destinationKey: image.source_key,
-            expectedDigest: image.digest,
-            expectedBytes: image.bytes,
-            maximum: context.budget.maximumObjectBytes,
-          });
+      const images = pending.results ?? [];
+      for (let index = 0; index < images.length; index += 4) {
+        const group = images.slice(index, index + 4);
+        remaining -= group.length;
+        // Captures can share an original. Finish its restore before the next read.
+        for (const image of group) {
+          const original = await context.images.get(image.source_key);
+          if (original) {
+            const verified = await digestStream(original.body, context.budget.maximumObjectBytes);
+            if (verified.digest !== image.digest || verified.bytes !== image.bytes) {
+              throw new Error("Source baseline original is corrupt.");
+            }
+          } else {
+            await copyVerifiedObject({
+              source: context.images,
+              destination: context.images,
+              sourceKey: image.protected_key,
+              destinationKey: image.source_key,
+              expectedDigest: image.digest,
+              expectedBytes: image.bytes,
+              maximum: context.budget.maximumObjectBytes,
+            });
+          }
         }
         await atomic(context.database, [
           assertion(
@@ -75,16 +82,17 @@ export async function convertSourceBaselines(context: OperationsContext): Promis
             "EXISTS(SELECT 1 FROM visonaut_snapshots WHERE id=? AND storage_mode='protected')",
             [snapshot.id],
           ),
-          context.database
-            .prepare(
-              "UPDATE visonaut_snapshot_images SET object_key=?,copied=1 WHERE snapshot_id=? AND capture_id=? AND digest=?",
-            )
-            .bind(image.source_key, snapshot.id, image.capture_id, image.digest),
-          context.database
-            .prepare("UPDATE visonaut_images SET bytes_present=1 WHERE id=? AND digest=?")
-            .bind(image.id, image.digest),
+          ...group.flatMap((image) => [
+            context.database
+              .prepare(
+                "UPDATE visonaut_snapshot_images SET object_key=?,copied=1 WHERE snapshot_id=? AND capture_id=? AND digest=?",
+              )
+              .bind(image.source_key, snapshot.id, image.capture_id, image.digest),
+            context.database
+              .prepare("UPDATE visonaut_images SET bytes_present=1 WHERE id=? AND digest=?")
+              .bind(image.id, image.digest),
+          ]),
         ]);
-        remaining -= 1;
       }
       const unconverted = await context.database
         .prepare(`SELECT 1 FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id
