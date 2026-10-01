@@ -21,6 +21,8 @@ import {
   finalizeStaged,
   reuseStagedImages,
   reserveStaged,
+  stagedReference,
+  stagedReferenceImage,
   submitStaged,
   uploadStagedImage,
 } from "./workflow-owned.js";
@@ -124,6 +126,25 @@ export async function handleApi(
     if (beginMatch?.[1] && request.method === "POST") {
       return privateResponse(await beginStaged(request, context, beginMatch[1]));
     }
+    const referenceMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference$/.exec(path);
+    if (referenceMatch?.[1] && request.method === "POST")
+      return privateResponse(await stagedReference(request, context, uuid(referenceMatch[1])));
+    const referenceImageMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference\/images\/([a-f0-9-]+)$/.exec(
+      path,
+    );
+    if (
+      referenceImageMatch?.[1] &&
+      referenceImageMatch[2] &&
+      ["GET", "HEAD"].includes(request.method)
+    )
+      return privateResponse(
+        await stagedReferenceImage(
+          request,
+          context,
+          uuid(referenceImageMatch[1]),
+          referenceImageMatch[2],
+        ),
+      );
     const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
     if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {
       return privateResponse(

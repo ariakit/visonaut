@@ -42,6 +42,7 @@ interface VariantView {
   thumbnail?: string;
   changedPixels?: number;
   maskExpected?: boolean;
+  candidateOmitted?: boolean;
   ratio?: number;
   engine?: string;
   codec?: string;
@@ -319,6 +320,12 @@ export async function reviewModel(
     (run.active || (run.closed_at !== null && Date.now() < run.closed_at + closedRunRetentionMs)) &&
     run.state !== "accepted",
   );
+  const localRun = await context.database
+    .prepare(
+      "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+    )
+    .bind(run.id)
+    .first();
   const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
     archive
       ? (archive.sections.comparisonRows ?? [])
@@ -421,6 +428,11 @@ export async function reviewModel(
     const variant =
       metadata.variant && typeof metadata.variant === "object" ? object(metadata.variant) : {};
     const tuple = object(JSON.parse(row.tuple_json));
+    const candidateOmitted =
+      row.outcome === "unchanged" &&
+      tuple.candidateDigest !== null &&
+      (metadata.candidateStored === false || metadata.candidateStored === 0) &&
+      tuple.candidateDigest !== tuple.referenceDigest;
     const result = object(JSON.parse(row.result_json ?? "{}"));
     const decision = decisionById.get(row.source_decision_id ?? row.decision_id ?? "");
     const effective =
@@ -468,7 +480,8 @@ export async function reviewModel(
       source: effective?.kind ?? null,
       ...(effective?.actor_id ? { reviewer: effective.actor_id } : {}),
       reference: imageView(reference?.image_id),
-      candidate: imageView(candidate?.image_id),
+      candidate: candidateOmitted ? null : imageView(candidate?.image_id),
+      ...(candidateOmitted ? { candidateOmitted: true } : {}),
       diff: imageView(typeof result.maskImageId === "string" ? result.maskImageId : undefined),
       ...(typeof result.thumbnailImageId === "string" && imageById.has(result.thumbnailImageId)
         ? { thumbnail: `/images/${result.thumbnailImageId}` }
@@ -484,8 +497,14 @@ export async function reviewModel(
       ...(typeof result.ratio === "number" ? { ratio: result.ratio } : {}),
       ...(typeof result.engineVersion === "string" ? { engine: result.engineVersion } : {}),
       ...(typeof result.codecVersion === "string" ? { codec: result.codecVersion } : {}),
-      policy: comparison?.policy_digest,
-      threshold,
+      policy:
+        typeof metadata.comparisonDigest === "string"
+          ? metadata.comparisonDigest
+          : comparison?.policy_digest,
+      threshold:
+        metadata.comparison && typeof metadata.comparison === "object"
+          ? `Color threshold ${object(metadata.comparison).threshold}; ${object(metadata.comparison).maxDiffPixels === undefined ? "" : `maximum ${object(metadata.comparison).maxDiffPixels} pixels; `}${object(metadata.comparison).maxDiffPixelRatio === undefined ? "" : `ratio ${object(metadata.comparison).maxDiffPixelRatio}`}`
+          : threshold,
       ...(typeof tuple.referenceProfileDigest === "string"
         ? { referenceProfile: tuple.referenceProfileDigest }
         : {}),
@@ -549,16 +568,18 @@ export async function reviewModel(
     ...(archive
       ? { evidenceState: "summary" as const, imagesExpired: retained?.byte_state !== "live" }
       : {}),
-    recompareAllowed,
-    recompareDisabledReason: recompareAllowed
-      ? undefined
-      : !run.sealed_at
-        ? "This run has not sealed."
-        : pendingHistorical
-          ? "A historical comparison is still running."
-          : !run.active || run.detail_archived || run.state === "accepted"
-            ? "This closed review is read-only. Capture a new complete run."
-            : "The stored image bytes have expired.",
+    recompareAllowed: recompareAllowed && !localRun,
+    recompareDisabledReason: localRun
+      ? "Run trusted Submit again from the complete CI bundle, or capture a new run. Unchanged candidate images were not uploaded."
+      : recompareAllowed
+        ? undefined
+        : !run.sealed_at
+          ? "This run has not sealed."
+          : pendingHistorical
+            ? "A historical comparison is still running."
+            : !run.active || run.detail_archived || run.state === "accepted"
+              ? "This closed review is read-only. Capture a new complete run."
+              : "The stored image bytes have expired.",
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
@@ -849,6 +870,18 @@ export async function handleReview(
   const recompareMatch = /^\/api\/runs\/([a-f0-9-]+)\/recompare$/.exec(path);
   if (recompareMatch?.[1] && request.method === "POST") {
     const run = await projectRun(context, uuid(recompareMatch[1]));
+    const local = await context.database
+      .prepare(
+        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+      )
+      .bind(run.id)
+      .first();
+    if (local)
+      throw new SecurityError(
+        "local_resubmit_required",
+        409,
+        "Run trusted Submit again from the complete CI bundle, or capture a new run. Stored representatives cannot replace omitted candidate bytes.",
+      );
     const promoted = await context.database
       .prepare(
         "SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=? LIMIT 1",

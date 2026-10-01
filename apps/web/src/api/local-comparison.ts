@@ -1,0 +1,384 @@
+import { assertDimensions, imageLimits } from "@visonaut/compare";
+import {
+  captureManifestDigest,
+  digestJson,
+  digestRenderingProfile,
+  identityKey,
+  LOCAL_COMPARISON_MODE,
+  validateDigest,
+  validateLocalReference,
+  type LocalReferenceBinding,
+  type LocalReferenceCapture,
+  type Manifest,
+} from "@visonaut/protocol";
+import {
+  createGitHubClient,
+  issueIngestCapability,
+  SecurityError,
+  type IngestCapability,
+} from "@visonaut/security";
+import { assertion, atomic, IncompleteError, statement } from "@visonaut/service";
+import type { ApiContext } from "./context.js";
+import { verifyAncestry } from "./ingest.ts";
+import { jsonBody, object, string } from "./input.js";
+import { publicImage } from "./images.ts";
+
+interface StagedReferenceRun {
+  id: string;
+  tested_sha: string;
+  verified_json: string;
+}
+
+const pageSize = 200;
+const owner = (runId: string) => `submit:${runId}`;
+
+/** Stored in the existing signed run JSON; it is not supplied by capture code. */
+async function storedReference(context: ApiContext, runId: string) {
+  const row = await context.database
+    .prepare(
+      "SELECT json_extract(verified_json,'$.localReference') AS reference FROM ingest_staged_runs WHERE id=? AND retention_state='live'",
+    )
+    .bind(runId)
+    .first<{ reference: string | null }>();
+  if (!row?.reference) return null;
+  const reference: unknown = JSON.parse(row.reference);
+  validateLocalReference(reference);
+  return reference;
+}
+
+export async function referenceCaptures(
+  context: ApiContext,
+  runId: string,
+  reference: LocalReferenceBinding,
+  page?: { offset: number; limit: number },
+): Promise<LocalReferenceCapture[]> {
+  if (reference.snapshotId === null) return [];
+  const rows = await context.database
+    .prepare(`SELECT capture.id AS captureId,capture.item_key AS itemKey,capture.variant_key AS variantKey,
+    COALESCE(profile.rendering_digest,capture.profile_digest) AS profileDigest,
+    image.id AS imageId,image.digest,image.content_type AS mediaType,image.bytes,image.width,image.height
+    FROM visonaut_snapshot_images member JOIN visonaut_captures capture ON capture.id=member.capture_id
+    JOIN visonaut_images image ON image.id=member.image_id
+    LEFT JOIN visonaut_capture_profiles profile ON profile.digest=capture.profile_digest
+    WHERE member.snapshot_id=? AND member.copied=1 AND image.bytes_present=1 AND image.validated=1 AND image.role='original'
+    ORDER BY capture.item_key,capture.variant_key LIMIT ? OFFSET ?`)
+    .bind(
+      reference.snapshotId,
+      page?.limit ?? context.configuration.limits.maximumCaptures + 1,
+      page?.offset ?? 0,
+    )
+    .all<{
+      captureId: string;
+      itemKey: string;
+      variantKey: string;
+      profileDigest: string;
+      imageId: string;
+      digest: string;
+      mediaType: "image/png" | "image/webp";
+      bytes: number;
+      width: number;
+      height: number;
+    }>();
+  return rows.results.map(({ digest, mediaType, bytes, width, height, ...capture }) => ({
+    ...capture,
+    image: { digest, mediaType, bytes, width, height },
+    path: `/v1/runs/${runId}/reference/images/${capture.imageId}`,
+  }));
+}
+
+async function currentReference(context: ApiContext, reference: LocalReferenceBinding) {
+  const project = await context.service.project(context.configuration.projectId);
+  if (project.baseline_revision !== reference.baselineRevision)
+    throw new SecurityError(
+      "stale_reference",
+      409,
+      "The baseline changed. Run trusted Submit again to compare the complete capture bundle.",
+    );
+  if (reference.snapshotId === null) {
+    if (!project.fresh_setup || project.snapshot_id !== null || reference.captureCount !== 0)
+      throw new SecurityError(
+        "stale_reference",
+        409,
+        "An empty reference is only valid for fresh setup.",
+      );
+  } else {
+    const snapshot = await context.database
+      .prepare(
+        "SELECT 1 AS found FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND snapshot.storage_mode='source' AND retention.byte_state='live' AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id=snapshot.id AND copied!=1)",
+      )
+      .bind(reference.snapshotId, project.id)
+      .first();
+    if (!snapshot) throw new IncompleteError("The accepted reference is no longer available.");
+  }
+  return project;
+}
+
+export async function referencePage(
+  request: Request,
+  context: ApiContext,
+  capability: IngestCapability,
+  run: StagedReferenceRun,
+) {
+  if (capability.comparisonMode !== LOCAL_COMPARISON_MODE || capability.shardKey !== "combined")
+    throw new SecurityError(
+      "comparison_mode",
+      403,
+      "Reference reads require the negotiated signed Submit mode.",
+    );
+  const body = await jsonBody(request, 32_768);
+  validateDigest(body.manifestDigest);
+  const manifestDigest = body.manifestDigest;
+  let reference = await storedReference(context, run.id);
+  if (!reference) {
+    const project = await context.service.project(context.configuration.projectId);
+    const verified = object(JSON.parse(run.verified_json));
+    const main = verified.event === "push" || verified.event === "workflow_dispatch";
+    const github = await createGitHubClient(context.configuration.github);
+    const ancestors = await verifyAncestry(context, github, run.tested_sha);
+    const candidates = await context.service.referenceCandidates(project.id);
+    const eligible = candidates.filter(
+      (snapshot) =>
+        ancestors.includes(snapshot.tested_sha) && (!main || snapshot.id === project.snapshot_id),
+    );
+    const snapshotId =
+      eligible.find((snapshot) => snapshot.id === project.snapshot_id)?.id ??
+      eligible[0]?.id ??
+      null;
+    if (snapshotId === null && !(project.fresh_setup && project.snapshot_id === null))
+      throw new IncompleteError(
+        "No retained accepted ancestor is eligible. Verify ancestry or capture current main.",
+      );
+    const provisional = {
+      manifestDigest,
+      snapshotId,
+      baselineRevision: project.baseline_revision,
+      inventoryDigest: "0".repeat(64),
+      captureCount: 0,
+    };
+    const captures = await referenceCaptures(context, run.id, provisional);
+    if (captures.length > context.configuration.limits.maximumCaptures)
+      throw new IncompleteError("The reference inventory exceeds the configured capture limit.");
+    reference = {
+      ...provisional,
+      captureCount: captures.length,
+      inventoryDigest: await digestJson(captures),
+    };
+    try {
+      await atomic(context.database, [
+        assertion(
+          context.database,
+          "EXISTS(SELECT 1 FROM visonaut_projects WHERE id=? AND baseline_revision=? AND snapshot_id IS ?)",
+          [project.id, project.baseline_revision, project.snapshot_id],
+        ),
+        assertion(
+          context.database,
+          "EXISTS(SELECT 1 FROM ingest_staged_runs WHERE id=? AND retention_state='live' AND submitted_at IS NULL AND json_extract(verified_json,'$.localReference') IS NULL)",
+          [run.id],
+        ),
+        ...(snapshotId
+          ? [
+              assertion(
+                context.database,
+                "(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=?)=?",
+                [snapshotId, captures.length],
+              ),
+              statement(
+                context.database,
+                "INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'local-submit',?)",
+                [snapshotId, owner(run.id)],
+              ),
+              statement(
+                context.database,
+                "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT image.run_id,?,'comparison' FROM visonaut_snapshot_images member JOIN visonaut_images image ON image.id=member.image_id WHERE member.snapshot_id=?",
+                [owner(run.id), snapshotId],
+              ),
+            ]
+          : []),
+        statement(
+          context.database,
+          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference',json(?)) WHERE id=?",
+          [JSON.stringify(reference), run.id],
+        ),
+      ]);
+    } catch (error) {
+      const raced = await storedReference(context, run.id);
+      if (!raced) throw error;
+      reference = raced;
+    }
+  }
+  if (
+    reference.manifestDigest !== manifestDigest ||
+    (capability.reference &&
+      (await digestJson(capability.reference)) !== (await digestJson(reference)))
+  )
+    throw new SecurityError(
+      "reference_conflict",
+      409,
+      "The selected reference belongs to another immutable capture manifest.",
+    );
+  await currentReference(context, reference);
+  const cursor = body.cursor === undefined ? 0 : Number(string(body.cursor, 16));
+  if (
+    !Number.isSafeInteger(cursor) ||
+    cursor < 0 ||
+    cursor > reference.captureCount ||
+    cursor % pageSize !== 0
+  )
+    throw new SecurityError("reference_cursor", 400, "The reference page cursor is invalid.");
+  const end = Math.min(cursor + pageSize, reference.captureCount);
+  const captures = await referenceCaptures(context, run.id, reference, {
+    offset: cursor,
+    limit: pageSize,
+  });
+  if (captures.length !== end - cursor)
+    throw new IncompleteError("The pinned reference page is incomplete.");
+  return Response.json({
+    schemaVersion: "1.0",
+    comparisonMode: LOCAL_COMPARISON_MODE,
+    reference,
+    captures,
+    nextCursor: end < reference.captureCount ? String(end) : null,
+    capability: await issueIngestCapability(context.configuration.capability, {
+      ...capability,
+      reference,
+    }),
+    expiresAt: new Date(Date.now() + 600_000).toISOString(),
+  });
+}
+
+export async function referenceImage(
+  request: Request,
+  context: ApiContext,
+  capability: IngestCapability,
+  runId: string,
+  imageId: string,
+) {
+  const reference = capability.reference;
+  if (
+    capability.comparisonMode !== LOCAL_COMPARISON_MODE ||
+    !reference ||
+    reference.snapshotId === null
+  )
+    throw new SecurityError("reference_scope", 403, "The image is not in this Submit reference.");
+  const stored = await storedReference(context, runId);
+  if (!stored || (await digestJson(stored)) !== (await digestJson(reference)))
+    throw new SecurityError("reference_scope", 403, "The reference binding differs.");
+  await currentReference(context, reference);
+  const found = await context.database
+    .prepare(
+      "SELECT 1 AS found FROM visonaut_snapshot_images WHERE snapshot_id=? AND image_id=? AND copied=1",
+    )
+    .bind(reference.snapshotId, imageId)
+    .first();
+  if (!found)
+    throw new SecurityError("reference_scope", 404, "The image is not in this Submit reference.");
+  return publicImage(request, context, imageId);
+}
+
+export async function validateLocalSubmission(
+  context: ApiContext,
+  runId: string,
+  manifest: Manifest,
+  binding?: LocalReferenceBinding,
+) {
+  const receipt = manifest.localComparison;
+  if (!receipt || manifest.shard.key !== "combined")
+    throw new IncompleteError("Local comparison requires the complete combined Submit manifest.");
+  const stored = await storedReference(context, runId);
+  const reference = binding ?? stored;
+  if (
+    !stored ||
+    !reference ||
+    (await digestJson(stored)) !== (await digestJson(reference)) ||
+    (await digestJson(receipt.reference)) !== (await digestJson(reference)) ||
+    (await captureManifestDigest(manifest)) !== reference.manifestDigest
+  )
+    throw new SecurityError(
+      "reference_conflict",
+      409,
+      "The comparison receipt is not bound to this complete capture manifest and reference.",
+    );
+  await currentReference(context, reference);
+  const captures = await referenceCaptures(context, runId, reference);
+  if (
+    captures.length !== reference.captureCount ||
+    (await digestJson(captures)) !== reference.inventoryDigest
+  )
+    throw new IncompleteError("The complete pinned reference inventory changed.");
+  const originals = new Map(captures.map((capture) => [identityKey(capture), capture]));
+  const results = new Map(receipt.captures.map((result) => [identityKey(result), result]));
+  if (
+    results.size !== manifest.captures.length ||
+    receipt.captures.length !== manifest.captures.length
+  )
+    throw new IncompleteError("Local comparison must report every captured identity exactly once.");
+  for (const capture of manifest.captures) {
+    const key = identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key });
+    const result = results.get(key);
+    const original = originals.get(key);
+    const policy = capture.comparison;
+    if (
+      !result ||
+      !policy ||
+      result.candidateDigest !== capture.image.digest ||
+      result.referenceDigest !== (original?.image.digest ?? null) ||
+      capture.image.mediaType !== "image/png"
+    )
+      throw new IncompleteError(
+        "A local result lost its capture, consumer settings, or reference identity.",
+      );
+    const profile = manifest.profiles.find((profile) => profile.digest === capture.profileDigest);
+    if (!profile) throw new IncompleteError("The captured rendering profile is unavailable.");
+    const profileChanged =
+      original && original.profileDigest !== (await digestRenderingProfile(profile.profile));
+    const sizeChanged =
+      !!original &&
+      (original.image.width !== capture.image.width ||
+        original.image.height !== capture.image.height);
+    assertDimensions(capture.image.width, capture.image.height, imageLimits);
+    const area = capture.image.width * capture.image.height;
+    const allowance = Math.min(
+      policy.maxDiffPixels ?? Infinity,
+      policy.maxDiffPixelRatio === undefined || !original
+        ? Infinity
+        : original.image.width * original.image.height * policy.maxDiffPixelRatio,
+    );
+    const maximum = allowance === Infinity ? 0 : allowance;
+    const expectedChanged =
+      !original || sizeChanged || profileChanged || result.changedPixels > maximum;
+    if (
+      result.sizeChanged !== sizeChanged ||
+      result.changedPixels > area ||
+      (result.outcome === "changed") !== !!expectedChanged ||
+      result.ratio !== (!original || sizeChanged ? 1 : result.changedPixels / area)
+    )
+      throw new IncompleteError(
+        "Local comparison metrics or outcome differ from the consumer settings.",
+      );
+    if (
+      original &&
+      !sizeChanged &&
+      result.outcome === "changed" &&
+      result.changedPixels > 0 &&
+      !result.mask
+    )
+      throw new IncompleteError("A changed local capture requires its review mask.");
+    if (
+      result.mask &&
+      (result.mask.width !== capture.image.width ||
+        result.mask.height !== capture.image.height ||
+        sizeChanged ||
+        result.changedPixels === 0)
+    )
+      throw new IncompleteError("The local review mask differs from its changed capture.");
+    originals.delete(key);
+  }
+  if (
+    originals.size !== receipt.removals.length ||
+    receipt.removals.some((removal) => !originals.has(identityKey(removal)))
+  )
+    throw new IncompleteError(
+      "Local comparison must report every removed reference identity exactly once.",
+    );
+  return captures;
+}

@@ -52,7 +52,7 @@ export async function runStatus(context: ApiContext, runId: string): Promise<Run
     expectedShards: counts?.expected ?? 0,
     errors:
       state.status === "needs-recompare"
-        ? ["The baseline changed. Recompare this stored run."]
+        ? ["The baseline changed. Open the review page for the next step."]
         : [],
   };
 }

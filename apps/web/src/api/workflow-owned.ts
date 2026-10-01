@@ -8,9 +8,12 @@ import {
   validateManifestProfiles,
   validateVersion,
   workflowSourceDigest,
+  LOCAL_COMPARISON_MODE,
+  uploadImages,
   type Manifest,
   type ReserveRunRequest,
 } from "@visonaut/protocol";
+import { validateLocalSubmission, referencePage, referenceImage } from "./local-comparison.ts";
 import {
   bearerToken,
   createGitHubClient,
@@ -151,6 +154,12 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
   if (!/^[a-f0-9]{40}$/.test(testedSha)) {
     throw new SecurityError("invalid_sha", 400, "A full tested SHA is required.");
   }
+  if (body.comparisonMode !== undefined && body.comparisonMode !== LOCAL_COMPARISON_MODE)
+    throw new SecurityError(
+      "comparison_mode",
+      400,
+      "The requested comparison mode is unsupported.",
+    );
   return {
     schemaVersion: body.schemaVersion,
     repository: string(body.repository),
@@ -160,6 +169,9 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
     testedSha,
     planDigest: body.planDigest,
     shardKey: body.shardKey,
+    ...(body.comparisonMode === LOCAL_COMPARISON_MODE
+      ? { comparisonMode: LOCAL_COMPARISON_MODE }
+      : {}),
   };
 }
 
@@ -211,7 +223,7 @@ async function stagedRun(context: ApiContext, runId: string): Promise<StagedRun>
   return run;
 }
 
-async function stagedCapability(request: Request, context: ApiContext, runId?: string) {
+export async function stagedCapability(request: Request, context: ApiContext, runId?: string) {
   const capability = await verifyIngestCapability(
     context.configuration.capability,
     bearerToken(request),
@@ -236,6 +248,21 @@ async function stagedCapability(request: Request, context: ApiContext, runId?: s
     throw new SecurityError("invalid_capability", 403, "The ingest credential is not current.");
   }
   return { capability, run, job };
+}
+
+export async function stagedReference(request: Request, context: ApiContext, runId: string) {
+  const { capability, run } = await stagedCapability(request, context, runId);
+  return referencePage(request, context, capability, run);
+}
+
+export async function stagedReferenceImage(
+  request: Request,
+  context: ApiContext,
+  runId: string,
+  imageId: string,
+) {
+  const { capability } = await stagedCapability(request, context, runId);
+  return referenceImage(request, context, capability, runId, imageId);
 }
 
 /** Begin the App check before artifact downloads or image staging. */
@@ -328,6 +355,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     jobId: verified.jobId,
     maximumBytes: context.configuration.limits.maximumShardBytes,
     maximumImages: context.configuration.limits.maximumCaptures,
+    ...(body.comparisonMode ? { comparisonMode: body.comparisonMode } : {}),
   };
   return Response.json(
     {
@@ -335,6 +363,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
       runId: run.id,
       capability: await issueIngestCapability(context.configuration.capability, capability),
       expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      ...(body.comparisonMode ? { comparisonMode: body.comparisonMode } : {}),
     },
     { status: 201 },
   );
@@ -490,12 +519,35 @@ export async function declareStaged(
     }
     images.set(image.digest, image);
   }
-  const declaredBytes = [...images.values()].reduce((sum, image) => sum + image.bytes, 0);
+  const observedImages = [...images.values()];
+  const declaredBytes = observedImages.reduce((sum, image) => sum + image.bytes, 0);
+  if (capability.comparisonMode === LOCAL_COMPARISON_MODE) {
+    if (!manifest.localComparison || !capability.reference)
+      throw new SecurityError(
+        "local_comparison_required",
+        409,
+        "Local Submit requires its bound reference and complete comparison receipt.",
+      );
+    await validateLocalSubmission(context, run.id, manifest, capability.reference);
+    images.clear();
+    for (const [digest, image] of uploadImages(manifest)) images.set(digest, image);
+  } else if (manifest.localComparison)
+    throw new SecurityError(
+      "comparison_mode",
+      403,
+      "A local receipt requires the negotiated signed Submit mode.",
+    );
+  const uploadBytes = [...images.values()].reduce((sum, image) => sum + image.bytes, 0);
+  // Local comparison can add one mask for each original image.
+  const maximumUploads =
+    capability.maximumImages * (capability.comparisonMode === LOCAL_COMPARISON_MODE ? 2 : 1);
   if (
     manifest.captures.length > context.configuration.limits.maximumCaptures ||
-    images.size > capability.maximumImages ||
+    observedImages.length > capability.maximumImages ||
+    images.size > maximumUploads ||
     declaredBytes > capability.maximumBytes ||
-    [...images.values()].some(
+    uploadBytes > capability.maximumBytes ||
+    [...observedImages, ...images.values()].some(
       (image) => image.bytes > context.configuration.limits.maximumImageBytes,
     )
   ) {
@@ -900,28 +952,43 @@ export async function uploadStagedImage(
     throw new SecurityError("image_mismatch", 422, "The image digest or size differs.");
   }
   if (image.complete) return new Response(null, { status: 204 });
-  const validation = await context.comparator.fetch("https://compare.internal/validate", {
-    method: "POST",
-    body: bytes,
-    headers: { "content-type": image.media_type },
-  });
-  if (validation.status === 503) {
-    throw new SecurityError("validation_busy", 503, "Image validation is busy. Retry.");
-  }
-  if (!validation.ok) {
-    throw new SecurityError("invalid_image", 422, "The image failed trusted decoding.");
-  }
-  const decoded = object(
-    JSON.parse(new TextDecoder().decode(await readBoundedBody(validation, 16_384))),
-  );
-  if (
-    decoded.digest !== image.digest ||
-    decoded.bytes !== bytes.byteLength ||
-    decoded.width !== image.width ||
-    decoded.height !== image.height ||
-    decoded.contentType !== image.media_type
-  ) {
-    throw new SecurityError("image_mismatch", 422, "The decoded image metadata differs.");
+  if (capability.comparisonMode !== LOCAL_COMPARISON_MODE) {
+    const validation = await context.comparator.fetch("https://compare.internal/validate", {
+      method: "POST",
+      body: bytes,
+      headers: { "content-type": image.media_type },
+    });
+    if (validation.status === 503) {
+      throw new SecurityError("validation_busy", 503, "Image validation is busy. Retry.");
+    }
+    if (!validation.ok) {
+      throw new SecurityError("invalid_image", 422, "The image failed trusted decoding.");
+    }
+    const decoded = object(
+      JSON.parse(new TextDecoder().decode(await readBoundedBody(validation, 16_384))),
+    );
+    if (
+      decoded.digest !== image.digest ||
+      decoded.bytes !== bytes.byteLength ||
+      decoded.width !== image.width ||
+      decoded.height !== image.height ||
+      decoded.contentType !== image.media_type
+    ) {
+      throw new SecurityError("image_mismatch", 422, "The decoded image metadata differs.");
+    }
+  } else {
+    const stored = await context.database
+      .prepare(
+        "SELECT manifest_object_key FROM ingest_staged_manifests WHERE run_id=? AND job_id=?",
+      )
+      .bind(run.id, job.job_id)
+      .first<{ manifest_object_key: string }>();
+    if (!stored || !(await privateManifest(context, stored.manifest_object_key)).localComparison)
+      throw new SecurityError(
+        "local_comparison_required",
+        403,
+        "Local image upload requires an admitted signed Submit receipt.",
+      );
   }
   await context.images.put(image.object_key, bytes, {
     httpMetadata: { contentType: image.media_type },
@@ -956,7 +1023,7 @@ export async function finalizeStaged(request: Request, context: ApiContext, runI
     throw new SecurityError("manifest_conflict", 409, "The stored manifest digest differs.");
   }
   await validateManifestProfiles(manifest);
-  const expectedImages = new Set(manifest.captures.map((capture) => capture.image.digest));
+  const expectedImages = new Set(uploadImages(manifest).keys());
   const images = await context.database
     .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)

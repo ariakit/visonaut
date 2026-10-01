@@ -6,17 +6,24 @@ import { validateImage } from "@visonaut/compare";
 import {
   discoveryArtifactPrefix,
   digestJson,
+  captureManifestDigest,
+  LOCAL_COMPARISON_MODE,
+  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_CODEC,
+  type LocalReferencePage,
   sha256,
   workflowSourceDigest,
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
-import { issueIngestCapability } from "@visonaut/security";
+import { issueIngestCapability, verifyIngestCapability } from "@visonaut/security";
+import { retireSnapshot } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { apiContext, type ApiBindings } from "./context.js";
 import { handleApi } from "./index.js";
+import { runStatus } from "./ingest.js";
 import { integer, object } from "./input.js";
 import { recordEvent } from "../operations/common.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
@@ -24,6 +31,8 @@ import {
   declareStaged,
   finalizeStaged,
   reserveVerifiedStagedRun,
+  stagedReference,
+  stagedReferenceImage,
   reuseStagedImages,
   uploadStagedImage,
   workflowConfiguration,
@@ -35,6 +44,8 @@ import {
   reconcileStagedWorkflows,
 } from "./workflow-materialize.js";
 import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-retention.js";
+import { storeCaptureProfiles } from "../profiles.ts";
+import { handleReview, reviewModel } from "./review.ts";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -858,6 +869,656 @@ function retention(now: number, objectsPerStep: number) {
     now: () => now,
   };
 }
+
+async function localSession(test: Awaited<ReturnType<typeof fixture>>) {
+  for (const capture of test.manifest.captures)
+    capture.comparison = { threshold: 0.2, maxDiffPixels: 0 };
+  const claims = await verifyIngestCapability(
+    test.context.configuration.capability,
+    test.capability,
+  );
+  let capability = await issueIngestCapability(test.context.configuration.capability, {
+    ...claims,
+    comparisonMode: LOCAL_COMPARISON_MODE,
+  });
+  const post = (body: unknown) =>
+    new Request("https://preview.example", {
+      method: "POST",
+      headers: { authorization: `Bearer ${capability}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const manifestDigest = await captureManifestDigest(test.manifest);
+  const page = (await (
+    await stagedReference(post({ schemaVersion: "1.0", manifestDigest }), test.context, test.runId)
+  ).json()) as LocalReferencePage;
+  capability = page.capability;
+  test.manifest.localComparison = {
+    mode: LOCAL_COMPARISON_MODE,
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    reference: page.reference,
+    captures: test.manifest.captures.map((capture) => {
+      const reference = page.captures.find(
+        (reference) =>
+          reference.itemKey === capture.itemKey && reference.variantKey === capture.variant.key,
+      );
+      return {
+        itemKey: capture.itemKey,
+        variantKey: capture.variant.key,
+        candidateDigest: capture.image.digest,
+        referenceDigest: reference?.image.digest ?? null,
+        outcome: reference ? "unchanged" : "changed",
+        changedPixels: reference ? 0 : capture.image.width * capture.image.height,
+        ratio: reference ? 0 : 1,
+        sizeChanged: false,
+      };
+    }),
+    removals: [],
+  };
+  return {
+    page,
+    post,
+    get capability() {
+      return capability;
+    },
+    manifestDigest,
+  };
+}
+
+async function stageLocal(
+  test: Awaited<ReturnType<typeof fixture>>,
+  session: Awaited<ReturnType<typeof localSession>>,
+) {
+  const body = (await (
+    await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
+  ).json()) as { manifestDigest: string; uploads: Array<{ ticket: string; imageDigest: string }> };
+  for (const upload of body.uploads) {
+    const bytes = upload.imageDigest === image.digest ? png : profiledPng;
+    await uploadStagedImage(
+      new Request("https://preview.example", {
+        method: "PUT",
+        headers: { authorization: `Bearer ${session.capability}`, "content-type": "image/png" },
+        body: bytes,
+      }),
+      test.context,
+      upload.ticket,
+    );
+  }
+  await finalizeStaged(
+    session.post({
+      schemaVersion: "1.0",
+      shardKey: test.shardKey,
+      manifestDigest: body.manifestDigest,
+    }),
+    test.context,
+    test.runId,
+  );
+  await terminalGitHub(test, body.manifestDigest);
+  return body;
+}
+
+async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
+  const runId = crypto.randomUUID();
+  const snapshotId = crypto.randomUUID();
+  const capture = test.manifest.captures[0]!;
+  const testedSha = "1".repeat(40);
+  await storeCaptureProfiles(database, test.manifest.profiles);
+  await test.context.service.reserveRun({
+    id: runId,
+    projectId: test.context.configuration.projectId,
+    externalRunId: String(Number(test.manifest.run.workflowRunId) + 100_000),
+    attempt: 1,
+    kind: "main",
+    testedSha,
+    lineageKey: "main",
+    plan: {
+      digest: "seed",
+      shards: [
+        {
+          key: "seed",
+          profileDigest: capture.profileDigest,
+          tests: [capture.testId],
+          captures: [
+            { itemKey: capture.itemKey, variantKey: capture.variant.key, testId: capture.testId },
+          ],
+        },
+      ],
+    },
+    verifiedRelatedRunIds: [],
+    verifiedAncestorShas: [],
+    verificationDigest: "seed-proof",
+    rerunShardKeys: ["seed"],
+    now: Date.now(),
+  });
+  const imageId = crypto.randomUUID();
+  const objectKey = `runs/${runId}/images/${imageId}`;
+  await images.put(objectKey, png, { sha256: image.digest });
+  await test.context.service.registerImage({
+    id: imageId,
+    runId,
+    objectKey,
+    digest: image.digest,
+    bytes: png.byteLength,
+    width: image.width,
+    height: image.height,
+    contentType: "image/png",
+  });
+  await test.context.service.commitShard({
+    runId,
+    key: "seed",
+    manifestDigest: "seed-manifest",
+    captures: [
+      {
+        id: crypto.randomUUID(),
+        itemKey: capture.itemKey,
+        variantKey: capture.variant.key,
+        ordinal: 0,
+        imageId,
+        profileDigest: capture.profileDigest,
+        environmentProfileDigest: capture.profileDigest,
+        testId: capture.testId,
+        testRetry: 0,
+        metadata: {},
+      },
+    ],
+    finalTestOutcomes: [{ testId: capture.testId, retry: 0, status: "passed" }],
+    now: Date.now(),
+  });
+  await test.context.service.sealRun({ runId, now: Date.now() });
+  const comparisonId = crypto.randomUUID();
+  await test.context.service.createComparison({
+    id: comparisonId,
+    runId,
+    referenceSnapshotId: null,
+    maxAttempts: 3,
+    now: Date.now(),
+  });
+  await test.context.service.finalizeComparison({ comparisonId, now: Date.now() });
+  const copies = await test.context.service.preparePromotion({
+    snapshotId,
+    comparisonId,
+    prefix: `baselines/${snapshotId}`,
+    now: Date.now(),
+  });
+  for (const copy of copies)
+    await test.context.service.recordSnapshotCopy({
+      snapshotId,
+      captureId: copy.capture_id,
+      objectKey: copy.object_key,
+      digest: copy.digest,
+    });
+  await test.context.service.promote({
+    snapshotId,
+    promotionId: crypto.randomUUID(),
+    expectedBaselineRevision: 0,
+    now: Date.now(),
+  });
+  test.githubResponses.set(
+    `/repos/ariakit/ariakit/compare/${testedSha}...${test.manifest.run.testedSha}`,
+    { status: "ahead" },
+  );
+  return { runId, imageId, snapshotId };
+}
+
+describe("trusted local Submit", () => {
+  it("keeps its reference snapshot eligible until the staged attempt expires", async () => {
+    const test = await fixture();
+    const seed = await acceptedReference(test);
+    await localSession(test);
+    // Isolate the staged reference pin from the current project baseline root.
+    await database
+      .prepare("UPDATE visonaut_projects SET snapshot_id=NULL WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    await expect(
+      retireSnapshot(database, { snapshotId: seed.snapshotId, now: Date.now() }),
+    ).rejects.toThrow("State changed");
+    expect(
+      await database
+        .prepare(
+          "SELECT reference_eligible,(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=visonaut_snapshots.id) AS captures FROM visonaut_snapshots WHERE id=?",
+        )
+        .bind(seed.snapshotId)
+        .first(),
+    ).toEqual({ reference_eligible: 1, captures: 1 });
+    await database
+      .prepare("UPDATE ingest_staged_runs SET created_at=1 WHERE id=?")
+      .bind(test.runId)
+      .run();
+    expect((await expireStagedAttempts(retention(Date.now(), 10))).completed).toContain(test.runId);
+    await retireSnapshot(database, { snapshotId: seed.snapshotId, now: Date.now() });
+    expect(
+      await database
+        .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id=?")
+        .bind(seed.snapshotId)
+        .first(),
+    ).toEqual({ reference_eligible: 0 });
+  });
+
+  it("directs a stale local run to its review page for recovery", async () => {
+    const test = await fixture();
+    const session = await localSession(test);
+    await stageLocal(test, session);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    expect(await runStatus(test.context, run.id)).toMatchObject({
+      state: "needs-review",
+      reviewUrl: `${test.context.configuration.origin}/runs/${run.id}`,
+      errors: ["The baseline changed. Open the review page for the next step."],
+    });
+  });
+
+  it("admits a complete new capture without calling the comparison Worker or creating pixel tasks", async () => {
+    const test = await fixture();
+    const compare = vi.spyOn(test.context.comparator, "fetch");
+    const session = await localSession(test);
+    expect(session.page.reference.snapshotId).toBeNull();
+    const body = await stageLocal(test, session);
+    expect(body.uploads).toHaveLength(1);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const comparison = await test.context.service.comparison(run.comparison_id!);
+    expect(comparison.state).toBe("ready");
+    expect(compare).not.toHaveBeenCalled();
+    expect(
+      await database
+        .prepare(
+          "SELECT count(*) AS count FROM work_tasks WHERE kind='compare' AND id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id=?)",
+        )
+        .bind(comparison.id)
+        .first(),
+    ).toEqual({ count: 0 });
+    expect((await test.context.service.comparisonRows(comparison.id))[0]?.outcome).toBe("changed");
+  });
+
+  it("local mode authentication rejects an unscoped comparison receipt", async () => {
+    const test = await fixture();
+    const capture = test.manifest.captures[0]!;
+    const supplied = {
+      ...test.manifest,
+      localComparison: {
+        mode: "local-v1",
+        engineVersion: "playwright-pixelmatch-1.63.0",
+        codecVersion: "pngjs-7.0.0",
+        reference: {
+          manifestDigest: await digestJson(test.manifest),
+          snapshotId: null,
+          baselineRevision: 0,
+          inventoryDigest: "a".repeat(64),
+          captureCount: 0,
+        },
+        captures: [
+          {
+            itemKey: capture.itemKey,
+            variantKey: capture.variant.key,
+            candidateDigest: capture.image.digest,
+            referenceDigest: null,
+            outcome: "changed",
+            changedPixels: capture.image.width * capture.image.height,
+            ratio: 1,
+            sizeChanged: false,
+          },
+        ],
+        removals: [],
+      },
+    };
+    await expect(
+      declareStaged(test.post(supplied), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("negotiated signed Submit mode");
+  });
+
+  it("rejects incomplete and false unchanged results before declaring any images", async () => {
+    const test = await fixture();
+    const session = await localSession(test);
+    const receipt = test.manifest.localComparison!;
+    receipt.captures[0]!.outcome = "unchanged";
+    receipt.captures[0]!.changedPixels = 0;
+    receipt.captures[0]!.ratio = 0;
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("metrics or outcome");
+    receipt.captures = [];
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow();
+    expect(
+      await database
+        .prepare("SELECT count(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("rejects a modified capture or reference receipt and scopes reference image reads", async () => {
+    const test = await fixture();
+    const seed = await acceptedReference(test);
+    const session = await localSession(test);
+    const read = (imageId: string) =>
+      stagedReferenceImage(
+        new Request(`https://preview.example/v1/runs/${test.runId}/reference/images/${imageId}`, {
+          headers: { authorization: `Bearer ${session.capability}` },
+        }),
+        test.context,
+        test.runId,
+        imageId,
+      );
+    expect(new Uint8Array(await (await read(seed.imageId)).arrayBuffer())).toEqual(png);
+    await expect(read(crypto.randomUUID())).rejects.toThrow("not in this Submit reference");
+    const original = structuredClone(test.manifest);
+    test.manifest.captures[0]!.name = "Modified after binding";
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("not bound");
+    test.manifest = structuredClone(original);
+    test.manifest.localComparison!.reference.inventoryDigest = "a".repeat(64);
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("not bound");
+    expect(
+      await database
+        .prepare("SELECT count(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("admits the required local mask at the configured capture limit", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    const capture = test.manifest.captures[0]!;
+    capture.image = {
+      ...capture.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+    const session = await localSession(test);
+    const result = test.manifest.localComparison!.captures[0]!;
+    result.outcome = "changed";
+    result.changedPixels = 1;
+    result.ratio = 1 / (capture.image.width * capture.image.height);
+    result.mask = {
+      digest: image.digest,
+      bytes: png.byteLength,
+      width: image.width,
+      height: image.height,
+      mediaType: "image/png",
+      path: "images/mask.png",
+    };
+    test.context.configuration.limits.maximumCaptures = 1;
+    const claims = await verifyIngestCapability(
+      test.context.configuration.capability,
+      session.capability,
+    );
+    const token = await issueIngestCapability(test.context.configuration.capability, {
+      ...claims,
+      maximumImages: 1,
+    });
+    const post = new Request("https://preview.example", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(test.manifest),
+    });
+    const declaration = await declareStaged(post, test.context, test.runId, test.shardKey);
+    expect(declaration.status).toBe(200);
+    expect(await declaration.json()).toMatchObject({
+      uploads: expect.arrayContaining([
+        expect.objectContaining({ imageDigest: profiledImage.digest }),
+        expect.objectContaining({ imageDigest: image.digest }),
+      ]),
+    });
+  });
+
+  it("does not inherit local matching evidence when a baseline capture is removed", async () => {
+    const test = await fixture();
+    const seed = await acceptedReference(test);
+    await database
+      .prepare("UPDATE visonaut_captures SET metadata_json=? WHERE run_id=?")
+      .bind(
+        JSON.stringify({
+          name: "Previously matched capture",
+          variant: { key: "light" },
+          localMode: "local-v1",
+          candidateStored: false,
+          observedImage: { ...test.manifest.captures[0]!.image, digest: profiledImage.digest },
+          comparison: { threshold: 0.2, maxDiffPixels: 1 },
+          comparisonDigest: "c".repeat(64),
+        }),
+        seed.runId,
+      )
+      .run();
+    test.manifest.captures[0]!.itemKey = "new-dialog";
+    const session = await localSession(test);
+    test.manifest.localComparison!.removals = session.page.captures.map(
+      ({ itemKey, variantKey }) => ({ itemKey, variantKey }),
+    );
+    await stageLocal(test, session);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const privateContext = {
+      ...test.context,
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const model = await reviewModel(privateContext, run.id);
+    const removed = model.items
+      .flatMap((item) => item.variants)
+      .find((variant) => variant.kind === "removed");
+    expect(removed).toMatchObject({ kind: "removed", candidate: null });
+    expect(removed?.candidateOmitted).toBeUndefined();
+  });
+
+  it("requires the complete removed-reference inventory before admitting the new capture", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    test.manifest.captures[0]!.itemKey = "new-dialog";
+    const session = await localSession(test);
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("every removed reference identity");
+    test.manifest.localComparison!.removals = session.page.captures.map(
+      ({ itemKey, variantKey }) => ({ itemKey, variantKey }),
+    );
+    await stageLocal(test, session);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const rows = await test.context.service.comparisonRows(run.comparison_id!);
+    expect(rows).toHaveLength(2);
+    expect(
+      rows.some(
+        (row) =>
+          row.candidate_capture_id === null &&
+          row.reference_capture_id !== null &&
+          row.outcome === "changed",
+      ),
+    ).toBe(true);
+    expect(
+      await database
+        .prepare(
+          "SELECT count(*) AS count FROM work_tasks WHERE kind='compare' AND id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id=?)",
+        )
+        .bind(run.comparison_id)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("retains a changed local original and review mask without enqueueing image work", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    const capture = test.manifest.captures[0]!;
+    capture.image = {
+      ...capture.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+    const session = await localSession(test);
+    const result = test.manifest.localComparison!.captures[0]!;
+    result.outcome = "changed";
+    result.changedPixels = 1;
+    result.ratio = 1 / (capture.image.width * capture.image.height);
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("requires its review mask");
+    result.mask = {
+      digest: image.digest,
+      bytes: png.byteLength,
+      width: image.width,
+      height: image.height,
+      mediaType: "image/png",
+      path: "images/local-mask.png",
+    };
+    const body = await stageLocal(test, session);
+    expect(body.uploads).toHaveLength(2);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const row = (await test.context.service.comparisonRows(run.comparison_id!))[0]!;
+    const stored = JSON.parse(row.result_json!);
+    expect(stored).toMatchObject({ outcome: "changed", changedPixels: 1, maskExpected: true });
+    expect(
+      await database
+        .prepare("SELECT role,digest FROM visonaut_images WHERE id=?")
+        .bind(stored.maskImageId)
+        .first(),
+    ).toEqual({ role: "mask", digest: image.digest });
+    expect(
+      await database
+        .prepare(
+          "SELECT count(*) AS count FROM work_tasks WHERE kind='compare' AND id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id=?)",
+        )
+        .bind(run.comparison_id)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("holds the selected reference across renewals and rejects a changed baseline", async () => {
+    const test = await fixture();
+    const session = await localSession(test);
+    const renewed = (await (
+      await stagedReference(
+        session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
+        test.context,
+        test.runId,
+      )
+    ).json()) as LocalReferencePage;
+    expect(renewed.reference).toEqual(session.page.reference);
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    await expect(
+      stagedReference(
+        session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
+        test.context,
+        test.runId,
+      ),
+    ).rejects.toThrow("baseline changed");
+    await expect(
+      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
+    ).rejects.toThrow("baseline changed");
+  });
+
+  it("keeps an omitted actual SHA explicit, retains the accepted representative through promotion, and blocks active recompare", async () => {
+    const test = await fixture();
+    const seed = await acceptedReference(test);
+    const capture = test.manifest.captures[0]!;
+    expect(profiledImage.width).toBe(image.width);
+    expect(profiledImage.height).toBe(image.height);
+    capture.image = {
+      ...capture.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+    const session = await localSession(test);
+    const body = await stageLocal(test, session);
+    expect(body.uploads).toEqual([]);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const saved = await database
+      .prepare("SELECT image_id,metadata_json FROM visonaut_captures WHERE run_id=?")
+      .bind(run.id)
+      .first<{ image_id: string; metadata_json: string }>();
+    expect(saved?.image_id).toBe(seed.imageId);
+    expect(JSON.parse(saved!.metadata_json)).toMatchObject({
+      candidateStored: false,
+      observedImage: { digest: profiledImage.digest },
+    });
+    const rows = await test.context.service.comparisonRows(run.comparison_id!);
+    expect(rows[0]?.outcome).toBe("unchanged");
+    expect(JSON.parse(rows[0]!.tuple_json)).toMatchObject({
+      candidateDigest: profiledImage.digest,
+      referenceDigest: image.digest,
+    });
+    const privateContext = {
+      ...test.context,
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const model = await reviewModel(privateContext, run.id);
+    expect(model.items[0]?.variants[0]).toMatchObject({
+      candidate: null,
+      candidateOmitted: true,
+      kind: "unchanged",
+    });
+    expect(model.recompareAllowed).toBe(false);
+    await expect(
+      handleReview(
+        new Request(`https://preview.example/api/runs/${run.id}/recompare`, { method: "POST" }),
+        privateContext,
+      ),
+    ).rejects.toThrow("complete CI bundle");
+    await expect(
+      test.context.service.createComparison({
+        id: crypto.randomUUID(),
+        runId: run.id,
+        referenceSnapshotId: seed.snapshotId,
+        now: Date.now(),
+        maxAttempts: 3,
+      }),
+    ).rejects.toThrow("trusted Submit");
+    const snapshotId = crypto.randomUUID();
+    const copies = await test.context.service.preparePromotion({
+      snapshotId,
+      comparisonId: run.comparison_id!,
+      prefix: `baselines/${snapshotId}`,
+      now: Date.now(),
+    });
+    expect(copies[0]?.image_id).toBe(seed.imageId);
+    for (const copy of copies)
+      await test.context.service.recordSnapshotCopy({
+        snapshotId,
+        captureId: copy.capture_id,
+        objectKey: copy.object_key,
+        digest: copy.digest,
+      });
+    await test.context.service.promote({
+      snapshotId,
+      promotionId: crypto.randomUUID(),
+      expectedBaselineRevision: 1,
+      now: Date.now(),
+    });
+    expect(
+      await database
+        .prepare("SELECT image_id,digest FROM visonaut_snapshot_images WHERE snapshot_id=?")
+        .bind(snapshotId)
+        .first(),
+    ).toEqual({ image_id: seed.imageId, digest: image.digest });
+    expect(
+      await database
+        .prepare("SELECT 1 AS found FROM work_retention_pins WHERE run_id=? AND owner=?")
+        .bind(seed.runId, `promotion:${snapshotId}`)
+        .first(),
+    ).toEqual({ found: 1 });
+  });
+});
 
 it("reconciles a signed main submission after main advances", async () => {
   const test = await fixture();

@@ -253,6 +253,12 @@ export async function expireStagedAttempts(
           )
           .bind(candidate.id, `workflow-rerun:${candidate.id}`),
         database
+          .prepare("DELETE FROM visonaut_pins WHERE owner_id=? AND reason='local-submit'")
+          .bind(`submit:${candidate.id}`),
+        database
+          .prepare("DELETE FROM work_retention_pins WHERE owner=? AND reason='comparison'")
+          .bind(`submit:${candidate.id}`),
+        database
           .prepare(
             "UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?",
           )
