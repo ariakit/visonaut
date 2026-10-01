@@ -37,7 +37,11 @@ concurrency:
 
 jobs:
   verify:
-    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository_id == '1380751023' &&
+      github.ref == 'refs/heads/main' &&
+      !(github.event_name == 'workflow_dispatch' &&
+        contains(fromJSON('["inspect","convert","migrate"]'), inputs.action))
     uses: ./.github/workflows/checks.yml
     permissions:
       contents: read
@@ -127,6 +131,8 @@ jobs:
   cutover:
     needs: verify
     if: >-
+      !cancelled() &&
+      (needs.verify.result == 'success' || needs.verify.result == 'skipped') &&
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' &&
