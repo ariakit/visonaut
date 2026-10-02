@@ -9,7 +9,7 @@ import type { OperationsContext } from "./types.ts";
 import { restoreCutoffSql, restoredDeliveryGuidSql } from "./recovery.ts";
 
 interface Delivery {
-  id: number;
+  id: bigint;
   guid: string;
   status_code: number | null;
   delivered_at: string;
@@ -25,6 +25,9 @@ interface RecoverDeliveriesParams {
   context: OperationsContext;
   configuration: GitHubAppConfiguration;
   fetcher?: typeof fetch;
+}
+interface JsonParseContext {
+  source?: string;
 }
 
 function parseDeliveries(value: unknown): Delivery[] {
@@ -51,7 +54,7 @@ function parseDeliveries(value: unknown): Delivery[] {
     const event = field("event");
     const repositoryId = field("repository_id") ?? null;
     const installationId = field("installation_id") ?? null;
-    if (typeof id !== "number" || !Number.isSafeInteger(id) || id < 1) {
+    if (typeof id !== "bigint" || id < 1n || id > 9223372036854775807n) {
       throw new SecurityError("github_delivery_id_invalid", 503, "Delivery metadata is invalid.");
     }
     if (typeof guid !== "string" || !/^[a-f0-9-]{36}$/.test(guid)) {
@@ -111,7 +114,20 @@ async function readDeliveryJson(response: Response, maximumBytes: number): Promi
     );
   }
   try {
-    return JSON.parse(new TextDecoder().decode(body));
+    return JSON.parse(
+      new TextDecoder().decode(body),
+      (key: string, value: unknown, context?: JsonParseContext) => {
+        if (key !== "id" || typeof value !== "number") {
+          return value;
+        }
+        // Validate the original integer token so Number rounding cannot change the ID.
+        const source = context?.source;
+        if (source && /^[0-9]{1,19}$/.test(source)) {
+          return BigInt(source);
+        }
+        return undefined;
+      },
+    );
   } catch {
     throw new SecurityError("github_delivery_json_invalid", 503, "Delivery metadata is invalid.");
   }
