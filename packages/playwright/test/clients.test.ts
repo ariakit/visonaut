@@ -8,6 +8,7 @@ import { PNG } from "pngjs";
 import { digestJson, parseManifest, sha256 } from "@visonaut/protocol";
 import { zip } from "../../cli/test/archive-fixture.js";
 import { extractCaptureArchive } from "../../cli/src/artifact-archive.js";
+import type { ComparisonOptions } from "../src/index.js";
 
 const require = createRequire(import.meta.url);
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
@@ -30,6 +31,8 @@ interface FixtureOptions {
   extraArgs?: string[];
   browserName?: "chromium" | "webkit";
   timeout?: number;
+  comparisonDefaults?: ComparisonOptions;
+  screenshotDefaults?: ComparisonOptions;
 }
 
 async function runFixture(source: string, options: FixtureOptions = {}) {
@@ -56,7 +59,15 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
     retries,
     workers: 1,
     timeout,
-    metadata,
+    metadata: {
+      visonaut: {
+        ...metadata.visonaut,
+        ...(Object.hasOwn(options, "comparisonDefaults")
+          ? { comparisonDefaults: options.comparisonDefaults }
+          : {}),
+      },
+    },
+    expect: { toHaveScreenshot: options.screenshotDefaults },
     use: {
       browserName,
       viewport: { width: 32, height: 32 },
@@ -130,6 +141,162 @@ async function manifestAt(directory: string) {
     JSON.parse(await readFile(path.join(directory, "evidence/manifest.json"), "utf8")),
   );
 }
+
+describe("public project comparison defaults", () => {
+  it.each(["chromium", "webkit"] as const)(
+    "records explicit defaults and batch/image overrides from real %s captures",
+    async (browserName) => {
+      await using fixture = await runFixture(
+        `
+        test('public defaults', async ({ page }, info) => {
+          await page.setContent('<style>body { margin:0; background:white }</style>');
+          const variant = { key: 'settings', browser: ${JSON.stringify(browserName)} };
+          await visual(page, { item: 'default', variant });
+          await visual(page, { item: 'override', variant, threshold: 0, maxDiffPixels: 7 });
+          await visual(page, { item: 'ratio', variant, maxDiffPixels: undefined, maxDiffPixelRatio: 0.5 });
+          await visual(page, { item: 'clear', variant, threshold: undefined, maxDiffPixels: undefined, maxDiffPixelRatio: undefined });
+          const inherited = Object.create({ threshold: 0, maxDiffPixels: 100, maxDiffPixelRatio: 1 });
+          inherited.item = 'prototype';
+          inherited.variant = variant;
+          await visual(page, inherited);
+          const own = { item: 'own', variant };
+          Object.defineProperty(own, 'maxDiffPixels', { value: 8 });
+          await visual(page, own);
+          await visualBatch(page, {
+            variant, threshold: 0.4, maxDiffPixels: 9,
+            items: [
+              { item: 'batch-default', clip: { x: 0, y: 0, width: 4, height: 4 } },
+              { item: 'batch-override', threshold: 0, maxDiffPixels: 3, clip: { x: 0, y: 0, width: 4, height: 4 } },
+              { item: 'batch-clear', threshold: undefined, maxDiffPixels: undefined, maxDiffPixelRatio: undefined, clip: { x: 0, y: 0, width: 4, height: 4 } },
+            ],
+          });
+          await visualBatch(page, {
+            variant, threshold: undefined, maxDiffPixels: undefined, maxDiffPixelRatio: undefined,
+            items: [{ item: 'batch-cleared', clip: { x: 0, y: 0, width: 4, height: 4 } }],
+          });
+        });
+      `,
+        {
+          browserName,
+          comparisonDefaults: { threshold: 0.35, maxDiffPixels: 11, maxDiffPixelRatio: 0.1 },
+          screenshotDefaults: { threshold: 0.15, maxDiffPixels: 5 },
+        },
+      );
+      expect(fixture.code, fixture.output).toBe(0);
+      const manifest = await manifestAt(fixture.directory);
+      expect(manifest.captures.map((capture) => capture.comparison)).toEqual([
+        { threshold: 0.35, maxDiffPixels: 11, maxDiffPixelRatio: 0.1 },
+        { threshold: 0, maxDiffPixels: 7, maxDiffPixelRatio: 0.1 },
+        { threshold: 0.35, maxDiffPixelRatio: 0.5 },
+        { threshold: 0.2, maxDiffPixels: 0 },
+        { threshold: 0.35, maxDiffPixels: 11, maxDiffPixelRatio: 0.1 },
+        { threshold: 0.35, maxDiffPixels: 8, maxDiffPixelRatio: 0.1 },
+        { threshold: 0.4, maxDiffPixels: 9, maxDiffPixelRatio: 0.1 },
+        { threshold: 0, maxDiffPixels: 3, maxDiffPixelRatio: 0.1 },
+        { threshold: 0.2, maxDiffPixels: 0 },
+        { threshold: 0.2, maxDiffPixels: 0 },
+      ]);
+      for (const captures of [manifest.captures.slice(0, 6), manifest.captures.slice(6)]) {
+        expect(new Set(captures.map((capture) => capture.profileDigest)).size).toBe(1);
+        expect(new Set(captures.map((capture) => capture.image.digest)).size).toBe(1);
+      }
+      expect(manifest.profiles.every(({ profile }) => !Object.hasOwn(profile, "comparison"))).toBe(
+        true,
+      );
+    },
+  );
+
+  it("uses explicit {} without the private bridge, even with looser screenshot defaults", async () => {
+    await using fixture = await runFixture(
+      `
+      test('empty defaults', async ({ page }, info) => {
+        await page.setContent('<style>body { margin:0; background:white }</style>');
+        const project = info._projectInternal;
+        try {
+          delete info._projectInternal;
+          await visual(page, { item: 'empty', variant: { key: 'empty', browser: 'chromium' } });
+        } finally {
+          info._projectInternal = project;
+        }
+      });
+    `,
+      { comparisonDefaults: {}, screenshotDefaults: { threshold: 0.5, maxDiffPixels: 100 } },
+    );
+    expect(fixture.code, fixture.output).toBe(0);
+    expect(
+      (await manifestAt(fixture.directory)).captures.map((capture) => capture.comparison),
+    ).toEqual([{ threshold: 0.2, maxDiffPixels: 0 }]);
+  });
+
+  it("keeps the pinned fallback when explicit configuration is absent or inherited", async () => {
+    await using fixture = await runFixture(
+      `
+      test('compatibility defaults', async ({ page }, info) => {
+        await page.setContent('<style>body { margin:0; background:white }</style>');
+        const variant = { key: 'bridge', browser: 'chromium' };
+        await visual(page, { item: 'missing', variant });
+        const settings = info.project.metadata.visonaut;
+        info.project.metadata.visonaut = Object.assign(Object.create({ comparisonDefaults: {} }), settings);
+        await visual(page, { item: 'inherited-defaults', variant });
+        info.project.metadata = Object.create({ visonaut: { ...settings, comparisonDefaults: {} } });
+        await visual(page, { item: 'inherited-metadata', variant });
+      });
+    `,
+      { screenshotDefaults: { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 } },
+    );
+    expect(fixture.code, fixture.output).toBe(0);
+    expect(
+      (await manifestAt(fixture.directory)).captures.map((capture) => capture.comparison),
+    ).toEqual([
+      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
+      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
+      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
+    ]);
+  });
+
+  it("uses non-enumerable own defaults and ignores inherited comparison fields", async () => {
+    await using fixture = await runFixture(`
+      test('own defaults', async ({ page }, info) => {
+        await page.setContent('<style>body { margin:0; background:white }</style>');
+        const defaults = Object.create({ threshold: 0, maxDiffPixelRatio: 1 });
+        Object.defineProperty(defaults, 'maxDiffPixels', { value: 8 });
+        Object.defineProperty(info.project.metadata.visonaut, 'comparisonDefaults', { value: defaults });
+        await visual(page, { item: 'own-defaults', variant: { key: 'own', browser: 'chromium' } });
+      });
+    `);
+    expect(fixture.code, fixture.output).toBe(0);
+    expect(
+      (await manifestAt(fixture.directory)).captures.map((capture) => capture.comparison),
+    ).toEqual([{ threshold: 0.2, maxDiffPixels: 8 }]);
+  });
+
+  it.each([
+    ["undefined", "must be an object"],
+    ["null", "must be an object"],
+    ["[]", "must be an object"],
+    ["'invalid'", "must be an object"],
+    ["{ threshold: 2 }", "Invalid project.metadata.visonaut.comparisonDefaults"],
+    ["{ threshold: NaN }", "Invalid project.metadata.visonaut.comparisonDefaults"],
+    ["{ maxDiffPixels: -1 }", "Invalid project.metadata.visonaut.comparisonDefaults"],
+    ["{ maxDiffPixels: 0.5 }", "Invalid project.metadata.visonaut.comparisonDefaults"],
+    ["{ maxDiffPixelRatio: 2 }", "Invalid project.metadata.visonaut.comparisonDefaults"],
+  ])("rejects malformed explicit defaults %s even when overridden", async (defaults, message) => {
+    await using fixture = await runFixture(`
+      test('invalid defaults', async ({ page }, info) => {
+        info.project.metadata.visonaut.comparisonDefaults = ${defaults};
+        await expect(visual(page, {
+          item: 'invalid', variant: { key: 'invalid', browser: 'chromium' },
+          threshold: 0.2, maxDiffPixels: 0, maxDiffPixelRatio: 0,
+        })).rejects.toThrow(${JSON.stringify(message)});
+      });
+    `);
+    expect(fixture.code, fixture.output).toBe(1);
+    expect(fixture.output).toContain("required capture started but did not complete");
+    await expect(
+      readFile(path.join(fixture.directory, "evidence/manifest.json")),
+    ).rejects.toThrow();
+  });
+});
 
 describe("published adapter and reporter", () => {
   it.each(["chromium", "webkit"] as const)(
@@ -369,8 +536,9 @@ describe("published adapter and reporter", () => {
     expect([...image.data.subarray(0, 4)]).toEqual([0, 255, 0, 255]);
   }, 20000);
 
-  it("refuses changing pixels with stable dimensions", async () => {
-    await using fixture = await runFixture(`
+  it("refuses changing pixels even with permissive explicit comparison defaults", async () => {
+    await using fixture = await runFixture(
+      `
       test('unstable pixels', async ({ page }) => {
         await page.setContent('<style>body { margin:0; background:blue }</style>');
         const screenshot = page.screenshot.bind(page);
@@ -382,7 +550,9 @@ describe("published adapter and reporter", () => {
         };
         await visual(page, { item:'dialog/open', variant:{ key:'react-light', browser:'chromium' }, timeout:500 });
       });
-    `);
+    `,
+      { comparisonDefaults: { threshold: 1, maxDiffPixelRatio: 1 } },
+    );
     expect(fixture.code).toBe(1);
     expect(fixture.output).toContain("Visual capture timed out before pixels stabilized");
     await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");

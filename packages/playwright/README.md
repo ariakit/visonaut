@@ -1,6 +1,6 @@
 # @visonaut/playwright
 
-This guide describes adapter `0.4.0`. The [current system guide](../../docs/current-contract.md) owns the supported path and selected changes. Capture prepared Playwright pages with stable item and variant identities. Ariakit owns its projects, page preparation, clip geometry, and normal Playwright command. Visonaut waits for settled font faces and two consecutive equal screenshots. A failed or incomplete test run produces no manifest.
+This guide describes the public adapter source. The [current system guide](../../docs/current-contract.md) owns the supported path and selected changes. Capture prepared Playwright pages with stable item and variant identities. Ariakit owns its projects, page preparation, clip geometry, and normal Playwright command. Visonaut waits for settled font faces and two consecutive equal screenshots. A failed or incomplete test run produces no manifest.
 
 ```ts
 import { visual } from "@visonaut/playwright";
@@ -22,7 +22,26 @@ Configure `@visonaut/playwright/reporter` in the caller's normal Playwright conf
 
 The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Each capture stores effective consumer comparison settings in `comparison`, separate from its rendering profile. The comparison engine identity belongs to the trusted comparison.
 
-Captures inherit `maxDiffPixels`, `maxDiffPixelRatio`, and `threshold` from the current project's resolved `expect.toHaveScreenshot` settings. Override each setting on a capture:
+Set `project.metadata.visonaut.comparisonDefaults` beside `profile`. Share one comparison object with Playwright's `expect.toHaveScreenshot` configuration. Preserve your existing tolerances; the values below show the built-in policy:
+
+```ts
+import { defineConfig } from "@playwright/test";
+import type { ComparisonOptions } from "@visonaut/playwright";
+
+const comparisonDefaults = {
+  threshold: 0.2,
+  maxDiffPixels: 0,
+} satisfies ComparisonOptions;
+
+export default defineConfig({
+  expect: { toHaveScreenshot: comparisonDefaults },
+  metadata: {
+    visonaut: { profile: environment.profile, comparisonDefaults },
+  },
+});
+```
+
+Project metadata supplies the defaults for `visual` and `visualBatch`. For project-specific Playwright settings, put that project's shared object in both places. An explicit `{}` selects the built-in policy and does not inherit Playwright's screenshot defaults. An explicit defaults value must be an object with valid numeric comparison fields, or capture fails with a setup error. Only own comparison fields count, including non-enumerable fields. Override each setting on a capture:
 
 ```ts
 await visual(page, {
@@ -32,9 +51,11 @@ await visual(page, {
 });
 ```
 
-`visualBatch` accepts these settings for the batch and for each item. An omitted field inherits its value. An explicit `undefined` clears its inherited value. Playwright uses the smaller limit when both pixel limits are set. The threshold defaults to `0.2`; with no pixel limit, the allowed count is zero. These settings do not change the requirement for two consecutive identical capture images.
+`visualBatch` accepts these settings for the batch and for each item. The order is project defaults, then batch settings, then image settings. An omitted field inherits its value. An explicit `undefined` clears its inherited value. Playwright uses the smaller limit when both pixel limits are set. The threshold defaults to `0.2`; with no pixel limit, the allowed count is zero. These settings do not change the requirement for two consecutive identical capture images.
 
-The adapter reads resolved defaults from the pinned Playwright `1.63.0` worker because the public project object does not expose `expect`. It fails if this bridge is unavailable. A later Playwright version requires a verified adapter update. D07/W05 selects explicit shared defaults through public project metadata, with an explicit defaults object and the same override rules. That API is not available in `0.4.0`. Keep the current bridge until the supported consumer set can move through a verified adapter/consumer release; do not silently select a looser policy.
+This is the compatibility stage of D07/W05. If `comparisonDefaults` is absent, the adapter still reads resolved defaults from the tested Playwright `1.63.0` private worker bridge. It fails if that bridge is unavailable. Explicit defaults take precedence and do not read the private field. The exact Playwright peer pin remains `1.63.0`; a later version requires actual capture verification. Published adapter `0.4.0` predates the explicit API, so consumers must first install the compatible release.
+
+Final D07 retirement is held for verified adoption by all supported consumers and a declared breaking release. That release must require an explicit defaults object, including `{}`, fail clearly when it is missing, and remove the private bridge. This compatibility stage does not complete private-field retirement. See the [prepared Ariakit adoption patch and release holds](../../docs/operations/adapter-comparison-defaults.md).
 
 Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 
