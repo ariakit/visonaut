@@ -164,6 +164,97 @@ test("framework names do not display browser marks", async ({ page }) => {
   await expect(icons.first().locator("img")).toBeVisible();
 });
 
+for (const width of [1280, 390]) {
+  test(`automatically accepted additions stay in the main list at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const accepted = page.getByRole("button", { name: "Accepted (1)" });
+    const addition = page.locator('[id="review-item-new%2Fopen"]');
+    await expect(addition).toBeVisible();
+    await expect(accepted).toHaveAttribute("aria-expanded", "false");
+    await expect(addition).toContainText("0 of 1 need review");
+    await expect(page.locator(".review-result-heading")).toContainText("9 of 11 need review");
+    await page.locator('[id="review-item-menu%2Fopen"]').click();
+    await page.keyboard.press("ArrowDown");
+    await expect(addition).toBeFocused();
+    await ready(page);
+    await expect(page.locator(".review-result-heading")).toContainText("Accepted automatically");
+    await expect(accepted).toHaveAttribute("aria-expanded", "false");
+    await focusWorkspace(page);
+    await page.keyboard.press("ArrowUp");
+    await expect(selected(page)).toContainText("Menu");
+    await callCount(page, 0);
+    expect(
+      await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
+    ).toMatchObject({
+      kind: "added",
+      verdict: "approved",
+      source: "automatic",
+    });
+    await addition.click();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.locator('[id="review-item-removed%2Fopen"]')).toBeFocused();
+    await expect(accepted).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Home");
+    await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toBeFocused();
+  });
+}
+
+test("mixed items stay visible after their changed and added variants are approved", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const addition = model.items[2];
+    const changed = model.items[0]?.variants[0];
+    const unchanged = model.items[1];
+    if (!addition || !changed || !unchanged) throw new Error("Missing mixed item fixture");
+    addition.variants.push({ ...changed, id: "row-existing", key: "Existing", label: "Existing" });
+    addition.variants.push({
+      ...changed,
+      id: "row-unchanged",
+      key: "Unchanged",
+      label: "Unchanged",
+      kind: "unchanged",
+    });
+    for (const variant of unchanged.variants) {
+      variant.kind = "unchanged";
+    }
+    window.reviewFixture.update(model);
+  });
+  const accepted = page.getByRole("button", { name: "Accepted (2)" });
+  const addition = page.locator('[id="review-item-new%2Fopen"]');
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await expect(addition).toContainText("1 of 3 need review");
+  await expect(page.locator(".review-result-heading")).toContainText("8 of 13 need review");
+  await addition.click();
+  await expect(selected(page)).toContainText("Existing");
+  await ready(page);
+  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(addition).toContainText("0 of 3 need review");
+  await expect(page.locator(".review-result-heading")).toContainText("7 of 13 need review");
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  await addition.click();
+  await page
+    .getByRole("navigation", { name: "Variants" })
+    .getByRole("link", { name: /Addition/ })
+    .click();
+  await ready(page);
+  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await callCount(page, 2);
+  await expect(addition).toBeVisible();
+  await expect(addition).toContainText("0 of 3 need review");
+  await expect(page.locator(".review-result-heading")).toContainText("7 of 13 need review");
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
+  expect(
+    await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
+  ).toMatchObject({
+    kind: "added",
+    verdict: "approved",
+    source: "human",
+  });
+});
+
 test("comparison errors stay visible ahead of accepted items", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
@@ -190,7 +281,7 @@ test("an accepted first item does not hide the initial attention selection", asy
     for (const variant of first.variants) variant.verdict = "approved";
     window.reviewFixture.update(model);
   });
-  const accepted = page.getByRole("button", { name: "Accepted (3)" });
+  const accepted = page.getByRole("button", { name: "Accepted (2)" });
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await expect(page.locator('[id="review-item-menu%2Fopen"]')).toHaveAttribute(
     "aria-current",
@@ -198,6 +289,12 @@ test("an accepted first item does not hide the initial attention selection", asy
   );
   await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveCount(0);
   await focusWorkspace(page);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator('[id="review-item-new%2Fopen"]')).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("ArrowDown");
   await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveAttribute(
     "aria-current",
@@ -220,7 +317,7 @@ test("a pending comparison stays visible without an evidence error", async ({ pa
   await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toContainText(
     "1 comparison running",
   );
-  await expect(page.getByRole("button", { name: "Accepted (2)" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Accepted (1)" })).toHaveAttribute(
     "aria-expanded",
     "false",
   );

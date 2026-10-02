@@ -35,7 +35,8 @@ export function partitionItems(items: ReviewItem[]) {
   const attention: ItemEntry[] = [];
   const accepted: ItemEntry[] = [];
   for (const [index, item] of items.entries()) {
-    const group = isAccepted(item) ? accepted : attention;
+    const hasAddedVariant = item.variants.some((variant) => variant.kind === "added");
+    const group = isAccepted(item) && !hasAddedVariant ? accepted : attention;
     group.push({ item, index, position: group.length });
   }
   return {
