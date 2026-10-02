@@ -1,5 +1,7 @@
 # Comparison Worker
 
+The [current guide](../../docs/current-contract.md) defines the normal trusted CLI path and D03/W08 retirement gates. This Worker still owns image validation and supported legacy comparison. W08 may retire legacy queue work only after client, retained-reader, and task drain checks. Keep `POST /validate`, required codecs, and finite image bounds.
+
 The Worker consumes IDs from `COMPARISONS`, reads immutable originals from private `IMAGES`, and commits results through `Service` in `DB`. Queue messages never contain image bytes or effective policy values. Service records supply the trusted policy and exact original digests.
 
 The consumer claims a two-minute lease. It writes validated PNG artifacts before the atomic D1 result. The result and task completion use the same lease guard. Retries use stable object keys. Completed delivery repeats acknowledge the durable result. Failed tasks retry at one-minute intervals and become durable dead tasks after the configured attempt limit. Invalid envelopes follow the queue retry/dead-letter policy.

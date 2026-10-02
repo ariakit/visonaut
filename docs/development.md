@@ -1,6 +1,6 @@
 # Development and verification
 
-Use the Node.js and pnpm versions in `package.json`. Install the locked dependencies with `pnpm install --frozen-lockfile`. `pnpm check` retains the local lint, type, build, unit, and browser checks. Google Chrome is needed by the browser fixture. These checks do not deploy resources or publish packages.
+Use the [current system guide](current-contract.md) for requirements, selected targets, and evidence limits. Use the Node.js and pnpm versions in `package.json`. Install the locked dependencies with `pnpm install --frozen-lockfile`. `pnpm check` retains the local lint, type, build, unit, and browser checks. Google Chrome is needed by the browser fixture. These checks do not deploy resources or publish packages.
 
 ## Check scope
 
@@ -16,9 +16,13 @@ Use the Node.js and pnpm versions in `package.json`. Install the locked dependen
 
 CI calls the same named commands. Its Gate remains fail-closed for every required job. Diagnostic Container checks remain available on demand; C04 removes their infrastructure from the normal production path. Read the [CI guide](../.github/workflows/README.md) for the current job set and deployment rules.
 
+## Browser server ownership
+
+Current source fixes the fixture port at `4179` and permits reuse of an existing server. Before trusting a result, verify that the server serves this checkout. A result from another worktree is not application evidence. Do not stop another developer's process. D18/W02 selects `reuseExistingServer: false` and one optional `VISONAUT_TEST_PORT`, validated as an integer from 1 to 65535 and shared by Vite, readiness, and baseURL. W01 does not implement this setting. Use the [W02 checks](https://github.com/ariakit/visonaut/issues/204#w02) when that patch lands.
+
 ## Database fixtures
 
-Ordinary database tests read every sorted numbered migration from `apps/web/migrations`. SQLite fixtures execute the source files. Native D1 fixtures use the same reader and apply each complete statement. Do not add another hand-maintained migration list or current-schema copy.
+Ordinary database tests read every sorted numbered migration from `apps/web/migrations`. Keep all applied files, including both `0030_*` files, as history. The zero-pixel correction must not be renamed, broadened, or rerun as cleanup. SQLite fixtures execute the source files. Native D1 fixtures use the same reader and apply each complete statement. Do not add another hand-maintained migration list or current-schema copy.
 
 ```ts
 import { applyTestMigrations, readTestMigrations } from "../../../tooling/test-migrations.js";
@@ -34,15 +38,19 @@ The brand migration test starts at `0013_promotion_scans`, inserts old-brand row
 
 ## Built-app check
 
-After framework, route, build, or deployment changes, build and serve the actual app with local bindings. Use an isolated local fixture. Do not use production credentials or production data. This is an on-demand manual check, not a second permanent browser project.
+After framework, route, build, or deployment changes, build and serve the actual app with local bindings. Use an isolated local fixture. Do not use production credentials or production data. D12 retains this on-demand manual check under Q04. Do not add a second permanent browser project.
 
 1. Record the source commit, working diff hash, Node, pnpm, browser, build command, local URL, and data fixture.
 2. Open the review route directly. Check the actual document, loaded script and style assets, sign-in-required state, and first image.
 3. Reload the route. Navigate away and back. Check client navigation, browser Back, and the URL-selected item and variant.
-4. Save a fixture decision. Check the saved result and next image. Reload to check the saved state. Use synthetic local data only.
+4. Save a fixture decision. Check sending, server queue admission, saved confirmation, and next-image progress. Reload to check stored state. Save another fixture decision, then verify Undo in that review session; reload clears the local Undo stack. Use synthetic local data and the complete numbered migrations.
 5. Record missing assets, failed requests, page errors, viewport, and the result of each step. Keep screenshots and raw browser output beside the record when needed.
 
 A passing interaction fixture does not prove the built Worker startup, deployed OAuth, or production storage behavior. Preview fixtures have no GitHub login under O11. A focused production auth smoke check and local auth tests remain separate checks.
+
+## Scope of the selected cleanup
+
+D10 keeps the copied Ariakit component set, notices, and historical prototype imports. D17 keeps the package and framework boundaries and CLI independence from the Playwright peer runtime. D11/W10 measures setup and build consumers before removing only proved redundant CI work. A file move or smaller source count proves no speed, bundle, or cost improvement.
 
 ## Performance checks
 

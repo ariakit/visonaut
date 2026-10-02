@@ -1,6 +1,6 @@
 # Operations integration
 
-Apply all numbered web D1 migrations in order. Preserve applied migrations as history. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery; the compare Worker consumes work and publishes a status wakeup.
+The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. This runbook describes source behavior before the selected retirements. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery; the compare Worker consumes work and publishes a status wakeup.
 
 Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs checks, review links, and promotion without scanning closed history or retention.
 
@@ -11,6 +11,12 @@ await operationsQueue.send({ kind: "maintenance", family: "history" });
 
 D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. Set each budget field from measured deployment limits. `maximumObjectBytes` bounds one image or metadata page. `maximumMetadataBytes` bounds total manual-export metadata. `maximumExportEntries` bounds the exported payload. These limits are separate from database-capacity admission.
 
+## Durable decisions and sealed recovery
+
+The review client admits authorized decisions into D1 work and receives HTTP 202. Admission is separate from a saved verdict. OPERATIONS processes review work even after the browser closes. Keep exact command IDs, predecessor order, actor-specific receipts, failed-predecessor handling, leases/retries, and replay after a crash. Queued or leased review tasks block completion/promotion. Aborting a browser wait does not cancel stored work. Keep this queue when legacy comparison consumers retire. See [review queue](review-queue.ts) and [review API](../api/review.ts).
+
+Keep the current [sealed-run recovery](../api/workflow-materialize.ts). An active sealed run with no comparison can resume from its stored validated local Submit receipt. Keep its eligibility query; missing or invalid receipt evidence must fail closed. This is current recovery work, not a legacy comparison helper.
+
 ## Baselines and closed history
 
 New accepted snapshots point to immutable source originals. Promotion reads and hashes each distinct original once per bounded page. It writes no protected image copy. Before promotion starts, D1 pins the snapshot's run and every inherited image owner. A missing or corrupt original blocks promotion. Promotion closes the review at the promotion time. The final GitHub check remains passed. A promoted review is read-only. A correction requires a new complete main capture.
@@ -19,7 +25,7 @@ Each new run owns its verified approval. A copied approval records its source de
 
 Rendering identity excludes comparison policy and engine. The converter verifies the original stored profile digest before saving its rendering digest. Required old tuples retain their original JSON beside the converted tuple. Comparison policy, engine, and codec remain in the acceptance tuple; conversion does not change the selected policy.
 
-Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. Before this boundary, a non-promoted closed run can create a read-only comparison from its retained native D1 captures. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
+Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. Before this boundary, some non-promoted closed legacy runs can create a read-only comparison from retained native D1 captures. Local-comparison runs cannot reconstruct omitted candidate bytes and reject this request. D05/W06 selects read-only history for every closed run; that target still needs implementation and settlement of outstanding historical work. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
 
 ## Conversion before deployment
 
@@ -55,6 +61,8 @@ Legacy backup inventory was read without writes on 2026-09-29. Production retain
 
 ## Manual evidence export
 
+D06/W06 selects retirement in two stages. First reject new creation and remove its control while keeping existing private downloads, integrity checks, lease renewal, expiry, cleanup, and export-owned pins. Final code removal waits for verified zero unfinished exports, zero active download leases, and complete bounded cleanup. The current source below still supports creation. New image-lookup and history-query optimizations remain in use during drain; do not undo or repeat them. No replacement report or data deletion is selected.
+
 `POST /api/runs/:runId/export` creates a private evidence export. `GET /api/exports/:exportId` streams it. Both require a current maintainer session and current repository authorization. Export pages use the private `exports/` prefix in IMAGES. They cannot be served through the public image-ID route.
 
 A sealed ready comparison is required. An export includes still-retained original, reference, and derived images with available profiles, provenance, decisions, and metadata. Pages and source objects are verified before the final `complete.json` integrity marker is emitted. Exports expire after 24 hours; an active download has its one-hour lease. A truncated download has no valid completion marker. Metadata and object bounds are finite. Local fixtures do not prove hosted latency, CPU, or cost for the full capture inventory.
@@ -72,7 +80,7 @@ Use this runbook first with a separate diagnostic D1 database and diagnostic R2 
 3. Keep the target offline. Apply the current numbered migrations if the rewind precedes them. Run `sanitizeRestoredDatabase` only against this isolated target. It invalidates sessions and account tokens, makes unfinished tasks terminal, and fences old GitHub deliveries. Its existing restore event keeps the latest sanitation time as a cutoff for old staged work, candidate checks, and identity tokens. Keep that event after resolving its secret-rotation alert. Accepted history and old check identities remain evidence; a new capture needs a fresh Plan and a new check generation, even at the same SHA. It does not replay external effects.
 4. Page through `inspectRecoveryImages`, retaining each `nextAfterId` until `hasMore` is false. Record missing and corrupt originals. Required baseline images must be present and verified; expired historical evidence must show an explicit missing or expired state. Run `PRAGMA foreign_key_check`.
 5. Rotate authentication and ingest capability secrets in the target. Keep checks with ambiguous prior external writes fenced until their requests are proven settled. Capture a new complete main run when the old baseline cannot be verified.
-6. Verify a new capture, a manual evidence export, and terminal old command links. Verify private login if the full diagnostic app is activated. A binding-only drill proves hosted storage and the application recovery functions; it does not prove the deployed HTTP or login paths. Reactivate only the verified target. Keep the previous bookmark and the drill receipt private.
+6. Verify a new complete capture, history readback, required image checks, and terminal old command links. While the current export feature remains supported, also verify a manual evidence export. Remove that export check only with the D06 cutover; do not add a replacement report. Verify private login if the full diagnostic app is activated. A binding-only drill proves hosted storage and the application recovery functions; it does not prove the deployed HTTP or login paths. Reactivate only the verified target. Keep the previous bookmark and the drill receipt private.
 
 Example commands for the independently selected diagnostic database:
 

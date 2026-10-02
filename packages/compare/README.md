@@ -1,6 +1,6 @@
 # Image comparison
 
-This private package validates static 8-bit PNG and lossless WebP. It retains exact original bytes. It decodes a separate PNG buffer with color and text metadata removed after validation. The source image remains unchanged.
+This private package validates static 8-bit PNG and lossless WebP. Its RGBA comparator serves the retained legacy path; trusted CLI Submit uses pixelmatch with the recorded capture settings. The [current guide](../../docs/current-contract.md#comparison-settings-and-rendering-identity) separates those policies and states the conditional legacy-retirement gates. Image validation remains required. It retains exact original bytes. It decodes a separate PNG buffer with color and text metadata removed after validation. The source image remains unchanged.
 
 ```ts
 const image = await validateImage(uploadBytes);

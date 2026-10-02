@@ -17,6 +17,19 @@ The approved 10-second Approve/Reject permission cache remains an explicit super
 
 Existing meaningful native Plan/API and public CLI/HTTP/artifact regressions satisfy the required failure-path checks. Do not create a forced hosted negative matrix, natural 24-hour expiry wait, artifact deletion, or global negative-queue gate. Hosted restore remains **UNVERIFIED** under O19. O26 historical preview health, old-cookie, and auth-denial probes remain **UNVERIFIED**, with drain inferred. O27 fresh App ping remains **UNVERIFIED**; the accepted real signed event, settled same-GUID receipt, revocation, fresh sign-in, and safe replay retain their scope.
 
+## Issue #204 removal holds
+
+The [current guide](../current-contract.md#issue-204-supersession-map) records the accepted #204 changes. Its W01 documentation patch does not repeat the completed PR #205 cutover or transfer-key retirement above. W03 must obtain new exact-target facts before W07/W08 can remove code. The dated completion receipts above do not prove all required protected sources, closed records, clients, delayed/replayable tasks, export leases, or conversion failures are clear now.
+
+Keep these holds explicit:
+
+- W07: required protected snapshots and unconverted expired history must be zero; no unresolved conversion failure; verified originals, owner pins, rendering/approval conversion, and foreign keys in both environments. Keep ordinary history creation, recovery, retention, and every applied migration.
+- W08: all supported clients can use the selected path; required legacy readers and historical writers no longer need it; pending, leased, retry, delayed, and dead-letter work is terminal. Keep image validation, durable review processing in OPERATIONS, and sealed local Submit recovery.
+- W06 export stage B: zero unfinished exports and active download leases, with complete bounded cleanup and correct pin ownership. Waiting 24 hours alone is not drain proof. Keep current optimized exports through drain.
+- D14: inventory rows, readers, foreign keys, retention, and recovery obligations. Prepare a proposal only. Retired backup tables and `transfer_key_redemptions` do not become disposable because the executable transfer path and key bindings are gone.
+
+Record account, environment, exact resource IDs, service/client versions, evidence time, and failed or unknown queries. Unknown is not zero. Keep raw metadata and object locations private. The remote runner's provider-proxy setup and a hosted recovery rehearsal need separate external authorization. Cloud/resource/data deletion, deployment, package publication, consumer changes, GitHub rule changes, and issue updates are separate actions. No such action is part of W01.
+
 ## Historical initial sequence
 
 The following sequence and runner description preserve the initial cutover scope. Read their pending states and gates as historical evidence. The current contract and remaining consumer steps above supersede the old Plan/report integration, manual-only release description, and hosted gates that the maintainer explicitly changed. Do not repeat external changes from this historical sequence.
