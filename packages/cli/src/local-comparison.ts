@@ -259,14 +259,13 @@ export async function compareLocally({
     }
     if (
       accepted.image.digest === capture.image.digest &&
-      accepted.profileDigest === capture.profileDigest &&
       accepted.image.width === capture.image.width &&
       accepted.image.height === capture.image.height &&
       accepted.image.bytes === capture.image.bytes
     ) {
       captures.push({
         ...result,
-        outcome: "unchanged",
+        outcome: accepted.profileDigest === capture.profileDigest ? "unchanged" : "changed",
         changedPixels: 0,
         ratio: 0,
         sizeChanged: false,
