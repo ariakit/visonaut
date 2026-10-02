@@ -52,6 +52,12 @@ The [pinned issue #1 notice](https://github.com/ariakit/visonaut/issues/1#issuec
 
 The caller, required-check, consumer, readiness-marker, and authority handoffs are complete for this dated receipt. At 15:08 UTC, the browser blocked a direct production `/health` request with `net::ERR_BLOCKED_BY_CLIENT`; direct HTTP proof remains unverified and is not a new launch gate. No hosted baseline-advance experiment is claimed. A07 retirement of the obsolete `VISONAUT_TRANSFER_PRIVATE_KEY` bindings on `visonaut` and `visonaut-preview` remains pending the unanswered action-time confirmation and exact absence readback. This cleanup hold has no effect on the completed publication. Preserve the [approved evidence limits](current-contract.md#publication-and-remaining-cutover), including unverified hosted restore, preview HTTP probes, and fresh App ping.
 
+### Transfer-key retirement on 2026-10-02
+
+After explicit action-time confirmation, only `VISONAUT_TRANSFER_PRIVATE_KEY` was deleted and deployed on Workers `visonaut-preview` and `visonaut`. Readback receipts recorded at 18:50:50 UTC for preview and 18:51:49 UTC for production confirmed its absence after each settings page was reloaded. Each complete variable and binding row set matched its prior state minus only that secret. All other masked secret names were unchanged, and no secret values were read.
+
+Cloudflare showed active version prefix `6df134dd` for preview and `49b3a357` for production, each serving 100% of traffic. Only these prefixes were read, not full version UUIDs. This completes the exact A07 transfer-key retirement. The pending state in the earlier PR #205 receipt records the pre-deletion checkpoint; its evidence limits remain unchanged.
+
 ## Historical implementation checkpoints
 
 This working record maps all 45 [selected decisions](current-contract.md) to source, regression coverage, and remaining work. It preserves the audit revision 6 selections, notes, definitions, and 61 prior decisions. The user authorized local implementation on 2026-09-29. A checked source change does not establish a deployed result. GitHub publication, npm release, production migrations, App/rule changes, secret moves, and resource retirement are not complete.
