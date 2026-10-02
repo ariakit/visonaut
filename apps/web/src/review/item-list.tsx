@@ -113,54 +113,64 @@ export function ItemList({
     const rejected = entry.variants.filter((variant) => variant.verdict === "rejected").length;
     const pending = entry.variants.filter(needsReview).length;
     return (
-      <ak.CompositeItem
-        {...rowProps}
-        key={entry.key}
-        role={undefined}
-        render={
-          route && variantKey ? (
-            <NavLink
-              item={false}
-              $p={2}
-              render={
-                <Link
-                  to="/runs/$runId"
-                  params={{ runId: route.runId }}
-                  search={{ comparison: route.comparisonId, item: entry.key, variant: variantKey }}
-                />
-              }
-            />
+      <li key={entry.key} className="contents">
+        <ak.CompositeItem
+          {...rowProps}
+          key={entry.key}
+          role={undefined}
+          render={
+            route && variantKey ? (
+              <NavLink
+                item={false}
+                $kind="flat"
+                $selectedPush={false}
+                $p={2}
+                render={
+                  <Link
+                    to="/runs/$runId"
+                    params={{ runId: route.runId }}
+                    search={{
+                      comparison: route.comparisonId,
+                      item: entry.key,
+                      variant: variantKey,
+                    }}
+                  />
+                }
+              />
+            ) : (
+              <Button $kind="flat" $p={2} />
+            )
+          }
+          className="review-item flex w-full items-center gap-3 text-start"
+          aria-current={index === selectedIndex ? "page" : undefined}
+          aria-describedby={`${itemId(entry)}-position`}
+          onClick={route && variantKey ? undefined : () => selectItem(index)}
+        >
+          {thumbnail ? (
+            <img className="review-thumbnail" src={thumbnail} alt="" loading="lazy" />
           ) : (
-            <Button $kind="flat" $p={2} />
-          )
-        }
-        className="review-item flex w-full items-center gap-3 text-start"
-        aria-current={index === selectedIndex ? "page" : undefined}
-        aria-describedby={`${itemId(entry)}-position`}
-        onClick={route && variantKey ? undefined : () => selectItem(index)}
-      >
-        {thumbnail ? (
-          <img className="review-thumbnail" src={thumbnail} alt="" loading="lazy" />
-        ) : (
-          <span className="review-thumbnail review-thumbnail-empty">—</span>
-        )}
-        <span className="min-w-0 flex-1">
-          <strong className="block text-xs font-medium wrap-anywhere">{entry.name}</strong>
-          <small className="block mt-1 text-xs ak-ink-60">
-            {errors
-              ? `${errors} comparison error${errors === 1 ? "" : "s"}`
-              : comparing
-                ? `${comparing} comparison${comparing === 1 ? "" : "s"} running`
-                : rejected
-                  ? `${rejected} rejected variant${rejected === 1 ? "" : "s"}`
-                  : `${pending} of ${entry.variants.length} need review`}
-          </small>
-          {entry.variants.every((capture) => capture.kind === "removed") && <small>Removed</small>}
-          <span id={`${itemId(entry)}-position`} hidden>
-            Item {position + 1} of {groupLength}
+            <span className="review-thumbnail review-thumbnail-empty">—</span>
+          )}
+          <span className="min-w-0 flex-1">
+            <strong className="block text-xs font-medium wrap-anywhere">{entry.name}</strong>
+            <small className="block mt-1 text-xs ak-ink-60">
+              {errors
+                ? `${errors} comparison error${errors === 1 ? "" : "s"}`
+                : comparing
+                  ? `${comparing} comparison${comparing === 1 ? "" : "s"} running`
+                  : rejected
+                    ? `${rejected} rejected variant${rejected === 1 ? "" : "s"}`
+                    : `${pending} of ${entry.variants.length} need review`}
+            </small>
+            {entry.variants.every((capture) => capture.kind === "removed") && (
+              <small>Removed</small>
+            )}
+            <span id={`${itemId(entry)}-position`} hidden>
+              Item {position + 1} of {groupLength}
+            </span>
           </span>
-        </span>
-      </ak.CompositeItem>
+        </ak.CompositeItem>
+      </li>
     );
   };
   return (
@@ -169,7 +179,11 @@ export function ItemList({
       render={<nav />}
       aria-label="Review items"
       tabIndex={items.length ? -1 : 0}
-      className="review-items"
+      $rounded="none"
+      $forceRounded
+      list={false}
+      glider={{ $kind: "bar", $barOffset: "frame" }}
+      className="review-items flex! flex-col min-h-0 flex-1"
       onFocusCapture={(event) => {
         focusedItem.current = event.target.closest<HTMLElement>(".review-item");
       }}
@@ -202,9 +216,10 @@ export function ItemList({
       }}
     >
       <ak.CompositeProvider store={store}>
-        <div className="review-item-scroll max-h-[48dvh] overflow-auto">
+        <div className="review-item-scroll min-h-0 flex-1 overflow-auto">
           <CompositeRenderer<{ id: string; entry?: ItemEntry }>
             store={store}
+            render={<ul />}
             items={attentionRows}
             estimatedItemSize={76}
             overscan={2}
@@ -217,19 +232,25 @@ export function ItemList({
         {accepted.length > 0 && (
           <NavDisclosure
             render={<div />}
-            className="review-accepted-group duration-0!"
+            className="review-accepted-group duration-0! shrink-0 max-h-[50%] min-h-0 flex! flex-col"
             open={acceptedOpen}
             setOpen={setAcceptedOpen}
-            content={{ unmountOnHide: true, guide: false }}
+            content={{
+              unmountOnHide: true,
+              guide: false,
+              className: "min-h-0 overflow-hidden",
+              body: { className: "min-h-0 overflow-hidden" },
+            }}
             button={
               <NavDisclosureButton className="review-accepted-toggle">
                 Accepted ({accepted.length})
               </NavDisclosureButton>
             }
           >
-            <div className="review-item-scroll max-h-[36dvh] overflow-auto">
+            <div className="review-item-scroll max-h-[30dvh] overflow-auto">
               <CompositeRenderer<{ id: string; entry?: ItemEntry }>
                 store={store}
+                render={<ul />}
                 items={acceptedRows}
                 estimatedItemSize={76}
                 overscan={2}

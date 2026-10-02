@@ -590,27 +590,94 @@ describe("full run and immutable comparison state", () => {
     expect(count(database, "work_tasks")).toBe(4);
   });
 
-  it("requires review when a signed capture measures a new full environment profile", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, {
-      id: "new-profile",
-      kind: "pull_request",
-      measuredEnvironmentProfile: true,
-      captureProfileDigest: "new-full-profile",
-      compare: () => ({
+  it.each([0, 1])(
+    "reviews changed profiles only when pixels differ (%i pixels)",
+    async (changedPixels) => {
+      using database = new TestDatabase();
+      const service = new Service(database);
+      await seed(service);
+      await fixture(service, {
+        id: "new-profile",
+        kind: "pull_request",
+        measuredEnvironmentProfile: true,
+        captureProfileDigest: "new-full-profile",
+        compare: () => ({
+          outcome: "unchanged",
+          changedPixels,
+          ratio: changedPixels / 100,
+          engineVersion: "engine",
+          codecVersion: "codec",
+        }),
+      });
+      const rows = await service.comparisonRows("comparison-new-profile");
+      expect(rows.map((row) => row.outcome)).toEqual([changedPixels ? "changed" : "unchanged"]);
+      expect((await service.status("new-profile")).status).toBe(
+        changedPixels ? "needs-review" : "passed",
+      );
+    },
+  );
+
+  it.each([true, false])(
+    "migrates zero-pixel changes (finalized: %s) and preserves review history",
+    async (finalized) => {
+      using database = new TestDatabase("0028_pr_title_index");
+      const service = new Service(database);
+      await seed(service);
+      for (const id of ["pending", "rejected", "closed", "pixels"]) {
+        await fixture(service, {
+          id,
+          kind: "pull_request",
+          finalize: id === "pending" ? finalized : true,
+          captureProfileDigest: "new-profile",
+          compare: () => ({
+            outcome: "changed",
+            changedPixels: id === "pixels" ? 1 : 0,
+            ratio: id === "pixels" ? 0.01 : 0,
+            engineVersion: "engine",
+            codecVersion: "codec",
+            maskExpected: false,
+          }),
+        });
+      }
+      await review(service, "comparison-rejected", { verdict: "rejected" });
+      await service.retireRun({ runId: "closed", now: 20 });
+      const before = await service.run("pending");
+      const rowsBefore = await service.comparisonRows("comparison-pending");
+      const projectBefore = await service.project("project");
+      database.connection.exec(
+        readFileSync(
+          new URL("../../../apps/web/migrations/0029_zero_pixel_reviews.sql", import.meta.url),
+          "utf8",
+        ),
+      );
+      const rows = await service.comparisonRows("comparison-pending");
+      expect(rows[0]).toMatchObject({
+        outcome: "unchanged",
+        decision_revision: (rowsBefore[0]?.decision_revision ?? 0) + 1,
+      });
+      expect(JSON.parse(rows[0]?.result_json ?? "{}")).toMatchObject({
         outcome: "unchanged",
         changedPixels: 0,
-        ratio: 0,
-        engineVersion: "engine",
-        codecVersion: "codec",
-      }),
-    });
-    const rows = await service.comparisonRows("comparison-new-profile");
-    expect(rows.map((row) => row.outcome)).toEqual(["changed"]);
-    expect((await service.status("new-profile")).status).toBe("needs-review");
-  });
+      });
+      expect((await service.run("pending")).revision).toBe(before.revision + 1);
+      expect((await service.project("project")).revision).toBe(projectBefore.revision + 1);
+      expect(
+        database.connection
+          .prepare("SELECT run_revision FROM visonaut_status_outbox WHERE id LIKE 'zero-pixels:%'")
+          .all(),
+      ).toEqual([{ run_revision: before.revision + 1 }]);
+      if (!finalized) {
+        await service.finalizeComparison({ comparisonId: "comparison-pending", now: 21 });
+      }
+      expect((await service.status("pending")).status).toBe("passed");
+      for (const id of ["rejected", "closed", "pixels"]) {
+        expect((await service.comparisonRows(`comparison-${id}`))[0]?.outcome).toBe("changed");
+      }
+      expect((await service.status("rejected")).status).toBe("rejected");
+      expect((await service.status("pixels")).status).toBe("needs-review");
+      expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    },
+  );
 
   it("recompares an existing baseline under a new policy without mass review", async () => {
     using database = new TestDatabase();
@@ -741,12 +808,11 @@ describe("full run and immutable comparison state", () => {
         captureProfileDigest: profileDigest,
         compare: unchanged,
       });
-      expect((await service.comparisonRows(`comparison-${id}`)).map((row) => row.outcome)).toEqual(
-        id === "rendering-change" ? ["changed", "changed"] : ["unchanged", "unchanged"],
-      );
-      expect((await service.status(id)).status).toBe(
-        id === "rendering-change" ? "needs-review" : "passed",
-      );
+      expect((await service.comparisonRows(`comparison-${id}`)).map((row) => row.outcome)).toEqual([
+        "unchanged",
+        "unchanged",
+      ]);
+      expect((await service.status(id)).status).toBe("passed");
     }
     expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 4);
 

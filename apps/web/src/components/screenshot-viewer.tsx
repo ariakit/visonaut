@@ -76,6 +76,8 @@ function ImagePane({
   return (
     <Frame
       $layer="canvas"
+      $rounded="none"
+      $forceRounded
       $p={0}
       render={<figure />}
       className="review-pane"

@@ -15,7 +15,7 @@ async function callCount(page: Page, count: number) {
 }
 
 function selected(page: Page) {
-  return page.getByRole("tablist", { name: "Variants" }).getByRole("tab", { selected: true });
+  return page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]');
 }
 
 test.beforeEach(async ({ page }) => {
@@ -26,7 +26,7 @@ test.beforeEach(async ({ page }) => {
 
 test("a locally matched capture does not show the reference as a new image", async ({ page }) => {
   await page.goto("/src/review/__tests__/index.html?localComparison");
-  await page.getByRole("tab", { name: /React/ }).click();
+  await page.getByRole("link", { name: /React/ }).click();
   await expect(page.getByText("Matched locally. The new image was not uploaded.")).toBeVisible();
   await ready(page);
   await expect(
@@ -79,11 +79,11 @@ test("valid prototype names stay visible in compact variant labels", async ({ pa
 });
 
 test("variant icons use brand marks and explain display preferences", async ({ page }) => {
-  const variants = page.getByRole("tablist", { name: "Variants" });
+  const variants = page.getByRole("navigation", { name: "Variants" });
   for (const name of ["React", "Solid", "Firefox", "WebKit"]) {
     await expect(
       variants
-        .getByRole("tab", { name: new RegExp(name) })
+        .getByRole("link", { name: new RegExp(name) })
         .first()
         .locator(`.review-variant-icons > span[title="${name}"] img`),
     ).toBeVisible();
@@ -115,7 +115,7 @@ test("variant icons use brand marks and explain display preferences", async ({ p
     ];
     window.reviewFixture.update(model);
   });
-  const icons = variants.getByRole("tab").first().locator(".review-variant-icons > span");
+  const icons = variants.getByRole("link").first().locator(".review-variant-icons > span");
   await expect(icons.nth(2)).toHaveAttribute("title", "Color scheme: no preference");
   await expect(icons.nth(3)).toHaveAttribute("title", "Contrast: no preference");
   await expect(icons.nth(4)).toHaveAttribute("title", "Forced colors: none");
@@ -135,7 +135,7 @@ test("variant keys do not claim an omitted display preference", async ({ page })
     ];
     window.reviewFixture.update(model);
   });
-  const summary = page.getByRole("tablist", { name: "Variants" }).getByRole("tab").first();
+  const summary = page.getByRole("navigation", { name: "Variants" }).getByRole("link").first();
   await expect(summary.locator(".review-variant-title")).toHaveText("none");
   await expect(
     summary.locator('.review-variant-icons > span[title="Forced colors: none"]'),
@@ -156,7 +156,7 @@ test("framework names do not display browser marks", async ({ page }) => {
     ];
     window.reviewFixture.update(model);
   });
-  const summary = page.getByRole("tablist", { name: "Variants" }).getByRole("tab").first();
+  const summary = page.getByRole("navigation", { name: "Variants" }).getByRole("link").first();
   await expect(summary.locator(".review-variant-title")).toHaveText("chrome · chrome-firefox");
   const icons = summary.locator(".review-variant-icons > span");
   await expect(icons).toHaveCount(1);
@@ -324,13 +324,15 @@ test("a missing remembered key falls back and announces the first variant", asyn
   ).toBeVisible();
 });
 
-test("save confirmation gates verdicts and navigation, and repeat keys do nothing", async ({
+test("approval advances before confirmation, and repeat keys do not submit twice", async ({
   page,
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.keyboard.press("a");
   await callCount(page, 1);
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toContainText("Solid");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.locator(".review-result-heading")).toContainText("8 of 11 need review");
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
   await page
     .getByLabel("Review workspace", { exact: true })
@@ -345,7 +347,65 @@ test("save confirmation gates verdicts and navigation, and repeat keys do nothin
   await ready(page);
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
-  await expect(page.getByRole("tab", { name: /Solid.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
+});
+
+for (const behavior of ["offline", "conflict", "noop"]) {
+  test(`an optimistic approval restores the original item after ${behavior}`, async ({ page }) => {
+    await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+    await page.getByRole("button", { name: "Approve A", exact: true }).click();
+    await expect(selected(page)).toHaveAccessibleName(/Solid/);
+    await expect(page.locator(".review-result-heading")).toContainText("8 of 11 need review");
+    await page.evaluate((behavior) => {
+      window.reviewFixture.setBehavior(behavior);
+      window.reviewFixture.resolve();
+    }, behavior);
+    await expect(selected(page)).toHaveAccessibleName(/React.*Needs review/);
+    await expect(page.locator(".review-result-heading")).toContainText("9 of 11 need review");
+    await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
+  });
+}
+
+test("save confirmation does not replace a selection made while saving", async ({ page }) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await expect(selected(page)).toHaveAccessibleName(/Solid/);
+  await page.keyboard.press("ArrowDown");
+  await expect(selected(page)).toHaveAccessibleName(/Menu/);
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("normal");
+    window.reviewFixture.resolve();
+  });
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(selected(page)).toHaveAccessibleName(/Menu/);
+});
+
+test("long item and variant names keep the navigation and main header compact", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const item = model.items[0];
+    if (!item) throw new Error("Missing item");
+    item.name = "ariakit-tailwind-7466/applied-light-week-hover".repeat(6);
+    for (const variant of item.variants) {
+      variant.label =
+        "react · chromium · light · no-preference · none · react-chrome-default-default-light-no-preference-none".repeat(
+          4,
+        );
+    }
+    window.reviewFixture.update(model);
+  });
+  const links = page.getByRole("navigation", { name: "Variants" }).getByRole("link");
+  for (const link of await links.all()) {
+    const bounds = await link.boundingBox();
+    expect(bounds?.width).toBeLessThanOrEqual(224);
+    expect(bounds?.height).toBeLessThanOrEqual(48);
+  }
+  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(80);
+  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(80);
 });
 
 test("a saved review keeps its reviewer visible when revisited", async ({ page }) => {
@@ -353,7 +413,8 @@ test("a saved review keeps its reviewer visible when revisited", async ({ page }
   await expect(selected(page)).toContainText("Solid");
   await page.keyboard.press("ArrowLeft");
   await expect(selected(page)).toContainText("React");
-  await expect(page.locator(".review-result-heading")).toContainText("maintainer-1");
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.locator(".review-metadata")).toContainText("maintainer-1");
 });
 
 test("whole item freezes all changed IDs in one undoable command", async ({ page }) => {
@@ -372,7 +433,7 @@ test("whole item freezes all changed IDs in one undoable command", async ({ page
   await expect(selected(page)).toContainText("Menu");
   await page.keyboard.press("Control+z");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -407,7 +468,7 @@ test("undo restores automatic acceptance and the original selection", async ({ p
   await expect(selected(page)).toContainText("React");
   await page.keyboard.press("Control+z");
   await expect(selected(page)).toContainText("Addition");
-  await expect(selected(page)).toContainText("Accepted automatically");
+  await expect(selected(page)).toHaveAccessibleName(/Accepted automatically/);
 });
 
 test("protected whole-item rejection refuses every target, while individual actions stay usable", async ({
@@ -423,7 +484,7 @@ test("protected whole-item rejection refuses every target, while individual acti
     }
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("tab", { name: /Protected Solid/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Protected Solid/ })).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
   await expect(
@@ -873,7 +934,7 @@ test("conflict identifies reviewer and does not advance or save a partial item",
   await page.keyboard.press("Shift+A");
   await expect(page.getByRole("alert")).toContainText("Updated by octocat");
   await expect(selected(page)).toContainText("React");
-  await expect(page.getByRole("tab", { name: /Solid.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -1324,7 +1385,7 @@ test("page-wide arrows work from body focus and the off switch preserves native 
     document.body.focus();
   });
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('.review-variant[aria-selected="true"]')).toContainText("Solid");
+  await expect(page.locator('.review-variant[aria-current="page"]')).toContainText("Solid");
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Shortcuts on" }).click();
