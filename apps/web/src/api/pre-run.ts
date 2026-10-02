@@ -129,20 +129,10 @@ export async function candidateForWebhook(
       testedSha === currentMergeSha
         ? currentBaseSha
         : await mergeBaseForHead(github, testedSha, sourceSha);
-    const eventMergeEquivalent =
-      eventBaseSha &&
-      (testedSha === currentMergeSha ||
-        (await sameCurrentMergeTree({
-          github,
-          testedSha,
-          currentSha: currentMergeSha,
-          testedBaseSha: eventBaseSha,
-          sourceSha,
-        })));
     const candidate: Candidate = {
-      testedSha: eventMergeEquivalent ? testedSha : currentMergeSha,
+      testedSha: eventBaseSha ? testedSha : currentMergeSha,
       sourceSha,
-      baseSha: eventMergeEquivalent ? eventBaseSha : currentBaseSha,
+      baseSha: eventBaseSha ?? currentBaseSha,
       kind: "pull_request",
       ref: `refs/pull/${number}/merge`,
       pullRequestNumber: number,
@@ -1124,13 +1114,8 @@ async function workflowCandidate({
   const ref = object(await github.request(`${root}/git/ref/pull/${row.pull_request_number}/merge`));
   if (
     object(ref.object).sha !== currentMergeSha ||
-    !(await sameCurrentMergeTree({
-      github,
-      testedSha: row.tested_sha,
-      currentSha: currentMergeSha,
-      testedBaseSha: row.base_sha,
-      sourceSha: row.source_sha,
-    }))
+    !(await mergeBaseForHead(github, currentMergeSha, row.source_sha)) ||
+    (await mergeBaseForHead(github, row.tested_sha, row.source_sha)) !== row.base_sha
   ) {
     throw new SecurityError("workflow_candidate", 503, "The pull-request merge ref changed.");
   }
@@ -1396,20 +1381,15 @@ async function retireSupersededPullRequestAttempt({
     );
     if (object(mergeRef.object).sha !== currentMergeSha) return false;
     if (
-      await sameCurrentMergeTree({
-        github,
-        testedSha: row.tested_sha,
-        currentSha: currentMergeSha,
-        testedBaseSha: row.base_sha,
-        sourceSha: row.source_sha,
-      })
+      (await mergeBaseForHead(github, currentMergeSha, row.source_sha)) &&
+      (await mergeBaseForHead(github, row.tested_sha, row.source_sha)) === row.base_sha
     ) {
       return false;
     }
   }
   return retireBoundHistoricalCheck(context, github, row, {
     title: "Visual capture was superseded",
-    summary: "The pull request head or merge contents changed before capture completed.",
+    summary: "The pull request head or target changed before capture completed.",
   });
 }
 
@@ -1477,13 +1457,10 @@ async function retireUnboundTerminalPullRequestAttempt(
     await github.request(`/repos/${github.repository}/git/ref/pull/${number}/merge`),
   );
   if (object(mergeRef.object).sha !== currentMergeSha) return false;
-  return !(await sameCurrentMergeTree({
-    github,
-    testedSha: bound.tested_sha,
-    currentSha: currentMergeSha,
-    testedBaseSha: bound.base_sha,
-    sourceSha: bound.source_sha,
-  }));
+  return (
+    !(await mergeBaseForHead(github, currentMergeSha, bound.source_sha)) ||
+    (await mergeBaseForHead(github, bound.tested_sha, bound.source_sha)) !== bound.base_sha
+  );
 }
 
 async function bindWorkflowCheck(

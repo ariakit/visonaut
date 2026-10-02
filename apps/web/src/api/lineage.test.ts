@@ -292,7 +292,7 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
       code: "stale_pull_request",
     });
   });
-  it("keeps a PR lineage when GitHub regenerates an equivalent merge commit", async () => {
+  it("keeps a PR lineage when main changes the regenerated merge contents", async () => {
     const test = fixture();
     const regenerated = oid(32);
     const advancedMain = oid(98);
@@ -306,8 +306,8 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
       proof: { testedSha: oid(31) },
     });
     test.trees.set(regenerated, oid(81));
-    await expect(verifyLineage(test.github, target("pull_request"), [])).rejects.toMatchObject({
-      code: "stale_pull_request",
+    await expect(verifyLineage(test.github, target("pull_request"), [])).resolves.toMatchObject({
+      proof: { testedSha: oid(31) },
     });
     test.trees.set(regenerated, oid(80));
     test.parents.set(regenerated, [base, secondHead]);

@@ -9,7 +9,7 @@ import {
 } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
-import { sameCurrentMergeTree } from "./merge.js";
+import { mergeBaseForHead } from "./merge.js";
 
 type LineageTarget = Pick<
   VerifiedRun,
@@ -183,18 +183,21 @@ export async function verifyLineage(
     );
     if (
       object(ref.object).sha !== currentSha ||
-      !(await sameCurrentMergeTree({
-        github: { repository: github.repository, request },
-        testedSha: target.testedSha,
+      !(await mergeBaseForHead(
+        { repository: github.repository, request },
         currentSha,
-        testedBaseSha: target.targetHead,
-        sourceSha: target.sourceHead,
-      }))
+        target.sourceHead,
+      )) ||
+      (await mergeBaseForHead(
+        { repository: github.repository, request },
+        target.testedSha,
+        target.sourceHead,
+      )) !== target.targetHead
     ) {
       throw new SecurityError(
         "stale_pull_request",
         409,
-        "The pull request merge contents changed during verification.",
+        "The tested pull request merge no longer has its verified source and main ancestor.",
       );
     }
   }

@@ -11,7 +11,7 @@ import {
 import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
-import { sameCurrentMergeTree } from "./merge.js";
+import { mergeBaseForHead } from "./merge.js";
 import {
   candidateForWebhook,
   hasPinnedMainWorkflow,
@@ -277,17 +277,12 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
       sourceSha = currentHead;
     }
     for (const run of runs.results) {
-      const equivalent =
+      const sameHead =
         testedSha &&
         sourceSha &&
         run.tested_sha !== testedSha &&
-        (await sameCurrentMergeTree({
-          github,
-          testedSha: run.tested_sha,
-          currentSha: testedSha,
-          sourceSha,
-        }));
-      if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha && !equivalent)) {
+        (await mergeBaseForHead(github, run.tested_sha, sourceSha));
+      if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha && !sameHead)) {
         try {
           await context.service.retireRun({ runId: run.id, now: Date.now() });
         } catch (error) {
