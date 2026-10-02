@@ -271,6 +271,79 @@ describe("one pinned native Plan", () => {
   });
 
   it.each([
+    ["push", "refs/heads/main", testedSha],
+    ["pull_request", "refs/pull/7/merge", sourceHead],
+    ["merge_group", "refs/heads/gh-readonly-queue/main/pr-7", testedSha],
+  ])("authenticates native %s Plan claims that identify the caller", async (event, ref, head) => {
+    const workflowRef = `${repository}/${native.workflowPath}@${ref}`;
+    await expect(
+      verifyGitHubOidc({
+        token: await token({
+          event_name: event,
+          ref,
+          head_ref: "feature",
+          base_ref: "main",
+          sub: `repo:${repository}:${event === "pull_request" ? "pull_request" : `ref:${ref}`}`,
+          workflow_ref: workflowRef,
+          job_workflow_ref: workflowRef,
+          job_workflow_sha: testedSha,
+        }),
+        request,
+        configuration: {
+          ...native,
+          loadMergeGroup: async () => ({
+            repositoryId: request.repositoryId,
+            headSha: testedSha,
+            headRef: ref,
+            baseSha: targetHead,
+            baseRef: "refs/heads/main",
+          }),
+        },
+        github: github({ path: native.workflowPath, event, head_sha: head }, "Plan"),
+        keySet,
+      }),
+    ).resolves.toMatchObject({ event, jobId: "30", testedSha, workflowAttempt: 2 });
+  });
+
+  it.each([
+    ["missing ref", { job_workflow_ref: undefined }],
+    ["missing SHA", { job_workflow_sha: undefined }],
+    ["null ref", { job_workflow_ref: null }],
+    ["null SHA", { job_workflow_sha: null }],
+    [
+      "different workflow",
+      { job_workflow_ref: `${repository}/.github/workflows/other.yml@refs/heads/main` },
+    ],
+    [
+      "different ref",
+      { job_workflow_ref: `${repository}/${native.workflowPath}@refs/heads/other` },
+    ],
+    ["different SHA", { job_workflow_sha: sourceHead }],
+    [
+      "untrusted caller and job",
+      {
+        workflow_ref: `${repository}/.github/workflows/other.yml@refs/heads/main`,
+        job_workflow_ref: `${repository}/.github/workflows/other.yml@refs/heads/main`,
+      },
+    ],
+  ])("rejects native job claims with %s", async (_name, changed) => {
+    await expect(
+      verifyGitHubOidc({
+        token: await token({
+          ...claims,
+          job_workflow_ref: claims.workflow_ref,
+          job_workflow_sha: testedSha,
+          ...changed,
+        }),
+        request,
+        configuration: native,
+        github: github({ path: native.workflowPath }, "Plan"),
+        keySet,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it.each([
     ["missing workflow commit", { workflow_sha: undefined }],
     ["other workflow commit", { workflow_sha: sourceHead }],
     ["other caller", { workflow_ref: `${repository}/.github/workflows/other.yml@refs/heads/main` }],
@@ -290,17 +363,25 @@ describe("one pinned native Plan", () => {
     ).rejects.toMatchObject({ status: 403 });
   });
 
-  it("rejects changed caller contents", async () => {
-    await expect(
-      verifyGitHubOidc({
-        token: await token(claims),
-        request,
-        configuration: native,
-        github: github({ path: native.workflowPath }, "Plan", { callerBlob: sourceHead }),
-        keySet,
-      }),
-    ).rejects.toMatchObject({ status: 403 });
-  });
+  it.each([false, true])(
+    "rejects changed caller contents with native job claims=%s",
+    async (present) => {
+      await expect(
+        verifyGitHubOidc({
+          token: await token({
+            ...claims,
+            ...(present
+              ? { job_workflow_ref: claims.workflow_ref, job_workflow_sha: testedSha }
+              : {}),
+          }),
+          request,
+          configuration: native,
+          github: github({ path: native.workflowPath }, "Plan", { callerBlob: sourceHead }),
+          keySet,
+        }),
+      ).rejects.toMatchObject({ status: 403 });
+    },
+  );
 });
 
 describe("one pinned direct visual workflow", () => {

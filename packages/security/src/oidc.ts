@@ -174,8 +174,11 @@ export async function verifyGitHubOidc({
     if (!configuration.callerWorkflowBlobSha) {
       throw new SecurityError("untrusted_run", 403, "The native workflow is not configured.");
     }
-    requireEqual(claims.job_workflow_ref, undefined, "claim.native_workflow_ref");
-    requireEqual(claims.job_workflow_sha, undefined, "claim.native_workflow_sha");
+    // Native jobs may identify their own workflow; a different source is not trusted.
+    if (claims.job_workflow_ref !== undefined || claims.job_workflow_sha !== undefined) {
+      requireEqual(claims.job_workflow_ref, claims.workflow_ref, "claim.native_workflow_ref");
+      requireEqual(claims.job_workflow_sha, claims.workflow_sha, "claim.native_workflow_sha");
+    }
   } else if (configuration.trustedWorkflowPath) {
     const source = configuration.trustedWorkflowPath;
     const claimedSource = claims.job_workflow_sha;
