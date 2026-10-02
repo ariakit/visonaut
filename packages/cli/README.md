@@ -3,12 +3,11 @@
 Submit verified visual captures from a pinned GitHub Actions workflow and inspect review status.
 
 ```sh
-visonaut begin --run "$GITHUB_RUN_ID"
 visonaut submit --shard linux --shard safari
 visonaut status --run <service-run-id> --json
 ```
 
-`submit` calls `begin` before any artifact download. The `begin` command verifies the current signed Submit job and starts the Visonaut App check before downloads and image staging. It does not approve a review.
+`submit` verifies the current signed Submit job and starts the Visonaut App check before artifact downloads and image staging. A separate `begin` command is optional. Run `visonaut begin --run "$GITHUB_RUN_ID"` to start the check earlier in the trusted job. Neither command approves a review.
 
 `submit --shard` is the only capture entry point. Each required shard must be unique. The CLI checks the complete GitHub job inventory, requires each visual job to succeed, and downloads its exact ordinary capture artifact. The artifact name is `visonaut-capture-<run-id>-<source-attempt>-<shard-key>`. A visual job that GitHub did not rerun can keep its proven successful source execution at the same tested commit. A rerun job needs fresh evidence. A missing or expired artifact requires a full visual rerun.
 

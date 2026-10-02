@@ -18,7 +18,6 @@ After:
 
 ```sh
 # Candidate jobs upload their complete capture directory for one day.
-visonaut begin --run "$GITHUB_RUN_ID"
 visonaut submit --shard linux --shard safari
 ```
 

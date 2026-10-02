@@ -34,7 +34,6 @@ Ariakit configures its reporter explicitly and uploads ordinary one-day capture 
 
 ```sh
 # In the trusted signed Submit job, after every capture job succeeds:
-pnpm exec visonaut begin --run "$GITHUB_RUN_ID"
 pnpm exec visonaut submit --shard linux --shard safari
 ```
 
