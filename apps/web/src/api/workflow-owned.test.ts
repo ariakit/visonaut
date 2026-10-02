@@ -2150,6 +2150,68 @@ describe("workflow-owned upload staging", () => {
     });
   });
 
+  it.each(["local", "server"])(
+    "reconciles a sealed %s run after comparison creation fails",
+    async (mode) => {
+      const test = await fixture();
+      if (mode === "local") {
+        await stageLocal(test, await localSession(test));
+      } else {
+        const { manifestDigest } = await stage(test);
+        await terminalGitHub(test, manifestDigest);
+      }
+      const createComparison = vi
+        .spyOn(test.context.service, "createComparison")
+        .mockRejectedValue(new Error("Comparison creation interrupted."));
+      expect(await reconcileStagedWorkflows(test.context)).toEqual({
+        checked: 1,
+        progressed: 0,
+        errors: [{ runId: test.runId, code: "incomplete" }],
+      });
+      const interrupted = await test.context.service.run(test.runId);
+      expect(interrupted.sealed_at).not.toBeNull();
+      expect(interrupted).toMatchObject({ active: 1, state: "comparing", comparison_id: null });
+      for (let attempt = 1; attempt < 5; attempt += 1) {
+        expect(await reconcileStagedWorkflows(test.context)).toEqual({
+          checked: 1,
+          progressed: 0,
+          errors: [{ runId: test.runId, code: "incomplete" }],
+        });
+      }
+      const alert = database
+        .prepare("SELECT resolved_at FROM operations_events WHERE kind=? AND subject_id=?")
+        .bind("staged-reconciliation", `${test.manifest.run.workflowRunId}:1`);
+      expect(await alert.first()).toEqual({ resolved_at: null });
+      expect(await reconcileStagedWorkflows(test.context)).toEqual({
+        checked: 0,
+        progressed: 0,
+        errors: [],
+      });
+      expect(await alert.first()).toEqual({ resolved_at: null });
+      expect(createComparison).toHaveBeenCalledTimes(5);
+      createComparison.mockRestore();
+      await database
+        .prepare("UPDATE ingest_staged_runs SET last_checked_at=? WHERE id=?")
+        .bind(Date.now() - 60 * 60 * 1000 - 1, test.runId)
+        .run();
+
+      expect(await reconcileStagedWorkflows(test.context)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      const recovered = await test.context.service.run(test.runId);
+      expect(recovered.sealed_at).toBe(interrupted.sealed_at);
+      expect(recovered.comparison_id).not.toBeNull();
+      expect(await alert.first()).toEqual({ resolved_at: expect.any(Number) });
+      expect(await reconcileStagedWorkflows(test.context)).toEqual({
+        checked: 0,
+        progressed: 0,
+        errors: [],
+      });
+    },
+  );
+
   it("seals a new upload from its R2 checksum without reading its body again", async () => {
     const test = await fixture();
     const { manifestDigest } = await stage(test);

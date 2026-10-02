@@ -698,7 +698,7 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
         AND candidate.tested_sha = staged.tested_sha
         AND candidate.state = 'failed')`;
   // A webhook may finish conversion outside this sweep. Clear stale alerts
-  // after the same or a newer workflow attempt has a sealed service run.
+  // after the same or a newer workflow attempt has a sealed run and comparison.
   await context.database
     .prepare(`UPDATE operations_events SET resolved_at = ? WHERE id IN (
       SELECT event.id FROM operations_events event
@@ -709,6 +709,7 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
           AND run.attempt >= staged.workflow_attempt
       WHERE event.kind = 'staged-reconciliation' AND event.resolved_at IS NULL
         AND staged.repository_id = ? AND run.project_id = ? AND run.sealed_at IS NOT NULL
+        AND run.comparison_id IS NOT NULL
       ORDER BY event.last_seen_at LIMIT ?)`)
     .bind(
       Date.now(),
@@ -729,9 +730,10 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
       ORDER BY event.last_seen_at LIMIT ?)`)
     .bind(Date.now(), context.configuration.github.repositoryId, Math.min(limit, 100))
     .run();
+  // Sealing and comparison creation commit separately. Resume either boundary.
   const runs = await context.database
     .prepare(
-      `SELECT staged.id, staged.workflow_run_id, staged.workflow_attempt, staged.reconcile_failures, staged.missing_original_failures FROM ingest_staged_runs staged LEFT JOIN visonaut_runs run ON run.id = staged.id WHERE staged.repository_id = ? AND staged.retention_state = 'live' AND staged.submitted_at IS NOT NULL AND staged.created_at > ? AND ${afterRestoreSql("staged.created_at")} AND (run.id IS NULL OR (run.active = 1 AND run.sealed_at IS NULL AND run.state = 'uploading')) AND NOT (${failedUnmaterializedStage}) AND NOT EXISTS (SELECT 1 FROM visonaut_runs newer WHERE newer.project_id = ? AND newer.external_run_id = staged.workflow_run_id AND newer.attempt > staged.workflow_attempt AND newer.sealed_at IS NOT NULL) AND (staged.reconcile_failures < ? OR staged.last_checked_at <= ?) ORDER BY COALESCE(staged.last_checked_at, 0), staged.created_at LIMIT ?`,
+      `SELECT staged.id, staged.workflow_run_id, staged.workflow_attempt, staged.reconcile_failures, staged.missing_original_failures FROM ingest_staged_runs staged LEFT JOIN visonaut_runs run ON run.id = staged.id WHERE staged.repository_id = ? AND staged.retention_state = 'live' AND staged.submitted_at IS NOT NULL AND staged.created_at > ? AND ${afterRestoreSql("staged.created_at")} AND (run.id IS NULL OR (run.active = 1 AND ((run.sealed_at IS NULL AND run.state = 'uploading') OR (run.sealed_at IS NOT NULL AND run.state = 'comparing' AND run.comparison_id IS NULL)))) AND NOT (${failedUnmaterializedStage}) AND NOT EXISTS (SELECT 1 FROM visonaut_runs newer WHERE newer.project_id = ? AND newer.external_run_id = staged.workflow_run_id AND newer.attempt > staged.workflow_attempt AND newer.sealed_at IS NOT NULL) AND (staged.reconcile_failures < ? OR staged.last_checked_at <= ?) ORDER BY COALESCE(staged.last_checked_at, 0), staged.created_at LIMIT ?`,
     )
     .bind(
       context.configuration.github.repositoryId,
