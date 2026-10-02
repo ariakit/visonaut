@@ -795,7 +795,7 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
       }),
     ).rejects.toMatchObject({ code: "merge_not_ready", status: 503 });
   });
-  it("rejects a regenerated PR merge commit with different contents", async () => {
+  it("accepts its tested PR merge when main advances with different contents", async () => {
     const ref = "refs/pull/7/merge";
     const signed = await token({
       event_name: "pull_request",
@@ -812,11 +812,13 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         configuration,
         github: github({ event: "pull_request", head_sha: sourceHead }, undefined, {
           currentMergeSha: "f".repeat(40),
+          currentMergeBase: "e".repeat(40),
+          main: "e".repeat(40),
           currentTree: "1".repeat(40),
         }),
         keySet,
       }),
-    ).rejects.toMatchObject({ code: "untrusted_run", status: 403 });
+    ).resolves.toMatchObject({ event: "pull_request", testedSha, sourceHead, targetHead });
   });
   it("rejects a regenerated PR merge commit with a different parent", async () => {
     const ref = "refs/pull/7/merge";
