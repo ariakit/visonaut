@@ -35,6 +35,7 @@ const IMAGE_PUT_CONCURRENCY = 5;
 const HELP = `Usage:
   visonaut begin --run <GitHub-run-id> [--server <origin>]
   visonaut submit --shard <key> [--shard <key> ...] [--server <origin>]
+  visonaut submit --no-visual [--server <origin>]
   visonaut status --run <id> [--server <origin>] [--json]
 
 VISONAUT_SERVER supplies the service origin when --server is absent.
@@ -42,6 +43,7 @@ VISONAUT_RUN supplies the run ID when status has no --run.
 Begin and submit require GitHub Actions OIDC (id-token: write).
 Status requires VISONAUT_TOKEN, a maintainer session token.
 Submit --shard downloads verified ordinary artifacts in one signed job, then uploads and submits them.
+Submit --no-visual reports a successful native CI Plan that requires no capture.
 Submission never grants visual approval.
 
 Exit codes: 0 success, 1 operation failure, 2 invalid arguments,

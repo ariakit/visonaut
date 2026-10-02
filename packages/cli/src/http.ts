@@ -236,7 +236,7 @@ export async function request({
 export async function githubToken(
   origin: URL,
   environment: NodeJS.ProcessEnv,
-  purpose: "upload" | "submit" | "transfer-key" = "upload",
+  purpose: "upload" | "submit" | "transfer-key" | "plan-report" = "upload",
 ): Promise<string> {
   const endpoint = environment.ACTIONS_ID_TOKEN_REQUEST_URL;
   const credential = environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
@@ -256,12 +256,7 @@ export async function githubToken(
   if (url.protocol !== "https:" || !githubHost || url.username || url.password || url.hash) {
     throw new CliError("The GitHub OIDC request URL must use the GitHub Actions HTTPS host.", 4);
   }
-  const audience =
-    purpose === "submit"
-      ? `${origin.origin}/submit`
-      : purpose === "transfer-key"
-        ? `${origin.origin}/transfer-key`
-        : origin.origin;
+  const audience = purpose === "upload" ? origin.origin : `${origin.origin}/${purpose}`;
   url.searchParams.set("audience", audience);
   const response = await request({ url, token: credential });
   if (!record(response) || !validCredential(response.value)) {

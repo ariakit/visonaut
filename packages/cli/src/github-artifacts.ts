@@ -1,6 +1,6 @@
 import { downloadCaptureArchive } from "./artifact-archive.js";
 import { join } from "node:path";
-import { digestJson, type CaptureSource } from "@visonaut/protocol";
+import { captureJobNames, digestJson, type CaptureSource } from "@visonaut/protocol";
 import { CliError, record } from "./errors.js";
 import { validateEnvironment } from "./environment.js";
 import { loadCapture, validateImages } from "./files.js";
@@ -69,13 +69,12 @@ export async function downloadCaptures({
   const repository = required(environment, "GITHUB_REPOSITORY");
   const runId = required(environment, "GITHUB_RUN_ID");
   const attempt = Number(required(environment, "GITHUB_RUN_ATTEMPT"));
-  const prefix = required(environment, "VISONAUT_CAPTURE_JOB_PREFIX");
+  const names = captureJobNames(required(environment, "VISONAUT_CAPTURE_JOB_NAME"));
   if (
     !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository) ||
     !/^[1-9][0-9]*$/.test(runId) ||
     !Number.isSafeInteger(attempt) ||
     attempt < 1 ||
-    !prefix.endsWith(" / ") ||
     shards.length < 1 ||
     shards.length > 16 ||
     new Set(shards).size !== shards.length
@@ -150,18 +149,18 @@ export async function downloadCaptures({
   }
   const jobs = await list(`/actions/runs/${runId}/jobs?filter=latest`, "jobs");
   const captures = jobs.filter(
-    (job) => typeof job.name === "string" && job.name.startsWith(prefix),
+    (job) => typeof job.name === "string" && names.shard(job.name) !== undefined,
   );
   if (
     captures.length !== shards.length ||
-    shards.some((shard) => captures.filter((job) => job.name === `${prefix}${shard}`).length !== 1)
+    shards.some((shard) => captures.filter((job) => job.name === names.name(shard)).length !== 1)
   ) {
     throw new CliError("The workflow does not contain exactly the required visual shards.", 4);
   }
   const artifacts = await list(`/actions/runs/${runId}/artifacts`, "artifacts");
   const sources: { shard: string; directory: string; source: CaptureSource }[] = [];
   for (const shard of shards) {
-    const wrapper = captures.find((job) => job.name === `${prefix}${shard}`);
+    const wrapper = captures.find((job) => job.name === names.name(shard));
     if (
       !wrapper ||
       String(wrapper.run_id) !== runId ||
@@ -258,7 +257,7 @@ export async function downloadCaptures({
         shardKey: shard,
         workflowAttempt: sourceAttempt,
         jobId: String(original.id),
-        jobName: `${prefix}${shard}`,
+        jobName: names.name(shard),
         manifestDigest: await digestJson(local.manifest),
         artifactId: String(artifact.id),
         artifactName: name,

@@ -14,8 +14,7 @@ function required(environment: Record<string, string | undefined>, name: string)
   return value;
 }
 
-export async function beginSubmission(environment: Record<string, string | undefined>) {
-  const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
+function workflowIdentity(environment: Record<string, string | undefined>) {
   const runId = required(environment, "GITHUB_RUN_ID");
   const attempt = Number(required(environment, "GITHUB_RUN_ATTEMPT"));
   const testedSha = required(environment, "GITHUB_SHA");
@@ -25,8 +24,39 @@ export async function beginSubmission(environment: Record<string, string | undef
     attempt < 1 ||
     !/^[a-f0-9]{40}$/.test(testedSha)
   ) {
-    throw new CliError("Begin requires the current GitHub run, attempt, and tested commit.", 4);
+    throw new CliError(
+      "Submission requires the current GitHub run, attempt, and tested commit.",
+      4,
+    );
   }
+  return { runId, attempt, testedSha };
+}
+
+/** Only the native CI Plan job can attest that capture is unnecessary. */
+export async function submitWithoutVisuals(environment: Record<string, string | undefined>) {
+  const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
+  const { runId, attempt, testedSha } = workflowIdentity(environment);
+  const token = await githubToken(origin, environment, "plan-report");
+  await request({
+    url: new URL("/v1/plan", origin),
+    token,
+    method: "POST",
+    mediaType: "application/json",
+    empty: true,
+    body: JSON.stringify({
+      schemaVersion: 1,
+      workflowRunId: runId,
+      workflowAttempt: attempt,
+      testedSha,
+      planResult: "success",
+      visualRequired: false,
+    }),
+  });
+}
+
+export async function beginSubmission(environment: Record<string, string | undefined>) {
+  const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
+  const { runId, attempt, testedSha } = workflowIdentity(environment);
   try {
     const token = await githubToken(origin, environment, "submit");
     await request({
