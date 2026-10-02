@@ -49,17 +49,18 @@ function referenceCapture(value: unknown): LocalReferenceCapture {
   if (!record(value) || !record(value.image)) {
     throw new CliError("The service returned invalid reference image metadata.");
   }
-  for (const key of ["itemKey", "variantKey", "captureId", "imageId"]) {
+  for (const key of ["itemKey", "variantKey", "imageId"]) {
     validateKey(value[key], key);
   }
   validateDigest(value.profileDigest);
   validateDigest(value.image.digest);
   const { itemKey, variantKey, captureId, imageId, path, profileDigest } = value;
   const { digest, mediaType, bytes, width, height } = value.image;
+  // Stored capture IDs are opaque and include colon-separated source IDs.
   if (
     typeof itemKey !== "string" ||
     typeof variantKey !== "string" ||
-    typeof captureId !== "string" ||
+    !text(captureId) ||
     typeof imageId !== "string" ||
     typeof path !== "string" ||
     typeof profileDigest !== "string" ||
