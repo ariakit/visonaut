@@ -34,7 +34,8 @@ interface ExportPage {
 const maximumPages = 8192;
 export const maximumExportRootBytes = 2 * 1024 * 1024;
 const targetPageBytes = 1024 * 1024;
-const maximumPageRows = 100;
+export const maximumExportPageRows = 1000;
+const maximumEntryPageRows = 100;
 
 function hash(bytes: Uint8Array) {
   return createHash("sha256").update(bytes).digest("hex");
@@ -73,16 +74,20 @@ export function createExportWriter(context: OperationsContext, id: string, runId
   };
   const metadata = async (section: string, rows: unknown[]) => {
     let page: unknown[] = [];
-    let bytes = 0;
+    // Include the wrapper and row separators in the serialized page bound.
+    const emptyPageBytes = new TextEncoder().encode(
+      JSON.stringify({ version: 2, runId, section, rows: [] }),
+    ).length;
+    let bytes = emptyPageBytes;
     for (const row of rows) {
       const size = new TextEncoder().encode(JSON.stringify(row)).length;
-      if (page.length && (page.length >= maximumPageRows || bytes + size > maximum)) {
+      if (page.length && (page.length >= maximumExportPageRows || bytes + size + 1 > maximum)) {
         await write("metadata", section, page);
         page = [];
-        bytes = 0;
+        bytes = emptyPageBytes;
       }
+      bytes += size + (page.length ? 1 : 0);
       page.push(row);
-      bytes += size;
     }
     await write("metadata", section, page);
   };
@@ -92,7 +97,7 @@ export function createExportWriter(context: OperationsContext, id: string, runId
       throw new Error("Export exceeds the measured deployment entry limit.");
     }
     pending.push(value);
-    if (pending.length === maximumPageRows) {
+    if (pending.length === maximumEntryPageRows) {
       await write("entries", "entries", pending);
       pending = [];
     }
@@ -141,7 +146,7 @@ export function parseExportPage(bytes: Uint8Array, record: PagedExportRecord) {
     page.runId !== record.runId ||
     typeof page.section !== "string" ||
     !Array.isArray(page.rows) ||
-    page.rows.length > maximumPageRows
+    page.rows.length > maximumExportPageRows
   ) {
     throw new Error("Export page is inconsistent.");
   }
