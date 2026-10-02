@@ -7,6 +7,7 @@ import {
   checkRegistry,
   packageContents,
   publicationNeeded,
+  publishedMetadata,
   releasePlan,
   validateReleasePlan,
   versioningNeeded,
@@ -100,6 +101,132 @@ test("all ready packages and partial reruns share one release plan", async () =>
       );
     else assert.equal(await checkRegistry({ records, tag: "next", published: true, read }), 0);
   }
+});
+
+test("final verification reads fresh metadata after publication becomes visible", async () => {
+  const record = { name: "visonaut", version: "2.0.0" };
+  const visible = published(record.version);
+  let reads = 0;
+  const waits = [];
+  const metadata = await publishedMetadata({
+    records: [record],
+    tag: "next",
+    read: async (name) => {
+      assert.equal(name, record.name);
+      reads += 1;
+      if (reads === 1) return null;
+      if (reads === 2) return published("1.0.0");
+      return visible;
+    },
+    wait: async (milliseconds) => waits.push(milliseconds),
+  });
+  assert.equal(reads, 3);
+  assert.deepEqual(waits, [5000, 5000]);
+  assert.deepEqual(metadata, [visible]);
+  assert.equal(
+    metadata[0].versions[record.version].dist.integrity,
+    visible.versions[record.version].dist.integrity,
+  );
+});
+
+test("final verification fails within its bound when the expected version stays absent", async () => {
+  let reads = 0;
+  const waits = [];
+  await assert.rejects(
+    publishedMetadata({
+      records: [{ name: "visonaut", version: "2.0.0" }],
+      tag: "next",
+      read: async () => {
+        reads += 1;
+        return null;
+      },
+      wait: async (milliseconds) => waits.push(milliseconds),
+    }),
+    /Expected version was not published: visonaut@2.0.0/,
+  );
+  assert.equal(reads, 6);
+  assert.deepEqual(waits, [5000, 5000, 5000, 5000, 5000]);
+});
+
+test("final verification uses visible metadata without a pause", async () => {
+  const record = { name: "visonaut", version: "2.0.0" };
+  const visible = published(record.version);
+  let reads = 0;
+  const metadata = await publishedMetadata({
+    records: [record],
+    tag: "next",
+    read: async () => {
+      reads += 1;
+      return visible;
+    },
+    wait: async () => assert.fail("Visible metadata must not wait"),
+  });
+  assert.equal(reads, 1);
+  assert.deepEqual(metadata, [visible]);
+});
+
+test("final verification rejects tag and provenance failures even when another version is absent", async () => {
+  const records = [
+    { name: "@visonaut/playwright", version: "1.2.3" },
+    { name: "visonaut", version: "2.0.0" },
+  ];
+  const failures = [
+    [published("2.0.0", "latest"), /different requested npm tag/],
+    [{ versions: { "2.0.0": {} }, "dist-tags": { next: "2.0.0" } }, /provenance/],
+  ];
+  for (const [registry, error] of failures) {
+    let reads = 0;
+    await assert.rejects(
+      publishedMetadata({
+        records,
+        tag: "next",
+        read: async (name) => {
+          reads += 1;
+          return name === "visonaut" ? registry : null;
+        },
+        wait: async () => assert.fail("Invalid published metadata must not wait"),
+      }),
+      error,
+    );
+    assert.equal(reads, 2);
+  }
+});
+
+test("final verification rejects invalid metadata that appears after a missing version", async () => {
+  let reads = 0;
+  const waits = [];
+  await assert.rejects(
+    publishedMetadata({
+      records: [{ name: "visonaut", version: "2.0.0" }],
+      tag: "next",
+      read: async () => {
+        reads += 1;
+        return reads === 1 ? null : published("2.0.0", "latest");
+      },
+      wait: async (milliseconds) => waits.push(milliseconds),
+    }),
+    /different requested npm tag/,
+  );
+  assert.equal(reads, 2);
+  assert.deepEqual(waits, [5000]);
+});
+
+test("final verification does not retry registry read failures", async () => {
+  const failure = new Error("Cannot read npm metadata");
+  let reads = 0;
+  await assert.rejects(
+    publishedMetadata({
+      records: [{ name: "visonaut", version: "2.0.0" }],
+      tag: "next",
+      read: async () => {
+        reads += 1;
+        throw failure;
+      },
+      wait: async () => assert.fail("Registry read failures must not wait"),
+    }),
+    failure,
+  );
+  assert.equal(reads, 1);
 });
 
 const records = [

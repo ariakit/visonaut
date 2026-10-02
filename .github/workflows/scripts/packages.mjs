@@ -4,6 +4,7 @@ import { appendFile, mkdtempDisposable, readFile, readdir, writeFile } from "nod
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 const publicPackages = [
@@ -85,6 +86,23 @@ export async function checkRegistry({ records, tag, published, read = registryPa
       assert(!needed, `Expected version was not published: ${record.name}@${record.version}`);
   }
   return pending;
+}
+
+export async function publishedMetadata({ records, tag, read = registryPackage, wait = delay }) {
+  // npm metadata can omit a version just after publication. Allow five fresh
+  // reads after a pause.
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const metadata = await Promise.all(records.map((record) => read(record.name)));
+    const missing = records.filter((record, index) =>
+      publicationNeeded(record, metadata[index], tag),
+    );
+    const [record] = missing;
+    if (!record) {
+      return metadata;
+    }
+    assert(attempt < 5, `Expected version was not published: ${record.name}@${record.version}`);
+    await wait(5000);
+  }
 }
 
 async function verifiedPackages(records, callback) {
@@ -338,14 +356,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     } else {
       const plan = JSON.parse(await readFile(receipt, "utf8"));
       validateReleasePlan(plan, records, sourceSha, tag);
-      const metadata = await Promise.all(
-        plan.packages.map((record) => registryPackage(record.name)),
-      );
-      await checkRegistry({
+      const metadata = await publishedMetadata({
         records: plan.packages,
         tag,
-        published: true,
-        read: (name) => metadata[plan.packages.findIndex((record) => record.name === name)],
       });
       const published = plan.packages.map((record, index) => ({
         ...record,
