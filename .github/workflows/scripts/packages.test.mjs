@@ -121,12 +121,33 @@ test("final verification reads fresh metadata after publication becomes visible"
     wait: async (milliseconds) => waits.push(milliseconds),
   });
   assert.equal(reads, 3);
-  assert.deepEqual(waits, [5000, 5000]);
+  assert.deepEqual(waits, [60_000, 60_000]);
   assert.deepEqual(metadata, [visible]);
   assert.equal(
     metadata[0].versions[record.version].dist.integrity,
     visible.versions[record.version].dist.integrity,
   );
+});
+
+test("final verification waits beyond the registry metadata cache lifetime", async () => {
+  const record = { name: "visonaut", version: "2.0.0" };
+  const visible = published(record.version);
+  let elapsed = 0;
+  let reads = 0;
+  const metadata = await publishedMetadata({
+    records: [record],
+    tag: "next",
+    read: async () => {
+      reads += 1;
+      return elapsed <= 300_000 ? null : visible;
+    },
+    wait: async (milliseconds) => {
+      elapsed += milliseconds;
+    },
+  });
+  assert.deepEqual(metadata, [visible]);
+  assert.equal(reads, 7);
+  assert.equal(elapsed, 360_000);
 });
 
 test("final verification fails within its bound when the expected version stays absent", async () => {
@@ -144,8 +165,8 @@ test("final verification fails within its bound when the expected version stays 
     }),
     /Expected version was not published: visonaut@2.0.0/,
   );
-  assert.equal(reads, 6);
-  assert.deepEqual(waits, [5000, 5000, 5000, 5000, 5000]);
+  assert.equal(reads, 7);
+  assert.deepEqual(waits, [60_000, 60_000, 60_000, 60_000, 60_000, 60_000]);
 });
 
 test("final verification uses visible metadata without a pause", async () => {
@@ -208,7 +229,7 @@ test("final verification rejects invalid metadata that appears after a missing v
     /different requested npm tag/,
   );
   assert.equal(reads, 2);
-  assert.deepEqual(waits, [5000]);
+  assert.deepEqual(waits, [60_000]);
 });
 
 test("final verification does not retry registry read failures", async () => {
