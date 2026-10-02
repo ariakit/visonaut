@@ -9,12 +9,46 @@ export interface ComparisonOptions extends Pick<
 
 const comparisonKeys = ["threshold", "maxDiffPixels", "maxDiffPixelRatio"] as const;
 
+function isComparisonRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function projectComparisonDefaults(info: TestInfo): Record<string, unknown> | undefined {
+  if (!Object.hasOwn(info.project.metadata, "visonaut")) return;
+  const metadata: unknown = info.project.metadata.visonaut;
+  if (!metadata || typeof metadata !== "object") return;
+  if (!Object.hasOwn(metadata, "comparisonDefaults")) return;
+  if (!("comparisonDefaults" in metadata)) return;
+  const defaults = metadata.comparisonDefaults;
+  if (!isComparisonRecord(defaults)) {
+    throw new Error("project.metadata.visonaut.comparisonDefaults must be an object, including {}");
+  }
+  const settings: Record<string, unknown> = {};
+  for (const key of comparisonKeys) {
+    if (Object.hasOwn(defaults, key)) {
+      settings[key] = defaults[key];
+    }
+  }
+  // Invalid explicit defaults must fail even when a capture overrides them.
+  try {
+    resolveComparison(settings);
+  } catch (cause) {
+    throw new Error("Invalid project.metadata.visonaut.comparisonDefaults", { cause });
+  }
+  return settings;
+}
+
 function screenshotDefaults(info: TestInfo): Record<string, unknown> {
+  const explicit = projectComparisonDefaults(info);
+  if (explicit !== undefined) {
+    return explicit;
+  }
   const unsupported = () =>
     new Error(
       "Cannot read resolved screenshot defaults; @visonaut/playwright requires Playwright 1.63.0",
     );
-  // FullProject omits expect. Keep the bridge to the pinned worker in one place.
+  // Keep unchanged clients on the tested 1.63.0 bridge until adoption permits
+  // its removal in the declared breaking release.
   if (!Object.hasOwn(info, "_projectInternal") || !("_projectInternal" in info)) {
     throw unsupported();
   }
@@ -55,6 +89,10 @@ export function comparisonOptions(
       }
     }
   }
+  return resolveComparison(effective);
+}
+
+function resolveComparison(effective: Record<string, unknown>): CaptureComparison {
   const comparison = {
     threshold: effective.threshold === undefined ? 0.2 : effective.threshold,
     ...(effective.maxDiffPixels === undefined ? {} : { maxDiffPixels: effective.maxDiffPixels }),

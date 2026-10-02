@@ -1,0 +1,33 @@
+diff --git a/app/playwright.config.ts b/app/playwright.config.ts
+--- a/app/playwright.config.ts
++++ b/app/playwright.config.ts
+@@ -1,6 +1,7 @@
+ import path from "node:path";
+ import { defineConfig, devices } from "@playwright/test";
+ import { measureEnvironment } from "@visonaut/playwright/environment";
++import type { ComparisonOptions } from "@visonaut/playwright";
+ 
+ if (process.argv.includes("--headed")) {
+   process.env.PWHEADED = "true";
+@@ -49,8 +50,12 @@
+       outputDirectory: captureDirectory,
+     })
+   : undefined;
++const comparisonDefaults = {
++  threshold: 0.2,
++  maxDiffPixels: 0,
++} satisfies ComparisonOptions;
+ const visualMetadata = captureEnvironment
+-  ? { visonaut: { profile: captureEnvironment.profile } }
++  ? { visonaut: { profile: captureEnvironment.profile, comparisonDefaults } }
+   : undefined;
+ 
+ function inspectorPortArg(port: number) {
+@@ -66,6 +71,7 @@
+ }
+ 
+ export default defineConfig({
++  expect: { toHaveScreenshot: comparisonDefaults },
+   fullyParallel: !HEADED && !PERF,
+   workers: HEADED || PERF ? 1 : CI ? "100%" : "80%",
+   forbidOnly: CI,
