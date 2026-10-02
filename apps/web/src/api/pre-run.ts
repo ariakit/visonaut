@@ -45,6 +45,7 @@ interface PreRunCheck {
   plan_workflow_sha: string | null;
   external_id: string;
   check_id: string | null;
+  check_head_sha: string | null;
   state: "pending" | "creating" | "ambiguous" | "active" | "docs_complete" | "failed";
   request_started: number;
   lease_until: number | null;
@@ -297,7 +298,7 @@ async function verifiedCheck(github: GitHubClient, row: PreRunCheck, checkId: st
     numericId(check.id) !== checkId ||
     check.name !== CHECK_NAME ||
     check.external_id !== row.external_id ||
-    check.head_sha !== row.tested_sha ||
+    check.head_sha !== (row.check_head_sha ?? row.tested_sha) ||
     numericId(object(check.app).id) !== github.appId
   ) {
     throw new SecurityError("wrong_check", 409, "The check does not belong to this commit.");
@@ -590,7 +591,7 @@ async function ensureStoredCheck(
   if (row.state === "ambiguous") {
     const found = await findGitHubCheck({
       github,
-      testedSha: row.tested_sha,
+      testedSha: row.check_head_sha ?? row.tested_sha,
       externalId: row.external_id,
     });
     if (!found) {
@@ -624,7 +625,7 @@ async function ensureStoredCheck(
     // A failed POST is ambiguous. Never make a second POST after it has started.
     const found = await findGitHubCheck({
       github,
-      testedSha: row.tested_sha,
+      testedSha: row.check_head_sha ?? row.tested_sha,
       externalId: row.external_id,
     });
     let checkId = found;
@@ -641,7 +642,7 @@ async function ensureStoredCheck(
           method: "POST",
           body: JSON.stringify({
             name: CHECK_NAME,
-            head_sha: row.tested_sha,
+            head_sha: row.check_head_sha ?? row.tested_sha,
             external_id: row.external_id,
             details_url:
               row.kind === "pull_request" && row.pull_request_number
@@ -703,7 +704,7 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
   const now = Date.now();
   await context.database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND generation>=?) ON CONFLICT DO NOTHING",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND generation>=?) ON CONFLICT DO NOTHING",
     )
     .bind(
       candidate.testedSha,
@@ -716,6 +717,7 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
       candidate.pullRequestNumber,
       0,
       externalId(candidate.testedSha, generation),
+      candidate.testedSha,
       now,
       now,
       candidate.testedSha,
@@ -781,8 +783,9 @@ async function storeCandidateCheck({
   await context.database
     .prepare(
       `WITH next_generation AS (SELECT COALESCE(MAX(generation),-1)+1 AS value FROM pre_run_checks WHERE tested_sha=?)
-      INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,created_at,updated_at)
-      SELECT ?,value,?,?,?,?,?,?,?,'visonaut:pre:'||?||CASE WHEN value=0 THEN '' ELSE ':'||value END,?,?
+      INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,created_at,updated_at)
+      SELECT ?,value,?,?,?,?,?,?,?,'visonaut:pre:'||?||CASE WHEN value=0 THEN '' ELSE ':'||value END,
+        CASE WHEN EXISTS(SELECT 1 FROM pre_run_checks legacy WHERE legacy.tested_sha=? AND legacy.kind='pull_request' AND legacy.check_head_sha IS NULL) THEN NULL ELSE ? END,?,?
       FROM next_generation WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")}) ON CONFLICT DO NOTHING`,
     )
     .bind(
@@ -796,6 +799,8 @@ async function storeCandidateCheck({
       candidate.pullRequestNumber,
       Number(candidate.docsOnly),
       candidate.testedSha,
+      candidate.testedSha,
+      candidate.kind === "pull_request" ? candidate.sourceSha : candidate.testedSha,
       now,
       now,
       candidate.testedSha,
@@ -1576,7 +1581,7 @@ async function bindWorkflowCheck(
   const now = Date.now();
   await context.database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,check_head_sha,?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
     )
     .bind(
       externalId(candidate.tested_sha, nextGeneration),

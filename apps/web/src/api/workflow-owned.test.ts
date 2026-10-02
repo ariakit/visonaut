@@ -224,7 +224,7 @@ async function fixture(
     const externalId = `visonaut:pre:${testedSha}${generation ? `:${generation}` : ""}`;
     await database
       .prepare(
-        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,0,?,?,'active',?,?,?,?)",
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,check_head_sha,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,0,?,?,?,'active',?,?,?,?)",
       )
       .bind(
         testedSha,
@@ -237,6 +237,7 @@ async function fixture(
         event === "pull_request" ? 7 : null,
         externalId,
         checkId,
+        event === "pull_request" ? sourceHead : testedSha,
         manifest.run.workflowRunId,
         attempt,
         Date.now(),
@@ -253,7 +254,7 @@ async function fixture(
       id: Number(checkId),
       name: "Visonaut",
       external_id: externalId,
-      head_sha: testedSha,
+      head_sha: event === "pull_request" ? sourceHead : testedSha,
       app: { id: 123 },
       status: "in_progress",
     });

@@ -445,6 +445,9 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
   return {
     bindings,
     background,
+    async flushBackground() {
+      await Promise.all(background.splice(0));
+    },
     service,
     githubRequests,
     setGitHubResponse(path: string, value: unknown) {
@@ -1234,6 +1237,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       );
       if (queued) {
         expect(staleResponse.status).toBe(202);
+        await test.flushBackground();
         await processReviewQueue({
           database,
           budget: { tasksPerStep: 10, leaseMilliseconds: 60000 },
@@ -1779,14 +1783,25 @@ it("stores ordered review decisions and completes them without further browser r
     throw new Error("Queue temporarily unavailable");
   });
   test.bindings.operations.send = wake;
-  for (const command of [first, first, second]) {
-    const response = await test.send(path, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(command),
-    });
-    expect(response.status).toBe(202);
-    expect(await objectResponse(response)).toEqual({ queued: true, commandId: command.commandId });
+  const unavailable = vi
+    .spyOn(Service.prototype, "review")
+    .mockRejectedValue(new Error("Worker unavailable"));
+  try {
+    for (const command of [first, first, second]) {
+      const response = await test.send(path, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(command),
+      });
+      expect(response.status).toBe(202);
+      expect(await objectResponse(response)).toEqual({
+        queued: true,
+        commandId: command.commandId,
+      });
+      await test.flushBackground();
+    }
+  } finally {
+    unavailable.mockRestore();
   }
   expect(wake).toHaveBeenCalledWith({ kind: "status" });
   const queued = await test.send(`/api/commands/${second.commandId}/queued`, { headers });
@@ -1872,6 +1887,7 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
       (await test.send(path, { method: "POST", headers, body: JSON.stringify(command) })).status,
     ).toBe(202);
   }
+  await test.flushBackground();
   await processReviewQueue({
     database,
     budget: { tasksPerStep: 10, leaseMilliseconds: 60000 },
@@ -1917,4 +1933,51 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
     reviewer: "other-reviewer",
   });
   expect((await test.send(`/api/commands/${second.commandId}/queued`)).status).toBe(401);
+});
+
+it("starts a saved approval without waiting for the shared operations consumer", async () => {
+  const test = await fixture();
+  await test.complete();
+  const headers = {
+    authorization: `Bearer ${test.token}`,
+    origin: "https://preview.example",
+    "content-type": "application/json",
+  };
+  const session = await objectResponse(
+    await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+  );
+  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const item = objects(model.items)[0];
+  const variant = objects(item?.variants)[0];
+  const commandId = crypto.randomUUID();
+  const wake = vi.fn(async () => {});
+  test.bindings.operations.send = wake;
+  const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      queued: true,
+      reviewSessionId: session.reviewSessionId,
+      commandId,
+      verdict: "approved",
+      targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+      selection: { itemKey: item?.key, variantKey: variant?.key },
+      expectedBaselineRevision: model.baselineRevision,
+    }),
+  });
+  expect(response.status).toBe(202);
+  await test.flushBackground();
+  expect(
+    await database
+      .prepare("SELECT state FROM work_tasks WHERE id=?")
+      .bind(`review:${commandId}`)
+      .first(),
+  ).toEqual({ state: "complete" });
+  expect(
+    await database
+      .prepare("SELECT verdict FROM visonaut_decisions WHERE command_id=?")
+      .bind(commandId)
+      .first(),
+  ).toEqual({ verdict: "approved" });
+  expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
 });

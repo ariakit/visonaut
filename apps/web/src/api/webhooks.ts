@@ -19,7 +19,11 @@ import {
   settlePreRunWorkflow,
 } from "./pre-run.js";
 import { materializeWorkflowRun } from "./workflow-materialize.js";
-import { restoreCutoffSql, restoredDeliveryGuidSql } from "../operations/recovery.ts";
+import {
+  afterRestoreSql,
+  restoreCutoffSql,
+  restoredDeliveryGuidSql,
+} from "../operations/recovery.ts";
 
 interface AppLifecycle {
   action: string | null;
@@ -215,6 +219,33 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
         .all<{ id: string }>();
       for (const run of runs.results) {
         await context.service.retireRun({ runId: run.id, now: Date.now() });
+      }
+    }
+  }
+  if (webhook.event === "check_run" && webhook.payload.action === "completed") {
+    const check = object(webhook.payload.check_run);
+    if (
+      context.configuration.workflowOwned &&
+      check.name === context.configuration.workflowOwned.submitJobName &&
+      check.status === "completed" &&
+      check.conclusion === "success" &&
+      object(check.app).id === 15368
+    ) {
+      const staged = await context.database
+        .prepare(`SELECT id FROM ingest_staged_runs WHERE repository_id=?
+          AND submit_check_run_id=? AND submit_job_name=? AND submitted_at IS NOT NULL
+          AND retention_state='live' AND json_extract(submit_verified_json,'$.sourceHead')=?
+          AND ${afterRestoreSql("ingest_staged_runs.created_at")}`)
+        .bind(
+          context.configuration.github.repositoryId,
+          String(check.id),
+          String(check.name),
+          String(check.head_sha),
+        )
+        .first();
+      // The event only wakes reconciliation; REST still verifies the complete signed job set.
+      if (staged) {
+        await context.operations.send({ kind: "ingest" });
       }
     }
   }

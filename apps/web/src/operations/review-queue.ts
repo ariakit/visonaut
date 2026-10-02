@@ -66,19 +66,23 @@ export async function enqueueReview(database: Database, input: QueuedReviewInput
 }
 
 /** Stored commands own their authorization and survive the browser session. */
-export async function processReviewQueue(context: {
-  database: Database;
-  budget: Pick<OperationsContext["budget"], "tasksPerStep" | "leaseMilliseconds">;
-  now(): number;
-}): Promise<OperationReport> {
+export async function processReviewQueue(
+  context: {
+    database: Database;
+    budget: Pick<OperationsContext["budget"], "tasksPerStep" | "leaseMilliseconds">;
+    now(): number;
+  },
+  commandId?: string,
+): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const database = context.database;
   const service = new Service(database);
+  const taskId = commandId ? reviewTaskId(commandId) : null;
   for (let index = 0; index < context.budget.tasksPerStep; index++) {
     const now = context.now();
     const due = await database
       .prepare(`SELECT task.id FROM work_tasks task
-        WHERE task.kind = 'review'
+        WHERE task.kind = 'review' ${taskId ? "AND task.id = ?" : ""}
           AND ((task.state = 'queued' AND task.available_at <= ?)
             OR (task.state = 'leased' AND task.lease_until <= ?))
           AND (json_extract(task.payload, '$.previousCommandId') IS NULL
@@ -86,7 +90,7 @@ export async function processReviewQueue(context: {
               WHERE previous.id = 'review:' || json_extract(task.payload, '$.previousCommandId')
                 AND previous.state IN ('complete', 'dead')))
         ORDER BY task.created_at, task.id LIMIT 1`)
-      .bind(now, now)
+      .bind(...(taskId ? [taskId] : []), now, now)
       .first<{ id: string }>();
     if (!due) break;
     const token = crypto.randomUUID();

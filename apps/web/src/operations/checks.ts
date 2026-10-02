@@ -260,6 +260,20 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
       });
       if (!intent) return "skipped" as const;
       const run = await service.run(intent.run_id);
+      const precreated = await database
+        .prepare(`SELECT check_head_sha,external_id FROM pre_run_checks
+          WHERE check_id=? AND repository_id=? AND tested_sha=?
+            AND workflow_run_id=? AND workflow_attempt=? AND external_id=(
+              SELECT external_id FROM operations_check_creations WHERE run_id=?)`)
+        .bind(
+          intent.check_id,
+          context.github.repositoryId,
+          run.tested_sha,
+          run.external_run_id,
+          run.attempt,
+          run.id,
+        )
+        .first<{ check_head_sha: string | null; external_id: string }>();
       const result = await deliverStatus(database, {
         id: delivery.id,
         token,
@@ -270,6 +284,12 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
             github: context.github,
             intent: latest,
             testedSha: run.tested_sha,
+            checkIdentity: precreated
+              ? {
+                  headSha: precreated.check_head_sha ?? run.tested_sha,
+                  externalId: precreated.external_id,
+                }
+              : undefined,
             origin: context.origin,
             isCurrent: async () =>
               (await isCurrent()) &&
