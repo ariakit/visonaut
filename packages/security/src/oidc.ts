@@ -320,7 +320,7 @@ export async function verifyGitHubOidc({
     requireEqual(await isMainAncestor(github, targetHead, mainSha), true, "pull.base_ancestry");
     requireEqual(parents[1], sourceHead, "pull.head_parent");
     if (currentMergeSha !== request.testedSha) {
-      // GitHub can regenerate its synthetic merge commit without changing its contents.
+      // Main can advance while this PR keeps its signed capture and source head.
       const currentMerge = record(await github.request(`${root}/git/commits/${currentMergeSha}`));
       const currentParents = Array.isArray(currentMerge.parents)
         ? currentMerge.parents.map((parent) => sha(record(parent).sha))
@@ -332,11 +332,6 @@ export async function verifyGitHubOidc({
         "pull.current_base_ancestry",
       );
       requireEqual(currentParents[1], sourceHead, "pull.current_head_parent");
-      requireEqual(
-        sha(record(currentMerge.tree).sha),
-        sha(record(commit.tree).sha),
-        "pull.merge_tree",
-      );
     }
     return { ...base, event, sourceHead, targetHead, pullRequestNumber: Number(number) };
   }
