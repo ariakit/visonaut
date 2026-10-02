@@ -1,5 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
+import { testPort } from "./test-port.ts";
+
+const origin = `http://127.0.0.1:${testPort}`;
 
 export default defineConfig({
   testDir: fileURLToPath(new URL(".", import.meta.url)),
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: 3,
   timeout: 20000,
   use: {
-    baseURL: "http://127.0.0.1:4179",
+    baseURL: origin,
     browserName: "chromium",
     channel: "chrome",
     viewport: { width: 1280, height: 900 },
@@ -18,7 +21,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm exec vite --config src/review/__tests__/vite.config.ts",
     cwd: fileURLToPath(new URL("../../../", import.meta.url)),
-    url: "http://127.0.0.1:4179/src/review/__tests__/index.html",
-    reuseExistingServer: true,
+    url: `${origin}/src/review/__tests__/index.html`,
+    reuseExistingServer: false,
   },
 });

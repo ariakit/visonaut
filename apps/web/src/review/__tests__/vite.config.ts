@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { testPort } from "./test-port.ts";
 
 export default defineConfig({
   root: fileURLToPath(new URL("../../../", import.meta.url)),
@@ -11,5 +12,5 @@ export default defineConfig({
     entries: ["src/review/__tests__/*.html", "src/components/**/__tests__/*.html"],
     include: ["react", "react-dom/client", "@tanstack/react-router"],
   },
-  server: { host: "127.0.0.1", port: 4179, strictPort: true },
+  server: { host: "127.0.0.1", port: testPort, strictPort: true },
 });

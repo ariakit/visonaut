@@ -1,6 +1,6 @@
 # Review a visual run
 
-Open Visonaut in Chrome Desktop. Sign in with a GitHub account that has current write permission to the configured repository. A review link does not grant access.
+Open Visonaut in Chrome Desktop. Sign in with a GitHub account that has current write permission to the configured repository. A review link does not grant access. The [current system guide](current-contract.md) owns the requirements and selected changes. Validated image URLs need no session; anyone with a URL can view and copy those pixels. Labels, verdicts, audit data, export files, and quarantine remain private.
 
 ## Check service attention
 
@@ -40,7 +40,7 @@ Review actions wait for the current selection's required images to load and deco
 
 ## Save a decision
 
-Choose **Approve** or **Reject** for the selected variant. Wait for server confirmation. After a successful save, the selection moves to the next variant that needs review, wrapping once through the list. If none remain, the selection stays in place.
+Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. **Sending** still needs the browser. **Queued on server** confirms durable admission; processing continues after the window closes. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 
@@ -48,7 +48,7 @@ Choose **Approve** or **Reject** for the selected variant. Wait for server confi
 
 A failed connection shows **Not saved**. **Retry same command** uses the original command identity and targets, so a lost response cannot create a second decision. **Refresh current state** loads the current server state. Inspect that state before making a new decision.
 
-A concurrent change shows **Conflict** and current state. The message identifies the conflicting reviewer when one is available. A refused command does not advance the selection or overwrite the newer decision.
+A concurrent change shows **Conflict** and current state. The message identifies the conflicting reviewer when one is available. A refused command restores the prior local state and does not overwrite the newer decision.
 
 ## Undo and accepted history
 
@@ -56,13 +56,11 @@ Use **Undo** or `Cmd/Ctrl+Z` to undo the last eligible command saved in this pag
 
 Undo succeeds only while the affected decision and baseline revisions still match. It cannot replace another reviewer's later decision. If the newest command is stale, the page reports the conflict; an older independent command may still be eligible.
 
-Rejecting a human-approved variant in the current promoted main run can restore the previous baseline. The operation must pass its current decision and baseline checks. It restores the complete previous snapshot, not only one image.
-
-An automatically accepted variant in promoted history is protected. Correct the code and submit a new complete main capture. The page explains why rejection is unavailable. Approving already accepted history does not add an Undo command.
+Promoted history is read-only, including human and automatic approvals. A correction requires a new complete main capture. Closed history keeps the original decisions and available evidence; it cannot promise image replay after unpinned bytes expire.
 
 ## Keyboard controls
 
-Move focus into the review workspace before using its shortcuts. **Keyboard help** lists them in the app. **Shortcuts on/off** lets you disable them.
+Review shortcuts work across the page while enabled, subject to the native input, menu, and dialog rules below. **Keyboard help** lists them in the app. **Shortcuts on/off** lets you disable them.
 
 | Key                   | Action                                     |
 | --------------------- | ------------------------------------------ |
@@ -83,9 +81,9 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 ## Recompare and export
 
-Choose **Recompare stored run** to compare stored originals again without a new capture job. The page keeps the previous evidence visible while the new comparison runs. Review actions stay unavailable until the new result is ready. A comparison failure remains visible.
+Current source permits **Recompare stored run** only for eligible legacy runs. Local Submit runs cannot recreate omitted candidate bytes, and promoted, expired, or archived runs reject stored recomparison. Some closed legacy runs still permit it before expiry. D05/W06 selects read-only history for every closed run; this documentation patch does not implement that target. Existing comparison links must retain their record or an explicit terminal state.
 
-Choose **Export run** after the sealed comparison is ready. Visonaut prepares a private TAR archive, then requests its download. The archive contains originals and private run, profile, provenance, review, and audit data. Access is checked again when the download starts. Export links expire after 24 hours; create a new export if needed. A complete archive has a final `complete.json` marker with image checksums.
+D06/W06 selects product-export retirement after existing downloads and cleanup drain. Current source still offers **Export run** after the sealed comparison is ready. Visonaut prepares a private TAR archive, then requests its download. The archive contains originals and private run, profile, provenance, review, and audit data. Access is checked again when the download starts. Export links expire after 24 hours; create a new export if needed. A complete archive has a final `complete.json` marker with image checksums.
 
 Use **All runs** to return to the dashboard and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 

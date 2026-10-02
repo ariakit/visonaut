@@ -1,6 +1,6 @@
 # @visonaut/playwright
 
-Capture prepared Playwright pages with stable item and variant identities. Ariakit owns its projects, page preparation, clip geometry, and normal Playwright command. Visonaut waits for settled font faces and two consecutive equal screenshots. A failed or incomplete test run produces no manifest.
+This guide describes adapter `0.4.0`. The [current system guide](../../docs/current-contract.md) owns the supported path and selected changes. Capture prepared Playwright pages with stable item and variant identities. Ariakit owns its projects, page preparation, clip geometry, and normal Playwright command. Visonaut waits for settled font faces and two consecutive equal screenshots. A failed or incomplete test run produces no manifest.
 
 ```ts
 import { visual } from "@visonaut/playwright";
@@ -34,7 +34,7 @@ await visual(page, {
 
 `visualBatch` accepts these settings for the batch and for each item. An omitted field inherits its value. An explicit `undefined` clears its inherited value. Playwright uses the smaller limit when both pixel limits are set. The threshold defaults to `0.2`; with no pixel limit, the allowed count is zero. These settings do not change the requirement for two consecutive identical capture images.
 
-The adapter reads resolved defaults from the pinned Playwright `1.63.0` worker because the public project object does not expose `expect`. It fails if this bridge is unavailable. A later Playwright version requires a verified adapter update.
+The adapter reads resolved defaults from the pinned Playwright `1.63.0` worker because the public project object does not expose `expect`. It fails if this bridge is unavailable. A later Playwright version requires a verified adapter update. D07/W05 selects explicit shared defaults through public project metadata, with an explicit defaults object and the same override rules. That API is not available in `0.4.0`. Keep the current bridge until the supported consumer set can move through a verified adapter/consumer release; do not silently select a looser policy.
 
 Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 
