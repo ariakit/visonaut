@@ -18,7 +18,18 @@ CI calls the same named commands. Its Gate remains fail-closed for every require
 
 ## Browser server ownership
 
-Current source fixes the fixture port at `4179` and permits reuse of an existing server. Before trusting a result, verify that the server serves this checkout. A result from another worktree is not application evidence. Do not stop another developer's process. D18/W02 selects `reuseExistingServer: false` and one optional `VISONAUT_TEST_PORT`, validated as an integer from 1 to 65535 and shared by Vite, readiness, and baseURL. W01 does not implement this setting. Use the [W02 checks](https://github.com/ariakit/visonaut/issues/204#w02) when that patch lands.
+Each browser run starts its own fixture server with `reuseExistingServer: false`. The optional `VISONAUT_TEST_PORT` must resolve to an integer from 1 to 65535; invalid input fails before server startup. It defaults to `4179` and is shared by Vite, the readiness URL, and Playwright's `baseURL`. Vite keeps `strictPort: true`, so a busy port fails instead of selecting another port. The suite never reuses the server that occupies that port. Do not stop another developer's process.
+
+Run concurrent checkouts with distinct ports. Run each command from its checkout root:
+
+```sh
+# First checkout
+VISONAUT_TEST_PORT=4392 pnpm test:browser
+# Second checkout
+VISONAUT_TEST_PORT=4393 pnpm test:browser
+```
+
+The same setting applies to `pnpm check`. A result from another worktree is not application evidence. Use the [W02 checks](https://github.com/ariakit/visonaut/issues/204#w02) to verify separate source roots and controlled busy-port failure without adding a permanent browser project or source-identity endpoint.
 
 ## Database fixtures
 
