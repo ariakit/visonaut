@@ -17,6 +17,7 @@ import {
   runScheduledOperations,
 } from "./runtime.ts";
 import server from "./server.ts";
+import { SecurityError } from "@visonaut/security";
 
 // These tests exercise Worker handlers without the application build's renderer.
 vi.mock("@tanstack/react-start/server", () => ({
@@ -390,6 +391,48 @@ it("keeps upstream recovery alerts open until an actual recovery pass succeeds",
   expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
   expect(deliveries.recoverGitHubDeliveries).toHaveBeenCalledTimes(2);
 });
+
+it.each([
+  [
+    new SecurityError("github_delivery_id_invalid", 503, "private-response-sentinel"),
+    "github_delivery_id_invalid",
+  ],
+  [new SecurityError("body_too_large", 413, "private-response-sentinel"), "body_too_large"],
+  [
+    new SecurityError("private-response-sentinel", 503, "private-response-sentinel"),
+    "recovery-unavailable",
+  ],
+  [new Error("private-response-sentinel"), "recovery-unavailable"],
+] as const)(
+  "logs only a fixed recovery reason and retains the existing alert",
+  async (error, code) => {
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValueOnce(error);
+    await runScheduledOperations(env);
+    const logged = output.mock.calls
+      .map(([line]) => JSON.parse(String(line)))
+      .filter((line) => line.operation === "github-delivery-recovery");
+    expect(logged).toEqual([
+      {
+        event: "operation-failed",
+        operation: "github-delivery-recovery",
+        code,
+        correlationId: expect.any(String),
+        elapsedMilliseconds: expect.any(Number),
+      },
+    ]);
+    expect(JSON.stringify(output.mock.calls)).not.toContain("private-response-sentinel");
+    expect(await event("upstream-webhook:scheduler:recovery-unavailable")).toEqual({
+      occurrences: 1,
+      resolved_at: null,
+    });
+    await runScheduledOperations(env);
+    expect(await event("upstream-webhook:scheduler:recovery-unavailable")).toEqual({
+      occurrences: 1,
+      resolved_at: now,
+    });
+  },
+);
 
 describe("scheduled operations dispatch", () => {
   const controller: ScheduledController = {

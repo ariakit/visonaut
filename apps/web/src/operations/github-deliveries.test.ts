@@ -15,6 +15,116 @@ afterEach(() => {
 });
 const guid = "12345678-1234-1234-1234-123456789abc";
 
+it.each([
+  ["id", 9007199254740992, "github_delivery_id_invalid"],
+  ["guid", "private-response-sentinel", "github_delivery_guid_invalid"],
+  ["delivered_at", null, "github_delivery_date_invalid"],
+  ["status_code", "private-response-sentinel", "github_delivery_status_invalid"],
+  ["event", null, "github_delivery_event_invalid"],
+  ["repository_id", "private-response-sentinel", "github_delivery_scope_invalid"],
+  ["installation_id", "private-response-sentinel", "github_delivery_scope_invalid"],
+])(
+  "identifies invalid %s without accepting the page or requesting recovery",
+  async (field, value, code) => {
+    const test = fixture();
+    const fetcher: typeof fetch = async (input, init) => {
+      if (new URL(String(input)).pathname === "/app/hook/config") {
+        return test.fetcher(input, init);
+      }
+      return Response.json([
+        {
+          id: 1,
+          guid,
+          delivered_at: "2026-09-29T12:00:00Z",
+          status_code: 503,
+          event: "workflow_run",
+          repository_id: 100,
+          installation_id: 456,
+          [String(field)]: value,
+        },
+      ]);
+    };
+    await expect(
+      recoverGitHubDeliveries({
+        context: test.operations,
+        configuration: test.configuration,
+        fetcher,
+      }),
+    ).rejects.toMatchObject({ code });
+    expect(test.posts()).toBe(0);
+    expect(
+      test.database.connection.prepare("SELECT count(*) AS n FROM operations_cursors").get(),
+    ).toEqual({ n: 0 });
+  },
+);
+
+it.each([
+  [
+    "malformed JSON",
+    "github_delivery_json_invalid",
+    () => new Response('{"private-response-sentinel":'),
+  ],
+  [
+    "unreadable body",
+    "github_delivery_body_unavailable",
+    () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new Error("private-response-sentinel"));
+          },
+        }),
+      ),
+  ],
+  [
+    "oversized body",
+    "body_too_large",
+    () => new Response("[]", { headers: { "Content-Length": "1048577" } }),
+  ],
+  [
+    "relative cursor URL",
+    "github_delivery_cursor_invalid",
+    () =>
+      Response.json([], { headers: { Link: '</app/hook/deliveries?cursor=next>; rel="next"' } }),
+  ],
+  [
+    "another cursor host",
+    "github_delivery_cursor_invalid",
+    () =>
+      Response.json([], {
+        headers: {
+          Link: '<https://unexpected.example/app/hook/deliveries?cursor=next>; rel="next"',
+        },
+      }),
+  ],
+  [
+    "missing cursor",
+    "github_delivery_cursor_invalid",
+    () =>
+      Response.json([], {
+        headers: { Link: '<https://api.github.com/app/hook/deliveries>; rel="next"' },
+      }),
+  ],
+] as const)("identifies %s without publishing a delivery cursor", async (_name, code, response) => {
+  const test = fixture();
+  const fetcher: typeof fetch = async (input, init) => {
+    if (new URL(String(input)).pathname === "/app/hook/config") {
+      return test.fetcher(input, init);
+    }
+    return response();
+  };
+  await expect(
+    recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher,
+    }),
+  ).rejects.toMatchObject({ code });
+  expect(
+    test.database.connection.prepare("SELECT count(*) AS n FROM operations_cursors").get(),
+  ).toEqual({ n: 0 });
+});
+
 function fixture() {
   const database = new TestDatabase();
   databases.push(database);

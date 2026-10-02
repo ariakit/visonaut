@@ -28,10 +28,21 @@ interface RecoverDeliveriesParams {
 }
 
 function parseDeliveries(value: unknown): Delivery[] {
-  if (!Array.isArray(value) || value.length > 100)
-    throw new Error("Delivery metadata is unavailable.");
+  if (!Array.isArray(value) || value.length > 100) {
+    throw new SecurityError(
+      "github_delivery_page_invalid",
+      503,
+      "Delivery metadata is unavailable.",
+    );
+  }
   return value.map((entry: unknown) => {
-    if (!entry || typeof entry !== "object") throw new Error("Delivery metadata is invalid.");
+    if (!entry || typeof entry !== "object") {
+      throw new SecurityError(
+        "github_delivery_entry_invalid",
+        503,
+        "Delivery metadata is invalid.",
+      );
+    }
     const field = (key: string) => Reflect.get(entry, key);
     const id = field("id");
     const guid = field("guid");
@@ -40,20 +51,39 @@ function parseDeliveries(value: unknown): Delivery[] {
     const event = field("event");
     const repositoryId = field("repository_id") ?? null;
     const installationId = field("installation_id") ?? null;
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id < 1) {
+      throw new SecurityError("github_delivery_id_invalid", 503, "Delivery metadata is invalid.");
+    }
+    if (typeof guid !== "string" || !/^[a-f0-9-]{36}$/.test(guid)) {
+      throw new SecurityError("github_delivery_guid_invalid", 503, "Delivery metadata is invalid.");
+    }
+    if (status !== null && (typeof status !== "number" || !Number.isSafeInteger(status))) {
+      throw new SecurityError(
+        "github_delivery_status_invalid",
+        503,
+        "Delivery metadata is invalid.",
+      );
+    }
+    if (typeof deliveredAt !== "string" || !Number.isFinite(Date.parse(deliveredAt))) {
+      throw new SecurityError("github_delivery_date_invalid", 503, "Delivery metadata is invalid.");
+    }
+    if (typeof event !== "string") {
+      throw new SecurityError(
+        "github_delivery_event_invalid",
+        503,
+        "Delivery metadata is invalid.",
+      );
+    }
     if (
-      typeof id !== "number" ||
-      !Number.isSafeInteger(id) ||
-      id < 1 ||
-      typeof guid !== "string" ||
-      !/^[a-f0-9-]{36}$/.test(guid) ||
-      (status !== null && (typeof status !== "number" || !Number.isSafeInteger(status))) ||
-      typeof deliveredAt !== "string" ||
-      !Number.isFinite(Date.parse(deliveredAt)) ||
-      typeof event !== "string" ||
       (repositoryId !== null && typeof repositoryId !== "number") ||
       (installationId !== null && typeof installationId !== "number")
-    )
-      throw new Error("Delivery metadata is invalid.");
+    ) {
+      throw new SecurityError(
+        "github_delivery_scope_invalid",
+        503,
+        "Delivery metadata is invalid.",
+      );
+    }
     return {
       id,
       guid,
@@ -64,6 +94,27 @@ function parseDeliveries(value: unknown): Delivery[] {
       installation_id: installationId,
     };
   });
+}
+
+async function readDeliveryJson(response: Response, maximumBytes: number): Promise<unknown> {
+  let body: Uint8Array;
+  try {
+    body = await readBoundedBody(response, maximumBytes);
+  } catch (error) {
+    if (error instanceof SecurityError && error.code === "body_too_large") {
+      throw error;
+    }
+    throw new SecurityError(
+      "github_delivery_body_unavailable",
+      503,
+      "Delivery metadata is unavailable.",
+    );
+  }
+  try {
+    return JSON.parse(new TextDecoder().decode(body));
+  } catch {
+    throw new SecurityError("github_delivery_json_invalid", 503, "Delivery metadata is invalid.");
+  }
 }
 
 /** GitHub does not retry failed deliveries; D1 cannot recover a missing receipt. */
@@ -96,9 +147,7 @@ export async function recoverGitHubDeliveries({
     return response;
   };
   const hook = await request("/app/hook/config");
-  const configurationBody: unknown = JSON.parse(
-    new TextDecoder().decode(await readBoundedBody(hook, 16_384)),
-  );
+  const configurationBody = await readDeliveryJson(hook, 16_384);
   if (
     !configurationBody ||
     typeof configurationBody !== "object" ||
@@ -121,17 +170,21 @@ export async function recoverGitHubDeliveries({
   const query = new URLSearchParams({ per_page: "100" });
   if (cursor?.value) query.set("cursor", cursor.value);
   const response = await request(`/app/hook/deliveries?${query}`);
-  const deliveries = parseDeliveries(
-    JSON.parse(new TextDecoder().decode(await readBoundedBody(response, 1024 * 1024))),
-  );
+  const deliveries = parseDeliveries(await readDeliveryJson(response, 1024 * 1024));
   const nextLink = /<([^>]+)>;\s*rel="next"/.exec(response.headers.get("link") ?? "")?.[1];
   let nextCursor: string | null = null;
   if (nextLink) {
+    if (!URL.canParse(nextLink)) {
+      throw new SecurityError("github_delivery_cursor_invalid", 503, "Invalid delivery cursor.");
+    }
     const next = new URL(nextLink);
-    if (next.origin !== "https://api.github.com" || next.pathname !== "/app/hook/deliveries")
-      throw new Error("Invalid delivery cursor.");
+    if (next.origin !== "https://api.github.com" || next.pathname !== "/app/hook/deliveries") {
+      throw new SecurityError("github_delivery_cursor_invalid", 503, "Invalid delivery cursor.");
+    }
     nextCursor = next.searchParams.get("cursor");
-    if (!nextCursor || nextCursor.length > 512) throw new Error("Invalid delivery cursor.");
+    if (!nextCursor || nextCursor.length > 512) {
+      throw new SecurityError("github_delivery_cursor_invalid", 503, "Invalid delivery cursor.");
+    }
   }
   await context.database
     .prepare(
