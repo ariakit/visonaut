@@ -174,14 +174,14 @@ describe("private permanent closed review", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("keeps closed native detail eligible for a read-only comparison only before expiry", async () => {
+  it("keeps existing historical comparisons readable without admitting new ones", async () => {
     using database = new TestDatabase();
     const test = await fixture(database);
     await test.close();
     expect(await test.model()).toMatchObject({
       archived: true,
       reviewReady: false,
-      recompareAllowed: true,
+      recompareAllowed: false,
     });
     await test.historical();
     await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
@@ -197,6 +197,46 @@ describe("private permanent closed review", () => {
     test.expire();
     expect((await test.model()).recompareAllowed).toBe(false);
   });
+
+  it.each(["legacy", "local", "expired"])(
+    "rejects new comparisons for closed %s runs without changing their evidence",
+    async (kind) => {
+      using database = new TestDatabase();
+      const test = await fixture(database);
+      await test.close();
+      if (kind === "local") {
+        database.connection
+          .prepare(
+            "UPDATE visonaut_captures SET metadata_json=json_set(metadata_json,'$.localMode','local-v1') WHERE run_id=?",
+          )
+          .run(runId);
+      }
+      if (kind === "expired") {
+        test.expire();
+      }
+      const before = await test.service.run(runId);
+      const decisions = database.connection.prepare("SELECT * FROM visonaut_decisions").all();
+      const comparison = await test.service.comparison(comparisonId);
+      const create = vi.spyOn(test.service, "createComparison");
+      await expect(
+        handleReview(
+          new Request(`https://example.com/api/runs/${runId}/recompare`, { method: "POST" }),
+          test.api,
+        ),
+      ).rejects.toMatchObject({
+        code: "history_closed",
+        status: 409,
+        message: "Closed history is read-only. Capture a new complete run.",
+      });
+      expect((await test.model()).recompareAllowed).toBe(false);
+      expect(await test.service.run(runId)).toEqual(before);
+      expect(await test.service.comparison(comparisonId)).toEqual(comparison);
+      expect(database.connection.prepare("SELECT * FROM visonaut_decisions").all()).toEqual(
+        decisions,
+      );
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
 
   it("keeps selected pending historical work read-only", async () => {
     using database = new TestDatabase();
@@ -239,7 +279,7 @@ describe("private permanent closed review", () => {
       run: {
         status: "failed",
         error:
-          "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.",
+          "Historical comparison failed. Required comparison evidence or its reference is unavailable. Capture a new complete run for a new result.",
       },
     });
     expect(model.items[0]?.variants[0]).toMatchObject({
@@ -523,7 +563,7 @@ describe("private permanent closed review", () => {
     await expect(test.model()).rejects.toThrow("Archived comparison outcome is invalid");
   });
 
-  it("keeps the permanent summary available for an authorized private export", async () => {
+  it("rejects new exports while keeping the permanent summary readable", async () => {
     using database = new TestDatabase();
     const test = await fixture(database);
     await test.close();
@@ -531,12 +571,46 @@ describe("private permanent closed review", () => {
     await test.summary();
     const create = vi.fn(async () => ({ exportId: "export", downloadPath: "/api/exports/export" }));
     test.api.exports = { create, download: vi.fn() };
+    await expect(
+      handleReview(
+        new Request(`https://example.com/api/runs/${runId}/export`, { method: "POST" }),
+        test.api,
+      ),
+    ).rejects.toMatchObject({ code: "export_retired", status: 410 });
+    expect(create).not.toHaveBeenCalled();
+    expect(await test.model()).toMatchObject({ evidenceState: "summary", archived: true });
+  });
+
+  it.each([true, false])("rejects active-run exports with export binding %s", async (binding) => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    const create = vi.fn(async () => ({
+      exportId: historicalId,
+      downloadPath: `/api/exports/${historicalId}`,
+    }));
+    if (binding) {
+      test.api.exports = { create, download: vi.fn() };
+    }
+    await expect(
+      handleReview(
+        new Request(`https://example.com/api/runs/${runId}/export`, { method: "POST" }),
+        test.api,
+      ),
+    ).rejects.toMatchObject({ code: "export_retired", status: 410 });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("keeps existing private export downloads available through drain", async () => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    const download = vi.fn(async () => new Response("retained private export"));
+    test.api.exports = { create: vi.fn(), download };
     const response = await handleReview(
-      new Request(`https://example.com/api/runs/${runId}/export`, { method: "POST" }),
+      new Request(`https://example.com/api/exports/${historicalId}`),
       test.api,
     );
-    expect(response?.status).toBe(202);
-    expect(create).toHaveBeenCalledWith(runId, "reviewer");
+    expect(await response?.text()).toBe("retained private export");
+    expect(download).toHaveBeenCalledWith(historicalId);
   });
 
   it("validates receipt identity but refuses replay after the permanent summary", async () => {

@@ -454,7 +454,9 @@ describe("private streaming exports", () => {
     for (let step = 0; step < 100; step++) {
       if (!(await expireExports(fixture.context))) break;
     }
-    await expect(streamRunExport(fixture.context, result.exportId)).rejects.toThrow("expired");
+    await expect(streamRunExport(fixture.context, result.exportId)).rejects.toThrow(
+      "This export expired or is not ready. Review retained evidence in run history, or capture a new complete run.",
+    );
     expect(
       await database
         .prepare("SELECT * FROM work_retention_pins WHERE owner=?")

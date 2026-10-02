@@ -251,7 +251,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [history, setHistory] = useState<SavedCommand[]>([]);
   const [pendingComparison, setPendingComparison] = useState(false);
-  const [exportState, setExportState] = useState({ pending: false, message: "" });
   const remembered = useRef(
     new Map<string, string>(
       route?.selection ? [[route.selection.itemKey, route.selection.variantKey]] : [],
@@ -315,10 +314,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     (!model.comparisonState &&
       !model.reviewReady &&
       ["incomplete", "comparing"].includes(model.run.status));
-  const recompareAllowed = model.recompareAllowed ?? !model.archived;
+  const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
   const recompareDisabledReason =
     model.recompareDisabledReason ??
-    (model.archived ? "Stored images are not available for a new comparison." : undefined);
+    (model.archived ? "This closed review is read-only. Capture a new complete run." : undefined);
   const retryImages =
     !terminalComparison && (evidence.failure === "load" || evidence.failure === "decode");
   const recompareEvidence =
@@ -726,20 +725,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       reportError(error);
     } finally {
       saving.current = false;
-    }
-  };
-  const exportRun = async () => {
-    if (!commands.export || exportState.pending) return;
-    setExportState({ pending: true, message: "Preparing a private export…" });
-    try {
-      await commands.export();
-      setExportState({ pending: false, message: "Export prepared. The download was requested." });
-    } catch (error) {
-      setExportState({
-        pending: false,
-        message:
-          error instanceof Error ? `Export failed. ${error.message}` : "Export failed. Try again.",
-      });
     }
   };
   const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
@@ -1328,20 +1313,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
               Recompare stored run
             </Button>
           )}
-          {commands.export && !model.preview && (
-            <Button
-              className="text-xs"
-              disabled={exportState.pending}
-              onClick={() => void exportRun()}
-            >
-              Export run
-            </Button>
-          )}
         </div>
         {commands.recompare && !model.preview && !recompareAllowed && recompareDisabledReason && (
           <p>{recompareDisabledReason}</p>
         )}
-        {exportState.message && <p role="status">{exportState.message}</p>}
         <p
           className="text-xs ak-ink-60 basis-full"
           role="status"

@@ -193,13 +193,6 @@ function render() {
             };
             return model;
           },
-          export: async () => {
-            if (behavior === "offline") throw new Error("The export service is unavailable.");
-            if (behavior === "delay")
-              await new Promise<void>((resolve) => {
-                pending = resolve;
-              });
-          },
         }}
       />
     </>,

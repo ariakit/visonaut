@@ -1365,7 +1365,7 @@ test("a superseded comparison stops status polling after one final model load", 
   });
 });
 
-test("archived history keeps navigation and export while blocking review, Undo, and recompare", async ({
+test("archived history keeps navigation while blocking review, Undo, recompare, and new exports", async ({
   page,
 }) => {
   await page.keyboard.press("a");
@@ -1374,6 +1374,7 @@ test("archived history keeps navigation and export while blocking review, Undo, 
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.archived = true;
+    model.recompareAllowed = true;
     model.readOnlyReason = "This closed run is read-only. Its review history remains available.";
     model.reviewReady = false;
     window.reviewFixture.update(model);
@@ -1393,33 +1394,18 @@ test("archived history keeps navigation and export while blocking review, Undo, 
   await callCount(page, 1);
   await page.keyboard.press("ArrowRight");
   await expect(selected(page)).toContainText("Dark");
-  await page.getByRole("button", { name: "Export run" }).click();
-  await expect(
-    page.getByText("Export prepared. The download was requested.", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
 });
 
-test("export gives pending and failure feedback without changing review verdicts", async ({
-  page,
-}) => {
-  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-  await page.getByRole("button", { name: "Export run" }).click();
-  await expect(page.getByText("Preparing a private export…", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Export run" })).toBeDisabled();
-  await page.evaluate(() => window.reviewFixture.resolve());
-  await expect(
-    page.getByText("Export prepared. The download was requested.", { exact: true }),
-  ).toBeVisible();
-  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
-  await page.getByRole("button", { name: "Export run" }).click();
-  await expect(
-    page.getByText("Export failed. The export service is unavailable.", { exact: true }),
-  ).toBeVisible();
+test("active review has no export control and still saves decisions", async ({ page }) => {
+  await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
-  await callCount(page, 0);
+  await page.keyboard.press("a");
+  await callCount(page, 1);
+  await expect(selected(page)).toContainText("Solid");
 });
 
-test("closed retained runs can recompare while historical results remain read-only", async ({
+test("existing historical work completes while closed history remains read-only", async ({
   page,
 }) => {
   await page.getByRole("button", { name: "Details", exact: true }).click();
@@ -1428,19 +1414,21 @@ test("closed retained runs can recompare while historical results remain read-on
     const model = window.reviewFixture.model();
     model.archived = true;
     model.reviewReady = false;
-    model.comparisonState = "ready";
-    model.recompareAllowed = true;
+    model.comparisonId = "comparison-3";
+    model.comparisonRevision = 3;
+    model.comparisonState = "comparing";
+    model.recompareAllowed = false;
+    model.historicalComparisons = [
+      { id: "comparison-3", ordinal: 3, state: "comparing", createdAt: 1_790_055_000_000 },
+    ];
+    model.run.status = "comparing";
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeEnabled();
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
-  await expect(page.locator(".review-run-identity")).toContainText("Comparison 2");
+  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
+  await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
   await page.clock.runFor(2100);
-  await expect(page.locator(".review-run-identity")).toContainText("Comparison 2");
-  await expect(
-    page.getByText("The previous comparison remains visible", { exact: false }),
-  ).toBeVisible();
+  await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
   await page.evaluate(() => window.reviewFixture.completeComparison());
   await page.clock.runFor(2100);
   await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
@@ -1496,14 +1484,12 @@ test("a failed historical comparison stops polling and shows its failure reason"
     const model = window.reviewFixture.model();
     model.archived = true;
     model.reviewReady = false;
-    model.comparisonState = "ready";
-    model.recompareAllowed = true;
+    model.comparisonState = "comparing";
+    model.recompareAllowed = false;
+    model.run.status = "comparing";
     window.reviewFixture.update(model);
   });
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
-  await expect(
-    page.getByText("The previous comparison remains visible", { exact: false }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await page.evaluate(() => {
     window.reviewFixture.setBehavior("comparison-failed");
     window.reviewFixture.completeComparison();

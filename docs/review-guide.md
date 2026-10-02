@@ -85,9 +85,9 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 ## Recompare and export
 
-Current source permits **Recompare stored run** only for eligible legacy runs. Local Submit runs cannot recreate omitted candidate bytes, and promoted, expired, or archived runs reject stored recomparison. Some closed legacy runs still permit it before expiry. D05/W06 selects read-only history for every closed run; this documentation patch does not implement that target. Existing comparison links must retain their record or an explicit terminal state.
+**Recompare stored run** is available only for eligible active legacy runs. Every closed run is read-only, including retained legacy detail. A new comparison needs a fresh complete capture. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
 
-D06/W06 selects product-export retirement after existing downloads and cleanup drain. Current source still offers **Export run** after the sealed comparison is ready. Visonaut prepares a private TAR archive, then requests its download. The archive contains originals and private run, profile, provenance, review, and audit data. Access is checked again when the download starts. Export links expire after 24 hours; create a new export if needed. A complete archive has a final `complete.json` marker with image checksums.
+New product exports are retired, and the **Export run** control is removed. Existing private export links remain usable until their current expiry. Access is checked again when a download starts. The reader verifies checksum pages and every listed file, including the final `complete.json` integrity marker; a filename alone does not prove a complete archive. Export links expire after 24 hours, and an active download keeps its one-hour lease. Expired exports cannot be recreated. Review retained evidence in run history, or capture a new complete run for new evidence.
 
 Use **All runs** to return to the dashboard and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 

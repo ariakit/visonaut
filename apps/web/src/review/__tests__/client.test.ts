@@ -323,13 +323,13 @@ test("the compact poll response rejects invalid terminal state", () => {
   );
 });
 
-test("historical selection remains pinned during initial load, refresh, and recompare", async () => {
+test("existing historical selection remains pinned during initial load, refresh, and polling", async () => {
   const model: ReviewModel = {
     ...fixtureModel(),
     archived: true,
     reviewReady: false,
     comparisonState: "ready",
-    recompareAllowed: true,
+    recompareAllowed: false,
     historicalComparisons: [
       { id: "history/one", ordinal: 3, state: "ready", createdAt: 1_790_055_000_000 },
     ],
@@ -338,11 +338,6 @@ test("historical selection remains pinned during initial load, refresh, and reco
   vi.stubGlobal("fetch", async (path: unknown) => {
     requests.push(path);
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
-    if (path === "/api/runs/run-42/recompare")
-      return json(
-        { ...compactReviewModel(model), comparisonId: "history/two", comparisonState: "comparing" },
-        202,
-      );
     if (String(path).includes("/state"))
       return json({
         run: { status: "comparing" },
@@ -356,18 +351,15 @@ test("historical selection remains pinned during initial load, refresh, and reco
   expect(requests).toContain("/api/runs/run-42?comparison=history%2Fone");
   expect(review.model).toMatchObject({
     comparisonState: "ready",
-    recompareAllowed: true,
+    recompareAllowed: false,
     historicalComparisons: model.historicalComparisons,
   });
   await review.commands.refresh();
   expect(requests.at(-1)).toBe("/api/runs/run-42?comparison=history%2Fone");
   await review.commands.pollStatus();
   expect(requests.at(-1)).toBe("/api/runs/run-42/state?comparison=history%2Fone");
-  await review.commands.recompare?.();
-  await review.commands.pollStatus();
-  expect(requests.at(-1)).toBe("/api/runs/run-42/state?comparison=history%2Ftwo");
   await review.commands.refresh();
-  expect(requests.at(-1)).toBe("/api/runs/run-42?comparison=history%2Ftwo");
+  expect(requests.at(-1)).toBe("/api/runs/run-42?comparison=history%2Fone");
   expect(requests).not.toContain("/api/runs/run-42");
 });
 
