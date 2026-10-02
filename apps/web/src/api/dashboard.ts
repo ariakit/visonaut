@@ -97,6 +97,7 @@ export async function dashboard(context: DashboardContext) {
       const comparisonId = row.comparisonId == null ? null : string(row.comparisonId);
       const summary = reviewStatus({
         run: {
+          kind,
           active: integer(row.active),
           state: string(row.state),
           comparison_id: comparisonId,

@@ -1,6 +1,9 @@
-import { expect, it } from "vitest";
-import { context, reserve, TestDatabase } from "./test-fixtures.ts";
-import { runOperations } from "./index.ts";
+import { expect, it, vi } from "vitest";
+import { Service } from "@visonaut/service";
+import { captured, context, TestDatabase } from "./test-fixtures.ts";
+import { deliverGitHubStatuses } from "./checks.ts";
+import { promoteBaselines } from "./promotions.ts";
+import { publishReviewLinks } from "./review-links.ts";
 
 const sourceSha = "b".repeat(40);
 const firstMergeSha = "a".repeat(40);
@@ -8,15 +11,31 @@ const secondMergeSha = "c".repeat(40);
 
 async function addCandidate(
   database: TestDatabase,
-  testedSha: string,
-  createdAt: number,
-  options: { runId?: string; pullNumber?: number; sourceSha?: string; generation?: number } = {},
+  testedSha = firstMergeSha,
+  createdAt = 1,
+  options: {
+    runId?: string;
+    attempt?: number;
+    pullNumber?: number;
+    sourceSha?: string;
+    generation?: number;
+    visualRequired?: number | null;
+    state?: "active" | "docs_complete" | "failed";
+  } = {},
 ) {
-  const { runId = "run", pullNumber = 7, sourceSha: headSha = sourceSha, generation = 0 } = options;
+  const {
+    runId = "run",
+    attempt = 1,
+    pullNumber = 7,
+    sourceSha: headSha = sourceSha,
+    generation = 0,
+    visualRequired = 1,
+    state = "active",
+  } = options;
   const externalId = "visonaut:pre:" + testedSha + (generation ? ":" + generation : "");
   await database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,'123',?,'d','pull_request',?,?,0,?,'active',?,1,?,?)",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha,created_at,updated_at) VALUES (?,?,'123',?,'d','pull_request',?,?,0,?,?,?,?,?,1,'plan-job','caller',?,?)",
     )
     .bind(
       testedSha,
@@ -25,7 +44,10 @@ async function addCandidate(
       `refs/pull/${pullNumber}/merge`,
       pullNumber,
       externalId,
+      state,
       runId,
+      attempt,
+      visualRequired,
       createdAt,
       createdAt,
     )
@@ -33,264 +55,419 @@ async function addCandidate(
   return externalId;
 }
 
-it("backfills one neutral PR-head review link and refreshes it for a new tested merge", async () => {
-  using database = new TestDatabase();
+function reviewContext(database: TestDatabase) {
   const fixture = context(database);
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  const firstCheck = await addCandidate(database, firstMergeSha, 1);
-  const patches: Record<string, unknown>[] = [];
+  const pull = {
+    state: "open",
+    head: { sha: sourceSha, repo: { id: 123 } },
+    base: { sha: "d".repeat(40), ref: "main", repo: { id: 123 } },
+    merge_commit_sha: firstMergeSha,
+  };
+  const patches: { id: string; body: Record<string, unknown> }[] = [];
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: sourceSha, repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
+    if (path === "/repos/owner/repo/pulls/7") return pull;
+    if (init?.method === "POST") {
+      const result = await request(path, init);
+      for (const check of fixture.state.checks.values()) {
+        if (check.status === "in_progress") check.conclusion = null;
+      }
+      return result;
     }
-    if (init?.method === "PATCH") patches.push(JSON.parse(String(init.body)));
-    return request(path, init);
+    if (init?.method !== "PATCH") return request(path, init);
+    const id = path.split("/").at(-1) ?? "";
+    const body = JSON.parse(String(init.body));
+    patches.push({ id, body });
+    const result = await request(path, init);
+    const check = fixture.state.checks.get(id);
+    if (check) {
+      Object.assign(check, body);
+      if (body.status === "in_progress") check.conclusion = null;
+    }
+    return result;
   };
+  return { ...fixture, pull, patches };
+}
 
-  await runOperations(fixture.context);
-  const links = [...fixture.state.checks.values()].filter(
-    (check) => check.name === "Open Visonaut review",
+function headChecks(fixture: ReturnType<typeof reviewContext>) {
+  return [...fixture.state.checks.values()].filter(
+    (check) => check.name === "Visonaut" && check.head_sha === sourceSha,
   );
-  expect(links).toHaveLength(1);
-  expect(links[0]).toMatchObject({
+}
+
+async function saveReview(
+  service: Service,
+  now: number,
+  verdict: "approved" | "rejected" = "approved",
+) {
+  const row = (await service.comparisonRows("comparison-run"))[0];
+  if (!row) throw new Error("Missing review row.");
+  return service.review({
+    commandId: verdict === "approved" ? "approve-run" : "reject-run",
+    actorId: "reviewer",
+    sessionId: "session",
+    comparisonId: "comparison-run",
+    verdict,
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: "dialog", variantKey: "light" },
+    now,
+  });
+}
+
+async function createProject(database: TestDatabase) {
+  const service = new Service(database);
+  await service.createPolicy({
+    digest: "policy",
+    policy: { id: "fixture", channelThreshold: 0, maxChangedPixels: 0, maxChangedRatio: 0 },
+  });
+  await service.createProject({ id: "project", repositoryId: "123", policyDigest: "policy" });
+}
+
+async function readyRun(database: TestDatabase, fixture: ReturnType<typeof reviewContext>) {
+  const service = await captured(fixture.context);
+  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
+  const externalId = await addCandidate(database);
+  return { service, externalId };
+}
+
+it("keeps the required PR-head result after main promotes and GitHub changes the tested merge", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({
+      head_sha: sourceSha,
+      status: "completed",
+      conclusion: "success",
+    }),
+  ]);
+  const checkId = String(headChecks(fixture)[0]?.id);
+  fixture.state.time += 1;
+  await captured(fixture.context, "main", "main");
+  expect((await promoteBaselines(fixture.context)).completed).toEqual(["main"]);
+  fixture.pull.base.sha = "e".repeat(40);
+  fixture.pull.merge_commit_sha = secondMergeSha;
+  await publishReviewLinks(fixture.context);
+
+  expect(headChecks(fixture)).toHaveLength(1);
+  expect(headChecks(fixture)[0]).toMatchObject({
+    id: checkId,
     head_sha: sourceSha,
+    conclusion: "success",
+  });
+  expect(await service.run("run")).toMatchObject({ tested_sha: firstMergeSha });
+  expect(
+    await database.prepare("SELECT tested_sha,source_sha FROM pre_run_checks").first(),
+  ).toEqual({ tested_sha: firstMergeSha, source_sha: sourceSha });
+});
+
+it("refreshes the same required head check after approval and Undo", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time, "rejected");
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)[0]).toMatchObject({ conclusion: "failure" });
+  const check = headChecks(fixture)[0];
+
+  await saveReview(service, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)[0]).toMatchObject({
+    id: check?.id,
+    external_id: check?.external_id,
+    conclusion: "success",
+  });
+  await service.undo({
+    commandId: "approve-run",
+    undoCommandId: "undo-approve-run",
+    actorId: "reviewer",
+    sessionId: "session",
+    expectedBaselineRevision: (await service.project("project")).baseline_revision,
+    now: fixture.state.time + 1,
+  });
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({
+      id: check?.id,
+      external_id: check?.external_id,
+      conclusion: "failure",
+    }),
+  ]);
+});
+
+it("upgrades an existing neutral PR-head link without replacing its check or tested merge", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service, externalId } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  await deliverGitHubStatuses(fixture.context);
+  const mergeCheck = [...fixture.state.checks.values()].find(
+    (check) => check.head_sha === firstMergeSha,
+  );
+  expect(mergeCheck).toMatchObject({ name: "Visonaut", conclusion: "success" });
+  const headExternalId = "visonaut:review:7:" + sourceSha;
+  fixture.state.checks.set("99", {
+    id: "99",
+    app: { id: 12 },
+    name: "Open Visonaut review",
+    head_sha: sourceSha,
+    external_id: headExternalId,
     status: "completed",
     conclusion: "neutral",
-    details_url: "https://visonaut.example/pulls/7?check=" + encodeURIComponent(firstCheck),
   });
-  expect(String((links[0]?.output as Record<string, unknown>)?.summary)).toContain(
-    "does not report visual approval",
-  );
-  await runOperations(fixture.context);
-  expect(
-    [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
-  ).toHaveLength(1);
-
-  await reserve(fixture.context, "next");
   await database
     .prepare(
-      "UPDATE visonaut_runs SET lineage_key='pr:7',tested_sha=?,sealed_at=created_at WHERE id='next'",
+      "INSERT INTO operations_review_links(repository_id,pull_request_number,source_sha,external_id,check_id,request_started,target_external_id) VALUES ('123',7,?,?,'99',1,?)",
     )
-    .bind(secondMergeSha)
+    .bind(sourceSha, headExternalId, externalId)
     .run();
-  const secondCheck = await addCandidate(database, secondMergeSha, 2, { runId: "next" });
-  await runOperations(fixture.context);
-  expect(
-    [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
-  ).toHaveLength(1);
-  expect(patches).toContainEqual({
-    details_url: "https://visonaut.example/pulls/7?check=" + encodeURIComponent(secondCheck),
+  const posts = fixture.state.posts;
+
+  await publishReviewLinks(fixture.context);
+
+  expect(fixture.state.posts).toBe(posts);
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({
+      id: "99",
+      external_id: headExternalId,
+      status: "completed",
+      conclusion: "success",
+    }),
+  ]);
+  expect(fixture.state.checks.get(String(mergeCheck?.id))).toMatchObject({
+    head_sha: firstMergeSha,
+    conclusion: "success",
   });
+  expect((await service.run("run")).tested_sha).toBe(firstMergeSha);
 });
 
-it("reconciles a lost PR-head check POST without creating a duplicate", async () => {
+it.each(["same-merge rerun", "new tested merge"])(
+  "makes the required head check pending before a %s materializes",
+  async (next) => {
+    using database = new TestDatabase();
+    const fixture = reviewContext(database);
+    const { service } = await readyRun(database, fixture);
+    await saveReview(service, fixture.state.time);
+    await publishReviewLinks(fixture.context);
+    expect(headChecks(fixture)[0]).toMatchObject({ conclusion: "success" });
+    const checkId = headChecks(fixture)[0]?.id;
+    const externalId = await addCandidate(
+      database,
+      next === "same-merge rerun" ? firstMergeSha : secondMergeSha,
+      2,
+      {
+        generation: next === "same-merge rerun" ? 1 : 0,
+        runId: next === "same-merge rerun" ? "run" : "next",
+        attempt: next === "same-merge rerun" ? 2 : 1,
+      },
+    );
+    if (next === "new tested merge") fixture.pull.merge_commit_sha = secondMergeSha;
+
+    await publishReviewLinks(fixture.context);
+
+    expect(headChecks(fixture)).toEqual([
+      expect.objectContaining({ id: checkId, status: "in_progress", conclusion: null }),
+    ]);
+    expect(
+      await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
+    ).toEqual({ target_external_id: externalId });
+    expect(await service.run("run")).toMatchObject({ tested_sha: firstMergeSha, attempt: 1 });
+  },
+);
+
+it("serializes a new attempt behind an already-started PR-head PATCH", async () => {
   using database = new TestDatabase();
-  const fixture = context(database);
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  await addCandidate(database, firstMergeSha, 1);
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  let releasePatch = () => {};
+  const patchReleased = new Promise<void>((resolve) => {
+    releasePatch = resolve;
+  });
+  const started: string[] = [];
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: sourceSha, repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
+    if (init?.method === "PATCH") {
+      const body = JSON.parse(String(init.body));
+      started.push(body.conclusion ?? "pending");
+      if (started.length === 1) await patchReleased;
     }
     return request(path, init);
   };
+
+  const first = publishReviewLinks(fixture.context);
+  try {
+    await vi.waitFor(() => expect(started).toEqual(["success"]));
+    await addCandidate(database, firstMergeSha, 2, { generation: 1, attempt: 2 });
+
+    await publishReviewLinks(fixture.context);
+
+    expect(started).toEqual(["success"]);
+    expect(fixture.patches).toHaveLength(0);
+  } finally {
+    releasePatch();
+    await first;
+  }
+  await publishReviewLinks(fixture.context);
+
+  expect(started).toEqual(["success", "pending"]);
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({ status: "in_progress", conclusion: null }),
+  ]);
+  expect(fixture.state.posts).toBe(1);
+});
+
+it.each([
+  { state: "active", visualRequired: 0, status: "in_progress", conclusion: null },
+  { state: "docs_complete", visualRequired: 0, status: "completed", conclusion: "success" },
+  { state: "failed", visualRequired: 1, status: "completed", conclusion: "failure" },
+] as const)(
+  "publishes the signed $state Plan result on the PR head without a materialized run",
+  async ({ state, visualRequired, status, conclusion }) => {
+    using database = new TestDatabase();
+    const fixture = reviewContext(database);
+    await createProject(database);
+    await addCandidate(database, firstMergeSha, 1, { state, visualRequired });
+
+    await publishReviewLinks(fixture.context);
+
+    expect(headChecks(fixture)).toEqual([
+      expect.objectContaining({ head_sha: sourceSha, status, conclusion }),
+    ]);
+    expect(await database.prepare("SELECT id FROM visonaut_runs").first()).toBeNull();
+    expect(await database.prepare("SELECT tested_sha FROM pre_run_checks").first()).toEqual({
+      tested_sha: firstMergeSha,
+    });
+  },
+);
+
+it("keeps a passed materialized run pending without the current signed Plan proof", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  await database
+    .prepare(
+      "UPDATE pre_run_checks SET plan_visual_required=NULL,plan_reported_at=NULL,plan_job_id=NULL,plan_workflow_sha=NULL",
+    )
+    .run();
+
+  await publishReviewLinks(fixture.context);
+
+  expect((await service.status("run")).status).toBe("passed");
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({ status: "in_progress", conclusion: null }),
+  ]);
+});
+
+it("reconciles a lost PR-head POST without creating a duplicate required check", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await readyRun(database, fixture);
   fixture.state.losePost = true;
-  await runOperations(fixture.context);
+  await publishReviewLinks(fixture.context);
   fixture.state.losePost = false;
-  await runOperations(fixture.context);
-  const links = [...fixture.state.checks.values()].filter(
-    (check) => check.name === "Open Visonaut review",
-  );
-  expect(links).toHaveLength(1);
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)).toHaveLength(1);
+  expect(fixture.state.posts).toBe(1);
   expect(await database.prepare("SELECT check_id FROM operations_review_links").first()).toEqual({
-    check_id: String(links[0]?.id),
+    check_id: String(headChecks(fixture)[0]?.id),
   });
 });
 
-it("keeps the review link on its ready run until a same-merge rerun materializes", async () => {
+it("does not publish a prior result on a new PR source head", async () => {
   using database = new TestDatabase();
-  const fixture = context(database);
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  const firstCheck = await addCandidate(database, firstMergeSha, 1);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: sourceSha, repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
-    }
-    return request(path, init);
-  };
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  expect(headChecks(fixture)[0]).toMatchObject({ conclusion: "success" });
+  const before = fixture.patches.length;
+  fixture.pull.head.sha = "e".repeat(40);
 
-  await runOperations(fixture.context);
-  const link = [...fixture.state.checks.values()].find(
-    (check) => check.name === "Open Visonaut review",
-  );
-  expect(link?.details_url).toBe(
-    "https://visonaut.example/pulls/7?check=" + encodeURIComponent(firstCheck),
-  );
+  await publishReviewLinks(fixture.context);
 
-  const rerunCheck = await addCandidate(database, firstMergeSha, 2, {
-    generation: 1,
-    runId: "rerun",
-  });
-  await runOperations(fixture.context);
+  expect(fixture.patches).toHaveLength(before);
+  expect(fixture.state.posts).toBe(1);
   expect(
-    await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
-  ).toEqual({
-    target_external_id: firstCheck,
-  });
-
-  await reserve(fixture.context, "rerun");
-  await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id='run'").run();
-  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='rerun'").run();
-  await runOperations(fixture.context);
-  expect(
-    await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
-  ).toEqual({
-    target_external_id: firstCheck,
-  });
-  await database.prepare("UPDATE visonaut_runs SET sealed_at=created_at WHERE id='rerun'").run();
-  await runOperations(fixture.context);
-  expect(
-    await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
-  ).toEqual({
-    target_external_id: rerunCheck,
-  });
-});
-
-it("backfills a ready review when a newer same-merge rerun has no run", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  const readyCheck = await addCandidate(database, firstMergeSha, 1);
-  await addCandidate(database, firstMergeSha, 2, { generation: 1, runId: "rerun" });
-  await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id='run'").run();
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: sourceSha, repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
-    }
-    return request(path, init);
-  };
-
-  await runOperations(fixture.context);
-  const links = [...fixture.state.checks.values()].filter(
-    (check) => check.name === "Open Visonaut review",
-  );
-  expect(links).toHaveLength(1);
-  expect(links[0]?.details_url).toBe(
-    "https://visonaut.example/pulls/7?check=" + encodeURIComponent(readyCheck),
-  );
-});
-
-it("does not attach a link to a superseded PR head", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  fixture.context.budget.tasksPerStep = 1;
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  await addCandidate(database, firstMergeSha, 1);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: secondMergeSha, repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
-    }
-    return request(path, init);
-  };
-
-  const { reports } = await runOperations(fixture.context);
-  expect(reports["review-links"]?.hasMore).toBe(true);
-  expect(
-    [...fixture.state.checks.values()].filter((check) => check.name === "Open Visonaut review"),
+    [...fixture.state.checks.values()].filter((check) => check.head_sha === fixture.pull.head.sha),
   ).toHaveLength(0);
-  expect(await database.prepare("SELECT check_id FROM operations_review_links").first()).toBeNull();
 });
 
-it("scans past stale PR heads to link a later current pull request", async () => {
+it("does not deliver success if the PR head changes after check lookup", async () => {
   using database = new TestDatabase();
-  const fixture = context(database);
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    const result = await request(path, init);
+    if (!init?.method && path === "/repos/owner/repo/check-runs/1") {
+      fixture.pull.head.sha = "e".repeat(40);
+    }
+    return result;
+  };
+
+  await publishReviewLinks(fixture.context);
+
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({ status: "in_progress", conclusion: null }),
+  ]);
+  expect(fixture.patches).toHaveLength(0);
+});
+
+it("scans past stale heads to publish a later current pull request", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
   fixture.context.budget.tasksPerStep = 1;
-  await reserve(fixture.context);
-  await database
-    .prepare("UPDATE visonaut_runs SET lineage_key='pr:7',sealed_at=created_at WHERE id='run'")
-    .run();
-  await addCandidate(database, firstMergeSha, 1);
-  await reserve(fixture.context, "next");
-  await database
-    .prepare(
-      "UPDATE visonaut_runs SET lineage_key='pr:8',tested_sha=?,sealed_at=created_at WHERE id='next'",
-    )
-    .bind(secondMergeSha)
-    .run();
-  const validCheck = await addCandidate(database, secondMergeSha, 2, {
+  await createProject(database);
+  await addCandidate(database);
+  await addCandidate(database, secondMergeSha, 2, {
     runId: "next",
     pullNumber: 8,
     sourceSha: secondMergeSha,
+    visualRequired: 0,
+    state: "docs_complete",
   });
+  fixture.pull.head.sha = "e".repeat(40);
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7" || path === "/repos/owner/repo/pulls/8") {
-      return {
-        state: "open",
-        head: { sha: path.endsWith("/8") ? secondMergeSha : "e".repeat(40), repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
+    if (path === "/repos/owner/repo/pulls/8") {
+      return { ...fixture.pull, head: { sha: secondMergeSha, repo: { id: 123 } } };
     }
     return request(path, init);
   };
 
-  const first = await runOperations(fixture.context);
-  expect(first.reports["review-links"]?.hasMore).toBe(true);
+  expect((await publishReviewLinks(fixture.context)).hasMore).toBe(true);
   expect(
     await database.prepare("SELECT value FROM operations_cursors WHERE id='review-links'").first(),
   ).toEqual({ value: "7" });
-  const second = await runOperations(fixture.context);
-  expect(second.reports["review-links"]?.hasMore).toBe(true);
-  const links = [...fixture.state.checks.values()].filter(
-    (check) => check.name === "Open Visonaut review",
-  );
-  expect(links).toHaveLength(1);
-  expect(links[0]?.details_url).toBe(
-    "https://visonaut.example/pulls/8?check=" + encodeURIComponent(validCheck),
-  );
-  const third = await runOperations(fixture.context);
-  expect(third.reports["review-links"]?.hasMore).toBe(false);
-  expect(
-    await database.prepare("SELECT value FROM operations_cursors WHERE id='review-links'").first(),
-  ).toEqual({ value: null });
+  expect((await publishReviewLinks(fixture.context)).hasMore).toBe(true);
+  expect([...fixture.state.checks.values()]).toEqual([
+    expect.objectContaining({
+      name: "Visonaut",
+      head_sha: secondMergeSha,
+      conclusion: "success",
+    }),
+  ]);
+  expect((await publishReviewLinks(fixture.context)).hasMore).toBe(false);
+});
+
+it("keeps actual main checks on their captured tested SHA", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await captured(fixture.context, "main", "main");
+
+  await deliverGitHubStatuses(fixture.context);
+
+  expect([...fixture.state.checks.values()]).toEqual([
+    expect.objectContaining({
+      name: "Visonaut",
+      head_sha: firstMergeSha,
+      status: "completed",
+      conclusion: "success",
+    }),
+  ]);
 });

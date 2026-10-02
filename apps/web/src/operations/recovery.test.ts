@@ -36,10 +36,14 @@ it("keeps an accepted restored PR read-only without preventing a fresh capture",
     }
     return request(path, init);
   };
+  await publishReviewLinks(fixture.context);
+  const originalPosts = fixture.state.posts;
+  const originalPatches = fixture.state.patches;
+  expect(originalPosts).toBe(1);
   await sanitizeRestoredDatabase(database, fixture.state.time);
   await publishReviewLinks(fixture.context);
-  expect(fixture.state.posts).toBe(0);
-  expect(fixture.state.patches).toBe(0);
+  expect(fixture.state.posts).toBe(originalPosts);
+  expect(fixture.state.patches).toBe(originalPatches);
   expect(await database.prepare("SELECT state,active FROM visonaut_runs").first()).toEqual({
     state: "accepted",
     active: 0,
@@ -54,7 +58,7 @@ it("keeps an accepted restored PR read-only without preventing a fresh capture",
     .bind("a".repeat(40), "b".repeat(40), "c".repeat(40), fixture.state.time, fixture.state.time)
     .run();
   await publishReviewLinks(fixture.context);
-  expect(fixture.state.posts).toBe(1);
+  expect(fixture.state.posts).toBe(originalPosts + 1);
   expect(
     await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
   ).toEqual({

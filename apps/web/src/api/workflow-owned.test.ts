@@ -83,14 +83,21 @@ beforeAll(async () => {
 });
 afterAll(async () => runtime.dispose());
 
-async function fixture(shardKeyOverride?: string, workflowPin = pin) {
+async function fixture(
+  shardKeyOverride?: string,
+  workflowPin = pin,
+  event: "push" | "pull_request" = "push",
+) {
   identity += 10;
   const trustedSourceDigest = await workflowSourceDigest(workflowPin);
   const repositoryId = String(identity);
   const runId = crypto.randomUUID();
   const jobId = String(identity + 10_000);
   const shardKey = shardKeyOverride ?? "combined";
-  const sourceHead = identity.toString(16).padStart(40, "d");
+  const testedSha = identity.toString(16).padStart(40, "d");
+  const sourceHead = event === "pull_request" ? "2".repeat(40) : testedSha;
+  const targetHead = event === "pull_request" ? "1".repeat(40) : testedSha;
+  const ref = event === "pull_request" ? "refs/pull/7/merge" : "refs/heads/main";
   const workflowOwned = {
     callerWorkflowPath: ".github/workflows/visonaut.yml",
     callerWorkflowBlobSha: workflowPin,
@@ -138,7 +145,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       repositoryId,
       workflowRunId: String(identity),
       workflowAttempt: 1,
-      testedSha: sourceHead,
+      testedSha,
       planDigest: trustedSourceDigest,
     },
     shard: { key: shardKey, jobId, sourceAttempt: 1 },
@@ -186,26 +193,48 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
     shardKey,
     jobId,
     checkRunId: jobId,
-    event: "push" as const,
-    ref: "refs/heads/main",
+    event,
+    ref,
     sourceHead,
-    targetHead: sourceHead,
+    targetHead,
+    ...(event === "pull_request" ? { pullRequestNumber: 7 } : {}),
   };
   const githubResponses = new Map<string, unknown>();
+  if (event === "pull_request") {
+    githubResponses.set("/repos/ariakit/ariakit/pulls/7", {
+      state: "open",
+      head: { sha: sourceHead, ref: "feature", repo: { id: Number(repositoryId) } },
+      base: { sha: targetHead, ref: "main", repo: { id: Number(repositoryId) } },
+      merge_commit_sha: testedSha,
+    });
+    githubResponses.set("/repos/ariakit/ariakit/git/ref/pull/7/merge", {
+      object: { sha: testedSha },
+    });
+    githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
+      object: { sha: targetHead },
+    });
+    githubResponses.set(`/repos/ariakit/ariakit/git/commits/${testedSha}`, {
+      parents: [{ sha: targetHead }, { sha: sourceHead }],
+      tree: { sha: "3".repeat(40) },
+    });
+  }
   async function registerPreRunCheck(attempt: number) {
     const generation = attempt - 1;
     const checkId = String(identity + 20_000 + generation);
-    const externalId = `visonaut:pre:${sourceHead}${generation ? `:${generation}` : ""}`;
+    const externalId = `visonaut:pre:${testedSha}${generation ? `:${generation}` : ""}`;
     await database
       .prepare(
-        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,?,?,?,'main','refs/heads/main',0,?,?,'active',?,?,?,?)",
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,0,?,?,'active',?,?,?,?)",
       )
       .bind(
-        sourceHead,
+        testedSha,
         generation,
         repositoryId,
         sourceHead,
-        "a".repeat(40),
+        event === "pull_request" ? targetHead : "a".repeat(40),
+        event === "pull_request" ? "pull_request" : "main",
+        ref,
+        event === "pull_request" ? 7 : null,
         externalId,
         checkId,
         manifest.run.workflowRunId,
@@ -224,7 +253,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       id: Number(checkId),
       name: "Visonaut",
       external_id: externalId,
-      head_sha: sourceHead,
+      head_sha: testedSha,
       app: { id: 123 },
       status: "in_progress",
     });
@@ -239,7 +268,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       runId,
       repositoryId,
       manifest.run.workflowRunId,
-      sourceHead,
+      testedSha,
       trustedSourceDigest,
       workflowOwned.callerWorkflowPath,
       workflowOwned.reusableWorkflowRef,
@@ -349,7 +378,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
     repositoryId,
     workflowRunId: manifest.run.workflowRunId,
     workflowAttempt: 1,
-    testedSha: sourceHead,
+    testedSha,
     planDigest: trustedSourceDigest,
     shardKey,
     jobId,
@@ -962,16 +991,22 @@ async function stageLocal(
   return body;
 }
 
-async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
+async function acceptedReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  previous?: { snapshotId: string; testedSha: string },
+) {
   const runId = crypto.randomUUID();
   const snapshotId = crypto.randomUUID();
-  const capture = test.manifest.captures[0]!;
-  const testedSha = "1".repeat(40);
+  const capture = test.manifest.captures[0];
+  if (!capture) {
+    throw new Error("Expected a reference capture.");
+  }
+  const testedSha = (previous ? "4" : "1").repeat(40);
   await storeCaptureProfiles(database, test.manifest.profiles);
   await test.context.service.reserveRun({
     id: runId,
     projectId: test.context.configuration.projectId,
-    externalRunId: String(Number(test.manifest.run.workflowRunId) + 100_000),
+    externalRunId: String(Number(test.manifest.run.workflowRunId) + 100_000 + (previous ? 1 : 0)),
     attempt: 1,
     kind: "main",
     testedSha,
@@ -990,7 +1025,7 @@ async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
       ],
     },
     verifiedRelatedRunIds: [],
-    verifiedAncestorShas: [],
+    verifiedAncestorShas: previous ? [previous.testedSha] : [],
     verificationDigest: "seed-proof",
     rerunShardKeys: ["seed"],
     now: Date.now(),
@@ -1034,7 +1069,7 @@ async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
   await test.context.service.createComparison({
     id: comparisonId,
     runId,
-    referenceSnapshotId: null,
+    referenceSnapshotId: previous?.snapshotId ?? null,
     maxAttempts: 3,
     now: Date.now(),
   });
@@ -1045,24 +1080,25 @@ async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
     prefix: `baselines/${snapshotId}`,
     now: Date.now(),
   });
-  for (const copy of copies)
+  for (const copy of copies) {
     await test.context.service.recordSnapshotCopy({
       snapshotId,
       captureId: copy.capture_id,
       objectKey: copy.object_key,
       digest: copy.digest,
     });
+  }
   await test.context.service.promote({
     snapshotId,
     promotionId: crypto.randomUUID(),
-    expectedBaselineRevision: 0,
+    expectedBaselineRevision: previous ? 1 : 0,
     now: Date.now(),
   });
   test.githubResponses.set(
     `/repos/ariakit/ariakit/compare/${testedSha}...${test.manifest.run.testedSha}`,
-    { status: "ahead" },
+    { status: previous ? "diverged" : "ahead" },
   );
-  return { runId, imageId, snapshotId };
+  return { runId, imageId, snapshotId, testedSha };
 }
 
 describe("trusted local Submit", () => {
@@ -1437,7 +1473,105 @@ describe("trusted local Submit", () => {
     ).toEqual({ count: 0 });
   });
 
-  it("holds the selected reference across renewals and rejects a changed baseline", async () => {
+  it.each(["before declaration", "before materialization", "before sealed retry"] as const)(
+    "keeps a PR's pinned reference when main promotes %s",
+    async (promotion) => {
+      const test = await fixture(undefined, pin, "pull_request");
+      const seed = await acceptedReference(test);
+      const session = await localSession(test);
+      expect(session.page.reference).toMatchObject({
+        snapshotId: seed.snapshotId,
+        baselineRevision: 1,
+      });
+      if (promotion !== "before declaration") {
+        await stageLocal(test, session);
+      }
+      if (promotion === "before sealed retry") {
+        // A failed comparison write must retry the sealed run's original receipt.
+        const comparison = vi
+          .spyOn(test.context.service, "createComparison")
+          .mockRejectedValueOnce(new Error("Temporary comparison failure"));
+        try {
+          await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+            "Temporary comparison failure",
+          );
+        } finally {
+          comparison.mockRestore();
+        }
+        const sealed = await test.context.service.run(test.runId);
+        expect(sealed.sealed_at).not.toBeNull();
+        expect(sealed.comparison_id).toBeNull();
+      }
+      const latest = await acceptedReference(test, seed);
+      expect(
+        await test.context.service.project(test.context.configuration.projectId),
+      ).toMatchObject({
+        snapshot_id: latest.snapshotId,
+        baseline_revision: 2,
+      });
+      if (promotion === "before declaration") {
+        const renewed = (await (
+          await stagedReference(
+            session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
+            test.context,
+            test.runId,
+          )
+        ).json()) as LocalReferencePage;
+        expect(renewed.reference).toEqual(session.page.reference);
+        expect(renewed.captures).toEqual(session.page.captures);
+        const original = await stagedReferenceImage(
+          new Request(
+            `https://preview.example/v1/runs/${test.runId}/reference/images/${seed.imageId}`,
+            {
+              headers: { authorization: `Bearer ${session.capability}` },
+            },
+          ),
+          test.context,
+          test.runId,
+          seed.imageId,
+        );
+        expect(original.status).toBe(200);
+        expect(await sha256(new Uint8Array(await original.arrayBuffer()))).toBe(image.digest);
+        await stageLocal(test, session);
+      }
+      await materializeWorkflowRun(test.context, test.runId);
+      const run = await test.context.service.run(test.runId);
+      if (!run.comparison_id) {
+        throw new Error("Expected the pinned PR comparison.");
+      }
+      expect(await test.context.service.comparison(run.comparison_id)).toMatchObject({
+        reference_snapshot_id: seed.snapshotId,
+        baseline_revision: 1,
+        state: "ready",
+      });
+      expect(await runStatus(test.context, run.id)).toMatchObject({ state: "passed", errors: [] });
+      expect(test.manifest.localComparison?.reference).toEqual(session.page.reference);
+    },
+  );
+
+  it("keeps a PR's empty signed reference after the first main promotion", async () => {
+    const test = await fixture(undefined, pin, "pull_request");
+    const session = await localSession(test);
+    expect(session.page.reference).toMatchObject({
+      snapshotId: null,
+      baselineRevision: 0,
+      captureCount: 0,
+    });
+    await acceptedReference(test);
+    await stageLocal(test, session);
+    await materializeWorkflowRun(test.context, test.runId);
+    const run = await test.context.service.run(test.runId);
+    if (!run.comparison_id) {
+      throw new Error("Expected the empty-reference PR comparison.");
+    }
+    expect(await test.context.service.comparison(run.comparison_id)).toMatchObject({
+      reference_snapshot_id: null,
+      baseline_revision: 0,
+      state: "ready",
+    });
+  });
+
+  it("holds main's selected reference across renewals and rejects a changed baseline", async () => {
     const test = await fixture();
     const session = await localSession(test);
     const renewed = (await (

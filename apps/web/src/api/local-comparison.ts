@@ -36,14 +36,14 @@ const owner = (runId: string) => `submit:${runId}`;
 async function storedReference(context: ApiContext, runId: string) {
   const row = await context.database
     .prepare(
-      "SELECT json_extract(verified_json,'$.localReference') AS reference FROM ingest_staged_runs WHERE id=? AND retention_state='live'",
+      "SELECT json_extract(verified_json,'$.localReference') AS reference,json_extract(verified_json,'$.event') AS event FROM ingest_staged_runs WHERE id=? AND retention_state='live'",
     )
     .bind(runId)
-    .first<{ reference: string | null }>();
+    .first<{ reference: string | null; event: string }>();
   if (!row?.reference) return null;
   const reference: unknown = JSON.parse(row.reference);
   validateLocalReference(reference);
-  return reference;
+  return { reference, pullRequest: row.event === "pull_request" };
 }
 
 export async function referenceCaptures(
@@ -86,21 +86,31 @@ export async function referenceCaptures(
   }));
 }
 
-async function currentReference(context: ApiContext, reference: LocalReferenceBinding) {
+async function currentReference(
+  context: ApiContext,
+  reference: LocalReferenceBinding,
+  pullRequest: boolean,
+) {
   const project = await context.service.project(context.configuration.projectId);
-  if (project.baseline_revision !== reference.baselineRevision)
+  // A signed PR reference stays fixed while unrelated main runs promote.
+  if (!pullRequest && project.baseline_revision !== reference.baselineRevision) {
     throw new SecurityError(
       "stale_reference",
       409,
       "The baseline changed. Run trusted Submit again to compare the complete capture bundle.",
     );
+  }
   if (reference.snapshotId === null) {
-    if (!project.fresh_setup || project.snapshot_id !== null || reference.captureCount !== 0)
+    if (
+      reference.captureCount !== 0 ||
+      (!pullRequest && (!project.fresh_setup || project.snapshot_id !== null))
+    ) {
       throw new SecurityError(
         "stale_reference",
         409,
         "An empty reference is only valid for fresh setup.",
       );
+    }
   } else {
     const snapshot = await context.database
       .prepare(
@@ -128,7 +138,8 @@ export async function referencePage(
   const body = await jsonBody(request, 32_768);
   validateDigest(body.manifestDigest);
   const manifestDigest = body.manifestDigest;
-  let reference = await storedReference(context, run.id);
+  let reference = (await storedReference(context, run.id))?.reference;
+  const pullRequest = object(JSON.parse(run.verified_json)).event === "pull_request";
   if (!reference) {
     const project = await context.service.project(context.configuration.projectId);
     const verified = object(JSON.parse(run.verified_json));
@@ -203,7 +214,7 @@ export async function referencePage(
     } catch (error) {
       const raced = await storedReference(context, run.id);
       if (!raced) throw error;
-      reference = raced;
+      reference = raced.reference;
     }
   }
   if (
@@ -216,7 +227,7 @@ export async function referencePage(
       409,
       "The selected reference belongs to another immutable capture manifest.",
     );
-  await currentReference(context, reference);
+  await currentReference(context, reference, pullRequest);
   const cursor = body.cursor === undefined ? 0 : Number(string(body.cursor, 16));
   if (
     !Number.isSafeInteger(cursor) ||
@@ -261,9 +272,9 @@ export async function referenceImage(
   )
     throw new SecurityError("reference_scope", 403, "The image is not in this Submit reference.");
   const stored = await storedReference(context, runId);
-  if (!stored || (await digestJson(stored)) !== (await digestJson(reference)))
+  if (!stored || (await digestJson(stored.reference)) !== (await digestJson(reference)))
     throw new SecurityError("reference_scope", 403, "The reference binding differs.");
-  await currentReference(context, reference);
+  await currentReference(context, reference, stored.pullRequest);
   const found = await context.database
     .prepare(
       "SELECT 1 AS found FROM visonaut_snapshot_images WHERE snapshot_id=? AND image_id=? AND copied=1",
@@ -285,11 +296,11 @@ export async function validateLocalSubmission(
   if (!receipt || manifest.shard.key !== "combined")
     throw new IncompleteError("Local comparison requires the complete combined Submit manifest.");
   const stored = await storedReference(context, runId);
-  const reference = binding ?? stored;
+  const reference = binding ?? stored?.reference;
   if (
     !stored ||
     !reference ||
-    (await digestJson(stored)) !== (await digestJson(reference)) ||
+    (await digestJson(stored.reference)) !== (await digestJson(reference)) ||
     (await digestJson(receipt.reference)) !== (await digestJson(reference)) ||
     (await captureManifestDigest(manifest)) !== reference.manifestDigest
   )
@@ -298,7 +309,7 @@ export async function validateLocalSubmission(
       409,
       "The comparison receipt is not bound to this complete capture manifest and reference.",
     );
-  await currentReference(context, reference);
+  await currentReference(context, reference, stored.pullRequest);
   const captures = await referenceCaptures(context, runId, reference);
   if (
     captures.length !== reference.captureCount ||
