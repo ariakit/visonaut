@@ -78,7 +78,9 @@ export function comparePixels({
     comparison.maxDiffPixels ?? Infinity,
     comparison.maxDiffPixelRatio === undefined ? Infinity : pixels * comparison.maxDiffPixelRatio,
   );
-  const changed = profileChanged || changedPixels > (Number.isFinite(allowed) ? allowed : 0);
+  const changed =
+    (profileChanged && changedPixels !== 0) ||
+    changedPixels > (Number.isFinite(allowed) ? allowed : 0);
   const result = {
     outcome: changed ? ("changed" as const) : ("unchanged" as const),
     changedPixels,
