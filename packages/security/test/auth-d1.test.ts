@@ -319,3 +319,138 @@ describe("bounded private-read permission", () => {
     expect(transport).toHaveBeenCalledTimes(calls);
   });
 });
+
+describe("bounded review permission", () => {
+  it("reuses a read grant for decisions without extending its 10-second lifetime", async () => {
+    const { auth, session } = await createSession();
+    let permission = "write";
+    const transport = vi.fn(async (path: string) =>
+      path.includes("/permission")
+        ? { user: { id: 42 }, permission, role_name: permission }
+        : { id: 42, login: "maintainer" },
+    );
+    const parameters = {
+      request: new Request(configuration.origin, {
+        headers: { authorization: `Bearer ${session.token}` },
+      }),
+      auth,
+      database,
+      github: {
+        appId: "review-cache",
+        repositoryId: "100",
+        repository: "ariakit/ariakit",
+        request: transport,
+      },
+      access: "review" as const,
+    };
+    const checkedAt = Date.now();
+    using clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    await requireMaintainer({ ...parameters, access: "read" });
+    const calls = transport.mock.calls.length;
+    permission = "read";
+    for (const elapsed of [1_000, 5_000, 9_999]) {
+      clock.mockReturnValue(checkedAt + elapsed);
+      await requireMaintainer(parameters);
+    }
+    expect(transport).toHaveBeenCalledTimes(calls);
+    clock.mockReturnValue(checkedAt + 10_000);
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+    await expect(requireMaintainer({ ...parameters, access: "read" })).rejects.toMatchObject({
+      code: "not_maintainer",
+    });
+    permission = "write";
+    await requireMaintainer(parameters);
+    permission = "read";
+    await expect(requireMaintainer({ ...parameters, access: "write" })).rejects.toMatchObject({
+      code: "not_maintainer",
+    });
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+    permission = "write";
+    await requireMaintainer(parameters);
+    clock.mockReturnValue(checkedAt + 20_000);
+    transport.mockRejectedValue(new Error("GitHub unavailable"));
+    await expect(requireMaintainer(parameters)).rejects.toThrow("GitHub unavailable");
+  });
+
+  it("counts slow GitHub verification time toward the review grant lifetime", async () => {
+    const { auth, session } = await createSession();
+    const checkedAt = Date.now();
+    using clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    let permission = "write";
+    const github: GitHubClient = {
+      appId: "slow-review-cache",
+      repositoryId: "100",
+      repository: "ariakit/ariakit",
+      async request(path) {
+        if (!path.includes("/permission")) return { id: 42, login: "maintainer" };
+        clock.mockReturnValue(checkedAt + 10_000);
+        return { user: { id: 42 }, permission, role_name: permission };
+      },
+    };
+    const parameters = {
+      request: new Request(configuration.origin, {
+        headers: { authorization: `Bearer ${session.token}` },
+      }),
+      auth,
+      database,
+      github,
+      access: "review" as const,
+    };
+    await requireMaintainer(parameters);
+    permission = "read";
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "not_maintainer" });
+  });
+
+  it("checks live sessions and linked accounts and isolates App configurations", async () => {
+    const { auth, session, user } = await createSession();
+    const second = await createSession();
+    let permission = "write";
+    const transport = vi.fn(async (path: string) => {
+      if (!path.includes("/permission")) return { id: 42, login: "maintainer" };
+      return { user: { id: 42 }, permission, role_name: permission };
+    });
+    const parameters = {
+      request: new Request(configuration.origin, {
+        headers: { authorization: `Bearer ${session.token}` },
+      }),
+      auth,
+      database,
+      github: {
+        appId: "isolated-review-cache",
+        repositoryId: "100",
+        repository: "ariakit/ariakit",
+        authorizationKey: "original-app-configuration",
+        request: transport,
+      },
+      access: "review" as const,
+    };
+    await requireMaintainer(parameters);
+    permission = "read";
+    await requireMaintainer(parameters);
+    await expect(
+      requireMaintainer({
+        ...parameters,
+        github: { ...parameters.github, authorizationKey: "rotated-app-configuration" },
+      }),
+    ).rejects.toMatchObject({ code: "not_maintainer" });
+    await expect(
+      requireMaintainer({
+        ...parameters,
+        request: new Request(configuration.origin, {
+          headers: { authorization: `Bearer ${second.session.token}` },
+        }),
+      }),
+    ).rejects.toMatchObject({ code: "not_maintainer" });
+    await database.prepare("UPDATE account SET accountId='99' WHERE userId=?").bind(user.id).run();
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({
+      code: "github_unavailable",
+    });
+    await database.prepare("DELETE FROM account WHERE userId=?").bind(user.id).run();
+    const calls = transport.mock.calls.length;
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "invalid_identity" });
+    expect(transport).toHaveBeenCalledTimes(calls);
+    await auth.api.signOut({ headers: parameters.request.headers });
+    await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "sign_in_required" });
+    expect(transport).toHaveBeenCalledTimes(calls);
+  });
+});

@@ -107,6 +107,7 @@ export interface ApiContext extends ApiBindings {
 
 export interface PrivateContext extends ApiContext {
   identity: MaintainerIdentity & { userId: string; sessionId: string; sessionHeaders: Headers };
+  lifetime: { waitUntil(promise: Promise<unknown>): void };
 }
 
 export function apiContext(bindings: ApiBindings): ApiContext {

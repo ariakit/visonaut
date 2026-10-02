@@ -65,7 +65,8 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
     service,
     database,
     images: operations.images,
-    operations: { send: vi.fn() },
+    operations: { send: vi.fn(async () => {}) },
+    lifetime: { waitUntil: vi.fn() },
     configuration: {
       projectId: "project",
       github: { repository: "ariakit/visonaut-diagnostics", repositoryId: "123" },

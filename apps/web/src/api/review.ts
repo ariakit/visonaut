@@ -623,12 +623,13 @@ async function commandResult(context: PrivateContext, result: CommandResult, run
 }
 
 async function wakeReviewStatus(context: PrivateContext) {
-  try {
-    await context.operations.send({ kind: "status" });
-  } catch {
-    // The saved outbox entry remains for the scheduled operations run.
-    console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
-  }
+  // The outbox is already durable; only its wakeup runs after the response.
+  context.lifetime.waitUntil(
+    context.operations.send({ kind: "status" }).catch(() => {
+      // The scheduled operations run retries the saved outbox entry.
+      console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
+    }),
+  );
 }
 
 async function archivedCommandResult(

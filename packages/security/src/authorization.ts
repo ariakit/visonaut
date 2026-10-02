@@ -8,17 +8,19 @@ export interface RequireMaintainerParams {
   auth: VisonautAuth;
   database: D1Database;
   github: GitHubClient;
-  access?: "read" | "write";
+  access?: "read" | "review" | "write";
 }
 
-interface PrivateReadPermission {
+interface PrivatePermission {
   identity: MaintainerIdentity;
-  expiresAt: number;
+  checkedAt: number;
 }
 
-const privateReadPermissions = new WeakMap<D1Database, Map<string, PrivateReadPermission>>();
-const maximumPrivateReadPermissions = 128;
+const privatePermissions = new WeakMap<D1Database, Map<string, PrivatePermission>>();
+const maximumPrivatePermissions = 128;
 const privateReadLifetime = 60_000;
+// Decision submissions may reuse permission briefly during continuous review.
+const reviewPermissionLifetime = 10_000;
 
 export async function requireMaintainer({
   request,
@@ -50,14 +52,15 @@ export async function requireMaintainer({
     githubUserId,
     github.authorizationKey ?? [github.appId, github.repositoryId, github.repository],
   ]);
-  let permissions = privateReadPermissions.get(database);
+  let permissions = privatePermissions.get(database);
   if (!permissions) {
     permissions = new Map();
-    privateReadPermissions.set(database, permissions);
+    privatePermissions.set(database, permissions);
   }
   const cached = permissions.get(key);
+  const lifetime = access === "read" ? privateReadLifetime : reviewPermissionLifetime;
   // A cache hit never skips the live session and linked account checks above.
-  if (access === "read" && cached && cached.expiresAt > Date.now()) {
+  if (access !== "write" && cached && cached.checkedAt + lifetime > Date.now()) {
     return {
       ...cached.identity,
       userId: session.user.id,
@@ -68,14 +71,14 @@ export async function requireMaintainer({
   permissions.delete(key);
   const checkedAt = Date.now();
   const identity = await requireRepositoryWrite(github, githubUserId);
-  if (access === "read") {
-    if (permissions.size >= maximumPrivateReadPermissions) {
+  if (access !== "write") {
+    if (permissions.size >= maximumPrivatePermissions) {
       const oldest = permissions.keys().next().value;
       if (oldest !== undefined) {
         permissions.delete(oldest);
       }
     }
-    permissions.set(key, { identity, expiresAt: checkedAt + privateReadLifetime });
+    permissions.set(key, { identity, checkedAt });
   }
   return { ...identity, userId: session.user.id, sessionId: session.session.id, sessionHeaders };
 }

@@ -38,14 +38,13 @@ import {
   workLeaseAssertion,
 } from "./work.ts";
 import type { StatusDelivery } from "./work.ts";
-import type { Database, SqlValue, Statement } from "./database.ts";
+import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import type {
   CommandResult,
   CommitShardParams,
   ComparisonResult,
   ComparisonRow,
   ProjectRow,
-  PromotionRow,
   ReserveRunParams,
   ReviewParams,
   ReviewRow,
@@ -153,6 +152,14 @@ function requestJson(input: Record<string, unknown>) {
 function parseCommandResult(json: string): CommandResult {
   // Command records are written only by this service, after typed validation.
   return JSON.parse(json) as CommandResult;
+}
+
+function batchRows<T>(result: Result | undefined): T[] {
+  if (!result?.results) {
+    throw new IncompleteError("The review query batch is incomplete.");
+  }
+  // The corresponding SELECT defines each result's row shape.
+  return result.results as T[];
 }
 
 export class Service {
@@ -1862,21 +1869,40 @@ export class Service {
         "A review command requires a maintainer, session, and unique targets.",
       );
     }
-    const comparison = await this.comparison(input.comparisonId);
-    const run = await this.run(comparison.run_id);
+    const [comparisonResult, runResult, projectResult, rowsResult, promotionResult] =
+      await this.database.batch([
+        this.sql("SELECT * FROM visonaut_comparisons WHERE id = ?", [input.comparisonId]),
+        this.sql(
+          "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+          [input.comparisonId],
+        ),
+        this.sql(
+          "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+          [input.comparisonId],
+        ),
+        input.wholeItemKey
+          ? this.sql(
+              "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND item_key = ? AND outcome = 'changed' ORDER BY ordinal, id",
+              [input.comparisonId, input.wholeItemKey],
+            )
+          : this.sql(
+              "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND id IN (SELECT value FROM json_each(?))",
+              [input.comparisonId, JSON.stringify(input.targets.map((target) => target.id))],
+            ),
+        this.sql("SELECT 1 FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1", [
+          input.comparisonId,
+        ]),
+      ]);
+    const comparison = batchRows<ComparisonRow>(comparisonResult)[0];
+    const run = batchRows<RunRow>(runResult)[0];
+    const project = batchRows<ProjectRow>(projectResult)[0];
+    if (!comparison || !run || !project) {
+      throw new IncompleteError("The requested record does not exist.");
+    }
     if (run.detail_archived) {
       throw new ConflictError("Archived history is read-only.");
     }
-    const project = await this.project(run.project_id);
-    const rows = input.wholeItemKey
-      ? await this.rows<ReviewRow>(
-          "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND item_key = ? AND outcome = 'changed' ORDER BY ordinal, id",
-          [comparison.id, input.wholeItemKey],
-        )
-      : await this.rows<ReviewRow>(
-          "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND id IN (SELECT value FROM json_each(?))",
-          [comparison.id, JSON.stringify(input.targets.map((target) => target.id))],
-        );
+    const rows = batchRows<ReviewRow>(rowsResult);
     const selected = input.targets.map((target) => {
       const row = rows.find((entry) => entry.id === target.id);
       if (!row || row.outcome !== "changed" || row.decision_revision !== target.expectedRevision) {
@@ -1895,11 +1921,7 @@ export class Service {
         throw new ConflictError("The whole-item target list must include every changed variant.");
       }
     }
-    const acceptedHistory = await this.sql(
-      "SELECT * FROM visonaut_promotions WHERE comparison_id = ? ORDER BY created_at DESC LIMIT 1",
-      [comparison.id],
-    ).first<PromotionRow>();
-    if (acceptedHistory) {
+    if (batchRows(promotionResult).length) {
       throw new ConflictError(
         "Promoted history is read-only. Capture a correction in a new complete main run.",
       );

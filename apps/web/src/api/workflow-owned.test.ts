@@ -1298,6 +1298,7 @@ describe("trusted local Submit", () => {
     const run = await materializeWorkflowRun(test.context, test.runId);
     const privateContext = {
       ...test.context,
+      lifetime: { waitUntil: vi.fn() },
       identity: {
         githubUserId: "user",
         login: "user",
@@ -1454,6 +1455,7 @@ describe("trusted local Submit", () => {
     });
     const privateContext = {
       ...test.context,
+      lifetime: { waitUntil: vi.fn() },
       identity: {
         githubUserId: "user",
         login: "user",

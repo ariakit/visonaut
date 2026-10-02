@@ -363,13 +363,14 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
     userId: user.id,
   });
   const session = await authContext.internalAdapter.createSession(user.id);
+  const background: Promise<unknown>[] = [];
   const send = async (path: string, init: RequestInit = {}) => {
     const response = await handleApi(
       new Request(`https://preview.example${path}`, init),
       bindings,
       {
         waitUntil(promise) {
-          void promise;
+          background.push(promise);
         },
       },
     );
@@ -442,6 +443,7 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
   };
   return {
     bindings,
+    background,
     service,
     githubRequests,
     setGitHubResponse(path: string, value: unknown) {
@@ -1001,9 +1003,13 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       { kind: "key", value: "react-light" },
     ]);
     expect(model.promotionId).toBe(promotionId);
-    const wake = vi.fn(async () => {});
-    wake.mockRejectedValueOnce(new Error("Queue unavailable."));
+    let rejectWakeup: ((error: Error) => void) | undefined;
+    const wakeup = new Promise<void>((_, reject) => {
+      rejectWakeup = reject;
+    });
+    const wake = vi.fn(() => wakeup);
     test.bindings.operations.send = wake;
+    const backgroundCount = test.background.length;
     const response = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
       method: "POST",
       headers,
@@ -1020,6 +1026,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     });
     expect(response.status).toBe(200);
     expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
+    expect(test.background).toHaveLength(backgroundCount + 1);
     const result = await objectResponse(response);
     expect(result).toMatchObject({
       revisions: [{ id: variant?.id, expectedRevision: Number(variant?.revision) + 1 }],
@@ -1030,6 +1037,15 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     });
     expect(result).not.toHaveProperty("model");
     expect(result.runRevision).toBe((await test.service.run(test.runId)).revision);
+    expect(
+      await database
+        .prepare("SELECT 1 FROM visonaut_status_outbox WHERE run_id=? AND run_revision=?")
+        .bind(test.runId, result.runRevision)
+        .first(),
+    ).not.toBeNull();
+    if (!rejectWakeup) throw new Error("Missing wakeup rejection");
+    rejectWakeup(new Error("Queue unavailable."));
+    await Promise.all(test.background);
     const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
     const savedVariant = objects(objects(refreshed.items)[0]?.variants)[0];
     expect(savedVariant).toMatchObject({
@@ -1038,6 +1054,80 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     });
     expect(result.reviewer).toBe(savedVariant?.reviewer);
     expect(result.runStatus).toBe(object(refreshed.run).status);
+  });
+
+  it("caches only decision permission and still checks origin, expiry, and other writes", async () => {
+    const test = await fixture();
+    await test.upload();
+    await test.complete();
+    const checkedAt = Date.now();
+    using clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const variant = objects(item?.variants)[0];
+    const commandPath = `/api/comparisons/${string(model.comparisonId)}/commands`;
+    const permissionChecks = () =>
+      test.githubRequests.filter((path) => path.endsWith("/permission")).length;
+    const before = permissionChecks();
+    test.setPermission("read");
+    expect(
+      (
+        await test.send(commandPath, {
+          method: "POST",
+          headers: { ...headers, origin: "https://evil.example" },
+          body: "{}",
+        })
+      ).status,
+    ).toBe(403);
+    let revision = Number(variant?.revision);
+    let runRevision = Number(model.comparisonRevision);
+    for (const verdict of ["rejected", "approved"]) {
+      clock.mockReturnValue(checkedAt + 9_999);
+      const response = await test.send(commandPath, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          reviewSessionId: session.reviewSessionId,
+          commandId: crypto.randomUUID(),
+          verdict,
+          targets: [{ id: variant?.id, expectedRevision: revision }],
+          selection: { itemKey: item?.key, variantKey: variant?.key },
+          expectedBaselineRevision: model.baselineRevision,
+          expectedRunRevision: runRevision,
+        }),
+      });
+      expect(response.status).toBe(200);
+      const result = await objectResponse(response);
+      expect(result.runStatus).toBe(verdict === "approved" ? "passed" : "rejected");
+      revision += 1;
+      runRevision += 1;
+    }
+    expect(permissionChecks()).toBe(before);
+    clock.mockReturnValue(checkedAt + 10_000);
+    expect((await test.send(commandPath, { method: "POST", headers, body: "{}" })).status).toBe(
+      403,
+    );
+    expect(permissionChecks()).toBe(before + 1);
+    expect((await test.service.run(test.runId)).revision).toBe(runRevision);
+    for (const path of [
+      "/api/review-sessions",
+      `/api/commands/${crypto.randomUUID()}/undo`,
+      `/api/runs/${test.runId}/recompare`,
+      `/api/runs/${test.runId}/export`,
+    ]) {
+      test.setPermission("write");
+      expect((await test.send(`/api/runs/${test.runId}`, { headers })).status).toBe(200);
+      test.setPermission("read");
+      expect((await test.send(path, { method: "POST", headers, body: "{}" })).status).toBe(403);
+    }
   });
 
   it("keeps a mixed error row pending after compactly approving the last changed row", async () => {

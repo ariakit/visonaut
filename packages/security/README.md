@@ -23,6 +23,8 @@ await requireMaintainer({ request, auth, database, github, access: "read" });
 await requireMaintainer({ request, auth, database, github, access: "write" });
 ```
 
+Only decision submissions at `POST /api/comparisons/:id/commands` use `access: "review"`. These requests can reuse a successful permission check for at most 10 seconds from the start of that check. Cache hits do not extend this interval. This permits up to 10 seconds of delay before a repository permission removal blocks another decision. Live session and linked-account checks still run for every submission. Session creation, Undo, promotion, and all other writes use the default live check. A failed live check removes the cached grant; there is no fallback to an expired grant when GitHub is unavailable.
+
 `createGitHubClient` reuses only resolved installation-token bytes until their expiry, with a 30-second safety margin. The cache is bounded and isolated by the exact App key, installation, repository, and transport. Pending token requests stay within the current request's client. A rejected token is removed; a failed mutation is not retried.
 
 GitHub App credentials and user OAuth credentials have separate code paths. App private keys must use PKCS8 PEM. `createGitHubClient` restricts requests to GitHub's API host and obtains a token limited to the configured repository. Required repository permissions are Metadata read, Actions read, Checks write, Pull requests read, and Contents read. Merge-group webhooks also require Merge queues read. GitHub sign-in requires the account Email addresses read permission for private email addresses. Named custom roles use the permission endpoint's base permission; its `write` result includes maintain access.
