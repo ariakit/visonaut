@@ -1387,7 +1387,11 @@ export class Service {
   }
 
   private acceptanceValiditySql() {
+    // Narrow through the existing image index before checking the complete tuple.
+    // IS also matches the missing image in an introduction or removal.
     return `decision.verdict = 'approved' AND decision.revoked = 0
+      AND json_extract(decision.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
+      AND json_extract(decision.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
       AND decision.tuple_json = row.tuple_json
       AND EXISTS (SELECT 1 FROM visonaut_comparison_rows source_row
         JOIN visonaut_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
