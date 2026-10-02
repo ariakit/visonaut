@@ -97,7 +97,7 @@
         "GITHUB_REPOSITORY_ID": "104133653",
         "GITHUB_OWNER_ID": "40200111",
         "VISONAUT_PROJECT_ID": "ariakit",
-        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"submitJobName\":\"App / Visual Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@426799bc4753bebbfe61f6be75689cc61c55f406\",\"reusableWorkflowSha\":\"426799bc4753bebbfe61f6be75689cc61c55f406\",\"callerWorkflowBlobSha\":\"4474b4139da73c77a1c0ebcdd1b07c78e34c00ec\",\"captureJobName\":\"App / Visual Capture ({shard})\"}",
+        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"submitJobName\":\"App / Visual Submit\",\"reusableWorkflowRef\":\"ariakit/ariakit/.github/workflows/app.yml@ec8ba1563228164856c33c94f4fa96645448c730\",\"reusableWorkflowSha\":\"ec8ba1563228164856c33c94f4fa96645448c730\",\"callerWorkflowBlobSha\":\"4b7a93772fcfe79479ece3395d5f6cb38922b52b\",\"captureJobName\":\"App / Visual Capture ({shard})\"}",
         "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "7e8c77bf386518619fd2a04a8b5a1509fa5a1db1c2a84827b26132672999d3a5",
         "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
         "VISONAUT_API_LIMITS": "{\"maximumImageBytes\":2097152,\"maximumShardBytes\":536870912,\"maximumRunBytes\":2147483648,\"maximumStagedBytes\":8589934592,\"maximumManifestBytes\":16777216,\"maximumPlanBytes\":1500000,\"maximumCaptures\":40000,\"comparisonMaxAttempts\":5,\"databaseWarningBytes\":1610612736,\"databaseAdmissionBytes\":2147483648,\"maximumActiveRuns\":5}",
