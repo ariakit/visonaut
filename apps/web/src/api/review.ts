@@ -1,3 +1,4 @@
+import { enqueueReview, reviewTaskId, type QueuedReviewInput } from "../operations/review-queue.ts";
 import { compactReviewModel } from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard } from "./dashboard.js";
@@ -8,6 +9,7 @@ import {
   ConflictError,
   type CommandResult,
   type ReviewRow,
+  getWork,
 } from "@visonaut/service";
 import { readClosedSummary } from "../operations/closed-summary.ts";
 import type { HistoryRow } from "../operations/history-format.ts";
@@ -761,6 +763,44 @@ export async function handleReview(
       await reviewPollState(context, uuid(runStateMatch[1]), selected ? uuid(selected) : undefined),
     );
   }
+  const queuedCommandMatch = /^\/api\/commands\/([a-f0-9-]+)\/queued$/.exec(path);
+  if (queuedCommandMatch?.[1] && request.method === "GET") {
+    const task = await getWork(context.database, reviewTaskId(uuid(queuedCommandMatch[1])));
+    if (!task || task.kind !== "review") {
+      throw new SecurityError("not_found", 404, "The queued decision was not found.");
+    }
+    const input: QueuedReviewInput = JSON.parse(task.payload);
+    if (input.actorId !== context.identity.githubUserId) {
+      throw new SecurityError("not_found", 404, "The queued decision was not found.");
+    }
+    const comparison = await context.service.comparison(input.comparisonId);
+    const run = await projectRun(context, comparison.run_id);
+    const result = task.result ? object(JSON.parse(task.result)) : null;
+    if (task.state === "complete" || task.state === "dead") {
+      // Other decisions can finish before the browser reads this receipt.
+      const model = await reviewModel(context, run.id);
+      // A review committed during model construction requires another poll.
+      if ((await context.service.run(run.id)).revision === model.comparisonRevision) {
+        if (task.state === "dead" || result?.error) {
+          return Response.json(
+            {
+              error: {
+                code: "conflict",
+                message:
+                  typeof result?.error === "string"
+                    ? result.error
+                    : "The queued decision could not be processed. Review it again.",
+              },
+              model,
+            },
+            { status: 409 },
+          );
+        }
+        return Response.json({ ...result, model });
+      }
+    }
+    return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
+  }
   const commandMatch = /^\/api\/comparisons\/([a-f0-9-]+)\/commands$/.exec(path);
   if (commandMatch?.[1] && request.method === "POST") {
     const comparisonId = uuid(commandMatch[1]);
@@ -779,7 +819,7 @@ export async function handleReview(
     }
     const selection = object(body.selection);
     try {
-      const result = await context.service.review({
+      const input: QueuedReviewInput = {
         commandId: uuid(body.commandId),
         actorId: context.identity.githubUserId,
         sessionId,
@@ -795,8 +835,15 @@ export async function handleReview(
           ? {}
           : { expectedPromotionId: string(body.expectedPromotionId) }),
         ...(body.wholeItemKey === undefined ? {} : { wholeItemKey: string(body.wholeItemKey) }),
-        now: Date.now(),
-      });
+      };
+      if (body.queued === true) {
+        if (body.previousCommandId !== undefined)
+          input.previousCommandId = uuid(body.previousCommandId);
+        await enqueueReview(context.database, input);
+        await wakeReviewStatus(context);
+        return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
+      }
+      const result = await context.service.review({ ...input, now: Date.now() });
       if (!result.noop) await wakeReviewStatus(context);
       if (
         result.noop ||

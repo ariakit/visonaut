@@ -1414,8 +1414,10 @@ export class Service {
 
   private readyGuard(comparisonId: string) {
     return this.guard(
-      `NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND (row.outcome NOT IN ('unchanged', 'changed') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()})))`,
-      [comparisonId],
+      `NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND (row.outcome NOT IN ('unchanged', 'changed') OR (row.outcome = 'changed' AND NOT ${this.eligibleAcceptanceSql()})))
+        AND NOT EXISTS (SELECT 1 FROM work_tasks WHERE kind = 'review' AND state IN ('queued', 'leased')
+          AND json_extract(payload, '$.comparisonId') = ?)`,
+      [comparisonId, comparisonId],
     );
   }
 

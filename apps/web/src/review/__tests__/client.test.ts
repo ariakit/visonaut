@@ -1,5 +1,10 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { loadReview, parseReviewModel, parseReviewPollState } from "../client.ts";
+import {
+  createReviewCommands,
+  loadReview,
+  parseReviewModel,
+  parseReviewPollState,
+} from "../client.ts";
 import { compactReviewModel } from "../compact-model.ts";
 import { ReviewCommandError, type ReviewModel } from "../model.ts";
 import { applySavedReview } from "../navigation.ts";
@@ -93,6 +98,7 @@ test("the client binds every review and Undo to the server session for this page
   expect(JSON.parse(String(requests.at(-1)?.init?.body))).toEqual({
     ...command,
     reviewSessionId: "session-1",
+    queued: true,
   });
   expect(requests.filter(({ path }) => path === "/api/review-sessions")).toHaveLength(1);
   await review.commands.undo({
@@ -413,4 +419,171 @@ test("model-only reads forward route cancellation and do not create mutable comm
     name: "AbortError",
   });
   expect(fetcher).toHaveBeenCalledTimes(1);
+});
+
+test("admits the next decision before processing finishes and reports durable receipts", async () => {
+  const model = fixtureModel();
+  const posted: Record<string, unknown>[] = [];
+  let complete = false;
+  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
+    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-queue" }, 201);
+    if (init?.method === "POST") {
+      const body = JSON.parse(String(init.body));
+      posted.push(body);
+      return json({ queued: true, commandId: body.commandId }, 202);
+    }
+    const command = posted.find((entry) => path.includes(String(entry.commandId)));
+    if (!command) throw new Error("Unknown command");
+    if (!complete) return json({ queued: true, commandId: command.commandId }, 202);
+    return json({
+      commandId: command.commandId,
+      selection: command.selection,
+      revisions: [{ id: "row-React", expectedRevision: command.commandId === "first" ? 1 : 2 }],
+      baselineRevision: model.baselineRevision,
+      promotionId: null,
+      runRevision: 4,
+      reviewer: "42",
+      runStatus: "needs-review",
+    });
+  });
+  const commands = createReviewCommands("run-42");
+  const first = {
+    commandId: "first",
+    comparisonId: model.comparisonId,
+    verdict: "approved" as const,
+    targets: [{ id: "row-React", expectedRevision: 0 }],
+    expectedBaselineRevision: model.baselineRevision,
+    expectedRunRevision: model.comparisonRevision,
+    selection: { itemKey: "dialog/open", variantKey: "React" },
+  };
+  const queued = vi.fn();
+  const firstResult = commands.save(first, { onQueued: queued });
+  const secondResult = commands.save(
+    {
+      ...first,
+      commandId: "second",
+      previousCommandId: first.commandId,
+      targets: [{ id: "row-React", expectedRevision: 1 }],
+    },
+    { onQueued: queued },
+  );
+  await vi.waitFor(() => expect(queued).toHaveBeenCalledTimes(2));
+  expect(posted).toHaveLength(2);
+  expect(posted[0]).toMatchObject({ queued: true, reviewSessionId: "session-queue" });
+  expect(posted[0]).not.toHaveProperty("previousCommandId");
+  expect(posted[1]).toMatchObject({ previousCommandId: "first" });
+  complete = true;
+  await expect(firstResult).resolves.toMatchObject({ commandId: "first" });
+  await expect(secondResult).resolves.toMatchObject({ commandId: "second" });
+  await commands.save(first);
+  expect(posted[2]).toEqual(posted[0]);
+});
+
+test("a ready recomparison starts a new decision chain", async () => {
+  const model = fixtureModel();
+  const next = { ...model, comparisonId: "comparison-new", reviewReady: true };
+  const posted: Record<string, unknown>[] = [];
+  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
+    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-recompare" });
+    if (path.endsWith("/recompare")) return json(compactReviewModel(next));
+    const command = JSON.parse(String(init?.body));
+    posted.push(command);
+    return json({
+      commandId: command.commandId,
+      selection: command.selection,
+      revisions: [],
+      baselineRevision: model.baselineRevision,
+      promotionId: null,
+      model: compactReviewModel(path.includes(next.comparisonId) ? next : model),
+    });
+  });
+  const commands = createReviewCommands("run-42");
+  const first = {
+    commandId: "first",
+    comparisonId: model.comparisonId,
+    verdict: "approved" as const,
+    targets: [{ id: "row-React", expectedRevision: 0 }],
+    expectedBaselineRevision: model.baselineRevision,
+    expectedRunRevision: model.comparisonRevision,
+    selection: { itemKey: "dialog/open", variantKey: "React" },
+  };
+  await commands.save(first);
+  expect(await commands.recompare?.()).toMatchObject({
+    comparisonId: next.comparisonId,
+    reviewReady: true,
+  });
+  await commands.save({ ...first, commandId: "second", comparisonId: next.comparisonId });
+  expect(posted).toHaveLength(2);
+  expect(posted[1]).not.toHaveProperty("previousCommandId");
+});
+
+test("ordered decisions retain the newest model when receipt polls finish out of order", async () => {
+  const initial = fixtureModel();
+  const item = initial.items[0];
+  const [firstVariant, secondVariant] = item?.variants ?? [];
+  if (!item || !firstVariant || !secondVariant) throw new Error("Missing review variants");
+  const earlier = structuredClone(initial);
+  earlier.comparisonRevision += 2;
+  for (const variant of earlier.items[0]?.variants.slice(0, 2) ?? []) {
+    variant.verdict = "approved";
+    variant.source = "human";
+    variant.revision++;
+  }
+  const latest = structuredClone(earlier);
+  latest.comparisonRevision++;
+  const other = latest.items[0]?.variants[2];
+  if (!other) throw new Error("Missing another review variant");
+  other.verdict = "rejected";
+  other.source = "human";
+  other.revision++;
+  const posted: Record<string, unknown>[] = [];
+  const polls: string[] = [];
+  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
+    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-order" });
+    if (init?.method === "POST") {
+      const command = JSON.parse(String(init.body));
+      posted.push(command);
+      return json({ queued: true, commandId: command.commandId }, 202);
+    }
+    const first = path.includes("/first/");
+    const commandId = first ? "first" : "second";
+    polls.push(commandId);
+    if (first && polls.length === 1) return json({ queued: true, commandId }, 202);
+    return json({
+      commandId,
+      selection: { itemKey: item.key, variantKey: first ? firstVariant.key : secondVariant.key },
+      revisions: [],
+      baselineRevision: initial.baselineRevision,
+      promotionId: null,
+      model: compactReviewModel(first ? latest : earlier),
+    });
+  });
+  const commands = createReviewCommands("run-42");
+  const first = {
+    commandId: "first",
+    comparisonId: initial.comparisonId,
+    verdict: "approved" as const,
+    targets: [{ id: firstVariant.id, expectedRevision: firstVariant.revision }],
+    expectedBaselineRevision: initial.baselineRevision,
+    expectedRunRevision: initial.comparisonRevision,
+    selection: { itemKey: item.key, variantKey: firstVariant.key },
+  };
+  const second = {
+    ...first,
+    commandId: "second",
+    targets: [{ id: secondVariant.id, expectedRevision: secondVariant.revision }],
+    selection: { itemKey: item.key, variantKey: secondVariant.key },
+  };
+  const firstResponse = commands.save(first);
+  const secondResponse = commands.save(second);
+  await vi.waitFor(() => expect(posted).toHaveLength(2));
+  const afterFirst = applySavedReview(initial, first, await firstResponse);
+  const afterSecond = applySavedReview(afterFirst, second, await secondResponse);
+  expect(polls).toEqual(["first", "second", "first"]);
+  expect(afterSecond.comparisonRevision).toBe(latest.comparisonRevision);
+  expect(afterSecond.items[0]?.variants.slice(0, 3)).toMatchObject([
+    { verdict: "approved", revision: 1 },
+    { verdict: "approved", revision: 1 },
+    { verdict: "rejected", revision: 1 },
+  ]);
 });

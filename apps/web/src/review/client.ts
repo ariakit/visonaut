@@ -288,6 +288,7 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
       ? `${runPath}${suffix}?comparison=${encodeURIComponent(selectedComparisonId)}`
       : `${runPath}${suffix}`;
   let sessionPromise: Promise<string> | undefined;
+  let admission: Promise<unknown> = Promise.resolve();
   const reviewSession = () => {
     sessionPromise ??= request("/api/review-sessions", {})
       .then((session) => string(record(session).reviewSessionId))
@@ -298,14 +299,39 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
     return sessionPromise;
   };
   return {
-    async save(command) {
-      const reviewSessionId = await reviewSession();
-      return saveResult(
-        await request(`/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`, {
-          ...command,
-          reviewSessionId,
-        }),
-      );
+    async save(command, options) {
+      // Only admission is serialized. Processing belongs to the server queue.
+      const submitted = admission
+        .catch(() => {})
+        .then(async () => {
+          const reviewSessionId = await reviewSession();
+          return record(
+            await request(
+              `/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`,
+              {
+                ...command,
+                reviewSessionId,
+                queued: true,
+              },
+              options?.signal,
+            ),
+          );
+        });
+      admission = submitted;
+      let result = await submitted;
+      if (result.queued === true) options?.onQueued?.();
+      while (result.queued === true) {
+        options?.signal?.throwIfAborted();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        result = record(
+          await request(
+            `/api/commands/${encodeURIComponent(command.commandId)}/queued`,
+            undefined,
+            options?.signal,
+          ),
+        );
+      }
+      return saveResult(result);
     },
     async undo(command) {
       const reviewSessionId = await reviewSession();

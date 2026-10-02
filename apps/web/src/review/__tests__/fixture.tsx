@@ -3,6 +3,7 @@ import { ReviewWorkspace } from "../review-workspace.tsx";
 import { ReviewCommandError } from "../model.ts";
 import type {
   ReviewCommand,
+  ReviewCommands,
   ReviewCommandResult,
   ReviewModel,
   ReviewSaveResult,
@@ -40,7 +41,15 @@ let pending: (() => void) | undefined;
 let statusReads = 0;
 let modelReads = 0;
 
-async function save(command: ReviewCommand): Promise<ReviewSaveResult> {
+let processing: Promise<unknown> = Promise.resolve();
+const save: ReviewCommands["save"] = (command, options) => {
+  if (behavior !== "offline") options?.onQueued?.();
+  const result = processing.catch(() => {}).then(() => processSave(command));
+  processing = result;
+  return result;
+};
+
+async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
   calls.push(command);
   if (behavior === "delay") {
     await new Promise<void>((resolve) => {

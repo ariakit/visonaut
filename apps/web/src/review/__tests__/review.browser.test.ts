@@ -324,7 +324,7 @@ test("a missing remembered key falls back and announces the first variant", asyn
   ).toBeVisible();
 });
 
-test("approval advances before confirmation, and repeat keys do not submit twice", async ({
+test("approve and reject queue while saving, and repeat keys do not submit twice", async ({
   page,
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
@@ -333,21 +333,94 @@ test("approval advances before confirmation, and repeat keys do not submit twice
   await expect(selected(page)).toContainText("Solid");
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.locator(".review-result-heading")).toContainText("8 of 11 need review");
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await ready(page);
+  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
   await page
     .getByLabel("Review workspace", { exact: true })
     .dispatchEvent("keydown", { key: "a", repeat: true });
   await page.keyboard.press("x");
+  await expect(selected(page)).toContainText("Dark");
+  await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
+  await expect(page.locator(".review-result-heading")).toContainText("7 of 11 need review");
+  await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await callCount(page, 1);
+  await page.evaluate(() => window.reviewFixture.resolve());
+  await callCount(page, 2);
+  await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
   await page.evaluate(() => {
     window.reviewFixture.setBehavior("normal");
     window.reviewFixture.resolve();
   });
+  await expect(page.getByText("1 variant rejected. Saved.")).toBeVisible();
+  await expect(selected(page)).toContainText("Dark");
+  const calls = await page.evaluate(() => window.reviewFixture.calls);
+  expect(calls[1]).toMatchObject({ verdict: "rejected" });
+  await page.keyboard.press("Control+z");
+  await expect(selected(page)).toContainText("Solid");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
+});
+
+test("queued whole-item decisions use revisions from earlier pending decisions", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await expect(selected(page)).toContainText("Solid");
+  await ready(page);
+  await page.getByRole("button", { name: /Reject whole item/ }).click();
+  await expect(selected(page)).toContainText("Menu");
+  await expect(page.getByText("2 queued on server. You can close this window.")).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("normal");
+    window.reviewFixture.resolve();
+  });
+  await callCount(page, 2);
+  await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
+  const calls = await page.evaluate(() => window.reviewFixture.calls);
+  expect(calls[1]).toMatchObject({
+    wholeItemKey: "dialog/open",
+    verdict: "rejected",
+    targets: ["React", "Solid", "Dark", "Contrast", "Firefox", "WebKit", "Wide"].map((key) => ({
+      id: `row-${key}`,
+      expectedRevision: key === "React" ? 1 : 0,
+    })),
+  });
+  await page.keyboard.press("Control+z");
+  await expect(selected(page)).toContainText("Solid");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
+});
+
+test("a later failed save preserves confirmed decisions and retries its exact command", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
   await expect(selected(page)).toContainText("Solid");
   await ready(page);
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
-  await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
+  await page.evaluate(() => window.reviewFixture.resolve());
+  await callCount(page, 2);
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("offline");
+    window.reviewFixture.resolve();
+  });
+  await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
+  await expect(selected(page)).toContainText("Solid");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
+  await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
+  await page.getByRole("button", { name: "Retry same command" }).click();
+  await expect(page.getByText("1 variant rejected. Saved.")).toBeVisible();
+  const calls = await page.evaluate(() => window.reviewFixture.calls);
+  expect(calls[1]).toEqual(calls[2]);
 });
 
 for (const behavior of ["offline", "conflict", "noop"]) {
