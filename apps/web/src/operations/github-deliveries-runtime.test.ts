@@ -18,7 +18,9 @@ const { privateKey } = generateKeyPairSync("rsa", {
 });
 let runtime: Miniflare | undefined;
 let redirect = false;
+let deliveryBody = "[]";
 const requests: string[] = [];
+const posts: string[] = [];
 
 beforeAll(async () => {
   const deliveries = fileURLToPath(new URL("./github-deliveries.ts", import.meta.url));
@@ -99,7 +101,11 @@ beforeAll(async () => {
         if (new URL(request.url).pathname === "/app/hook/config") {
           return Response.json({ url: "https://visonaut.test/v1/webhooks" });
         }
-        return Response.json([]);
+        if (request.method === "POST") {
+          posts.push(request.url);
+          return new Response(null, { status: 202 });
+        }
+        return new Response(deliveryBody);
       },
     }),
   );
@@ -109,15 +115,36 @@ beforeAll(async () => {
   )?.sql;
   const events = schema?.match(/CREATE TABLE IF NOT EXISTS operations_events \([\s\S]*?\);/u)?.[0];
   const cursors = schema?.match(/CREATE TABLE IF NOT EXISTS operations_cursors \([^;]+;/u)?.[0];
-  if (!events || !cursors) {
+  const deliveriesSchema = readTestMigrations().find(
+    (migration) => migration.name === "0003_auth.sql",
+  )?.sql;
+  const deliveriesTable = deliveriesSchema?.match(
+    /CREATE TABLE github_webhook_delivery \([^;]+;/u,
+  )?.[0];
+  const recoveryTable = readTestMigrations().find(
+    (migration) => migration.name === "0027_webhook_recovery.sql",
+  )?.sql;
+  if (!events || !cursors || !deliveriesTable || !recoveryTable) {
     throw new Error("Recovery metadata tables are unavailable.");
   }
-  await database.batch([database.prepare(events), database.prepare(cursors)]);
+  await database.batch(
+    [events, cursors, deliveriesTable, recoveryTable].map((sql) => database.prepare(sql)),
+  );
 }, 40000);
 
-beforeEach(() => {
+beforeEach(async () => {
   redirect = false;
+  deliveryBody = "[]";
   requests.length = 0;
+  posts.length = 0;
+  if (!runtime) {
+    throw new Error("Native runtime unavailable.");
+  }
+  const database = await runtime.getD1Database("DB");
+  await database.batch([
+    database.prepare("DELETE FROM github_webhook_recovery"),
+    database.prepare("DELETE FROM operations_cursors"),
+  ]);
 });
 
 afterAll(async () => {
@@ -154,3 +181,52 @@ it("rejects recovery redirects without forwarding App credentials", async () => 
   expect(response.status).toBe(503);
   expect(requests).toEqual(["https://api.github.com/app/hook/config"]);
 });
+
+it.each(["1", "9007199254740993", "9223372036854775807"])(
+  "preserves numeric delivery ID %s in native D1 and the POST URL",
+  async (id) => {
+    if (!runtime) {
+      throw new Error("Native runtime unavailable.");
+    }
+    deliveryBody = `[{"id":${id},"guid":"12345678-1234-1234-1234-123456789abc","delivered_at":"2026-09-29T12:00:00Z","status_code":503,"event":"workflow_run","repository_id":789,"installation_id":456}]`;
+    const response = await runtime.dispatchFetch("https://visonaut.test", {
+      method: "POST",
+      body: privateKey,
+    });
+    expect(await response.json()).toEqual({ checked: 1, requested: 1 });
+    expect(response.status).toBe(200);
+    expect(posts).toEqual([`https://api.github.com/app/hook/deliveries/${id}/attempts`]);
+    const database = await runtime.getD1Database("DB");
+    expect(
+      await database
+        .prepare(
+          "SELECT delivery_id,typeof(delivery_id) AS storage_type FROM github_webhook_recovery",
+        )
+        .first(),
+    ).toEqual({ delivery_id: id, storage_type: "text" });
+  },
+);
+
+it.each(["1.0000000000000001", "9007199254740991.1"])(
+  "rejects fractional delivery ID %s before native storage or POST",
+  async (id) => {
+    if (!runtime) {
+      throw new Error("Native runtime unavailable.");
+    }
+    deliveryBody = `[{"id":${id},"guid":"12345678-1234-1234-1234-123456789abc","delivered_at":"2026-09-29T12:00:00Z","status_code":503,"event":"workflow_run","repository_id":789,"installation_id":456}]`;
+    const response = await runtime.dispatchFetch("https://visonaut.test", {
+      method: "POST",
+      body: privateKey,
+    });
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "Delivery metadata is invalid." });
+    expect(posts).toEqual([]);
+    const database = await runtime.getD1Database("DB");
+    expect(await database.prepare("SELECT count(*) AS n FROM operations_cursors").first()).toEqual({
+      n: 0,
+    });
+    expect(
+      await database.prepare("SELECT count(*) AS n FROM github_webhook_recovery").first(),
+    ).toEqual({ n: 0 });
+  },
+);

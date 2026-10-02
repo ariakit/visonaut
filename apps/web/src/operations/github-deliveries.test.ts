@@ -16,7 +16,7 @@ afterEach(() => {
 const guid = "12345678-1234-1234-1234-123456789abc";
 
 it.each([
-  ["id", 9007199254740992, "github_delivery_id_invalid"],
+  ["id", -1, "github_delivery_id_invalid"],
   ["guid", "private-response-sentinel", "github_delivery_guid_invalid"],
   ["delivered_at", null, "github_delivery_date_invalid"],
   ["status_code", "private-response-sentinel", "github_delivery_status_invalid"],
@@ -57,6 +57,75 @@ it.each([
     ).toEqual({ n: 0 });
   },
 );
+
+function deliveryResponse(id: string) {
+  return new Response(
+    `[{"id":${id},"guid":"${guid}","delivered_at":"2026-09-29T12:00:00Z","status_code":503,"event":"workflow_run","repository_id":100,"installation_id":456}]`,
+  );
+}
+
+it.each(["1", "9007199254740991", "9007199254740992", "9007199254740993", "9223372036854775807"])(
+  "preserves numeric delivery ID %s in storage and the redelivery URL",
+  async (id) => {
+    const test = fixture();
+    const posts: string[] = [];
+    const fetcher: typeof fetch = async (input, init) => {
+      if (init?.method === "POST") {
+        posts.push(String(input));
+      }
+      if (new URL(String(input)).pathname === "/app/hook/deliveries") {
+        return deliveryResponse(id);
+      }
+      return test.fetcher(input, init);
+    };
+    expect(
+      await recoverGitHubDeliveries({
+        context: test.operations,
+        configuration: test.configuration,
+        fetcher,
+      }),
+    ).toEqual({ checked: 1, requested: 1 });
+    expect(posts).toEqual([`https://api.github.com/app/hook/deliveries/${id}/attempts`]);
+    expect(
+      test.database.connection
+        .prepare(
+          "SELECT delivery_id,typeof(delivery_id) AS storage_type FROM github_webhook_recovery",
+        )
+        .get(),
+    ).toEqual({ delivery_id: id, storage_type: "text" });
+  },
+);
+
+it.each([
+  "0",
+  "-1",
+  "1.5",
+  "1.0000000000000001",
+  "9007199254740991.1",
+  "9007199254740993.5",
+  "9223372036854775808",
+  '"1"',
+  '"9007199254740993"',
+])("rejects invalid delivery ID %s before storing a cursor or requesting recovery", async (id) => {
+  const test = fixture();
+  const fetcher: typeof fetch = async (input, init) => {
+    if (new URL(String(input)).pathname === "/app/hook/deliveries") {
+      return deliveryResponse(id);
+    }
+    return test.fetcher(input, init);
+  };
+  await expect(
+    recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher,
+    }),
+  ).rejects.toMatchObject({ code: "github_delivery_id_invalid" });
+  expect(test.posts()).toBe(0);
+  expect(
+    test.database.connection.prepare("SELECT count(*) AS n FROM operations_cursors").get(),
+  ).toEqual({ n: 0 });
+});
 
 it.each([
   [
