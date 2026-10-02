@@ -74,9 +74,16 @@ class TestDatabase implements Database {
   }
   async batch(statements: Statement[]) {
     this.batchCalls += 1;
-    const before = this.beforeBatch;
-    this.beforeBatch = null;
-    before?.();
+    // Inject races after read batches, at the atomic write boundary.
+    if (
+      statements.some(
+        (entry) => entry instanceof SqliteStatement && !entry.sql.startsWith("SELECT"),
+      )
+    ) {
+      const before = this.beforeBatch;
+      this.beforeBatch = null;
+      before?.();
+    }
     this.connection.exec("BEGIN");
     try {
       const result = statements.map((entry) => {
@@ -1319,6 +1326,51 @@ describe("exact acceptance and automatic reservations", () => {
 });
 
 describe("atomic review, rollback, and session Undo", () => {
+  it.each(["approved", "rejected"] as const)(
+    "persists a fresh %s command in three database round trips",
+    async (verdict) => {
+      using database = new TestDatabase();
+      const service = new Service(database);
+      await seed(service);
+      await fixture(service, { id: "latency", kind: "pull_request", color: "red" });
+      const row = (await service.comparisonRows("comparison-latency"))[0];
+      if (!row) throw new Error("Missing review target");
+      const input = {
+        commandId: "latency-command",
+        comparisonId: "comparison-latency",
+        actorId: "maintainer",
+        sessionId: "session",
+        verdict,
+        targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+        selection: { itemKey: row.item_key, variantKey: row.variant_key },
+        now: 10,
+      };
+      const previousRunRevision = (await service.run("latency")).revision;
+      using first = vi.spyOn(SqliteStatement.prototype, "first");
+      using all = vi.spyOn(SqliteStatement.prototype, "all");
+      using run = vi.spyOn(SqliteStatement.prototype, "run");
+      using batch = vi.spyOn(database, "batch");
+      const result = await service.review(input);
+      const roundTrips =
+        first.mock.calls.length +
+        all.mock.calls.length +
+        run.mock.calls.length +
+        batch.mock.calls.length;
+      expect(roundTrips).toBe(3);
+      expect(result).toMatchObject({
+        revisions: [{ id: row.id, expectedRevision: row.decision_revision + 1 }],
+        previousRunRevision,
+        runRevision: previousRunRevision + 1,
+      });
+      expect((await service.status("latency")).status).toBe(
+        verdict === "approved" ? "passed" : "rejected",
+      );
+      expect(await service.review(input)).toEqual(result);
+      expect(count(database, "visonaut_commands")).toBe(1);
+      expect((await service.run("latency")).revision).toBe(result.runRevision);
+    },
+  );
+
   it("reviews 100 targets across items within D1's bound-parameter limit", async () => {
     using database = new TestDatabase();
     database.maximumBindings = 100;

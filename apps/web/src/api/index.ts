@@ -174,12 +174,19 @@ export async function handleApi(
     }
     // A signed upload token is never accepted by this live-session boundary.
     const github = await createGitHubClient(bindings.configuration.github);
+    const reviewWrite =
+      request.method === "POST" && /^\/api\/comparisons\/[a-f0-9-]+\/commands$/.test(path);
     const identity = await requireMaintainer({
       request,
       auth,
       database: bindings.database,
       github,
-      access: request.method === "GET" || request.method === "HEAD" ? "read" : "write",
+      access:
+        request.method === "GET" || request.method === "HEAD"
+          ? "read"
+          : reviewWrite
+            ? "review"
+            : "write",
     });
     if (!["GET", "HEAD"].includes(request.method)) {
       requireSameOrigin(request, bindings.configuration.origin);
@@ -188,7 +195,7 @@ export async function handleApi(
     const response =
       statusMatch?.[1] && request.method === "GET"
         ? Response.json(await runStatus(context, uuid(statusMatch[1])))
-        : await handleReview(request, { ...context, identity });
+        : await handleReview(request, { ...context, identity, lifetime });
     const result =
       response ??
       Response.json(
