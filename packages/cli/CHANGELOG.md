@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.5.2
+
+### Patch Changes
+
+- 9fce991: Reduced reference image downloads by 100% for byte-identical captures when only their rendering profile changes. These captures still require review.
+
 ## 0.5.1
 
 ### Patch Changes
