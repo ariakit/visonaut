@@ -40,6 +40,6 @@ Capture image attachments use private `0600` attempt files outside `test-results
 
 Upload the complete successful capture directory as one ordinary GitHub Actions artifact per required shard. Name it `visonaut-capture-<run-id>-<source-attempt>-<shard-key>` and retain it for one day. Keep failure screenshots and retry traces in ordinary bounded seven-day diagnostic artifacts. Candidate jobs receive no GitHub OIDC or service upload credential.
 
-The sole trusted Submit job runs `visonaut begin --run <run-id>` before lengthy work, then `visonaut submit --shard linux --shard safari`. It downloads exact verified artifacts, validates every image and rendering profile, and submits a new complete bundle. An expired inherited artifact requires a full visual rerun. Upload or submission never grants review approval.
+The sole trusted Submit job runs `visonaut submit --shard linux --shard safari`, which starts the Visonaut App check before artifact downloads and image staging. It downloads exact verified artifacts, validates every image and rendering profile, and submits a new complete bundle. An expired inherited artifact requires a full visual rerun. Upload or submission never grants review approval.
 
 The old `@visonaut/playwright/ci` export, `visonaut-capture` binary, second test configuration, runtime lock, dependency bootstrap, transfer encryption, and per-shard signed upload are removed. New integrations use their normal Playwright jobs and the single signed Submit path.
