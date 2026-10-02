@@ -174,9 +174,13 @@ export function apiBindings(env: Env): ApiBindings {
       workflowOwned.callerWorkflowPath,
       "VISONAUT_WORKFLOW_OWNED.callerWorkflowPath",
     ),
-    captureJobPrefix: required(
-      workflowOwned.captureJobPrefix,
-      "VISONAUT_WORKFLOW_OWNED.captureJobPrefix",
+    callerWorkflowBlobSha: required(
+      workflowOwned.callerWorkflowBlobSha,
+      "VISONAUT_WORKFLOW_OWNED.callerWorkflowBlobSha",
+    ),
+    captureJobName: required(
+      workflowOwned.captureJobName,
+      "VISONAUT_WORKFLOW_OWNED.captureJobName",
     ),
     submitJobName: required(workflowOwned.submitJobName, "VISONAUT_WORKFLOW_OWNED.submitJobName"),
     reusableWorkflowRef: required(
