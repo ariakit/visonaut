@@ -89,9 +89,8 @@ export async function checkRegistry({ records, tag, published, read = registryPa
 }
 
 export async function publishedMetadata({ records, tag, read = registryPackage, wait = delay }) {
-  // npm metadata can omit a version just after publication. Allow five fresh
-  // reads after a pause.
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  // Allow six minutes for npm's five-minute metadata cache to expire.
+  for (let attempt = 0; attempt < 7; attempt += 1) {
     const metadata = await Promise.all(records.map((record) => read(record.name)));
     const missing = records.filter((record, index) =>
       publicationNeeded(record, metadata[index], tag),
@@ -100,8 +99,8 @@ export async function publishedMetadata({ records, tag, read = registryPackage, 
     if (!record) {
       return metadata;
     }
-    assert(attempt < 5, `Expected version was not published: ${record.name}@${record.version}`);
-    await wait(5000);
+    assert(attempt < 6, `Expected version was not published: ${record.name}@${record.version}`);
+    await wait(60_000);
   }
 }
 
