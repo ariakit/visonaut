@@ -4,7 +4,9 @@ Visual regression capture, comparison, and review for Ariakit.
 
 Visonaut captures prepared Playwright pages, compares the original images in a Cloudflare Worker, and lets maintainers review changes in a private web app. GitHub checks report the result for the tested commit. Uploading a capture does not approve it.
 
-The [current implementation contract](docs/current-contract.md) indexes the selected simplification rules and their explicit supersessions. [Issue #1](https://github.com/ariakit/visonaut/issues/1) remains the published contract until the repository authority handoff. Unaffected issue requirements remain binding. Package publication, production deployment, and Ariakit's required-check cutover use the [release and deployment workflow](.github/workflows/README.md). A passing local test suite alone does not establish launch readiness.
+After this documentation handoff merges to main, the [current implementation contract](docs/current-contract.md) defines the current requirements and explicit supersessions. Until then, [issue #1](https://github.com/ariakit/visonaut/issues/1) remains the published authority. The repository contract preserves every unaffected issue requirement. After the handoff, the issue, design, and audit remain historical records.
+
+Use the [release and deployment guide](.github/workflows/README.md) for execution and the [cutover guide](docs/operations/simplification-cutover.md) for production readiness verification and the remaining cleanup. A passing local test suite alone does not establish launch readiness.
 
 ## Review a run
 
@@ -30,14 +32,14 @@ await visual(page, {
 });
 ```
 
-Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Its small pinned visual workflow owns capture and signed Submit. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, and retries. The [CLI guide](packages/cli/README.md) explains the trusted submission path.
+Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. The selected integration pins native CI and the small App workflow. Native `Plan` runs `visonaut submit --no-visual` only after successful `Plan CI` computes `app=false`. For `app=true`, `App / Visual Capture (linux)` and `App / Visual Capture (safari)` feed `App / Visual Submit`; trusted Submit verifies successful native Plan and the complete capture set. The [adapter guide](packages/playwright/README.md) explains capture profiles, stability, and retries. The [CLI guide](packages/cli/README.md) explains submission. CLI `visonaut@0.5.3` is published and verified; adapter `@visonaut/playwright@0.4.0` remains unchanged. The earlier CLI `0.5.2` run has successful captures, Submit, the recovered App check and Gate, and a verified normal export. The CLI `0.5.3` consumer update is published, and its normal Plan, captures, Submit, App check, and Gate passed. PR #7703 received eligible approval and merged as [`394aec5`](https://github.com/ariakit/ariakit/commit/394aec5cb6debc18dd88d28268b9c4bad9d4726c), which completes main adoption. Normal signed no-visual proof on PR #7552 and activation of the required App check are also complete. The service caller-pin deployment is verified, and matching consumer polling removal is adopted through PR #7708. Final readiness-marker deployment and exact transfer-key retirement remain pending; see the [implementation checkpoint](docs/simplification-implementation.md#current-handoff-checkpoint).
 
 ```sh
 # In the trusted signed Submit job, after every capture job succeeds:
 pnpm exec visonaut submit --shard linux --shard safari
 ```
 
-The service verifies the small pinned visual workflow, exact tested commit and attempt, and complete source-attempt capture set. It compares validated PNG and lossless WebP originals. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
+The service verifies both workflow Git blobs, the exact tested commit and attempt, and the complete source-attempt capture set. The visual path has no separate signed Plan report. The Visonaut check from App `5028451` is required beside Gate. Gate polling is removed, and the service trusts the matching caller pin. Native Gate still verifies the other selected CI jobs. The service accepts validated PNG and lossless WebP originals; local Submit requires PNG captures and references. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
 
 ## Work on the repository
 
