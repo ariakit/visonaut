@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.5.1
+
+### Patch Changes
+
+- c73ddff: Fixed visual submission failing on accepted references with colon-separated capture IDs, including inherited captures.
+
 ## 0.5.0
 
 ### Minor Changes
