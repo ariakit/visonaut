@@ -1,5 +1,6 @@
 import {
   digestJson,
+  captureJobNames,
   parseManifest,
   SCHEMA_VERSION,
   sha256,
@@ -38,7 +39,11 @@ import {
   type ApiContext,
 } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
-import { ensureSignedAttemptCheck, requireVisualPlan } from "./pre-run.js";
+import {
+  ensureSignedAttemptCheck,
+  recordRequiredVisualPlan,
+  requireVisualPlan,
+} from "./pre-run.js";
 import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
 
 interface StagedRun {
@@ -50,6 +55,7 @@ interface StagedRun {
   workflow_source_digest: string;
   caller_workflow_path: string;
   reusable_workflow_ref: string;
+  // The historic column stores the complete capture job name template.
   capture_job_prefix: string;
   submit_job_name: string;
   verified_json: string;
@@ -107,11 +113,10 @@ export function workflowConfiguration(context: ApiContext) {
     !maximumStagedBytes ||
     maximumStagedBytes < 1 ||
     !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.callerWorkflowPath) ||
+    (configuration.callerWorkflowBlobSha !== undefined &&
+      !/^[a-f0-9]{40}$/.test(configuration.callerWorkflowBlobSha)) ||
     (configuration.trustedWorkflowPath !== undefined &&
       !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.trustedWorkflowPath)) ||
-    configuration.captureJobPrefix.length < 12 ||
-    configuration.captureJobPrefix.length > 200 ||
-    !configuration.captureJobPrefix.endsWith(" / ") ||
     !configuration.submitJobName ||
     configuration.submitJobName.length > 256 ||
     !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
@@ -123,6 +128,15 @@ export function workflowConfiguration(context: ApiContext) {
     ) ||
     !configuration.reusableWorkflowRef.endsWith(`@${configuration.reusableWorkflowSha}`)
   ) {
+    throw new SecurityError(
+      "workflow_configuration",
+      503,
+      "The trusted workflow is not configured.",
+    );
+  }
+  try {
+    captureJobNames(configuration.captureJobName);
+  } catch {
     throw new SecurityError(
       "workflow_configuration",
       503,
@@ -196,6 +210,7 @@ async function verifyWorkflowJob(
         context.configuration.allowMainDispatch === true,
       repositoryOwnerId: context.configuration.repositoryOwnerId,
       workflowPath: configuration.callerWorkflowPath,
+      callerWorkflowBlobSha: configuration.callerWorkflowBlobSha,
       reusableWorkflowRef: configuration.reusableWorkflowRef,
       reusableWorkflowSha: configuration.reusableWorkflowSha,
       trustedWorkflowPath: configuration.trustedWorkflowPath,
@@ -291,6 +306,7 @@ export async function beginStaged(request: Request, context: ApiContext, externa
     new URL("/submit", context.configuration.origin).href,
   );
   await ensureSignedAttemptCheck(context, github, verified);
+  await recordRequiredVisualPlan(context, github, verified);
   await requireVisualPlan(context, {
     testedSha: verified.testedSha,
     workflowRunId: verified.workflowRunId,
@@ -419,7 +435,7 @@ export async function reserveVerifiedStagedRun(
         sourceDigest,
         configuration.callerWorkflowPath,
         configuration.reusableWorkflowRef,
-        configuration.captureJobPrefix,
+        configuration.captureJobName,
         configuration.submitJobName,
         JSON.stringify(verified),
         Date.now(),
@@ -438,7 +454,7 @@ export async function reserveVerifiedStagedRun(
     run.workflow_source_digest !== sourceDigest ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
     run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
-    run.capture_job_prefix !== configuration.captureJobPrefix ||
+    run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName ||
     run.submitted_at !== null ||
     run.retention_state !== "live"
@@ -1082,7 +1098,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
       (await workflowSourceDigest(configuration.reusableWorkflowSha)) ||
     seed.caller_workflow_path !== configuration.callerWorkflowPath ||
     seed.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
-    seed.capture_job_prefix !== configuration.captureJobPrefix ||
+    seed.capture_job_prefix !== configuration.captureJobName ||
     seed.submit_job_name !== configuration.submitJobName
   ) {
     throw new SecurityError("wrong_workflow_source", 403, "The workflow source changed.");
@@ -1106,6 +1122,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     new URL("/submit", context.configuration.origin).href,
   );
   await ensureSignedAttemptCheck(context, github, verified);
+  await recordRequiredVisualPlan(context, github, verified);
   await requireVisualPlan(context, {
     testedSha: verified.testedSha,
     workflowRunId: verified.workflowRunId,
@@ -1120,7 +1137,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     run.workflow_source_digest !== seed.workflow_source_digest ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
     run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
-    run.capture_job_prefix !== configuration.captureJobPrefix ||
+    run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName ||
     run.retention_state !== "live"
   ) {

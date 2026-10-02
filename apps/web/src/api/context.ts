@@ -22,7 +22,8 @@ export interface ApiConfiguration {
   /** Names and immutable source of the workflow-owned upload and submit jobs. */
   workflowOwned?: {
     callerWorkflowPath: string;
-    captureJobPrefix: string;
+    callerWorkflowBlobSha?: string;
+    captureJobName: string;
     submitJobName: string;
     reusableWorkflowRef: string;
     reusableWorkflowSha: string;
