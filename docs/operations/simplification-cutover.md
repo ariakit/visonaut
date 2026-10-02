@@ -19,7 +19,7 @@ Existing meaningful native Plan/API and public CLI/HTTP/artifact regressions sat
 
 ## Issue #204 removal holds
 
-The [current guide](../current-contract.md#issue-204-supersession-map) records the accepted #204 changes. Its W01 documentation patch does not repeat the completed PR #205 cutover or transfer-key retirement above. W03 must obtain new exact-target facts before W07/W08 can remove code. The dated completion receipts above do not prove all required protected sources, closed records, clients, delayed/replayable tasks, export leases, or conversion failures are clear now.
+The [current guide](../current-contract.md#issue-204-supersession-map) records the accepted #204 changes. Its W01 documentation patch does not repeat the completed PR #205 cutover or transfer-key retirement above. The [W03 inventory](issue-204-inventory.md) records SELECT-only preview and production reads on 2026-10-02, with explicit migration, image/profile, client, delivery, export, and preservation holds. W07/W08 still need the missing exact-target facts before they can remove code. The dated completion receipts above do not prove all required protected sources, closed records, clients, delayed/replayable tasks, export leases, or conversion failures are clear now.
 
 Keep these holds explicit:
 
