@@ -871,9 +871,13 @@ function retention(now: number, objectsPerStep: number) {
   };
 }
 
-async function localSession(test: Awaited<ReturnType<typeof fixture>>) {
-  for (const capture of test.manifest.captures)
-    capture.comparison = { threshold: 0.2, maxDiffPixels: 0 };
+async function localSession(
+  test: Awaited<ReturnType<typeof fixture>>,
+  comparison = { threshold: 0.2, maxDiffPixels: 0 },
+) {
+  for (const capture of test.manifest.captures) {
+    capture.comparison = comparison;
+  }
   const claims = await verifyIngestCapability(
     test.context.configuration.capability,
     test.capability,
@@ -1062,6 +1066,38 @@ async function acceptedReference(test: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe("trusted local Submit", () => {
+  it.each(["unchanged", "changed"] as const)(
+    "accepts a zero-pixel profile change from a %s receipt without review",
+    async (outcome) => {
+      const test = await fixture();
+      await acceptedReference(test);
+      const profile = test.manifest.profiles[0];
+      const capture = test.manifest.captures[0];
+      if (!profile || !capture) throw new Error("Expected a captured profile.");
+      profile.profile.browserVersion = "150.0";
+      profile.digest = await digestJson(profile.profile);
+      capture.profileDigest = profile.digest;
+      const session = await localSession(test);
+      const result = test.manifest.localComparison?.captures[0];
+      if (!result) throw new Error("Expected the local comparison receipt.");
+      result.outcome = outcome;
+      const body = await stageLocal(test, session);
+      expect(body.uploads).toHaveLength(outcome === "changed" ? 1 : 0);
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      if (!run.comparison_id) throw new Error("Expected the local comparison.");
+      const row = (await test.context.service.comparisonRows(run.comparison_id))[0];
+      expect(row?.outcome).toBe("unchanged");
+      expect(JSON.parse(row?.result_json ?? "{}")).toMatchObject({
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        maskExpected: false,
+      });
+      expect(result.outcome).toBe(outcome);
+      expect((await test.context.service.status(run.id)).status).toBe("passed");
+    },
+  );
+
   it("keeps its reference snapshot eligible until the staged attempt expires", async () => {
     const test = await fixture();
     const seed = await acceptedReference(test);
@@ -1357,7 +1393,12 @@ describe("trusted local Submit", () => {
       digest: profiledImage.digest,
       bytes: profiledPng.byteLength,
     };
-    const session = await localSession(test);
+    const profile = test.manifest.profiles[0];
+    if (!profile) throw new Error("Expected the captured profile.");
+    profile.profile.browserVersion = "150.0";
+    profile.digest = await digestJson(profile.profile);
+    capture.profileDigest = profile.digest;
+    const session = await localSession(test, { threshold: 0.2, maxDiffPixels: 1 });
     const result = test.manifest.localComparison!.captures[0]!;
     result.outcome = "changed";
     result.changedPixels = 1;

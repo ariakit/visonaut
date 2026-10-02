@@ -345,16 +345,24 @@ export async function validateLocalSubmission(
     );
     const maximum = allowance === Infinity ? 0 : allowance;
     const expectedChanged =
-      !original || sizeChanged || profileChanged || result.changedPixels > maximum;
+      !original ||
+      sizeChanged ||
+      (profileChanged && result.changedPixels !== 0) ||
+      result.changedPixels > maximum;
+    // Older signed receipts require review for profile-only changes. Their
+    // immutable evidence remains valid; comparison import applies the policy.
+    const legacyZeroPixelChange =
+      !!original && !sizeChanged && result.changedPixels === 0 && result.outcome === "changed";
     if (
       result.sizeChanged !== sizeChanged ||
       result.changedPixels > area ||
-      (result.outcome === "changed") !== !!expectedChanged ||
+      ((result.outcome === "changed") !== !!expectedChanged && !legacyZeroPixelChange) ||
       result.ratio !== (!original || sizeChanged ? 1 : result.changedPixels / area)
-    )
+    ) {
       throw new IncompleteError(
         "Local comparison metrics or outcome differ from the consumer settings.",
       );
+    }
     if (
       original &&
       !sizeChanged &&
