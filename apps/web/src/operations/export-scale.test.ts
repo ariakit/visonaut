@@ -1,9 +1,72 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { Service } from "@visonaut/service";
 import { createRunExport, expireExports, streamRunExport } from "./exports.ts";
 import { archiveClosedRuns } from "./history.ts";
 import { profile, seedExport, sha256 } from "./export-scale-fixture.ts";
 import { readTar, record, verifyExport } from "./export-scale-reader.ts";
+import { captured } from "./test-fixtures.ts";
+
+it("pages owned and inherited export images through indexes without scanning unrelated images", async () => {
+  using fixture = await seedExport({ captureCount: 240, imageCount: 220 });
+  await captured(fixture.context, "inherited-owner");
+  const inheritedKey = "runs/inherited-owner/original";
+  const inherited = fixture.images.objects.get(inheritedKey);
+  if (!inherited) {
+    throw new Error("The inherited image fixture is missing.");
+  }
+  fixture.expectedObjects.set(inheritedKey, {
+    bytes: inherited.bytes.length,
+    digest: sha256(inherited.bytes),
+  });
+  // Shared inherited bytes must appear once alongside images owned by the run.
+  fixture.database.connection
+    .prepare(
+      "UPDATE visonaut_captures SET image_id='image-inherited-owner' WHERE run_id=? AND ordinal IN (1,2)",
+    )
+    .run(fixture.runId);
+  const insertUnrelated = fixture.database.connection.prepare(
+    "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height) VALUES(?,'inherited-owner',?,?,'image/png',1,1,1)",
+  );
+  for (let index = 0; index < 100; index++) {
+    // Sort unrelated images before this run to expose the old correlated scan.
+    const id = `0-unrelated-${index}`;
+    insertUnrelated.run(id, sha256(id), `runs/inherited-owner/${id}`);
+  }
+  using prepared = vi.spyOn(fixture.database, "prepare");
+  const exported = await createRunExport(fixture.context, {
+    runId: fixture.runId,
+    actorId: "maintainer",
+  });
+  const imageQueries = prepared.mock.calls
+    .map(([sql]) => sql)
+    .filter((sql) => sql.includes("SELECT DISTINCT image.* FROM visonaut_images image"));
+  const imageQuery = imageQueries[0];
+  if (!imageQuery) {
+    throw new Error("The export image page query was not executed.");
+  }
+  const imagePages: string[][] = [];
+  await verifyExport({
+    ...fixture,
+    response: await streamRunExport(fixture.context, exported.exportId),
+    onJson(_entry, value) {
+      const page = record(value);
+      if (page.section !== "images" || !Array.isArray(page.rows)) return;
+      imagePages.push(page.rows.map((image) => String(record(image).id)));
+    },
+  });
+  expect(imagePages.map((page) => page.length)).toEqual([100, 100, 21]);
+  const imageIds = imagePages.flat();
+  expect(imageIds).toEqual([...imageIds].sort());
+  expect(new Set(imageIds).size).toBe(221);
+  expect(imageIds).toContain("image-inherited-owner");
+  expect(imageIds.some((id) => id.startsWith("0-unrelated-"))).toBe(false);
+  expect(imageQueries).toHaveLength(4);
+  const plan = fixture.database.connection
+    .prepare(`EXPLAIN QUERY PLAN ${imageQuery}`)
+    .all(fixture.runId, 0, 1024 * 1024);
+  expect(JSON.stringify(plan)).toContain("SEARCH image USING INDEX visonaut_images_run");
+  expect(JSON.stringify(plan)).not.toMatch(/SCAN image\b/u);
+});
 
 it("exports 35,820 hydrated captures and 10,580 distinct image payloads as a complete verified TAR", async () => {
   using fixture = await seedExport({ captureCount: 35_820, imageCount: 10_580 });
