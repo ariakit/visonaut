@@ -318,6 +318,65 @@ it("keeps tolerated observed bytes in the full manifest and uploads only unique 
   console.info(`LOCAL_COMPARISON_FIXTURE ${JSON.stringify(counts)}`);
 });
 
+it.each(["current", "inherited", "legacy long"] as const)(
+  "submits accepted reference captures with %s service IDs",
+  async (source) => {
+    const local = await localFixture();
+    const runId = "dd4cff79-0dd7-4b09-a882-f0524e648206";
+    // These ID forms come from workflow materialization and shard inheritance.
+    const reference = await Promise.all(
+      local.reference.map(async (entry, ordinal) => {
+        const captureId = `${runId}:${await digestJson([entry.itemKey, entry.variantKey])}`;
+        return {
+          ...entry,
+          captureId:
+            source === "inherited"
+              ? `${runId}:inherited:0:${ordinal}`
+              : source === "legacy long"
+                ? `${`${runId}:`.repeat(20)}${captureId}`
+                : captureId,
+        };
+      }),
+    );
+    const service = await mockService(local, { reference, pageSize: 2 });
+    const result = await execute(local.environment);
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    expect(service.declarations[0]?.localComparison?.reference.inventoryDigest).toBe(
+      await digestJson(reference),
+    );
+    expect(service.downloads).toEqual(["image-tolerated", "image-changed"]);
+    expect(service.uploads).toHaveLength(2);
+  },
+);
+
+it("refuses invalid opaque reference capture IDs before upload", async () => {
+  for (const captureId of ["", "invalid\u0000id", "invalid\u0080id", "x".repeat(4097)]) {
+    const local = await localFixture();
+    const reference = local.reference.map((entry) => ({ ...entry, captureId }));
+    const service = await mockService(local, { reference });
+    const result = await execute(local.environment);
+    expect(result.code).toBe(1);
+    expect(service.downloads).toHaveLength(0);
+    expect(service.declarations).toHaveLength(0);
+    expect(service.uploads).toHaveLength(0);
+    expect(result.error).not.toContain("secret");
+  }
+});
+
+it.each(["itemKey", "variantKey"] as const)(
+  "keeps reference %s validation strict",
+  async (field) => {
+    const local = await localFixture();
+    const reference = local.reference.map((entry) => ({ ...entry, [field]: "invalid:key" }));
+    const service = await mockService(local, { reference });
+    expect((await execute(local.environment)).code).toBe(1);
+    expect(service.downloads).toHaveLength(0);
+    expect(service.declarations).toHaveLength(0);
+    expect(service.uploads).toHaveLength(0);
+  },
+);
+
 it.each(["mode", "corruptReference", "incomplete", "arbitraryPath", "stale"] as const)(
   "fails clearly before upload for %s",
   async (failure) => {
