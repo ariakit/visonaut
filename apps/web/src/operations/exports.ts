@@ -9,6 +9,7 @@ import {
 import { readBounded } from "@visonaut/compare";
 import {
   createExportWriter,
+  maximumExportPageRows,
   maximumExportRootBytes,
   parseExportPage,
   readExportPage,
@@ -42,6 +43,7 @@ interface ExportRowsParams {
   bindings: SqlValue[];
   table?: string;
   columns?: string[];
+  maximumRows?: number;
 }
 
 async function* rows<T = Record<string, unknown>>({
@@ -50,6 +52,7 @@ async function* rows<T = Record<string, unknown>>({
   bindings,
   table,
   columns,
+  maximumRows = 100,
 }: ExportRowsParams) {
   const names =
     columns ??
@@ -65,7 +68,7 @@ async function* rows<T = Record<string, unknown>>({
     ])
     .join(",");
   // Measure inside SQLite so a page of individually large rows never fills the isolate.
-  const query = `WITH source AS (${sql} LIMIT 100 OFFSET ?),
+  const query = `WITH source AS (${sql} LIMIT ${maximumRows} OFFSET ?),
     encoded AS (SELECT ROW_NUMBER() OVER() AS ordinal,json_object(${fields}) AS value FROM source record),
     measured AS (SELECT *,SUM(length(CAST(value AS BLOB))) OVER(ORDER BY ordinal) AS total FROM encoded)
     SELECT value FROM measured WHERE total<=? OR ordinal=1 ORDER BY ordinal`;
@@ -188,6 +191,8 @@ export async function createRunExport(
         sql: query,
         bindings: [run.id],
         table: tables[name],
+        // Identity history spans the project and needs no profile hydration.
+        maximumRows: name === "identityHistory" ? maximumExportPageRows : 100,
       })) {
         if (name === "captures" || name === "referenceCaptures") {
           const captures = page.map((row) => {
