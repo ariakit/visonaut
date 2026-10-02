@@ -135,8 +135,9 @@ export async function createRunExport(
     }
     const queries: Record<string, string> = {
       shards: "SELECT * FROM visonaut_shards WHERE run_id=? ORDER BY key",
+      // Use the run and image indexes before applying the export page limit.
       images:
-        "SELECT DISTINCT image.* FROM visonaut_images image JOIN visonaut_runs exported ON exported.id=? WHERE image.run_id=exported.id OR EXISTS(SELECT 1 FROM visonaut_captures capture WHERE capture.run_id=exported.id AND capture.image_id=image.id) ORDER BY image.id",
+        "SELECT DISTINCT image.* FROM visonaut_images image JOIN visonaut_runs exported ON exported.id=? WHERE image.run_id=exported.id OR image.id IN(SELECT capture.image_id FROM visonaut_captures capture WHERE capture.run_id=exported.id) ORDER BY image.id",
       captures: "SELECT * FROM visonaut_captures WHERE run_id=? ORDER BY id",
       comparisons: "SELECT * FROM visonaut_comparisons WHERE run_id=? ORDER BY id",
       comparisonRows:
