@@ -84,6 +84,14 @@ On 2026-10-02, the maintainer selected the 10-second decision cache for faster r
 
 [PR #186](https://github.com/ariakit/visonaut/pull/186) implements the approved cache. See the [security implementation](../packages/security/README.md) and [implementation checkpoint](simplification-implementation.md#current-handoff-checkpoint) for its source and deployment proof. The later durable queue belongs to separate PR #190. No measured production latency improvement is claimed.
 
+## Approved PR baseline independence
+
+On 2026-10-02, the maintainer approved concurrent PRs that use the same earlier target baseline. A newer main baseline alone must not invalidate an otherwise valid PR result or require the PR to compare again. This supersedes the earlier requirement to recompare an active PR solely because main advances. The tested commit, workflow attempt, complete capture evidence, comparison identity, and approval rules still apply. A changed PR source head or a new signed attempt can replace the earlier run.
+
+The required GitHub result must remain available on the unchanged PR head when GitHub regenerates its temporary merge commit. The review keeps the original tested commit as its capture identity. A passing check on an obsolete merge commit alone does not meet this requirement.
+
+For example, PRs A and B compare against baseline X. A merges and promotes baseline Y. B's valid result against X remains valid. After B merges, its complete main run compares the actual merged result against Y. Approval reuse still needs exact identity and eligible lineage. Any remaining change needs valid acceptance before main can promote the full snapshot.
+
 ## Native Plan and Submit
 
 Pin the exact Git blobs of `.github/workflows/ci.yml` and `.github/workflows/app.yml`. The native CI job is `Plan`. Its last step runs the following command only after successful `Plan CI` computes `app=false`:
