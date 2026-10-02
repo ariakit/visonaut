@@ -1,0 +1,23 @@
+diff --git a/contributing.md b/contributing.md
+--- a/contributing.md
++++ b/contributing.md
+@@ -584,4 +584,18 @@
+ If Submit fails, inspect its logs. You can rerun Submit if the tested commit is unchanged and both capture artifacts are still available. If a required capture artifact is missing or expired, select **Re-run all jobs** for the CI workflow. This runs both capture jobs and Submit again. Rerunning only Submit cannot recreate missing capture artifacts.
+-
++
++### Full visual rerun trial
++
++Use this procedure only for a separately approved D04 trial. For the full-attempt arm, open the existing CI run and select **Re-run all jobs**. Keep the tested commit, pinned workflows, rendering profiles, and capture inventory the same as the partial-rerun arm. Check that native Plan, both capture shards, and Submit succeed in the new attempt.
++
++This action also repeats regular CI checks, both app builds, and the existing preview deployment. It needs a separate instruction before execution. It does not provide a capture-only rerun or change the normal support for partial reruns.
++
++After a failed or cancelled capture shard, compare the existing partial-rerun action with **Re-run all jobs**. If a required artifact has expired, use **Re-run all jobs** in both arms. Do not delete artifacts or wait for natural expiry to create a test case.
++
++A Submit-only rerun remains supported when the tested commit is unchanged and every required source artifact is available. Record it as partial reuse. To measure a new complete attempt in the trial, use **Re-run all jobs**.
++
++Record job and step durations, Linux and macOS runner minutes separately, time until Gate and the separate Visonaut check finish, cache state, capture artifact sizes and ages, source attempts, inventory and artifact digests, and the exact user actions. Mark unavailable values with a reason. Compare only matching inventories and conditions. No acceptable cost threshold has been set.
++
++Keep the trial results separate from a support decision. A later explicit maintainer choice is required before partial-rerun support can change.
++
+ <div align="right">
+     <a href="#advanced-tutorial">&uarr; back to top</a></b>

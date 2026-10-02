@@ -58,6 +58,8 @@ An issue #204 D-number is separate from a revision 9 D-number. The replacement s
 
 W03 and W10 can collect evidence after W01. W04/W05 require W02. W06 needs W02 and W03; W07 needs W03 and W06; W08 needs W03 and W05-W07; W09 needs W02 and W06-W08. Unknown required facts hold dependent removal. Keep independent selected work moving. Cloud mutations, deployments, package publication, consumer changes, GitHub rules, and issue updates each need a separate instruction and one external owner. The remote inspection runner creates a provider proxy during setup, so its setup is an external write. Hosted recovery also needs separate resource/write authorization.
 
+The [W10 measurement record](evidence/issue-204-ci/README.md) retains dated D04/D11 observations and the prepared full-rerun trial. D11 removes only Browser's preceding full build after the source fixture passed with all app/package `dist` output absent. Keep every other build and setup step, required job name, dependency and fail-closed Gate. D04's paired trials remain on hold for separate consumer actions and verified matching inventory evidence. Partial-rerun support remains, and no measured CI improvement or acceptable cost threshold is claimed.
+
 ## Request failure references
 
 D13/W04 now passes the outer request UUID and start time to API failure handling. An unexpected API or outer HTTP failure returns HTTP 503 with `error.reference`, the existing private headers, and `Retry-After: 1`. The reference matches exactly one `operation-failed` log with fixed operation, code, correlation ID, and elapsed-time fields. No request body, token, URL, SQL, raw exception, or private label is added to that log.

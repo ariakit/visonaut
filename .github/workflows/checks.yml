@@ -120,7 +120,6 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chrome chromium
-      - run: pnpm build
       - run: pnpm test:browser
 
   release-guards:
