@@ -3,12 +3,7 @@ import { createAuthClient } from "better-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { Badge, BadgeLabel } from "../components/ariakit/components/badge.ariakit.react.tsx";
-import {
-  Tabs,
-  TabList,
-  Tab,
-  TabPanel,
-} from "../components/ariakit/components/tabs.ariakit.react.tsx";
+import { Nav, NavLink } from "../components/ariakit/components/nav.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
@@ -26,7 +21,12 @@ import {
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
 import "../review.css";
 
-export const Route = createFileRoute("/")({ component: Index });
+export const Route = createFileRoute("/")({
+  validateSearch: (search: Record<string, unknown>): { view?: "history" } => ({
+    view: search.view === "history" ? "history" : undefined,
+  }),
+  component: Index,
+});
 
 interface DashboardRun {
   id: string;
@@ -134,6 +134,7 @@ function runDate(value: string | number) {
 }
 
 function Index() {
+  const { view } = Route.useSearch();
   const [state, setState] = useState<DashboardState>({ status: "loading" });
   const [reload, setReload] = useState(0);
   const [action, setAction] = useState<"sign-in" | "sign-out" | null>(null);
@@ -328,20 +329,35 @@ function Index() {
                   </Button>
                 </div>
               </Frame>
-              <Tabs defaultSelectedId="review-work">
-                <TabList aria-label="Run views">
-                  <Tab id="review-work">Needs attention ({state.actionable.length})</Tab>
-                  <Tab id="run-history">History</Tab>
-                </TabList>
-                <TabPanel tabId="review-work">
-                  <RunTable
-                    runs={state.actionable}
-                    title="Review work"
-                    empty="No review work"
-                    description="All captures that need review or recovery appear here."
-                  />
-                </TabPanel>
-                <TabPanel tabId="run-history">
+              <Nav
+                $layout="horizontal"
+                $rounded="none"
+                $forceRounded
+                $p={0}
+                $gap={1}
+                glider={{ $kind: "bar", $barOffset: "frame" }}
+                aria-label="Run views"
+                className="border-b border-(--ak-edge) mb-4"
+              >
+                <NavLink
+                  $kind="flat"
+                  $selectedPush={false}
+                  aria-current={view !== "history" ? "page" : undefined}
+                  render={<Link to="/" search={{}} />}
+                >
+                  Needs attention ({state.actionable.length})
+                </NavLink>
+                <NavLink
+                  $kind="flat"
+                  $selectedPush={false}
+                  aria-current={view === "history" ? "page" : undefined}
+                  render={<Link to="/" search={{ view: "history" }} />}
+                >
+                  History
+                </NavLink>
+              </Nav>
+              {view === "history" ? (
+                <>
                   <p className="text-xs ak-ink-60 my-3">
                     Latest 100 runs. Older work that needs attention stays in the review list.
                   </p>
@@ -351,8 +367,15 @@ function Index() {
                     empty="No runs yet"
                     description="The first complete capture run will appear here."
                   />
-                </TabPanel>
-              </Tabs>
+                </>
+              ) : (
+                <RunTable
+                  runs={state.actionable}
+                  title="Review work"
+                  empty="No review work"
+                  description="All captures that need review or recovery appear here."
+                />
+              )}
             </>
           )}
         </ShellMainBody>

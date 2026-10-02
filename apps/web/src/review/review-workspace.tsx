@@ -1,4 +1,5 @@
 import * as ak from "@ariakit/react";
+import { Columns2Icon, ScanIcon, ImageIcon, ImageMinusIcon, DiffIcon } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
@@ -6,6 +7,7 @@ import { ControlButton as Button } from "../components/control-button.tsx";
 import {
   Button as FlatButton,
   ButtonGroup,
+  ButtonGlider,
   ButtonSlot,
 } from "../components/ariakit/components/button.ariakit.react.tsx";
 import {
@@ -25,12 +27,7 @@ import {
   Disclosure,
   DisclosureButton,
 } from "../components/ariakit/components/disclosure.ariakit.react.tsx";
-import {
-  Tabs,
-  Tab,
-  TabList,
-  TabPanel,
-} from "../components/ariakit/components/tabs.ariakit.react.tsx";
+import { Nav, NavLink } from "../components/ariakit/components/nav.ariakit.react.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import { ItemList } from "./item-list.tsx";
 import { ReviewCommandError } from "./model.ts";
@@ -90,22 +87,32 @@ function excludesShortcuts(event: globalThis.KeyboardEvent) {
   if (target.nodeType !== 1) return true;
   const element = target as HTMLElement;
   return !!element.closest(
-    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"]',
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"], .review-variants',
   );
 }
 
-function followFocusedTab(event: KeyboardEvent<HTMLElement>) {
+function followVariantLink(event: KeyboardEvent<HTMLElement>) {
   if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-  const list = event.currentTarget;
-  const before = list.ownerDocument.activeElement;
-  // Ariakit moves focus first. Follow that tab's existing route afterwards.
-  requestAnimationFrame(() => {
-    const next = list.ownerDocument.activeElement;
-    if (next === before || !next || !list.contains(next)) return;
-    if (next.tagName !== "A" && next.tagName !== "BUTTON") return;
-    (next as HTMLElement).click();
-  });
+  const links = Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>("a"));
+  const index = links.findIndex((link) => link === event.target);
+  if (index < 0) return;
+  const nextIndex =
+    event.key === "ArrowLeft"
+      ? index - 1
+      : event.key === "ArrowRight"
+        ? index + 1
+        : event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? links.length - 1
+            : undefined;
+  if (nextIndex === undefined) return;
+  event.preventDefault();
+  const next = links[nextIndex];
+  if (!next) return;
+  next.focus({ preventScroll: true });
+  next.scrollIntoView({ block: "nearest", inline: "nearest" });
+  next.click();
 }
 
 function initialSelection(model: ReviewModel): ReviewSelection {
@@ -449,6 +456,28 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       status: "saving",
       message: `Saving ${command.targets.length} variant${command.targets.length === 1 ? "" : "s"}…`,
     });
+    const optimisticModel = {
+      ...model,
+      items: model.items.map((item) => ({
+        ...item,
+        variants: item.variants.map((variant) =>
+          command.targets.some((target) => target.id === variant.id)
+            ? {
+                ...variant,
+                verdict: command.verdict,
+                source: "human" as const,
+                reviewer: undefined,
+              }
+            : variant,
+        ),
+      })),
+    };
+    setModel(optimisticModel);
+    const next = nextPending(optimisticModel.items, command.selection);
+    if (next) {
+      select(next);
+    }
+    focusWorkspace();
     try {
       const result = await commands.save(command);
       const nextModel = applySavedReview(model, command, result);
@@ -465,16 +494,14 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           ? "This acceptance is already saved."
           : `${command.targets.length} variant${command.targets.length === 1 ? "" : "s"} ${command.verdict}. Saved.`,
       });
-      if (!result.noop) {
-        const next = nextPending(nextModel.items, command.selection);
-        if (next) {
-          select(next);
-        } else {
-          setAnnouncement("Review complete. No variants need review.");
-        }
+      if (result.noop) {
+        select(command.selection);
+      } else if (!nextPending(nextModel.items, command.selection)) {
+        setAnnouncement("Review complete. No variants need review.");
       }
-      focusWorkspace();
     } catch (error) {
+      setModel(model);
+      select(command.selection);
       reportError(error, command);
     } finally {
       saving.current = false;
@@ -674,7 +701,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       $layer="canvas"
     >
       <ShellHeader
-        $height="lg"
+        $height="sm"
         $stackCenter
         start={
           <a href="/" className="text-sm font-semibold">
@@ -699,11 +726,14 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         className="review-sidebar max-md:w-full! max-md:[&>.shell-sidebar-panel]:w-full! max-md:[&>.shell-sidebar-panel]:relative!"
         aria-label="Review navigation"
       >
-        <ShellSidebarHeader className="flex justify-between text-xs" $p={3}>
+        <ShellSidebarHeader className="flex justify-between text-xs min-h-10!" $p={3}>
           <strong>Items</strong>
           <span>{model.items.length}</span>
         </ShellSidebarHeader>
-        <ShellSidebarBody $p={2} className="review-sidebar-body">
+        <ShellSidebarBody
+          $p={2}
+          className="review-sidebar-body flex flex-col overflow-hidden! max-md:h-64 max-md:flex-none"
+        >
           <ItemList
             items={model.items}
             selectedIndex={item ? model.items.indexOf(item) : -1}
@@ -717,27 +747,19 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       </ShellSidebar>
       <ShellMain $maxWidth="100%" $p={0} className="review-main max-md:block!">
         <ShellMainHeader className="max-md:block!" $p={0}>
-          <Frame $p={3} className="flex flex-wrap items-center justify-between gap-3">
-            <div className="review-result-heading min-w-0">
-              <h2 className="text-sm font-semibold wrap-anywhere">
+          <Frame $p={3} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="review-result-heading min-w-0 flex-1 basis-48">
+              <h2 className="text-sm font-semibold truncate" title={item?.name}>
                 {item?.name ?? "Visual review"}
               </h2>
-              {variant && (
-                <p className="text-xs ak-ink-60 wrap-anywhere">
-                  {variant.label} · {verdictLabel(variant)}
-                  {variant.reviewer ? ` · ${variant.reviewer}` : ""}
-                  {variant.kind === "added"
-                    ? " · New image"
-                    : variant.kind === "removed"
-                      ? " · Removed"
-                      : ""}
-                </p>
-              )}
-              <p className="text-xs ak-ink-60">
-                {pending} of {total} need review · {runStatusLabel(model.run.status)}
+              <p className="text-xs ak-ink-60 flex flex-wrap gap-x-3">
+                <span>
+                  {pending} of {total} need review
+                </span>
+                {variant && <span>{verdictLabel(variant)}</span>}
               </p>
             </div>
-            <div className="review-actions flex flex-wrap gap-2 items-center">
+            <div className="review-actions flex flex-wrap gap-1 items-center text-xs">
               <Button
                 disabled={
                   !ready ||
@@ -771,34 +793,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 Undo <ButtonSlot $kind="shortcut">⌘/Ctrl Z</ButtonSlot>
               </Button>
             </div>
-            <div
-              className="review-save-state basis-full flex flex-wrap items-center gap-2 text-xs ak-ink-60"
-              role={
-                saveState.status === "error" || saveState.status === "conflict" ? "alert" : "status"
-              }
-            >
-              {saveState.message || "Review commands are saved after server confirmation."}
-              {!model.archived && saveState.status === "error" && saveState.failed && (
-                <Button
-                  className="text-xs"
-                  onClick={() => {
-                    if (saveState.failed) void save(saveState.failed);
-                  }}
-                >
-                  Retry same command
-                </Button>
-              )}
-              {!model.archived && saveState.status === "error" && saveState.failedUndo && (
-                <Button className="text-xs" onClick={() => void undo(saveState.failedUndo)}>
-                  Retry Undo
-                </Button>
-              )}
-              {(saveState.status === "conflict" || saveState.status === "error") && (
-                <Button className="text-xs" onClick={() => void refresh()}>
-                  Refresh current state
-                </Button>
-              )}
-            </div>
           </Frame>
         </ShellMainHeader>
         <ShellMainBody className="max-md:block!">
@@ -826,286 +820,344 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           )}
           {item && variant ? (
             <>
-              <Tabs selectedId={variant.id} selectOnMove={false}>
-                <TabList
-                  aria-label="Variants"
-                  className="overflow-x-auto max-w-full"
-                  onKeyDownCapture={(event) => followFocusedTab(event)}
-                >
-                  {item.variants.map((entry, index) => (
-                    <Tab
-                      key={entry.id}
-                      id={entry.id}
-                      className="review-variant"
-                      render={
-                        route ? (
-                          <Link
-                            to="/runs/$runId"
-                            params={{ runId: route.runId }}
-                            search={{
-                              comparison: route.comparisonId,
-                              item: item.key,
-                              variant: entry.key,
-                            }}
-                          />
-                        ) : undefined
+              <Nav
+                $layout="horizontal"
+                $rounded="none"
+                $forceRounded
+                $p={0}
+                $gap={0}
+                glider={{ $kind: "bar", $barOffset: "frame" }}
+                aria-label="Variants"
+                className="review-variants max-w-full border-b border-(--ak-edge)"
+                onKeyDown={followVariantLink}
+              >
+                {item.variants.map((entry, index) => (
+                  <NavLink
+                    $kind="flat"
+                    $selectedPush={false}
+                    $p={2}
+                    aria-current={entry.id === variant.id ? "page" : undefined}
+                    href={route ? undefined : `#variant-${encodeURIComponent(entry.key)}`}
+                    key={entry.id}
+                    id={entry.id}
+                    className="review-variant max-w-56 min-w-0 text-xs"
+                    title={`${entry.label} · ${verdictLabel(entry)}`}
+                    render={
+                      route ? (
+                        <Link
+                          to="/runs/$runId"
+                          params={{ runId: route.runId }}
+                          search={{
+                            comparison: route.comparisonId,
+                            item: item.key,
+                            variant: entry.key,
+                          }}
+                        />
+                      ) : undefined
+                    }
+                    onClick={(event) => {
+                      if (
+                        event.button !== 0 ||
+                        event.altKey ||
+                        event.ctrlKey ||
+                        event.metaKey ||
+                        event.shiftKey
+                      )
+                        return;
+                      remembered.current.set(item.key, entry.key);
+                      if (!route) {
+                        event.preventDefault();
+                        selectVariant(index);
                       }
-                      onClick={(event) => {
-                        if (
-                          event.button !== 0 ||
-                          event.altKey ||
-                          event.ctrlKey ||
-                          event.metaKey ||
-                          event.shiftKey
-                        )
-                          return;
-                        remembered.current.set(item.key, entry.key);
-                        if (!route) selectVariant(index);
-                      }}
-                      aria-label={`${index + 1}. ${entry.label}. ${verdictLabel(entry)}`}
-                    >
-                      <VariantSummary variant={entry} index={index} />
-                      <small className="text-xs ak-ink-60">{verdictLabel(entry)}</small>
-                    </Tab>
-                  ))}
-                </TabList>
-                <TabPanel single className="review-result" tabIndex={-1}>
-                  {!model.archived &&
-                    (variant.approveDisabledReason || variant.rejectDisabledReason) && (
+                    }}
+                    aria-label={`${index + 1}. ${entry.label}. ${verdictLabel(entry)}`}
+                  >
+                    <VariantSummary variant={entry} index={index} />
+                  </NavLink>
+                ))}
+              </Nav>
+              <section className="review-result" aria-label="Selected variant" tabIndex={-1}>
+                {!model.archived &&
+                  (variant.approveDisabledReason || variant.rejectDisabledReason) && (
+                    <p className="text-xs ak-ink-60 px-3 pb-3">
+                      {variant.rejectDisabledReason ?? variant.approveDisabledReason}
+                    </p>
+                  )}
+                {model.evidenceState === "summary" ? (
+                  <Frame $p={4} $layer $border>
+                    <h3 className="text-sm font-semibold">
+                      {model.imagesExpired ? "Image history expired" : "Closed review summary"}
+                    </h3>
+                    <p className="text-sm ak-ink-60 mt-2">
+                      Review results and capture identity remain available. This view does not
+                      contain image bytes.
+                    </p>
+                  </Frame>
+                ) : (
+                  <>
+                    <div className="review-view-controls flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+                      <ButtonGroup
+                        $p={0.5}
+                        $gap="xs"
+                        $rounded="md"
+                        $forceRounded
+                        $layer
+                        className="min-w-0 max-w-full overflow-x-auto"
+                        aria-label="Image view"
+                      >
+                        <FlatButton
+                          className="text-xs whitespace-nowrap"
+                          $p={1.5}
+                          $rounded="md"
+                          aria-pressed={effectiveMode === "side"}
+                          $lightnessOffset={effectiveMode === "side"}
+                          onClick={() => setView("side")}
+                        >
+                          <ButtonSlot aria-hidden>
+                            <Columns2Icon />
+                          </ButtonSlot>
+                          Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
+                        </FlatButton>
+                        <FlatButton
+                          className="text-xs whitespace-nowrap"
+                          $p={1.5}
+                          $rounded="md"
+                          aria-pressed={effectiveMode === "diff"}
+                          $lightnessOffset={effectiveMode === "diff"}
+                          aria-disabled={!variant.reference || !variant.candidate}
+                          onClick={() => setView("diff")}
+                        >
+                          <ButtonSlot aria-hidden>
+                            <DiffIcon />
+                          </ButtonSlot>
+                          Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
+                        </FlatButton>
+                        <FlatButton
+                          className="text-xs whitespace-nowrap"
+                          $p={1.5}
+                          $rounded="md"
+                          aria-pressed={effectiveMode === "new"}
+                          $lightnessOffset={effectiveMode === "new"}
+                          onClick={() => setView("new")}
+                        >
+                          <ButtonSlot aria-hidden>
+                            <ImageIcon />
+                          </ButtonSlot>
+                          New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
+                        </FlatButton>
+                        <FlatButton
+                          className="text-xs whitespace-nowrap"
+                          $p={1.5}
+                          $rounded="md"
+                          aria-pressed={effectiveMode === "original"}
+                          $lightnessOffset={effectiveMode === "original"}
+                          onClick={() => setView("original")}
+                        >
+                          <ButtonSlot aria-hidden>
+                            <ImageMinusIcon />
+                          </ButtonSlot>
+                          Original only <ButtonSlot $kind="shortcut">G</ButtonSlot>
+                        </FlatButton>
+                        <ButtonGlider $rounded="md" />
+                      </ButtonGroup>
+                      <ButtonGroup
+                        $p={0.5}
+                        $gap="xs"
+                        $rounded="md"
+                        $forceRounded
+                        $border
+                        aria-label="Image zoom"
+                      >
+                        {(["fit", 1, 2] as const).map((value) => (
+                          <FlatButton
+                            key={value}
+                            className="text-xs"
+                            $p={1.5}
+                            $rounded="md"
+                            aria-pressed={zoom === value}
+                            $lightnessOffset={zoom === value}
+                            onClick={() => setZoom(value)}
+                          >
+                            {value === "fit" && (
+                              <ButtonSlot aria-hidden>
+                                <ScanIcon />
+                              </ButtonSlot>
+                            )}
+                            {value === "fit" ? "Fit" : `${value * 100}%`}
+                          </FlatButton>
+                        ))}
+                        <ButtonGlider $rounded="md" />
+                      </ButtonGroup>
+                    </div>
+                    {(!variant.reference || !variant.candidate) && (
                       <p className="text-xs ak-ink-60 px-3 pb-3">
-                        {variant.rejectDisabledReason ?? variant.approveDisabledReason}
+                        {variant.candidateOmitted
+                          ? "Matched locally. The new image was not uploaded."
+                          : "Pixel diff requires both a reference and a new image."}
                       </p>
                     )}
-                  {model.evidenceState === "summary" ? (
-                    <Frame $p={4} $layer $border>
-                      <h3 className="text-sm font-semibold">
-                        {model.imagesExpired ? "Image history expired" : "Closed review summary"}
-                      </h3>
-                      <p className="text-sm ak-ink-60 mt-2">
-                        Review results and capture identity remain available. This view does not
-                        contain image bytes.
-                      </p>
-                    </Frame>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap justify-between gap-3 p-3">
-                        <ButtonGroup
-                          $p={0}
-                          $gap="none"
-                          className="min-w-0 max-w-full overflow-x-auto"
-                          aria-label="Image view"
+                    <Frame
+                      $layer="canvas"
+                      $border
+                      $p={0}
+                      $rounded="none"
+                      $forceRounded
+                      className="review-evidence"
+                      data-evidence={terminalComparison ? "terminal" : evidence.status}
+                    >
+                      {evidence.status === "loading" && !terminalComparison && (
+                        <div
+                          className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
+                          role="status"
                         >
-                          <FlatButton
-                            className="text-xs"
-                            aria-pressed={effectiveMode === "side"}
-                            $lightnessOffset={effectiveMode === "side"}
-                            onClick={() => setView("side")}
-                          >
-                            Side by side <ButtonSlot $kind="shortcut">S</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            className="text-xs"
-                            aria-pressed={effectiveMode === "diff"}
-                            $lightnessOffset={effectiveMode === "diff"}
-                            aria-disabled={!variant.reference || !variant.candidate}
-                            onClick={() => setView("diff")}
-                          >
-                            Pixel diff <ButtonSlot $kind="shortcut">D</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            className="text-xs"
-                            aria-pressed={effectiveMode === "new"}
-                            $lightnessOffset={effectiveMode === "new"}
-                            onClick={() => setView("new")}
-                          >
-                            New only <ButtonSlot $kind="shortcut">F</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            className="text-xs"
-                            aria-pressed={effectiveMode === "original"}
-                            $lightnessOffset={effectiveMode === "original"}
-                            onClick={() => setView("original")}
-                          >
-                            Original only <ButtonSlot $kind="shortcut">G</ButtonSlot>
-                          </FlatButton>
-                        </ButtonGroup>
-                        <ButtonGroup $p={0} $gap="none" aria-label="Image zoom">
-                          {(["fit", 1, 2] as const).map((value) => (
-                            <FlatButton
-                              key={value}
-                              className="text-xs"
-                              aria-pressed={zoom === value}
-                              $lightnessOffset={zoom === value}
-                              onClick={() => setZoom(value)}
-                            >
-                              {value === "fit" ? "Fit" : `${value * 100}%`}
-                            </FlatButton>
-                          ))}
-                        </ButtonGroup>
-                      </div>
-                      {(!variant.reference || !variant.candidate) && (
-                        <p className="text-xs ak-ink-60 px-3 pb-3">
-                          {variant.candidateOmitted
-                            ? "Matched locally. The new image was not uploaded."
-                            : "Pixel diff requires both a reference and a new image."}
-                        </p>
+                          {variant.kind === "pending"
+                            ? "Comparison is still running…"
+                            : "Loading this comparison’s images…"}
+                        </div>
                       )}
-                      <Frame
-                        $layer="canvas"
-                        $border
-                        $p={0}
-                        className="review-evidence"
-                        data-evidence={terminalComparison ? "terminal" : evidence.status}
-                      >
-                        {evidence.status === "loading" && !terminalComparison && (
-                          <div
-                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                            role="status"
-                          >
-                            {variant.kind === "pending"
-                              ? "Comparison is still running…"
-                              : "Loading this comparison’s images…"}
-                          </div>
-                        )}
-                        {(terminalComparison || evidence.status === "error") && (
-                          <div
-                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                            role={terminalComparison ? "status" : "alert"}
-                          >
-                            <strong>
-                              {terminalComparison
-                                ? model.run.status === "superseded"
-                                  ? "Comparison superseded"
-                                  : model.run.status === "needs-recompare"
-                                    ? "Comparison needs to be rerun"
-                                    : "Comparison failed"
-                                : retryImages
-                                  ? "Image evidence unavailable"
-                                  : "Comparison evidence incomplete"}
-                            </strong>
-                            <p>
-                              {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
-                            </p>
-                            {terminalComparison && variant.error && <p>{variant.error}</p>}
-                            {retryImages && (
-                              <Button
-                                className="text-xs"
-                                disabled={busy}
-                                onClick={() => setRetry((value) => value + 1)}
-                              >
-                                Retry images
-                              </Button>
-                            )}
-                            {recompareEvidence && commands.recompare && recompareAllowed && (
-                              <Button
-                                className="text-xs"
-                                disabled={
-                                  busy || awaitingComparison || saveState.status === "error"
-                                }
-                                onClick={() => void recompare()}
-                              >
-                                Recompare now
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                        <ScreenshotViewer
-                          variant={variant}
-                          mode={effectiveMode}
-                          zoom={zoom}
-                          ready={evidence.status === "ready"}
-                          images={evidence.images}
-                          identity={evidence.identity}
-                          report={evidence.report}
-                        />
-                      </Frame>
-                    </>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2 p-3">
-                    <span>
-                      {targets.length} changed variant{targets.length === 1 ? "" : "s"} in this item
-                    </span>
-                    <Button
-                      className="text-xs"
-                      disabled={!ready || busy || saveState.status === "error" || !targets.length}
-                      onClick={() => review("approved", true)}
-                    >
-                      Approve whole item ({targets.length}){" "}
-                      <ButtonSlot $kind="shortcut">Shift A</ButtonSlot>
-                    </Button>
-                    <Button
-                      className="text-xs"
-                      disabled={!ready || busy || saveState.status === "error" || !targets.length}
-                      onClick={() => review("rejected", true)}
-                    >
-                      Reject whole item ({targets.length}){" "}
-                      <ButtonSlot $kind="shortcut">Shift X</ButtonSlot>
-                    </Button>
-                  </div>
-                  <Disclosure
-                    className="review-metadata"
-                    $p={3}
-                    button={<DisclosureButton>Details</DisclosureButton>}
-                  >
-                    <p className="review-run-identity text-xs">
-                      Run {model.run.id} · Attempt {model.run.attempt} · Commit{" "}
-                      <code>{model.run.testedSha.slice(0, 12)}</code> ·{" "}
-                      <span>Comparison {model.comparisonRevision}</span>
-                    </p>
-                    <nav aria-label="Comparison history" className="flex flex-wrap gap-3 text-xs">
-                      <a href={`/runs/${encodeURIComponent(model.run.id)}`}>Original comparison</a>
-                      {model.historicalComparisons?.map((comparison) => (
-                        <a
-                          key={comparison.id}
-                          href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
-                          aria-current={comparison.id === model.comparisonId ? "page" : undefined}
+                      {(terminalComparison || evidence.status === "error") && (
+                        <div
+                          className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
+                          role={terminalComparison ? "status" : "alert"}
                         >
-                          Historical comparison {comparison.ordinal} ·{" "}
-                          {comparison.state === "ready"
-                            ? "Complete"
-                            : comparison.state === "invalidated"
-                              ? "Failed"
-                              : "Comparing"}
-                        </a>
-                      ))}
-                    </nav>
-                    <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
-                      <dt>Changed pixels</dt>
-                      <dd>
-                        {variant.changedPixels?.toLocaleString() ?? "—"}
-                        {variant.ratio != null ? ` (${(variant.ratio * 100).toFixed(4)}%)` : ""}
-                      </dd>
-                      <dt>Dimensions</dt>
-                      <dd>
-                        {variant.reference
-                          ? `${variant.reference.width} × ${variant.reference.height}`
-                          : "Absent"}{" "}
-                        →{" "}
-                        {variant.candidate
-                          ? `${variant.candidate.width} × ${variant.candidate.height}`
-                          : "Absent"}
-                      </dd>
-                      <dt>Engine / codec</dt>
-                      <dd>
-                        {variant.engine ?? "—"} / {variant.codec ?? "—"}
-                      </dd>
-                      <dt>Policy / threshold</dt>
-                      <dd>
-                        {variant.policy ?? "—"} / {variant.threshold ?? "—"}
-                      </dd>
-                      <dt>Capture profiles</dt>
-                      <dd>
-                        {variant.referenceProfile ?? "Absent"} →{" "}
-                        {variant.candidateProfile ?? "Absent"}
-                      </dd>
-                      <dt>Comparison</dt>
-                      <dd>
-                        {model.comparisonId} · {variant.id} · decision revision {variant.revision}
-                      </dd>
-                    </dl>
-                  </Disclosure>
-                </TabPanel>
-              </Tabs>
+                          <strong>
+                            {terminalComparison
+                              ? model.run.status === "superseded"
+                                ? "Comparison superseded"
+                                : model.run.status === "needs-recompare"
+                                  ? "Comparison needs to be rerun"
+                                  : "Comparison failed"
+                              : retryImages
+                                ? "Image evidence unavailable"
+                                : "Comparison evidence incomplete"}
+                          </strong>
+                          <p>
+                            {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
+                          </p>
+                          {terminalComparison && variant.error && <p>{variant.error}</p>}
+                          {retryImages && (
+                            <Button
+                              className="text-xs"
+                              disabled={busy}
+                              onClick={() => setRetry((value) => value + 1)}
+                            >
+                              Retry images
+                            </Button>
+                          )}
+                          {recompareEvidence && commands.recompare && recompareAllowed && (
+                            <Button
+                              className="text-xs"
+                              disabled={busy || awaitingComparison || saveState.status === "error"}
+                              onClick={() => void recompare()}
+                            >
+                              Recompare now
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                      <ScreenshotViewer
+                        variant={variant}
+                        mode={effectiveMode}
+                        zoom={zoom}
+                        ready={evidence.status === "ready"}
+                        images={evidence.images}
+                        identity={evidence.identity}
+                        report={evidence.report}
+                      />
+                    </Frame>
+                  </>
+                )}
+                <div className="flex flex-wrap items-center gap-2 p-3">
+                  <span>
+                    {targets.length} changed variant{targets.length === 1 ? "" : "s"} in this item
+                  </span>
+                  <Button
+                    className="text-xs"
+                    disabled={!ready || busy || saveState.status === "error" || !targets.length}
+                    onClick={() => review("approved", true)}
+                  >
+                    Approve whole item ({targets.length}){" "}
+                    <ButtonSlot $kind="shortcut">Shift A</ButtonSlot>
+                  </Button>
+                  <Button
+                    className="text-xs"
+                    disabled={!ready || busy || saveState.status === "error" || !targets.length}
+                    onClick={() => review("rejected", true)}
+                  >
+                    Reject whole item ({targets.length}){" "}
+                    <ButtonSlot $kind="shortcut">Shift X</ButtonSlot>
+                  </Button>
+                </div>
+                <Disclosure
+                  className="review-metadata"
+                  $rounded="none"
+                  $forceRounded
+                  $p={3}
+                  button={<DisclosureButton>Details</DisclosureButton>}
+                >
+                  <p className="text-xs wrap-anywhere">
+                    {variant.label} · {verdictLabel(variant)}
+                    {variant.reviewer ? ` · ${variant.reviewer}` : ""}
+                  </p>
+                  <p className="text-xs">{runStatusLabel(model.run.status)}</p>
+                  <p className="review-run-identity text-xs">
+                    Run {model.run.id} · Attempt {model.run.attempt} · Commit{" "}
+                    <code>{model.run.testedSha.slice(0, 12)}</code> ·{" "}
+                    <span>Comparison {model.comparisonRevision}</span>
+                  </p>
+                  <nav aria-label="Comparison history" className="flex flex-wrap gap-3 text-xs">
+                    <a href={`/runs/${encodeURIComponent(model.run.id)}`}>Original comparison</a>
+                    {model.historicalComparisons?.map((comparison) => (
+                      <a
+                        key={comparison.id}
+                        href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
+                        aria-current={comparison.id === model.comparisonId ? "page" : undefined}
+                      >
+                        Historical comparison {comparison.ordinal} ·{" "}
+                        {comparison.state === "ready"
+                          ? "Complete"
+                          : comparison.state === "invalidated"
+                            ? "Failed"
+                            : "Comparing"}
+                      </a>
+                    ))}
+                  </nav>
+                  <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
+                    <dt>Changed pixels</dt>
+                    <dd>
+                      {variant.changedPixels?.toLocaleString() ?? "—"}
+                      {variant.ratio != null ? ` (${(variant.ratio * 100).toFixed(4)}%)` : ""}
+                    </dd>
+                    <dt>Dimensions</dt>
+                    <dd>
+                      {variant.reference
+                        ? `${variant.reference.width} × ${variant.reference.height}`
+                        : "Absent"}{" "}
+                      →{" "}
+                      {variant.candidate
+                        ? `${variant.candidate.width} × ${variant.candidate.height}`
+                        : "Absent"}
+                    </dd>
+                    <dt>Engine / codec</dt>
+                    <dd>
+                      {variant.engine ?? "—"} / {variant.codec ?? "—"}
+                    </dd>
+                    <dt>Policy / threshold</dt>
+                    <dd>
+                      {variant.policy ?? "—"} / {variant.threshold ?? "—"}
+                    </dd>
+                    <dt>Capture profiles</dt>
+                    <dd>
+                      {variant.referenceProfile ?? "Absent"} →{" "}
+                      {variant.candidateProfile ?? "Absent"}
+                    </dd>
+                    <dt>Comparison</dt>
+                    <dd>
+                      {model.comparisonId} · {variant.id} · decision revision {variant.revision}
+                    </dd>
+                  </dl>
+                </Disclosure>
+              </section>
             </>
           ) : (
             <div className="p-6">
@@ -1119,7 +1171,35 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           )}
         </ShellMainBody>
       </ShellMain>
-      <ShellFooter className="flex! flex-wrap gap-3" $p={3}>
+      <ShellFooter className="flex! flex-wrap items-center gap-3" $p={3}>
+        <div
+          className="review-save-state flex flex-wrap items-center gap-2 text-xs ak-ink-60 empty:hidden"
+          role={
+            saveState.status === "error" || saveState.status === "conflict" ? "alert" : "status"
+          }
+        >
+          {saveState.message}
+          {!model.archived && saveState.status === "error" && saveState.failed && (
+            <Button
+              className="text-xs"
+              onClick={() => {
+                if (saveState.failed) void save(saveState.failed);
+              }}
+            >
+              Retry same command
+            </Button>
+          )}
+          {!model.archived && saveState.status === "error" && saveState.failedUndo && (
+            <Button className="text-xs" onClick={() => void undo(saveState.failedUndo)}>
+              Retry Undo
+            </Button>
+          )}
+          {(saveState.status === "conflict" || saveState.status === "error") && (
+            <Button className="text-xs" onClick={() => void refresh()}>
+              Refresh current state
+            </Button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             className="text-xs"

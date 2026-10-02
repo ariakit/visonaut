@@ -1275,6 +1275,7 @@ export class Service {
     const comparison = await this.comparison(row.comparison_id);
     const requiresReview =
       input.result.outcome === "unchanged" &&
+      input.result.changedPixels !== 0 &&
       tuple.referenceProfileDigest !== tuple.candidateProfileDigest;
     const result = requiresReview ? { ...input.result, outcome: "changed" as const } : input.result;
     const run = await this.run(comparison.run_id);

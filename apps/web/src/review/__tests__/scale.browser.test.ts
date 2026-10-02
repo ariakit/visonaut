@@ -11,7 +11,7 @@ function row(page: Page, index: number) {
 }
 
 function selected(page: Page) {
-  return page.getByRole("tablist", { name: "Variants" }).getByRole("tab", { selected: true });
+  return page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]');
 }
 
 test.beforeEach(async ({ page }) => {
@@ -33,6 +33,31 @@ test.beforeEach(async ({ page }) => {
     window.reviewFixture.update(model);
   });
   await ready(page);
+});
+
+test("sidebar fills its body and the bar follows the selected virtual row", async ({ page }) => {
+  const nav = page.getByRole("navigation", { name: "Review items" });
+  const bar = nav.locator(":scope > .glider-bar");
+  const scroll = nav.locator(".review-item-scroll").first();
+  await expect(bar).toBeVisible();
+  const bodyBounds = await page.locator(".review-sidebar-body").boundingBox();
+  const scrollBounds = await scroll.boundingBox();
+  if (!bodyBounds || !scrollBounds) throw new Error("Missing sidebar bounds");
+  expect(scrollBounds.height).toBeGreaterThan(bodyBounds.height - 24);
+  expect((await page.locator(".shell-sidebar-header").boundingBox())?.height).toBeLessThanOrEqual(
+    40,
+  );
+  await row(page, 0).focus();
+  await page.keyboard.press("End");
+  await expect(row(page, 999)).toBeFocused();
+  await expect
+    .poll(async () => {
+      const selected = await row(page, 999).boundingBox();
+      const marker = await bar.boundingBox();
+      if (!selected || !marker) return Infinity;
+      return Math.abs(marker.y - selected.y) + Math.abs(marker.height - selected.height);
+    })
+    .toBeLessThan(2);
 });
 
 test("the complete virtual list has bounded rows and arrow, Home and End navigation", async ({
@@ -148,7 +173,10 @@ test("long names have measured height and do not overlap at browser zoom", async
   const geometry = await first.evaluate((element) => {
     const row = element.getBoundingClientRect();
     const content = element.querySelector(":scope > span:last-child")?.getBoundingClientRect();
-    const next = element.nextElementSibling?.getBoundingClientRect();
+    const next = element
+      .closest("li")
+      ?.nextElementSibling?.querySelector(".review-item")
+      ?.getBoundingClientRect();
     if (!content || !next) throw new Error("Expected rows with content.");
     return {
       rowTop: row.top,
