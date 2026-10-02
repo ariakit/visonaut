@@ -52,7 +52,6 @@ export interface ObjectStore {
 }
 
 export interface OperationsBudget {
-  /** Measured deployment policy supplies these values; there are no launch defaults. */
   tasksPerStep: number;
   objectsPerStep: number;
   leaseMilliseconds: number;

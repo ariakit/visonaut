@@ -70,6 +70,20 @@ Safe log: correlationId = the same request UUID
 Review error: Reference: request UUID. [Retry same command]
 ```
 
+## Numeric runtime limits
+
+The D15 source change puts the shared preview and production numeric values in [typed defaults](../apps/web/src/runtime-defaults.ts). The [exact old/new value comparison](evidence/issue-204-d15-runtime-defaults.json) preserves every committed bound. D13 failure-reference work remains a separate patch. This record does not prove deployed values or inventory live incident overrides.
+
+`VISONAUT_API_LIMITS` and `VISONAUT_OPERATIONS_BUDGET` remain JSON strings at their existing read paths. The committed Wrangler values are `{}`. A missing binding or `{}` selects the defaults. Partial overrides change only known fields, and complete existing objects still work. Decimal-string values remain supported. Malformed objects, unknown fields, nonpositive or unsafe integers, and values outside the existing image, page, or capacity bounds fail before use. Validation runs after the merge. Export budget fields remain while their consumers exist.
+
+For example, this operations override changes the task count for each step to 10 and keeps every other default:
+
+```json
+{ "tasksPerStep": 10 }
+```
+
+Keep incident overrides in the existing deployment configuration. A future deployment must reconcile live values before applying the committed `{}` values. D15 does not authorize a deployment or remove an override path.
+
 ## Comparison settings and rendering identity
 
 C03 keeps rendering identity separate from comparison policy, engine, and codec identity. Rendering identity records the browser, OS, fonts, viewport, locale, media, and screenshot settings. Current local comparison uses each capture's recorded `comparison` object; it does not apply a blanket 0.05% allowance. C05/revision 9 D43's `visible-ratio-v3` policy has `maxChangedRatio: 0.0005` and belongs to the retained RGBA Worker path and its dated results. Keep the [historical policy evidence](evidence/comparator-policy.md) unchanged. A source constant or this guide does not change a stored policy or the consumer's settings.
