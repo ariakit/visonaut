@@ -306,10 +306,28 @@ export async function runScheduledOperations(
     try {
       await recoverGitHubDeliveries({ context, configuration: githubConfiguration(env) });
       await resolveSchedulerFailure(env, "upstream-webhook", "recovery-unavailable");
-    } catch {
+    } catch (error) {
       logOperationFailure({
         operation: "github-delivery-recovery",
-        code: "recovery-unavailable",
+        code:
+          error instanceof SecurityError &&
+          [
+            "github_delivery_unavailable",
+            "body_too_large",
+            "github_delivery_body_unavailable",
+            "github_delivery_json_invalid",
+            "github_delivery_page_invalid",
+            "github_delivery_entry_invalid",
+            "github_delivery_id_invalid",
+            "github_delivery_guid_invalid",
+            "github_delivery_status_invalid",
+            "github_delivery_date_invalid",
+            "github_delivery_event_invalid",
+            "github_delivery_scope_invalid",
+            "github_delivery_cursor_invalid",
+          ].includes(error.code)
+            ? error.code
+            : "recovery-unavailable",
         correlationId,
         startedAt,
       });
