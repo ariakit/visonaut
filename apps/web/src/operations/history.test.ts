@@ -640,8 +640,9 @@ describe("verified closed history with native D1 and R2", () => {
     };
     const workflowOwned = {
       callerWorkflowPath: ".github/workflows/app.yml",
+      callerWorkflowBlobSha: "e".repeat(40),
       trustedWorkflowPath: ".github/workflows/visual.yml",
-      captureJobPrefix: "App / Visual / Capture / ",
+      captureJobName: "App / Visual / Capture / {shard}",
       submitJobName: "App / Visual / Submit",
       reusableWorkflowRef: `owner/repo/.github/workflows/visual.yml@${"b".repeat(40)}`,
       reusableWorkflowSha: "b".repeat(40),
@@ -658,7 +659,7 @@ describe("verified closed history with native D1 and R2", () => {
         sourceDigest,
         workflowOwned.callerWorkflowPath,
         workflowOwned.reusableWorkflowRef,
-        workflowOwned.captureJobPrefix,
+        workflowOwned.captureJobName,
         workflowOwned.submitJobName,
         operations.now(),
         operations.now(),
@@ -780,7 +781,7 @@ describe("verified closed history with native D1 and R2", () => {
         operations.now(),
         operations.now(),
         operations.now(),
-        workflowOwned.reusableWorkflowSha,
+        workflowOwned.callerWorkflowBlobSha,
       )
       .run();
     expect(await materializeWorkflowRun(api, runId)).toEqual(before);
