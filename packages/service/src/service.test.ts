@@ -679,6 +679,148 @@ describe("full run and immutable comparison state", () => {
     },
   );
 
+  it.each([true, false])(
+    "migrates only unreviewed local zero-pixel rows (finalized: %s)",
+    async (finalized) => {
+      using database = new TestDatabase("0029_zero_pixel_reviews");
+      const service = new Service(database);
+      await seed(service);
+      const excluded = [
+        "approved",
+        "rejected",
+        "revoked",
+        "inherited",
+        "promoted",
+        "closed",
+        "pixels",
+        "dimensions",
+        "mask",
+        "mask-image",
+        "ratio",
+        "server",
+        "added",
+        "removed",
+      ];
+      for (const id of ["pending", ...excluded]) {
+        await fixture(service, {
+          id,
+          kind: "pull_request",
+          finalize: id === "pending" ? finalized : !["added", "removed"].includes(id),
+          items: id === "added" ? ["new-dialog"] : id === "removed" ? ["other"] : ["dialog"],
+          compare: () => ({
+            outcome: "changed",
+            changedPixels: id === "pixels" ? 1 : 0,
+            ratio: id === "pixels" || id === "ratio" ? 0.01 : 0,
+            engineVersion: "playwright-pixelmatch-1.63.0",
+            codecVersion: "pngjs-7.0.0",
+            maskExpected: id === "mask",
+          }),
+        });
+        if (id !== "server") {
+          database.connection
+            .prepare(
+              "UPDATE visonaut_captures SET metadata_json=json_set(metadata_json,'$.localMode','local-v1') WHERE run_id=?",
+            )
+            .run(id);
+        }
+      }
+      // The legacy profile was normalized before the local outcome was imported.
+      database.connection
+        .prepare(
+          "UPDATE visonaut_comparison_rows SET tuple_json=json_set(tuple_json,'$.referenceProfileDigest',?,'$.candidateProfileDigest',?) WHERE comparison_id='comparison-pending'",
+        )
+        .run("c".repeat(64), "c".repeat(64));
+      for (const id of ["approved", "rejected", "revoked"]) {
+        await review(service, `comparison-${id}`, {
+          verdict: id === "rejected" ? "rejected" : "approved",
+        });
+      }
+      database.connection.exec(`
+        UPDATE visonaut_decisions SET revoked=1 WHERE row_id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id='comparison-revoked');
+        UPDATE visonaut_comparison_rows SET decision_id=NULL WHERE comparison_id='comparison-revoked';
+        UPDATE visonaut_comparison_rows SET source_decision_id=(SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id='comparison-approved') WHERE comparison_id='comparison-inherited';
+        UPDATE visonaut_images SET width=11 WHERE run_id='dimensions';
+        UPDATE visonaut_comparison_rows SET result_json=json_set(result_json,'$.maskImageId','stored-mask') WHERE comparison_id='comparison-mask-image';
+        INSERT INTO visonaut_promotions(id,project_id,snapshot_id,comparison_id,baseline_revision,created_at)
+          VALUES('guard-promotion','project','snapshot-seed','comparison-promoted',1,20);
+      `);
+      await service.retireRun({ runId: "closed", now: 20 });
+      await service.prepareStatusIntent({
+        runId: "pending",
+        checkId: "local-zero-check",
+        detailsUrl: "https://visonaut.example/runs/pending",
+        maxAttempts: 3,
+        now: 20,
+      });
+      const before = await service.run("pending");
+      const projectBefore = await service.project("project");
+      const rowBefore = (await service.comparisonRows("comparison-pending"))[0];
+      const savedRows = await Promise.all(
+        excluded.map((id) => service.comparisonRows(`comparison-${id}`)),
+      );
+      const decisions = database.connection
+        .prepare("SELECT * FROM visonaut_decisions ORDER BY id")
+        .all();
+      const promotions = database.connection
+        .prepare("SELECT * FROM visonaut_promotions ORDER BY id")
+        .all();
+      const migration = readFileSync(
+        new URL("../../../apps/web/migrations/0030_local_zero_pixel_reviews.sql", import.meta.url),
+        "utf8",
+      );
+      database.connection.exec(migration);
+      const rows = await service.comparisonRows("comparison-pending");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        outcome: "unchanged",
+        decision_revision: (rowBefore?.decision_revision ?? 0) + 1,
+      });
+      expect(JSON.parse(rows[0]?.result_json ?? "{}")).toMatchObject({
+        outcome: "unchanged",
+        changedPixels: 0,
+      });
+      expect((await service.run("pending")).revision).toBe(before.revision + 1);
+      expect((await service.project("project")).revision).toBe(projectBefore.revision + 1);
+      expect(
+        database.connection
+          .prepare("SELECT desired_revision FROM work_checks WHERE id='local-zero-check'")
+          .get(),
+      ).toEqual({ desired_revision: projectBefore.revision + 1 });
+      expect(
+        database.connection
+          .prepare(
+            "SELECT run_id,run_revision FROM visonaut_status_outbox WHERE id LIKE 'local-zero-pixels:%'",
+          )
+          .all(),
+      ).toEqual([{ run_id: "pending", run_revision: before.revision + 1 }]);
+      expect(
+        await Promise.all(excluded.map((id) => service.comparisonRows(`comparison-${id}`))),
+      ).toEqual(savedRows);
+      expect(
+        database.connection.prepare("SELECT * FROM visonaut_decisions ORDER BY id").all(),
+      ).toEqual(decisions);
+      expect(
+        database.connection.prepare("SELECT * FROM visonaut_promotions ORDER BY id").all(),
+      ).toEqual(promotions);
+      database.connection.exec(migration);
+      expect(await service.comparisonRows("comparison-pending")).toEqual(rows);
+      expect((await service.run("pending")).revision).toBe(before.revision + 1);
+      expect((await service.project("project")).revision).toBe(projectBefore.revision + 1);
+      expect(
+        database.connection
+          .prepare(
+            "SELECT count(*) AS count FROM visonaut_status_outbox WHERE id LIKE 'local-zero-pixels:%'",
+          )
+          .get(),
+      ).toEqual({ count: 1 });
+      if (!finalized) {
+        await service.finalizeComparison({ comparisonId: "comparison-pending", now: 21 });
+      }
+      expect((await service.status("pending")).status).toBe("passed");
+      expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    },
+  );
+
   it("recompares an existing baseline under a new policy without mass review", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
