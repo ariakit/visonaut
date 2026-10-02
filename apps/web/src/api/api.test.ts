@@ -1680,7 +1680,7 @@ describe("private recomparison API", () => {
     ).toEqual({ count: 1 });
   });
 
-  it("recompares retained native closed detail without changing the live review pointer", async () => {
+  it("rejects closed legacy recomparison without changing its original review", async () => {
     const test = await fixture();
     await test.complete();
     await test.service.retireRun({ runId: test.runId, now: Date.now() });
@@ -1690,13 +1690,47 @@ describe("private recomparison API", () => {
       method: "POST",
       headers,
     });
-    expect(response.status).toBe(202);
-    const model = await objectResponse(response);
-    expect(model.archived).toBe(true);
-    expect(model.reviewReady).toBe(false);
-    expect(model.comparisonId).not.toBe(before.comparison_id);
+    expect(response.status).toBe(409);
+    expect(await objectResponse(response)).toMatchObject({
+      error: {
+        code: "history_closed",
+        message: "Closed history is read-only. Capture a new complete run.",
+      },
+    });
     expect(await test.service.run(test.runId)).toEqual(before);
-    expect((await test.service.comparison(string(model.comparisonId))).purpose).toBe("historical");
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    expect(model).toMatchObject({ archived: true, reviewReady: false, recompareAllowed: false });
+    expect(model.comparisonId).toBe(before.comparison_id);
+  });
+
+  it("reports export retirement behind the existing private write checks", async () => {
+    const test = await fixture();
+    await test.complete();
+    const path = `/api/runs/${test.runId}/export`;
+    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
+    expect((await test.send(path, { method: "POST" })).status).toBe(401);
+    expect(
+      (
+        await test.send(path, {
+          method: "POST",
+          headers: { ...headers, origin: "https://other.example" },
+        })
+      ).status,
+    ).toBe(403);
+    const response = await test.send(path, { method: "POST", headers });
+    expect(response.status).toBe(410);
+    expect(await objectResponse(response)).toMatchObject({
+      error: {
+        code: "export_retired",
+        message: "Product exports are retired. Review retained evidence in run history.",
+      },
+    });
+    const missing = await test.send(`/api/runs/${crypto.randomUUID()}/export`, {
+      method: "POST",
+      headers,
+    });
+    expect(missing.status).toBe(409);
+    expect(await objectResponse(missing)).toMatchObject({ error: { code: "incomplete" } });
   });
 
   it("keeps an expired closed run immutable when the active policy changes", async () => {

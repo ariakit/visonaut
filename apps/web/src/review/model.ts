@@ -157,7 +157,6 @@ export interface ReviewCommands {
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;
   recompare?(): Promise<ReviewModel>;
-  export?(): Promise<void>;
 }
 
 export class ReviewCommandError extends Error {

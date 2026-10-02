@@ -358,20 +358,6 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
       selectedComparisonId = model.archived ? model.comparisonId : undefined;
       return model;
     },
-    async export() {
-      const data = record(await request(`${runPath}/export`, {}));
-      const downloadPath = string(data.downloadPath);
-      const url = new URL(downloadPath, window.location.origin);
-      if (url.origin !== window.location.origin || !url.pathname.startsWith("/api/exports/")) {
-        throw new Error("The service returned an invalid export location.");
-      }
-      const link = document.createElement("a");
-      link.href = url.href;
-      link.download = `visonaut-${runId}.tar`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    },
   };
 }
 

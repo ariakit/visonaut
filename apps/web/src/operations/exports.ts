@@ -353,7 +353,10 @@ export async function streamRunExport(context: OperationsContext, exportId: stri
     WHERE id=? AND state='ready' AND expires_at>? RETURNING run_id`)
     .bind(expires, exportId, context.now())
     .first<{ run_id: string }>();
-  if (!row) throw new ConflictError("This export expired or is not ready. Create a new export.");
+  if (!row)
+    throw new ConflictError(
+      "This export expired or is not ready. Review retained evidence in run history, or capture a new complete run.",
+    );
   const object = await context.images.get(`exports/${exportId}.json`);
   if (!object || object.size > 20 * 1024 * 1024) {
     await object?.body.cancel();

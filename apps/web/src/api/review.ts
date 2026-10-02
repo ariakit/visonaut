@@ -10,7 +10,6 @@ import { dashboard } from "./dashboard.js";
 import { SecurityError } from "@visonaut/security";
 import {
   ArchivedCommandResultError,
-  closedRunRetentionMs,
   ConflictError,
   type CommandResult,
   type ReviewRow,
@@ -97,7 +96,7 @@ async function projectRun(context: PrivateContext, runId: string) {
 const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
 const historicalComparisonError =
-  "Historical comparison failed. Required comparison evidence or its reference is unavailable. Use Recompare if the image bytes are available, or start a new capture.";
+  "Historical comparison failed. Required comparison evidence or its reference is unavailable. Capture a new complete run for a new result.";
 
 export async function reviewPollState(
   context: PrivateContext,
@@ -319,12 +318,12 @@ export async function reviewModel(
     createdAt: number;
   }>(metadata[2]);
   const recompareAllowed = Boolean(
+    run.active &&
     run.sealed_at &&
     retained?.byte_state === "live" &&
     !pendingHistorical &&
     !run.detail_archived &&
     !retained.promoted &&
-    (run.active || (run.closed_at !== null && Date.now() < run.closed_at + closedRunRetentionMs)) &&
     run.state !== "accepted",
   );
   const localRun = await context.database
@@ -576,17 +575,18 @@ export async function reviewModel(
       ? { evidenceState: "summary" as const, imagesExpired: retained?.byte_state !== "live" }
       : {}),
     recompareAllowed: recompareAllowed && !localRun,
-    recompareDisabledReason: localRun
-      ? "Run trusted Submit again from the complete CI bundle, or capture a new run. Unchanged candidate images were not uploaded."
-      : recompareAllowed
-        ? undefined
-        : !run.sealed_at
-          ? "This run has not sealed."
-          : pendingHistorical
-            ? "A historical comparison is still running."
-            : !run.active || run.detail_archived || run.state === "accepted"
-              ? "This closed review is read-only. Capture a new complete run."
-              : "The stored image bytes have expired.",
+    recompareDisabledReason:
+      !run.active || run.detail_archived || run.state === "accepted"
+        ? "This closed review is read-only. Capture a new complete run."
+        : localRun
+          ? "Run trusted Submit again from the complete CI bundle, or capture a new run. Unchanged candidate images were not uploaded."
+          : recompareAllowed
+            ? undefined
+            : !run.sealed_at
+              ? "This run has not sealed."
+              : pendingHistorical
+                ? "A historical comparison is still running."
+                : "The stored image bytes have expired.",
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
@@ -941,6 +941,13 @@ export async function handleReview(
   const recompareMatch = /^\/api\/runs\/([a-f0-9-]+)\/recompare$/.exec(path);
   if (recompareMatch?.[1] && request.method === "POST") {
     const run = await projectRun(context, uuid(recompareMatch[1]));
+    if (!run.active || run.detail_archived || run.state === "accepted") {
+      throw new SecurityError(
+        "history_closed",
+        409,
+        "Closed history is read-only. Capture a new complete run.",
+      );
+    }
     const local = await context.database
       .prepare(
         "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
@@ -959,48 +966,31 @@ export async function handleReview(
       )
       .bind(run.id)
       .first();
-    const expired =
-      !run.active && (run.closed_at === null || Date.now() >= run.closed_at + closedRunRetentionMs);
-    if (expired || run.detail_archived || run.state === "accepted" || promoted)
+    if (promoted)
       throw new SecurityError(
         "history_closed",
         409,
         "Closed history is read-only. Capture a new complete run.",
       );
-    const comparisonId = crypto.randomUUID();
-    const historical = !run.active;
-    const reference = await comparisonReference(context, run, historical);
-    const count = historical
-      ? await context.database
-          .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
-          .bind(run.id)
-          .first<{ count: number }>()
-      : null;
+    const reference = await comparisonReference(context, run);
     const comparison = await context.service.createComparison({
-      id: comparisonId,
-      ...(historical
-        ? { purpose: "historical" as const, expectedCaptureCount: count?.count ?? 0 }
-        : {}),
+      id: crypto.randomUUID(),
       runId: run.id,
       ...reference,
       now: Date.now(),
       maxAttempts: context.configuration.comparisonMaxAttempts,
     });
     await startComparisonPublication(context, comparison.id);
-    return Response.json(
-      await reviewModel(context, run.id, historical ? comparison.id : undefined),
-      { status: 202 },
-    );
+    return Response.json(await reviewModel(context, run.id), { status: 202 });
   }
   const exportMatch = /^\/api\/runs\/([a-f0-9-]+)\/export$/.exec(path);
   if (exportMatch?.[1] && request.method === "POST") {
-    const run = await projectRun(context, uuid(exportMatch[1]));
-    if (!context.exports) {
-      throw new SecurityError("export_unavailable", 503, "Export is temporarily unavailable.");
-    }
-    return Response.json(await context.exports.create(run.id, context.identity.githubUserId), {
-      status: 202,
-    });
+    await projectRun(context, uuid(exportMatch[1]));
+    throw new SecurityError(
+      "export_retired",
+      410,
+      "Product exports are retired. Review retained evidence in run history.",
+    );
   }
   const downloadMatch = /^\/api\/exports\/([a-f0-9-]+)$/.exec(path);
   if (downloadMatch?.[1] && request.method === "GET") {
