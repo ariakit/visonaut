@@ -89,7 +89,7 @@
       "vars": {
         "VISONAUT_ENVIRONMENT": "production",
         "VISONAUT_REPOSITORY": "ariakit/ariakit",
-        "VISONAUT_LAUNCH_ENABLED": "false",
+        "VISONAUT_LAUNCH_ENABLED": "true",
         "VISONAUT_ORIGIN": "https://visonaut.com",
         "GITHUB_CLIENT_ID": "Iv23lihLxwLZeW7tlh5u",
         "GITHUB_APP_ID": "5028451",
