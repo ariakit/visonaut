@@ -1,3 +1,4 @@
+import { beginStaged } from "./workflow-owned.js";
 import { readFile } from "node:fs/promises";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { exportPKCS8, generateKeyPair } from "jose";
@@ -143,14 +144,19 @@ const mergeSha = "c".repeat(40);
 
 const preRunConfiguration = {
   callerWorkflowPath: ".github/workflows/visonaut.yml",
-  captureJobPrefix: "Visonaut / capture / ",
+  callerWorkflowBlobSha: "e".repeat(40),
+  captureJobName: "Visonaut / capture / {shard}",
   submitJobName: "Visonaut / submit",
   reusableWorkflowRef: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${"d".repeat(40)}`,
   reusableWorkflowSha: "d".repeat(40),
 };
 const preRunBindings: ApiBindings = {
   ...bindings,
-  configuration: { ...bindings.configuration, workflowOwned: preRunConfiguration },
+  configuration: {
+    ...bindings.configuration,
+    workflowOwned: preRunConfiguration,
+    limits: { ...bindings.configuration.limits, maximumStagedBytes: 8 * 1024 * 1024 * 1024 },
+  },
 };
 
 function preRunFixture() {
@@ -185,7 +191,7 @@ function preRunFixture() {
         id: 101,
         name: "Visonaut / capture / linux",
         status: "completed",
-        conclusion: "success",
+        conclusion: "success" as string | null,
         started_at: "2026-09-25T03:58:00Z",
       },
       {
@@ -203,6 +209,7 @@ function preRunFixture() {
     run: {
       id: 77,
       run_attempt: 1,
+      run_started_at: "2026-09-22T00:00:00Z",
       path: preRunConfiguration.callerWorkflowPath,
       event: "pull_request",
       status: "completed",
@@ -1938,7 +1945,7 @@ describe("pre-run App checks", () => {
           digest,
           preRunConfiguration.callerWorkflowPath,
           preRunConfiguration.reusableWorkflowRef,
-          preRunConfiguration.captureJobPrefix,
+          preRunConfiguration.captureJobName,
           preRunConfiguration.submitJobName,
         )
         .run();
@@ -3168,11 +3175,15 @@ describe("trusted Plan report with native D1", () => {
 
   function planFixture() {
     const fixture = preRunFixture();
+    const calculatorStep = { name: "Plan CI", status: "completed", conclusion: "success" };
     const plan = {
       id: 103,
-      name: "Plan / Plan",
+      run_id: 77,
+      head_sha: sourceSha,
+      steps: [calculatorStep],
+      name: "Plan",
       status: "completed",
-      conclusion: "success",
+      conclusion: "success" as string | null,
       started_at: "2026-09-25T03:57:00Z",
       run_attempt: 1,
     };
@@ -3184,8 +3195,8 @@ describe("trusted Plan report with native D1", () => {
       .spyOn(security, "verifyGitHubOidc")
       .mockImplementation(async ({ request }) => ({
         ...request,
-        jobId: "104",
-        checkRunId: "104",
+        jobId: "103",
+        checkRunId: "103",
         event: "pull_request",
         ref: "refs/pull/7/merge",
         sourceHead: sourceSha,
@@ -3193,25 +3204,38 @@ describe("trusted Plan report with native D1", () => {
         pullRequestNumber: 7,
       }));
     const report = (visualRequired: boolean, planResult = "success", workflowAttempt = 1) =>
-      reportVisualPlan(
-        new Request("https://preview.example/v1/plan", {
-          method: "POST",
-          headers: {
-            authorization: "Bearer verified-fixture-token",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            schemaVersion: 1,
-            workflowRunId: "77",
-            workflowAttempt,
-            testedSha: mergeSha,
-            visualRequired,
-            planResult,
-          }),
-        }),
-        apiContext(preRunBindings),
-      );
-    return { fixture, plan, report, identity };
+      visualRequired && planResult === "success"
+        ? beginStaged(
+            new Request("https://preview.example/v1/runs/77/begin", {
+              method: "POST",
+              headers: {
+                authorization: "Bearer verified-fixture-token",
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt, testedSha: mergeSha }),
+            }),
+            apiContext(preRunBindings),
+            "77",
+          ).then(() => new Response(null, { status: 204 }))
+        : reportVisualPlan(
+            new Request("https://preview.example/v1/plan", {
+              method: "POST",
+              headers: {
+                authorization: "Bearer verified-fixture-token",
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({
+                schemaVersion: 1,
+                workflowRunId: "77",
+                workflowAttempt,
+                testedSha: mergeSha,
+                visualRequired,
+                planResult,
+              }),
+            }),
+            apiContext(preRunBindings),
+          );
+    return { fixture, plan, calculatorStep, report, identity };
   }
 
   it("requires a fresh Plan and check generation for the same SHA after recovery", async () => {
@@ -3222,6 +3246,7 @@ describe("trusted Plan report with native D1", () => {
     await sanitizeRestoredDatabase(database, restoredAt);
     fixture.state.run.run_attempt = 2;
     plan.run_attempt = 2;
+    plan.started_at = "2026-09-25T03:57:02Z";
     expect((await report(true, "success", 2)).status).toBe(204);
     expect(identity).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -3260,6 +3285,7 @@ describe("trusted Plan report with native D1", () => {
       .run();
     fixture.state.run.event = "merge_group";
     fixture.state.run.head_sha = mergeSha;
+    plan.head_sha = mergeSha;
     fixture.state.run.head_branch = group.headRef.slice("refs/heads/".length);
     identity.mockImplementation(async ({ request }) => ({
       ...request,
@@ -3291,6 +3317,7 @@ describe("trusted Plan report with native D1", () => {
       .first();
     fixture.state.run.run_attempt = 2;
     plan.run_attempt = 2;
+    plan.started_at = "2026-09-25T03:57:02Z";
     return { fixture, plan, report, identity, group, original, restored };
   }
 
@@ -3382,8 +3409,15 @@ describe("trusted Plan report with native D1", () => {
       expect(identity).toHaveBeenCalledWith(
         expect.objectContaining({
           configuration: expect.objectContaining({
-            audience: "https://preview.example/plan-report",
-            shards: [{ key: "plan-report", jobName: "Plan / Report" }],
+            audience: visualRequired
+              ? "https://preview.example/submit"
+              : "https://preview.example/plan-report",
+            shards: [
+              {
+                key: visualRequired ? "combined" : "plan-report",
+                jobName: visualRequired ? preRunConfiguration.submitJobName : "Plan",
+              },
+            ],
           }),
         }),
       );
@@ -3409,6 +3443,91 @@ describe("trusted Plan report with native D1", () => {
       count: 0,
     });
   });
+
+  it("rejects a true Plan report before identity exchange", async () => {
+    const { identity } = planFixture();
+    await expect(
+      reportVisualPlan(
+        new Request("https://preview.example/v1/plan", {
+          method: "POST",
+          headers: { authorization: "Bearer fixture", "content-type": "application/json" },
+          body: JSON.stringify({
+            schemaVersion: 1,
+            workflowRunId: "77",
+            workflowAttempt: 1,
+            testedSha: mergeSha,
+            visualRequired: true,
+            planResult: "success",
+          }),
+        }),
+        apiContext(preRunBindings),
+      ),
+    ).rejects.toMatchObject({ code: "invalid_plan_report" });
+    expect(identity).not.toHaveBeenCalled();
+  });
+
+  it("accepts signed false in the running native Plan after its calculator succeeds", async () => {
+    const { plan, report, fixture } = planFixture();
+    plan.status = "in_progress";
+    plan.conclusion = null;
+    expect((await report(false)).status).toBe(204);
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      status: "completed",
+      conclusion: "success",
+    });
+  });
+
+  it.each([
+    "failed",
+    "skipped",
+    "running",
+    "missing",
+    "duplicate",
+    "other signed job",
+    "other source",
+    "duplicate Plan",
+  ])("rejects false with %s calculation evidence", async (change) => {
+    const { fixture, plan, calculatorStep, report, identity } = planFixture();
+    if (change === "failed") calculatorStep.conclusion = "failure";
+    if (change === "skipped") calculatorStep.conclusion = "skipped";
+    if (change === "running") calculatorStep.status = "in_progress";
+    if (change === "missing") plan.steps = [];
+    if (change === "duplicate") plan.steps.push({ ...calculatorStep });
+    if (change === "other signed job")
+      identity.mockImplementation(async ({ request }) => ({
+        ...request,
+        jobId: "999",
+        checkRunId: "999",
+        event: "pull_request",
+        ref: "refs/pull/7/merge",
+        sourceHead: sourceSha,
+        targetHead: baseSha,
+        pullRequestNumber: 7,
+      }));
+    if (change === "other source") plan.head_sha = "f".repeat(40);
+    if (change === "duplicate Plan") fixture.state.jobs.push({ ...plan, id: 999 });
+    await expect(report(false)).rejects.toMatchObject({ code: "plan_unverified" });
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it.each(["failed", "in progress", "missing", "duplicate"])(
+    "does not start visual Submit for a %s native Plan",
+    async (change) => {
+      const { fixture, plan, report } = planFixture();
+      if (change === "failed") plan.conclusion = "failure";
+      if (change === "in progress") {
+        plan.status = "in_progress";
+        plan.conclusion = null;
+      }
+      if (change === "missing")
+        fixture.state.jobs = fixture.state.jobs.filter((job) => job.id !== plan.id);
+      if (change === "duplicate") fixture.state.jobs.push({ ...plan, id: 999 });
+      await expect(report(true)).rejects.toMatchObject({ code: "plan_unverified" });
+      expect(
+        await database.prepare("SELECT plan_visual_required FROM pre_run_checks").first(),
+      ).toEqual({ plan_visual_required: null });
+    },
+  );
 
   it.each(["missing", "failure"])("rejects a %s current Plan job", async (result) => {
     const { fixture, plan, report } = planFixture();
@@ -3444,25 +3563,31 @@ describe("trusted Plan report with native D1", () => {
     },
   );
 
-  async function carriedPlanFixture() {
+  async function carriedPlanFixture(withPriorBegin = true) {
     const value = planFixture();
     const original = {
       ...structuredClone(carriedJobs.original),
-      name: "Plan / Plan",
+      name: "Plan",
       run_id: 77,
       head_sha: sourceSha,
     };
+    const originalStep = original.steps[0];
+    if (!originalStep) throw new Error("The original Plan step is missing");
+    originalStep.name = "Plan CI";
     value.fixture.state.jobs = [
       original,
       ...value.fixture.state.jobs.filter((job) => job.id !== value.plan.id),
     ];
-    await value.report(true);
+    if (withPriorBegin) await value.report(true);
     const wrapper = {
       ...structuredClone(carriedJobs.alias),
-      name: "Plan / Plan",
+      name: "Plan",
       run_id: 77,
       head_sha: sourceSha,
     };
+    const wrapperStep = wrapper.steps[0];
+    if (!wrapperStep) throw new Error("The carried Plan step is missing");
+    wrapperStep.name = "Plan CI";
     value.fixture.state.jobs = [
       wrapper,
       ...value.fixture.state.jobs.filter((job) => job.id !== original.id),
@@ -3479,6 +3604,18 @@ describe("trusted Plan report with native D1", () => {
     };
     value.fixture.github.request = async (path, init) => {
       if (path.endsWith(`/actions/jobs/${original.id}`)) return original;
+      if (path.includes("/actions/runs/77/attempts/1/jobs?")) {
+        return { total_count: 1, jobs: [original] };
+      }
+      if (path.endsWith("/actions/runs/77/attempts/1")) {
+        return {
+          ...value.fixture.state.run,
+          run_attempt: 1,
+          run_started_at: "2026-09-22T00:00:00Z",
+          status: "completed",
+          conclusion: "failure",
+        };
+      }
       if (path.endsWith("/actions/runs/77/attempts/2") && value.fixture.state.run.run_attempt === 3)
         return secondAttempt;
       return request(path, init);
@@ -3519,6 +3656,71 @@ describe("trusted Plan report with native D1", () => {
     await ensure(3);
     expect(await current()).toEqual({
       workflow_attempt: 3,
+      plan_visual_required: 1,
+      plan_job_id: String(original.id),
+    });
+  });
+
+  it("starts signed Submit after capture failed before any earlier Begin", async () => {
+    const { report, original, current } = await carriedPlanFixture(false);
+    expect((await report(true, "success", 2)).status).toBe(204);
+    expect(await current()).toEqual({
+      workflow_attempt: 2,
+      plan_visual_required: 1,
+      plan_job_id: String(original.id),
+    });
+  });
+
+  it.each(["runner", "steps", "timestamps", "older wrapper"])(
+    "rejects changed carried Plan proof before any earlier Begin: %s",
+    async (change) => {
+      const { report, original, wrapper, current } = await carriedPlanFixture(false);
+      if (change === "runner") original.runner_id += 1;
+      if (change === "steps") {
+        const step = wrapper.steps[1];
+        if (!step) throw new Error("The carried Plan fixture has no second step");
+        step.name += " changed";
+      }
+      if (change === "timestamps") wrapper.completed_at = "2026-09-22T14:57:27Z";
+      if (change === "older wrapper") wrapper.started_at = "2026-09-21T00:00:00Z";
+      await expect(report(true, "success", 2)).rejects.toThrow();
+      expect(await current()).toMatchObject({ workflow_attempt: 2, plan_visual_required: null });
+    },
+  );
+
+  it("records a fresh successful native Plan as a new execution", async () => {
+    const { report, wrapper, current } = await carriedPlanFixture(false);
+    wrapper.started_at = "2026-09-25T03:57:02Z";
+    wrapper.completed_at = "2026-09-25T03:57:03Z";
+    expect((await report(true, "success", 2)).status).toBe(204);
+    expect(await current()).toEqual({
+      workflow_attempt: 2,
+      plan_visual_required: 1,
+      plan_job_id: String(wrapper.id),
+    });
+  });
+
+  it("resolves the original successful Plan after many failed capture attempts", async () => {
+    const { fixture, report, original, wrapper, current } = await carriedPlanFixture(false);
+    fixture.state.run.run_attempt = 30;
+    wrapper.run_attempt = 30;
+    const request = fixture.github.request;
+    fixture.github.request = async (path, init) => {
+      const match = /\/actions\/runs\/77\/attempts\/(\d+)$/.exec(path);
+      if (match && Number(match[1]) > 1 && Number(match[1]) < 30) {
+        return {
+          ...fixture.state.run,
+          run_attempt: Number(match[1]),
+          status: "completed",
+          conclusion: "failure",
+        };
+      }
+      if (path.endsWith("/actions/runs/77/attempts/30")) return fixture.state.run;
+      return request(path, init);
+    };
+    expect((await report(true, "success", 30)).status).toBe(204);
+    expect(await current()).toEqual({
+      workflow_attempt: 30,
       plan_visual_required: 1,
       plan_job_id: String(original.id),
     });
@@ -3830,7 +4032,7 @@ describe("restored workflow and delivery fencing", () => {
         mergeSha,
         preRunConfiguration.callerWorkflowPath,
         preRunConfiguration.reusableWorkflowRef,
-        preRunConfiguration.captureJobPrefix,
+        preRunConfiguration.captureJobName,
         preRunConfiguration.submitJobName,
         createdAt,
         createdAt,

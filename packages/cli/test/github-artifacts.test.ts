@@ -39,14 +39,14 @@ async function setup() {
     JSON.stringify({ osImage, fonts, profile, systemFontRootCount: 1, fontPackage: null }),
   );
   const runId = local.manifest.run.workflowRunId;
-  const prefix = "App / Visual / Capture / ";
+  const captureJobName = "App / Visual Capture ({shard})";
   const environment = {
     GITHUB_REPOSITORY: local.manifest.run.repository,
     GITHUB_RUN_ID: runId,
     GITHUB_RUN_ATTEMPT: "1",
     GITHUB_SHA: local.manifest.run.testedSha,
     GH_TOKEN: "token",
-    VISONAUT_CAPTURE_JOB_PREFIX: prefix,
+    VISONAUT_CAPTURE_JOB_NAME: captureJobName,
   };
   const run = {
     id: Number(runId),
@@ -58,7 +58,7 @@ async function setup() {
   };
   const capture = {
     id: 99,
-    name: `${prefix}linux`,
+    name: "App / Visual Capture (linux)",
     run_id: Number(runId),
     run_attempt: 1,
     head_sha: run.head_sha,
@@ -130,6 +130,7 @@ it("selects exact successful source artifacts and validates their image/profile 
     download: test.download,
   });
   expect(sources[0]?.source).toMatchObject({
+    jobName: "App / Visual Capture (linux)",
     workflowAttempt: 1,
     jobId: "99",
     artifactId: "55",
@@ -137,7 +138,7 @@ it("selects exact successful source artifacts and validates their image/profile 
     manifestDigest: await digestJson(test.local.manifest),
   });
 });
-it.each(["failed", "missing", "duplicate", "expired"])(
+it.each(["failed", "missing", "duplicate", "extra", "unclosed", "expired"])(
   "rejects a %s required shard before download",
   async (kind) => {
     const test = await setup();
@@ -149,6 +150,15 @@ it.each(["failed", "missing", "duplicate", "expired"])(
     }
     if (kind === "duplicate") {
       test.setJobs([test.capture, { ...test.capture, id: 100 }]);
+    }
+    if (kind === "extra") {
+      test.setJobs([
+        test.capture,
+        { ...test.capture, id: 100, name: "App / Visual Capture (safari)" },
+      ]);
+    }
+    if (kind === "unclosed") {
+      test.capture.name = "App / Visual Capture (linux";
     }
     if (kind === "expired") {
       test.artifact.expired = true;
@@ -190,7 +200,12 @@ it("keeps only a non-rerun shard's verified original attempt", async () => {
     fetchImpl,
     download: test.download,
   });
-  expect(sources[0]?.source).toMatchObject({ workflowAttempt: 1, jobId: "99" });
+  expect(sources[0]?.source).toMatchObject({
+    workflowAttempt: 1,
+    jobId: "99",
+    jobName: "App / Visual Capture (linux)",
+    artifactName: test.artifact.name,
+  });
 });
 it("carries a successful second execution after an earlier failed visual attempt", async () => {
   const test = await setup();

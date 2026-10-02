@@ -5,7 +5,7 @@ import { runWorkflowCommand } from "./workflow.js";
 export type { CliOptions } from "./engine.js";
 export type { ExitCode } from "./errors.js";
 
-/** Submit uses only verified GitHub artifacts; status uses a maintainer session. */
+/** Submit binds a native Plan skip or verified artifacts; status uses a session. */
 export async function runCli(options: CliOptions) {
   const environment = options.environment ?? process.env;
   try {
@@ -18,7 +18,12 @@ export async function runCli(options: CliOptions) {
     }
     const prepared = await runWorkflowCommand(options.argv, environment);
     if (!prepared) {
-      throw new CliError("Choose begin, submit --shard, or status. Use --help for usage.", 2);
+      throw new CliError("Choose begin, submit, or status. Use --help for usage.", 2);
+    }
+    if ("noVisual" in prepared) {
+      const stdout = options.stdout ?? ((value: string) => process.stdout.write(value));
+      stdout("No visual capture is required.\n");
+      return 0;
     }
     return runInternalCli(
       {

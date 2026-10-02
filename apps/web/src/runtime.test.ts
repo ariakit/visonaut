@@ -145,6 +145,7 @@ it("keeps live workflow and authentication configuration only in production", ()
   const workflow = apiBindings(env).configuration.workflowOwned;
   expect(workflow).toBeDefined();
   expect(workflow?.callerWorkflowPath).toBe(".github/workflows/ci.yml");
+  expect(workflow?.callerWorkflowBlobSha).toMatch(/^[a-f0-9]{40}$/);
   expect(workflow?.trustedWorkflowPath).toMatch(/^\.github\/workflows\/[^/]+\.yml$/);
   expect(workflow?.reusableWorkflowSha).toMatch(/^[a-f0-9]{40}$/);
   expect(workflow).not.toHaveProperty("additionalTrustedWorkflowBlobSha");

@@ -11,7 +11,7 @@ import {
   type VerifiedRun,
   type VerifiedWebhook,
 } from "@visonaut/security";
-import { digestJson, workflowSourceDigest } from "@visonaut/protocol";
+import { captureJobNames, digestJson, workflowSourceDigest } from "@visonaut/protocol";
 import { assertConfiguredProject, loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { completeWorkflowJobs, jobExecutedInAttempt, verifyCarriedExecution } from "./jobs.js";
@@ -940,6 +940,7 @@ export async function requireVisualPlan(
     !row ||
     row.tested_sha !== identity.testedSha ||
     row.plan_visual_required !== 1 ||
+    row.plan_workflow_sha !== context.configuration.workflowOwned?.callerWorkflowBlobSha ||
     row.state !== "active"
   ) {
     throw new SecurityError(
@@ -1152,8 +1153,9 @@ async function successfulSubmittedPinnedJobs(
     .first<{ submit_job_id: string | null }>();
   if (!submitted) return { submitted: false, successful: false };
   const jobs = await completeWorkflowJobs(github, numericId(run.id));
+  const captureNames = captureJobNames(configuration.captureJobName);
   const captureJobs = jobs.filter(
-    (job) => typeof job.name === "string" && job.name.startsWith(configuration.captureJobPrefix),
+    (job) => typeof job.name === "string" && captureNames.shard(job.name) !== undefined,
   );
   const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
   const pinnedJobs = [...captureJobs, ...submitJobs];
@@ -1261,7 +1263,7 @@ async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRu
       digest,
       configuration.callerWorkflowPath,
       configuration.reusableWorkflowRef,
-      configuration.captureJobPrefix,
+      configuration.captureJobName,
       configuration.submitJobName,
       context.configuration.projectId,
     )
@@ -1942,7 +1944,7 @@ export async function settlePreRunWorkflow(
   if (submitted.successful && row.plan_visual_required === 1) return;
   const reason =
     row.plan_visual_required === null
-      ? "The trusted Plan report is missing. Missing Plan never means no visual work."
+      ? "The trusted Plan or signed Submit is missing. Missing Plan never means no visual work."
       : submitted.submitted
         ? "A pinned capture or submit job did not complete successfully."
         : run.conclusion === "success"
@@ -1965,18 +1967,143 @@ export async function settlePreRunWorkflow(
     .run();
 }
 
-/** Only the pinned workflow can report a recomputed, successful Plan result. */
+function callerPlanBlob(context: ApiContext) {
+  const pin = context.configuration.workflowOwned?.callerWorkflowBlobSha;
+  if (!pin || !/^[a-f0-9]{40}$/.test(pin)) {
+    throw new SecurityError(
+      "workflow_configuration",
+      503,
+      "The trusted Plan source is unavailable.",
+    );
+  }
+  return pin;
+}
+
+function successfulPlanStep(plan: Record<string, unknown>) {
+  const steps = Array.isArray(plan.steps)
+    ? plan.steps.map(object).filter((step) => step.name === "Plan CI")
+    : [];
+  const step = steps[0];
+  return steps.length === 1 && step?.status === "completed" && step.conclusion === "success";
+}
+
+async function nativePlanJob(
+  github: GitHubClient,
+  identity: Pick<VerifiedRun, "workflowRunId" | "workflowAttempt" | "sourceHead">,
+) {
+  const jobs = await completeWorkflowJobs(github, identity.workflowRunId, identity.workflowAttempt);
+  const plans = jobs.filter((job) => job.name === "Plan");
+  const plan = plans[0];
+  if (
+    plans.length !== 1 ||
+    !plan ||
+    !Number.isSafeInteger(plan.run_id) ||
+    String(plan.run_id) !== identity.workflowRunId ||
+    plan.head_sha !== identity.sourceHead ||
+    !Number.isSafeInteger(plan.run_attempt) ||
+    Number(plan.run_attempt) < 1 ||
+    Number(plan.run_attempt) > identity.workflowAttempt ||
+    !successfulPlanStep(plan)
+  ) {
+    throw new SecurityError(
+      "plan_unverified",
+      409,
+      "The trusted Plan calculation did not succeed.",
+    );
+  }
+  return plan;
+}
+
+/** Signed Submit proves the true branch of the pinned caller after Plan succeeds. */
+export async function recordRequiredVisualPlan(
+  context: ApiContext,
+  github: GitHubClient,
+  identity: VerifiedRun,
+) {
+  const pin = callerPlanBlob(context);
+  const row = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
+  if (
+    !row ||
+    row.tested_sha !== identity.testedSha ||
+    row.state !== "active" ||
+    row.plan_visual_required === 0
+  ) {
+    throw new SecurityError(
+      "plan_unverified",
+      409,
+      "The current attempt cannot require visual work.",
+    );
+  }
+  if (row.plan_visual_required === 1 && row.plan_workflow_sha === pin && row.plan_job_id) return;
+  const plan = await nativePlanJob(github, identity);
+  if (plan.status !== "completed" || plan.conclusion !== "success") {
+    throw new SecurityError("plan_unverified", 409, "The native Plan job did not succeed.");
+  }
+  const run = object(
+    await github.request(
+      `/repos/${github.repository}/actions/runs/${identity.workflowRunId}/attempts/${identity.workflowAttempt}`,
+    ),
+  );
+  let originalId = numericId(plan.id);
+  if (jobExecutedInAttempt(plan, run.run_started_at)) {
+    if (plan.run_attempt !== identity.workflowAttempt) {
+      throw new SecurityError("plan_unverified", 409, "The Plan execution has another attempt.");
+    }
+  } else {
+    // Capture can fail before Submit. Attempt start times locate its original
+    // Plan without an earlier signed row; full execution proof below rejects
+    // changed wrappers, whose attempt number can identify a later rerun.
+    let first = 1;
+    let last = identity.workflowAttempt - 1;
+    let sourceAttempt = 0;
+    while (first <= last) {
+      const attempt = first + Math.floor((last - first) / 2);
+      const sourceRun = await completedHistoricalAttempt(github, run, attempt);
+      if (jobExecutedInAttempt(plan, sourceRun.run_started_at)) {
+        sourceAttempt = attempt;
+        first = attempt + 1;
+      } else {
+        last = attempt - 1;
+      }
+    }
+    if (!sourceAttempt) {
+      throw new SecurityError(
+        "plan_unverified",
+        409,
+        "The original Plan execution is unavailable.",
+      );
+    }
+    const source = await nativePlanJob(github, { ...identity, workflowAttempt: sourceAttempt });
+    originalId = numericId(source.id);
+    await verifyCarriedExecution(github, originalId, plan, {
+      workflowRunId: identity.workflowRunId,
+      workflowAttempt: identity.workflowAttempt,
+      sourceAttempt,
+      sourceHead: identity.sourceHead,
+      jobName: "Plan",
+      attemptStartedAt: run.run_started_at,
+    });
+  }
+  const recorded = await context.database
+    .prepare(
+      `UPDATE pre_run_checks SET plan_visual_required=1,plan_reported_at=?,updated_at=?,plan_job_id=?,plan_workflow_sha=?
+    WHERE external_id=? AND state='active' AND plan_visual_required IS NULL RETURNING external_id`,
+    )
+    .bind(Date.now(), Date.now(), originalId, pin, row.external_id)
+    .first();
+  if (!recorded) {
+    throw new SecurityError("plan_conflict", 409, "The current Plan result changed.");
+  }
+}
+
+/** Native Plan submits only an explicit false after its calculator succeeds. */
 export async function reportVisualPlan(request: Request, context: ApiContext) {
   await assertConfiguredProject(context);
   const configuration = context.configuration.workflowOwned;
   if (!configuration)
     throw new SecurityError("workflow_configuration", 503, "The trusted workflow is unavailable.");
   const body = await jsonBody(request, 16_384);
-  if (
-    body.schemaVersion !== 1 ||
-    body.planResult !== "success" ||
-    typeof body.visualRequired !== "boolean"
-  ) {
+  if (body.schemaVersion !== 1 || body.planResult !== "success" || body.visualRequired !== false) {
     throw new SecurityError(
       "invalid_plan_report",
       400,
@@ -1992,6 +2119,7 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
   if (!header?.startsWith("Bearer "))
     throw new SecurityError("invalid_oidc", 401, "A signed Plan report is required.");
   const github = await createGitHubClient(context.configuration.github);
+  const callerBlob = callerPlanBlob(context);
   const planDigest = await digestJson(body);
   const identity = await verifyGitHubOidc({
     token: header.slice(7),
@@ -2012,21 +2140,27 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
       workflowPath: configuration.callerWorkflowPath,
       reusableWorkflowRef: configuration.reusableWorkflowRef,
       reusableWorkflowSha: configuration.reusableWorkflowSha,
-      trustedWorkflowPath: configuration.trustedWorkflowPath,
+      trustedWorkflowPath: configuration.callerWorkflowPath,
+      callerWorkflowBlobSha: callerBlob,
       planDigest,
-      shards: [{ key: "plan-report", jobName: "Plan / Report" }],
+      shards: [{ key: "plan-report", jobName: "Plan" }],
       loadMergeGroup: (commit) => loadVerifiedMergeGroup(context, commit),
     },
   });
-  const jobs = await completeWorkflowJobs(github, workflowRunId, workflowAttempt);
-  const plans = jobs.filter((job) => job.name === "Plan / Plan");
-  const plan = plans[0];
+  const plan = await nativePlanJob(github, identity);
+  const run = object(
+    await github.request(
+      `/repos/${github.repository}/actions/runs/${workflowRunId}/attempts/${workflowAttempt}`,
+    ),
+  );
   if (
-    plans.length !== 1 ||
-    !plan ||
-    plan.status !== "completed" ||
-    plan.conclusion !== "success" ||
-    plan.run_attempt !== workflowAttempt
+    numericId(plan.id) !== identity.jobId ||
+    plan.run_attempt !== workflowAttempt ||
+    !(
+      (plan.status === "in_progress" && plan.conclusion === null) ||
+      (plan.status === "completed" && plan.conclusion === "success")
+    ) ||
+    !jobExecutedInAttempt(plan, run.run_started_at)
   ) {
     throw new SecurityError("plan_unverified", 409, "The current Plan job did not succeed.");
   }
@@ -2034,6 +2168,7 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
   if (existing?.plan_visual_required !== null && existing?.plan_visual_required !== undefined) {
     if (
       existing.tested_sha !== testedSha ||
+      existing.plan_workflow_sha !== callerBlob ||
       existing.plan_visual_required !== Number(body.visualRequired)
     ) {
       throw new SecurityError(
@@ -2042,12 +2177,12 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
         "This attempt already has a different Plan result.",
       );
     }
-    if (!body.visualRequired) await completeNoVisualPlan(context, github, existing);
+    await completeNoVisualPlan(context, github, existing);
     return new Response(null, { status: 204 });
   }
   await ensureSignedAttemptCheck(context, github, identity);
   const row = await attemptCheck(context, workflowRunId, workflowAttempt);
-  if (row?.plan_visual_required === 0 && !body.visualRequired) {
+  if (row?.plan_visual_required === 0) {
     await completeNoVisualPlan(context, github, row);
     return new Response(null, { status: 204 });
   }
@@ -2061,14 +2196,13 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
       Date.now(),
       Date.now(),
       numericId(plan.id),
-      configuration.reusableWorkflowSha,
+      callerBlob,
       row.external_id,
       Number(body.visualRequired),
     )
     .first();
   if (!recorded)
     throw new SecurityError("plan_conflict", 409, "The Plan result changed during verification.");
-  if (body.visualRequired) return new Response(null, { status: 204 });
   await completeNoVisualPlan(context, github, row);
   return new Response(null, { status: 204 });
 }
@@ -2076,6 +2210,7 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
 async function completeNoVisualPlan(context: ApiContext, github: GitHubClient, row: PreRunCheck) {
   const current = await storedExternalId(context, row.external_id);
   if (!current || current.plan_visual_required !== 0 || !current.check_id) return;
+  if (current.plan_workflow_sha !== callerPlanBlob(context)) return;
   if (current.state === "docs_complete") return;
   await verifiedCheck(github, row, current.check_id);
   const latest = await storedCheck(context, row.tested_sha);
@@ -2122,12 +2257,7 @@ async function inheritVisualPlan(
     AND ${afterRestoreSql("pre_run_checks.created_at")}
     AND workflow_attempt<? AND plan_visual_required IS NOT NULL AND plan_job_id IS NOT NULL AND plan_workflow_sha=?
     ORDER BY workflow_attempt DESC LIMIT 1`)
-    .bind(
-      row.tested_sha,
-      row.workflow_run_id,
-      row.workflow_attempt,
-      configuration.reusableWorkflowSha,
-    )
+    .bind(row.tested_sha, row.workflow_run_id, row.workflow_attempt, callerPlanBlob(context))
     .first<PreRunCheck>();
   if (
     !prior ||
@@ -2137,7 +2267,7 @@ async function inheritVisualPlan(
   )
     return;
   const jobs = await completeWorkflowJobs(github, row.workflow_run_id, row.workflow_attempt);
-  const plans = jobs.filter((job) => job.name === "Plan / Plan");
+  const plans = jobs.filter((job) => job.name === "Plan");
   const plan = plans[0];
   if (plans.length !== 1 || !plan || plan.status !== "completed" || plan.conclusion !== "success")
     return;
@@ -2157,7 +2287,7 @@ async function inheritVisualPlan(
     workflowAttempt: row.workflow_attempt,
     sourceAttempt: source.run_attempt,
     sourceHead: row.source_sha,
-    jobName: "Plan / Plan",
+    jobName: "Plan",
     attemptStartedAt: run.run_started_at,
   });
   const inherited = await context.database

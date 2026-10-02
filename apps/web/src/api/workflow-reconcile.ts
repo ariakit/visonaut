@@ -1,8 +1,8 @@
 import {
   uploadImages,
+  captureJobNames,
   digestJson,
   parseManifest,
-  validateKey,
   validateManifestProfiles,
   workflowSourceDigest,
   type Manifest,
@@ -34,6 +34,7 @@ interface StagedRun {
   workflow_source_digest: string;
   caller_workflow_path: string;
   reusable_workflow_ref: string;
+  // The historic column stores the complete capture job name template.
   capture_job_prefix: string;
   submit_job_name: string;
   verified_json: string;
@@ -222,7 +223,7 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
       (await workflowSourceDigest(configuration.reusableWorkflowSha)) ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
     run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
-    run.capture_job_prefix !== configuration.captureJobPrefix ||
+    run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName
   ) {
     throw new IncompleteError("The pinned workflow has no matching signed submit intent.");
@@ -262,8 +263,9 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   ) {
     throw new IncompleteError("The signed submit job is not the final successful job.");
   }
+  const captureNames = captureJobNames(run.capture_job_prefix);
   const captureJobs = latestJobs.filter(
-    (job) => typeof job.name === "string" && job.name.startsWith(run.capture_job_prefix),
+    (job) => typeof job.name === "string" && captureNames.shard(job.name) !== undefined,
   );
   if (!captureJobs.length) {
     throw new IncompleteError("The pinned workflow has no required capture jobs.");
@@ -303,8 +305,10 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     }
     names.add(name);
     successfulJob(job, name, run, submit.sourceHead);
-    const key = name.slice(run.capture_job_prefix.length);
-    validateKey(key, "shardKey");
+    const key = captureNames.shard(name);
+    if (!key) {
+      throw new IncompleteError("The capture job name has no matching shard key.");
+    }
     const source = sources.find((entry) => entry.shardKey === key && entry.jobName === name);
     if (!source || source.workflowAttempt > run.workflow_attempt) {
       throw new IncompleteError("A required capture source is absent or stale.");

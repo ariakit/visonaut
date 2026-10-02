@@ -93,8 +93,9 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
   const sourceHead = identity.toString(16).padStart(40, "d");
   const workflowOwned = {
     callerWorkflowPath: ".github/workflows/visonaut.yml",
-    captureJobPrefix: "Visonaut / capture / ",
-    submitJobName: "Visonaut / submit",
+    callerWorkflowBlobSha: workflowPin,
+    captureJobName: "App / Visual Capture ({shard})",
+    submitJobName: "App / Visual Submit",
     reusableWorkflowRef: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${workflowPin}`,
     reusableWorkflowSha: workflowPin,
   };
@@ -166,7 +167,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
         shardKey: "linux",
         workflowAttempt: 1,
         jobId: String(Number(jobId) + 1),
-        jobName: `${workflowOwned.captureJobPrefix}linux`,
+        jobName: "App / Visual Capture (linux)",
         manifestDigest: "c".repeat(64),
         artifactId: String(identity + 50000),
         artifactName: `visonaut-capture-${identity}-1-linux`,
@@ -242,7 +243,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       trustedSourceDigest,
       workflowOwned.callerWorkflowPath,
       workflowOwned.reusableWorkflowRef,
-      workflowOwned.captureJobPrefix,
+      workflowOwned.captureJobName,
       workflowOwned.submitJobName,
       JSON.stringify(verified),
       Date.now(),
@@ -259,7 +260,7 @@ async function fixture(shardKeyOverride?: string, workflowPin = pin) {
       shardKey,
       shardKey === "combined"
         ? workflowOwned.submitJobName
-        : `${workflowOwned.captureJobPrefix}${shardKey}`,
+        : workflowOwned.captureJobName.replace("{shard}", shardKey),
       JSON.stringify(verified),
       Date.now(),
     )
@@ -800,7 +801,7 @@ async function terminalGitHub(test: Awaited<ReturnType<typeof fixture>>, manifes
   };
   const capture = {
     id: Number(test.jobId) + 1,
-    name: `${test.context.configuration.workflowOwned?.captureJobPrefix}linux`,
+    name: "App / Visual Capture (linux)",
     run_id: Number(test.manifest.run.workflowRunId),
     run_attempt: 1,
     head_sha: test.verified.sourceHead,
@@ -1715,7 +1716,7 @@ describe("workflow-owned upload staging", () => {
         otherJobId,
         otherJobId,
         otherShardKey,
-        `${test.context.configuration.workflowOwned?.captureJobPrefix}${otherShardKey}`,
+        `App / Visual Capture (${otherShardKey})`,
         JSON.stringify({ ...test.verified, jobId: otherJobId, shardKey: otherShardKey }),
         Date.now(),
       )
@@ -1797,17 +1798,23 @@ describe("workflow-owned upload staging", () => {
       status: "in_progress",
       conclusion: null,
     });
+    test.githubResponses.set(
+      `/repos/ariakit/ariakit/contents/${workflowOwned.callerWorkflowPath}?ref=${test.manifest.run.testedSha}`,
+      {
+        type: "file",
+        path: workflowOwned.callerWorkflowPath,
+        sha: workflowOwned.callerWorkflowBlobSha,
+      },
+    );
     test.githubResponses.set(base, run);
     test.githubResponses.set(`${base}/attempts/1`, run);
     test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
       object: { sha: test.manifest.run.testedSha },
     });
     test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
+      total_count: 2,
       jobs: [
-        job(
-          test.jobId,
-          `${test.context.configuration.workflowOwned?.captureJobPrefix}${test.shardKey}`,
-        ),
+        job(test.jobId, `App / Visual Capture (${test.shardKey})`),
         job(submitJobId, test.context.configuration.workflowOwned?.submitJobName ?? ""),
       ],
     });
@@ -1833,6 +1840,7 @@ describe("workflow-owned upload staging", () => {
           event_name: "push",
           ref: "refs/heads/main",
           workflow_ref: `ariakit/ariakit/${test.context.configuration.workflowOwned?.callerWorkflowPath}@refs/heads/main`,
+          workflow_sha: test.manifest.run.testedSha,
           job_workflow_ref: workflowOwned.reusableWorkflowRef,
           job_workflow_sha: workflowOwned.reusableWorkflowSha,
         })
@@ -2009,7 +2017,7 @@ describe("workflow-owned upload staging", () => {
     const missing = {
       ...github.capture,
       id: github.capture.id + 100,
-      name: `${test.context.configuration.workflowOwned?.captureJobPrefix}another-opaque-key`,
+      name: "App / Visual Capture (another-opaque-key)",
     };
     test.githubResponses.set(`${github.base}/attempts/1/jobs?per_page=100&page=1`, {
       total_count: 3,

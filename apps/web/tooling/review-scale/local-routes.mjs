@@ -75,8 +75,9 @@ const runtime = new Miniflare(
       // Preview builds omit upload trust; this read/save probe uses local fixtures.
       VISONAUT_WORKFLOW_OWNED: JSON.stringify({
         callerWorkflowPath: ".github/workflows/fixture-ci.yml",
+        callerWorkflowBlobSha: workflowSha,
         trustedWorkflowPath: ".github/workflows/fixture-capture.yml",
-        captureJobPrefix: "Fixture / Capture / ",
+        captureJobName: "Fixture / Capture / {shard}",
         submitJobName: "Fixture / Submit",
         reusableWorkflowRef: `fixture/repository/.github/workflows/fixture-capture.yml@${workflowSha}`,
         reusableWorkflowSha: workflowSha,

@@ -1,30 +1,38 @@
 import { CliError } from "./errors.js";
-import { prepareBundleSubmission } from "./bundle-submit.js";
+import { prepareBundleSubmission, submitWithoutVisuals } from "./bundle-submit.js";
 
-/** The only capture submission path downloads the verified required shard artifacts. */
+/** Submit either binds the native Plan's skip or verifies every capture artifact. */
 export async function runWorkflowCommand(
   argv: string[],
   environment: Record<string, string | undefined>,
-): Promise<{ command: "submit"; directory: string; server: string } | undefined> {
-  if (argv[0] !== "submit" || !argv.includes("--shard")) {
-    return;
-  }
+): Promise<
+  | { command: "submit"; directory: string; server: string }
+  | { command: "submit"; noVisual: true }
+  | undefined
+> {
+  if (argv[0] !== "submit") return;
   const shards: string[] = [];
+  let noVisual = false;
   let server: string | undefined;
-  if (argv.length < 3 || argv.length > 35 || argv.length % 2 !== 1) {
-    throw new CliError("Submit requires 1–16 --shard pairs and an optional --server.", 2);
-  }
-  for (let index = 1; index < argv.length; index += 2) {
-    const value = argv[index + 1] ?? "";
-    if (argv[index] === "--server") {
-      if (server || !value) {
+  for (let index = 1; index < argv.length; index++) {
+    const flag = argv[index];
+    if (flag === "--no-visual") {
+      if (noVisual) {
+        throw new CliError("Submit accepts --no-visual once.", 2);
+      }
+      noVisual = true;
+      continue;
+    }
+    const value = argv[++index] ?? "";
+    if (flag === "--server") {
+      if (server || !value || value.startsWith("--")) {
         throw new CliError("Submit accepts one --server origin.", 2);
       }
       server = value;
       continue;
     }
     if (
-      argv[index] !== "--shard" ||
+      flag !== "--shard" ||
       !/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/.test(value) ||
       shards.includes(value)
     ) {
@@ -32,9 +40,17 @@ export async function runWorkflowCommand(
     }
     shards.push(value);
   }
-  const prepared = await prepareBundleSubmission(
-    shards,
-    server ? { ...environment, VISONAUT_SERVER: server } : environment,
-  );
+  const selectedEnvironment = server ? { ...environment, VISONAUT_SERVER: server } : environment;
+  if (noVisual) {
+    if (shards.length) {
+      throw new CliError("Submit --no-visual does not accept capture shards.", 2);
+    }
+    await submitWithoutVisuals(selectedEnvironment);
+    return { command: "submit", noVisual: true };
+  }
+  if (shards.length < 1 || shards.length > 16) {
+    throw new CliError("Submit requires --no-visual or 1–16 --shard pairs.", 2);
+  }
+  const prepared = await prepareBundleSubmission(shards, selectedEnvironment);
   return { command: "submit", ...prepared };
 }

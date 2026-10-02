@@ -27,6 +27,8 @@ export interface OidcConfiguration {
   reusableWorkflowSha: string;
   /** Approved Git blob for direct jobs in this repository's app workflow. */
   trustedWorkflowPath?: string;
+  /** Approved caller blob; native Plan and App Submit keep distinct source pins. */
+  callerWorkflowBlobSha?: string;
   planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
@@ -152,7 +154,29 @@ export async function verifyGitHubOidc({
     configuration.repositoryOwnerId,
     "claim.repository_owner_id",
   );
-  if (configuration.trustedWorkflowPath) {
+  if (configuration.callerWorkflowBlobSha !== undefined) {
+    requireEqual(
+      typeof claims.workflow_sha === "string" && /^[a-f0-9]{40}$/.test(claims.workflow_sha),
+      true,
+      "claim.caller_workflow_sha_format",
+    );
+    requireEqual(claims.workflow_sha, sha(claims.sha), "claim.caller_workflow_sha");
+    const file = record(
+      await github.request(
+        `/repos/${github.repository}/contents/${configuration.workflowPath}?ref=${claims.workflow_sha}`,
+      ),
+    );
+    requireEqual(file.type, "file", "rest.caller_workflow_type");
+    requireEqual(file.path, configuration.workflowPath, "rest.caller_workflow_path");
+    requireEqual(file.sha, sha(configuration.callerWorkflowBlobSha), "rest.caller_workflow_blob");
+  }
+  if (configuration.trustedWorkflowPath === configuration.workflowPath) {
+    if (!configuration.callerWorkflowBlobSha) {
+      throw new SecurityError("untrusted_run", 403, "The native workflow is not configured.");
+    }
+    requireEqual(claims.job_workflow_ref, undefined, "claim.native_workflow_ref");
+    requireEqual(claims.job_workflow_sha, undefined, "claim.native_workflow_sha");
+  } else if (configuration.trustedWorkflowPath) {
     const source = configuration.trustedWorkflowPath;
     const claimedSource = claims.job_workflow_sha;
     requireEqual(sha(claimedSource), sha(claims.sha), "claim.direct_workflow_sha");
