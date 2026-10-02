@@ -1,5 +1,48 @@
 # visonaut
 
+## 0.4.0
+
+### Minor Changes
+
+- 4f387ce: One verified capture submission path
+
+  **BREAKING** if your workflow uses the encrypted capture transport, the renderer binary, or direct upload commands. Use normal Playwright jobs and one signed Submit job with ordinary one-day capture artifacts. The CLI now verifies the complete required job set, source attempts, rendering profiles, and image hashes before it submits. A missing inherited artifact requires a full visual rerun.
+
+  Before:
+
+  ```sh
+  visonaut pack --dir "$RUNNER_TEMP/visonaut" --output capture.enc
+  visonaut submit --bundle linux=linux.enc --bundle safari=safari.enc
+  ```
+
+  After:
+
+  ```sh
+  # Candidate jobs upload their complete capture directory for one day.
+  visonaut submit --shard linux --shard safari
+  ```
+
+  Import rendering environment measurement from `@visonaut/playwright/environment`. Rendering profiles no longer include comparison policy or engine settings. The old `@visonaut/playwright/ci` export and `visonaut-capture` binary are removed. Capture image attachments use private files outside diagnostic artifacts and the reporter removes them after each run.
+
+### Patch Changes
+
+- 4f387ce: Compare captures in the trusted Submit job
+
+  Submit compares PNG captures with the accepted reference in the caller's trusted job. It uses the screenshot threshold and pixel limits recorded by the Playwright adapter. It uploads new or changed originals and changed masks. Captures within the limits keep their observed metadata and image digest.
+
+  Set the same capture limits through [`visual`](https://github.com/ariakit/visonaut/blob/main/packages/playwright/README.md) or [`visualBatch`](https://github.com/ariakit/visonaut/blob/main/packages/playwright/README.md):
+
+  ```ts
+  await visual(page, {
+    item: "button",
+    variant: { key: "react-light", browser: "chromium" },
+    threshold: 0.2,
+    maxDiffPixels: 5,
+  });
+  ```
+
+  Use PNG captures and an accepted PNG reference. Local Submit rejects WebP references and requires a new Submit attempt if the accepted reference changes during comparison.
+
 ## 0.3.6
 
 ### Patch Changes
