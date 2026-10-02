@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.5.4
+
+### Patch Changes
+
+- f32fd10: Updated the [CLI guide](https://github.com/ariakit/visonaut/blob/main/packages/cli/README.md) with current workflow, comparison, and reference rules.
+
 ## 0.5.3
 
 ### Patch Changes
