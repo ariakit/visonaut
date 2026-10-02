@@ -784,7 +784,13 @@ export class Service {
             AND EXISTS(SELECT 1 FROM visonaut_snapshot_images member JOIN visonaut_captures reference ON reference.id=member.capture_id
               WHERE member.snapshot_id=? AND member.image_id=image.id AND member.copied=1
               AND reference.item_key=json_extract(staged.value,'$.itemKey') AND reference.variant_key=json_extract(staged.value,'$.variantKey')
-              AND COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=reference.profile_digest),reference.profile_digest)=json_extract(staged.value,'$.profileDigest'))))))`,
+              AND (COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=reference.profile_digest),reference.profile_digest)=json_extract(staged.value,'$.profileDigest')
+                OR (json_extract(staged.value,'$.metadata.localResult.changedPixels')=0
+                  AND json_extract(staged.value,'$.metadata.localResult.ratio')=0
+                  AND image.width=json_extract(staged.value,'$.metadata.observedImage.width')
+                  AND image.height=json_extract(staged.value,'$.metadata.observedImage.height')
+                  AND json_extract(staged.value,'$.metadata.localResult.maskImageId') IS NULL
+                  AND json_extract(staged.value,'$.metadata.localResult.maskExpected') IS NOT 1)))))))`,
           [captures, run.id, input.localReferenceSnapshotId ?? null],
         ),
         this.sql(
@@ -1075,11 +1081,19 @@ export class Service {
         ),
       );
     }
+    // Preserve signed receipts from older CLIs while applying the current
+    // zero-pixel policy to their imported review results.
+    const localZeroPixelChange = `r.id IS NOT NULL AND ri.width=ci.width AND ri.height=ci.height
+      AND json_extract(c.metadata_json,'$.localResult.outcome')='changed'
+      AND json_extract(c.metadata_json,'$.localResult.changedPixels')=0
+      AND json_extract(c.metadata_json,'$.localResult.ratio')=0
+      AND json_extract(c.metadata_json,'$.localResult.maskImageId') IS NULL
+      AND json_extract(c.metadata_json,'$.localResult.maskExpected') IS NOT 1`;
     const outcome = input.localComparison
-      ? "json_extract(c.metadata_json,'$.localResult.outcome')"
+      ? `CASE WHEN ${localZeroPixelChange} THEN 'unchanged' ELSE json_extract(c.metadata_json,'$.localResult.outcome') END`
       : `CASE WHEN r.id IS NULL THEN 'changed' WHEN ${identicalOriginals} THEN 'unchanged' ELSE 'pending' END`;
     const result = input.localComparison
-      ? "json_extract(c.metadata_json,'$.localResult')"
+      ? `CASE WHEN ${localZeroPixelChange} THEN json_set(json_extract(c.metadata_json,'$.localResult'),'$.outcome','unchanged') ELSE json_extract(c.metadata_json,'$.localResult') END`
       : `CASE WHEN ${identicalOriginals} THEN ${identicalResult} ELSE NULL END`;
     await atomic(this.database, [
       ...guards,

@@ -18,7 +18,7 @@ Download and ZIP extraction enforce encoded byte, expanded byte, entry count, pa
 
 Each capture artifact contains `manifest.json`, `environment.json`, and digest-named image files. Submit checks their hashes, sizes, test inventory, rendering profiles, repository, tested commit, package digest, and source attempt. It forms a fresh combined manifest, records every verified source, and submits only from the signed trusted job. Candidate code cannot choose its upload authority.
 
-Submit uses local comparison after these checks. The service pins the accepted reference for the complete capture manifest. The CLI compares each capture with that reference using the consumer's recorded screenshot settings. The pixel threshold defaults to `0.2`. An absolute pixel limit and a ratio limit both apply when both are set. A dimension or rendering profile change always requires review.
+Submit uses local comparison after these checks. The service pins the accepted reference for the complete capture manifest. The CLI compares each capture with that reference using the consumer's recorded screenshot settings. The pixel threshold defaults to `0.2`. An absolute pixel limit and a ratio limit both apply when both are set. A dimension change always requires review. A rendering profile change requires review only when pixels differ.
 
 The final manifest keeps every observed capture and its original digest. Submit uploads only new or changed originals and changed masks. A tolerated image keeps its observed metadata, but its bytes are not uploaded. For example, a capture with `comparison: { threshold: 0.2, maxDiffPixels: 2 }` can remain unchanged when the comparator finds two different pixels.
 

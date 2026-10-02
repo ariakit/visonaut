@@ -265,7 +265,7 @@ export async function compareLocally({
     ) {
       captures.push({
         ...result,
-        outcome: accepted.profileDigest === capture.profileDigest ? "unchanged" : "changed",
+        outcome: "unchanged",
         changedPixels: 0,
         ratio: 0,
         sizeChanged: false,

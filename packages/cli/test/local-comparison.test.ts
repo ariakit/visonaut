@@ -319,7 +319,7 @@ it("keeps tolerated observed bytes in the full manifest and uploads only unique 
 });
 
 it.each([false, true])(
-  "reuses identical reference bytes and preserves a profile change: %s",
+  "reuses identical reference bytes without reviewing a profile change: %s",
   async (profileChanged) => {
     const local = await localFixture();
     const capture = local.manifest.captures.find((entry) => entry.itemKey === "same");
@@ -345,15 +345,13 @@ it.each([false, true])(
         variantKey: capture.variant.key,
         candidateDigest: capture.image.digest,
         referenceDigest: capture.image.digest,
-        outcome: profileChanged ? "changed" : "unchanged",
+        outcome: "unchanged",
         changedPixels: 0,
         ratio: 0,
         sizeChanged: false,
       },
     ]);
-    expect(service.uploads).toEqual(
-      profileChanged ? [{ digest: capture.image.digest, bytes: capture.image.bytes }] : [],
-    );
+    expect(service.uploads).toEqual([]);
   },
 );
 
@@ -653,6 +651,14 @@ it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensio
       comparison: { threshold: 0.2, maxDiffPixels: 1000 },
       profileChanged: true,
     }),
-  ).toMatchObject({ outcome: "changed", changedPixels: 0, sizeChanged: false });
+  ).toMatchObject({ outcome: "unchanged", changedPixels: 0, sizeChanged: false });
+  expect(
+    comparePixels({
+      candidate: PNG.sync.read(black),
+      reference: PNG.sync.read(white),
+      comparison: { threshold: 0.2, maxDiffPixels: 1000 },
+      profileChanged: true,
+    }),
+  ).toMatchObject({ outcome: "changed", changedPixels: 1, sizeChanged: false });
   await expect(decodePng(white, { ...metadata(white), width: 100_000 })).rejects.toThrow();
 });
