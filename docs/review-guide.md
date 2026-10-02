@@ -48,6 +48,8 @@ Choose **Approve** or **Reject** for the selected variant. The page can show the
 
 A failed connection shows **Not saved**. **Retry same command** uses the original command identity and targets, so a lost response cannot create a second decision. **Refresh current state** loads the current server state. Inspect that state before making a new decision.
 
+An unexpected service failure shows **Reference:** beside the retry error. Include that reference in a support report so a maintainer can find the matching safe server log. If the decision is already queued, the notice still says that server processing will continue. Retry checks the same command; it does not cancel admitted work.
+
 A concurrent change shows **Conflict** and current state. The message identifies the conflicting reviewer when one is available. A refused command restores the prior local state and does not overwrite the newer decision.
 
 ## Undo and accepted history

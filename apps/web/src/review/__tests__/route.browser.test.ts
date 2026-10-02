@@ -6,6 +6,86 @@ import { fixtureModel } from "./fixture-model.ts";
 const entry = "/runs/run-42?comparison=history%2Fone";
 const fixtureUrl = `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
 
+for (const queued of [false, true]) {
+  test(`a ${queued ? "queued" : "sending"} save shows its support reference beside Retry`, async ({
+    page,
+  }) => {
+    const initial = fixtureModel();
+    const reference = "af4a9c01-3e33-4faa-903c-31c1b20d2bac";
+    const posted: Array<{ commandId: string; selection: unknown }> = [];
+    let fail = true;
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/review-sessions") {
+        return route.fulfill({ json: { reviewSessionId: "session-reference" } });
+      }
+      const command = path.endsWith("/commands") ? route.request().postDataJSON() : undefined;
+      if (command) {
+        posted.push(command);
+        if (queued) {
+          return route.fulfill({
+            status: 202,
+            json: { queued: true, commandId: command.commandId },
+          });
+        }
+      }
+      if (command || path.endsWith("/queued")) {
+        if (fail) {
+          return route.fulfill({
+            status: 503,
+            json: {
+              error: {
+                code: "service_unavailable",
+                message: "The service is temporarily unavailable.",
+                reference,
+              },
+            },
+          });
+        }
+        const saved = command ?? posted[0];
+        if (!saved) throw new Error("Missing saved command");
+        return route.fulfill({
+          json: {
+            commandId: saved.commandId,
+            selection: saved.selection,
+            revisions: [{ id: "row-React", expectedRevision: 1 }],
+            baselineRevision: initial.baselineRevision,
+            promotionId: null,
+            runRevision: initial.comparisonRevision + 1,
+            reviewer: "maintainer-reference",
+            runStatus: "needs-review",
+          },
+        });
+      }
+      if (path.endsWith("/state")) {
+        return route.fulfill({
+          json: {
+            run: initial.run,
+            comparisonState: "ready",
+            reviewReady: true,
+            archived: false,
+          },
+        });
+      }
+      return route.fulfill({ json: compactReviewModel(initial) });
+    });
+    await page.goto("/src/review/__tests__/route-fixture.html");
+    await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+    await page.getByRole("button", { name: "Approve A", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText(`Reference: ${reference}.`);
+    if (queued) {
+      await expect(page.getByRole("alert")).toContainText("The server will continue processing");
+    } else {
+      await expect(page.getByRole("alert")).toContainText("Not saved.");
+    }
+    fail = false;
+    await page.getByRole("button", { name: "Retry same command" }).click();
+    await expect(page.locator(".review-save-state")).toContainText("Saved.");
+    expect(posted).toHaveLength(2);
+    expect(posted[0]).toEqual(posted[1]);
+  });
+}
+
 test("dashboard loads its protected run list without a separate identity request", async ({
   page,
 }) => {
