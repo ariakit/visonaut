@@ -154,6 +154,7 @@ interface SendCheckParams {
   github: GitHubClient;
   intent: StatusDelivery;
   testedSha: string;
+  checkIdentity?: { headSha: string; externalId: string };
   origin: string;
   isCurrent: () => Promise<boolean>;
 }
@@ -163,6 +164,7 @@ export async function sendGitHubCheck({
   github,
   intent,
   testedSha,
+  checkIdentity,
   origin,
   isCurrent,
 }: SendCheckParams): Promise<void | "not-sent"> {
@@ -172,7 +174,8 @@ export async function sendGitHubCheck({
   const legacyCheck =
     existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
   if (
-    existing.head_sha !== testedSha ||
+    existing.head_sha !== (checkIdentity?.headSha ?? testedSha) ||
+    (checkIdentity && existing.external_id !== checkIdentity.externalId) ||
     (existing.name !== CHECK_NAME && !legacyCheck) ||
     numericId(record(existing.app).id) !== github.appId
   ) {

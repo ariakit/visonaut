@@ -26,6 +26,7 @@ interface Candidate {
   sourceSha: string;
   externalId: string;
   testedSha: string;
+  checkHeadSha: string | null;
   workflowRunId: string;
   workflowAttempt: number;
   state: string;
@@ -46,6 +47,7 @@ const candidatesSql = `WITH ranked AS (
   SELECT source.repository_id AS repositoryId,source.pull_request_number AS pullRequestNumber,
     source.source_sha AS sourceSha,source.external_id AS externalId,source.tested_sha AS testedSha,
     source.workflow_run_id AS workflowRunId,source.workflow_attempt AS workflowAttempt,
+    source.check_head_sha AS checkHeadSha,
     source.state,source.plan_visual_required AS visualRequired,source.plan_job_id AS planJobId,
     source.plan_workflow_sha AS planWorkflowSha,project.id AS projectId,project.revision AS projectRevision,
     ROW_NUMBER() OVER (PARTITION BY source.repository_id,source.pull_request_number
@@ -168,6 +170,8 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
     .bind(context.github.repositoryId, Number(cursor?.value) || 0, context.budget.tasksPerStep)
     .all<Candidate>();
   for (const candidate of candidates.results ?? []) {
+    // New attempts publish directly on the PR head; old merge checks keep their mirror.
+    if (candidate.checkHeadSha === candidate.sourceSha) continue;
     const externalId = reviewLinkIdentity(candidate, restoredAt);
     try {
       const detailsUrl = reviewLinkUrl(context.origin, candidate);

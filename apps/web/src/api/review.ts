@@ -1,4 +1,9 @@
-import { enqueueReview, reviewTaskId, type QueuedReviewInput } from "../operations/review-queue.ts";
+import {
+  enqueueReview,
+  processReviewQueue,
+  reviewTaskId,
+  type QueuedReviewInput,
+} from "../operations/review-queue.ts";
 import { compactReviewModel } from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard } from "./dashboard.js";
@@ -624,13 +629,31 @@ async function commandResult(context: PrivateContext, result: CommandResult, run
   return Response.json({ ...result, model: await reviewModel(context, runId) });
 }
 
-async function wakeReviewStatus(context: PrivateContext) {
-  // The outbox is already durable; only its wakeup runs after the response.
+async function wakeReviewStatus(context: PrivateContext, commandId?: string) {
+  // Start the saved command while the shared consumer may be occupied with ingest.
   context.lifetime.waitUntil(
-    context.operations.send({ kind: "status" }).catch(() => {
-      // The scheduled operations run retries the saved outbox entry.
-      console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
-    }),
+    (async () => {
+      if (commandId) {
+        try {
+          await processReviewQueue(
+            {
+              database: context.database,
+              budget: { tasksPerStep: 1, leaseMilliseconds: 30_000 },
+              now: Date.now,
+            },
+            commandId,
+          );
+        } catch {
+          // The durable task remains available to the operations consumer.
+          console.error(JSON.stringify({ event: "review-command-wakeup-failed" }));
+        }
+      }
+      try {
+        await context.operations.send({ kind: "status" });
+      } catch {
+        console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
+      }
+    })(),
   );
 }
 
@@ -841,7 +864,7 @@ export async function handleReview(
         if (body.previousCommandId !== undefined)
           input.previousCommandId = uuid(body.previousCommandId);
         await enqueueReview(context.database, input);
-        await wakeReviewStatus(context);
+        await wakeReviewStatus(context, input.commandId);
         return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
       }
       const result = await context.service.review({ ...input, now: Date.now() });

@@ -195,3 +195,31 @@ it("refuses duplicate exact check identities", async () => {
     }),
   ).rejects.toMatchObject({ code: "duplicate_check" });
 });
+
+it.each([
+  ["the stored head", { head_sha: testedSha }],
+  ["the stored external identity", { external_id: "visonaut:pre:other" }],
+  ["the App", { app: { id: 999 } }],
+] as const)("refuses a PR head check that differs from %s", async (_label, change) => {
+  const headSha = "b".repeat(40);
+  const externalId = `visonaut:pre:${testedSha}`;
+  const github = senderClient({
+    id: 42,
+    name: "Visonaut",
+    app: { id: 123 },
+    head_sha: headSha,
+    external_id: externalId,
+    ...change,
+  });
+  await expect(
+    sendGitHubCheck({
+      github,
+      intent,
+      testedSha,
+      checkIdentity: { headSha, externalId },
+      origin,
+      isCurrent: async () => true,
+    }),
+  ).rejects.toMatchObject({ code: "wrong_check" });
+  expect(github.request).toHaveBeenCalledTimes(1);
+});

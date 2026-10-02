@@ -1,3 +1,4 @@
+import { object } from "./input.js";
 import { beginStaged } from "./workflow-owned.js";
 import { readFile } from "node:fs/promises";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
@@ -384,7 +385,7 @@ async function boundMainWorkflowFixture() {
 }
 
 describe("pre-run App checks", () => {
-  async function equivalentMergeChecks() {
+  async function equivalentMergeChecks(headChecks = false) {
     const fixture = preRunFixture();
     const aliasSha = "f".repeat(40);
     const sourceExternalId = `visonaut:pre:${mergeSha}`;
@@ -395,18 +396,20 @@ describe("pre-run App checks", () => {
     await database
       .prepare(`INSERT INTO pre_run_checks
         (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
-          docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,created_at,updated_at)
-        VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'1','active','77',1,1,1),
-          (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'2','active',NULL,NULL,1,1)`)
+          docs_only,external_id,check_id,check_head_sha,state,workflow_run_id,workflow_attempt,created_at,updated_at)
+        VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'1',?,'active','77',1,1,1),
+          (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'2',?,'active',NULL,NULL,1,1)`)
       .bind(
         mergeSha,
         sourceSha,
         baseSha,
         sourceExternalId,
+        headChecks ? sourceSha : null,
         aliasSha,
         sourceSha,
         baseSha,
         aliasExternalId,
+        headChecks ? sourceSha : null,
       )
       .run();
     await database
@@ -420,7 +423,7 @@ describe("pre-run App checks", () => {
       id: 1,
       app: { id: 123 },
       name: "Visonaut",
-      head_sha: mergeSha,
+      head_sha: headChecks ? sourceSha : mergeSha,
       external_id: sourceExternalId,
       status: "completed",
       conclusion: "success",
@@ -430,7 +433,7 @@ describe("pre-run App checks", () => {
       id: 2,
       app: { id: 123 },
       name: "Visonaut",
-      head_sha: aliasSha,
+      head_sha: headChecks ? sourceSha : aliasSha,
       external_id: aliasExternalId,
       status: "in_progress",
       conclusion: null,
@@ -438,6 +441,37 @@ describe("pre-run App checks", () => {
     });
     return fixture;
   }
+
+  it.each([false, true])(
+    "keeps the signed result pending for a changed merge tree (head check: %s)",
+    async (headChecks) => {
+      const fixture = await equivalentMergeChecks(headChecks);
+      fixture.state.currentTree = "2".repeat(40);
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "in_progress",
+        conclusion: null,
+      });
+    },
+  );
+
+  it("retires a regenerated head check only after exact merge equivalence", async () => {
+    const fixture = await equivalentMergeChecks(true);
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 1, pending: [] });
+    expect(fixture.state.checks.get("2")).toMatchObject({
+      head_sha: sourceSha,
+      status: "completed",
+      conclusion: "neutral",
+      details_url: "https://preview.example/runs/1234",
+    });
+    expect(
+      await database.prepare("SELECT tested_sha FROM pre_run_checks WHERE check_id='2'").first(),
+    ).toEqual({ tested_sha: "f".repeat(40) });
+  });
 
   it("retires the current equivalent merge check with a link to the signed result", async () => {
     const fixture = await equivalentMergeChecks();
@@ -613,42 +647,45 @@ describe("pre-run App checks", () => {
     expect(fixture.state.checks.get("2")?.conclusion).toBe("neutral");
   });
 
-  it("creates a new generation when a signed attempt later uses the retired merge", async () => {
-    const fixture = await equivalentMergeChecks();
-    await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github);
-    const aliasSha = "f".repeat(40);
-    fixture.state.posts = 2;
-    fixture.state.run.run_attempt = 2;
-    fixture.state.run.status = "in_progress";
-    fixture.state.run.conclusion = null;
-    fixture.state.run.referenced_workflows = [
-      {
-        path: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${aliasSha}`,
+  it.each([false, true])(
+    "creates a new generation when a signed attempt later uses the retired merge (head check: %s)",
+    async (headChecks) => {
+      const fixture = await equivalentMergeChecks(headChecks);
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github);
+      const aliasSha = "f".repeat(40);
+      fixture.state.posts = 2;
+      fixture.state.run.run_attempt = 2;
+      fixture.state.run.status = "in_progress";
+      fixture.state.run.conclusion = null;
+      fixture.state.run.referenced_workflows = [
+        {
+          path: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${aliasSha}`,
+          ref: "refs/pull/7/merge",
+          sha: aliasSha,
+        },
+      ];
+      await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
+        workflowRunId: "77",
+        workflowAttempt: 2,
+        testedSha: aliasSha,
+        sourceHead: sourceSha,
+        targetHead: baseSha,
+        event: "pull_request",
         ref: "refs/pull/7/merge",
-        sha: aliasSha,
-      },
-    ];
-    await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, {
-      workflowRunId: "77",
-      workflowAttempt: 2,
-      testedSha: aliasSha,
-      sourceHead: sourceSha,
-      targetHead: baseSha,
-      event: "pull_request",
-      ref: "refs/pull/7/merge",
-      pullRequestNumber: 7,
-    });
-    expect(fixture.state.checks.get("3")).toMatchObject({
-      head_sha: aliasSha,
-      external_id: `visonaut:pre:${aliasSha}:1`,
-      status: "in_progress",
-    });
-    expect(
-      await database
-        .prepare("SELECT generation,state,workflow_run_id FROM pre_run_checks WHERE check_id='3'")
-        .first(),
-    ).toEqual({ generation: 1, state: "active", workflow_run_id: "77" });
-  });
+        pullRequestNumber: 7,
+      });
+      expect(fixture.state.checks.get("3")).toMatchObject({
+        head_sha: headChecks ? sourceSha : aliasSha,
+        external_id: `visonaut:pre:${aliasSha}:1`,
+        status: "in_progress",
+      });
+      expect(
+        await database
+          .prepare("SELECT generation,state,workflow_run_id FROM pre_run_checks WHERE check_id='3'")
+          .first(),
+      ).toEqual({ generation: 1, state: "active", workflow_run_id: "77" });
+    },
+  );
 
   it.each(["head", "base", "tree"] as const)(
     "does not pass an alias after the current merge %s changes",
@@ -1106,6 +1143,81 @@ describe("pre-run App checks", () => {
     expect(fixture.state.checks.size).toBe(0);
   });
 
+  it("wakes ingestion when the exact signed Submit check completes before Gate", async () => {
+    const context = apiContext(preRunBindings);
+    const prepare = vi.fn(database.prepare.bind(database));
+    context.database = new Proxy(database, {
+      get(target, key) {
+        return key === "prepare" ? prepare : Reflect.get(target, key);
+      },
+    });
+    const send = vi.fn(async () => {});
+    context.operations.send = send;
+    await database
+      .prepare(`INSERT INTO ingest_staged_runs
+      (id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,
+        caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,
+        verified_json,submit_job_id,submit_check_run_id,submit_verified_json,submitted_at,created_at)
+      VALUES ('staged','100','77',1,?,'digest','caller','reusable','capture',?,'{}','102','202',?,1,?)`)
+      .bind(
+        mergeSha,
+        preRunConfiguration.submitJobName,
+        JSON.stringify({ sourceHead: sourceSha }),
+        Date.now(),
+      )
+      .run();
+    const webhook: VerifiedWebhook = {
+      deliveryId: crypto.randomUUID(),
+      event: "check_run",
+      payloadDigest: "digest",
+      receivedAt: Date.now(),
+      payload: {
+        action: "completed",
+        repository: { id: 100 },
+        installation,
+        check_run: {
+          id: 202,
+          name: preRunConfiguration.submitJobName,
+          app: { id: 15368 },
+          head_sha: sourceSha,
+          status: "completed",
+          conclusion: "success",
+        },
+      },
+    };
+    await processWebhook(context, webhook);
+    expect(send).toHaveBeenCalledExactlyOnceWith({ kind: "ingest" });
+    expect(
+      prepare.mock.calls.filter(([sql]) => sql.includes("FROM ingest_staged_runs")),
+    ).toHaveLength(1);
+    send.mockClear();
+    const check = object(webhook.payload.check_run);
+    for (const patch of [
+      { id: 203 },
+      { head_sha: mergeSha },
+      { name: "Gate" },
+      { app: { id: 123 } },
+      { conclusion: "failure" },
+      { status: "in_progress" },
+    ]) {
+      webhook.payload.check_run = { ...check, ...patch };
+      await processWebhook(context, webhook);
+    }
+    expect(send).not.toHaveBeenCalled();
+    prepare.mockClear();
+    for (const name of ["Gate", "Lint", "Capture / Linux", "Capture / Safari"]) {
+      webhook.payload.check_run = { ...check, name };
+      await processWebhook(context, webhook);
+    }
+    expect(
+      prepare.mock.calls.filter(([sql]) => sql.includes("FROM ingest_staged_runs")),
+    ).toHaveLength(0);
+    expect(send).not.toHaveBeenCalled();
+    expect(await database.prepare("SELECT COUNT(*) AS count FROM visonaut_runs").first()).toEqual({
+      count: 0,
+    });
+  });
+
   it("creates one check when a verified submit starts", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
@@ -1128,7 +1240,7 @@ describe("pre-run App checks", () => {
     await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, signedSubmit);
     expect(fixture.state.posts).toBe(1);
     expect(fixture.state.checks.get("1")).toMatchObject({
-      head_sha: mergeSha,
+      head_sha: sourceSha,
       status: "in_progress",
       external_id: `visonaut:pre:${mergeSha}`,
     });
@@ -1153,7 +1265,7 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(1);
     expect(fixture.state.checks.get("1")).toMatchObject({
       name: "Visonaut",
-      head_sha: mergeSha,
+      head_sha: sourceSha,
       status: "in_progress",
     });
     expect(
@@ -1420,6 +1532,61 @@ describe("pre-run App checks", () => {
       { filename: "README.md", previous_filename: "app/src/index.ts", status: "renamed" },
     ];
     expect((await candidateForWebhook(fixture.github, fixture.webhook))?.docsOnly).toBe(false);
+  });
+
+  it("creates the attempt check on the PR head while retaining its tested merge", async () => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    expect(fixture.state.checks.get("1")).toMatchObject({
+      head_sha: sourceSha,
+      external_id: `visonaut:pre:${mergeSha}`,
+      details_url: `${preRunBindings.configuration.origin}/pulls/7?check=visonaut%3Apre%3A${mergeSha}`,
+    });
+    expect(
+      await database.prepare("SELECT tested_sha,check_head_sha FROM pre_run_checks").first(),
+    ).toEqual({
+      tested_sha: mergeSha,
+      check_head_sha: sourceSha,
+    });
+    expect(
+      await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 1,
+      }),
+    ).toMatchObject({ testedSha: mergeSha, checkId: "1" });
+  });
+
+  it("recovers a legacy ambiguous merge POST without changing its immutable check head", async () => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    const externalId = `visonaut:pre:${mergeSha}`;
+    await database
+      .prepare(`INSERT INTO pre_run_checks
+      (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
+      docs_only,external_id,state,request_started,created_at,updated_at)
+      VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,'ambiguous',1,?,?)`)
+      .bind(mergeSha, sourceSha, baseSha, externalId, Date.now(), Date.now())
+      .run();
+    fixture.state.checks.set("99", {
+      id: 99,
+      app: { id: 123 },
+      name: "Visonaut",
+      head_sha: mergeSha,
+      external_id: externalId,
+      status: "in_progress",
+    });
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    expect(fixture.state.posts).toBe(0);
+    expect(
+      await database.prepare("SELECT check_id,check_head_sha,state FROM pre_run_checks").first(),
+    ).toEqual({ check_id: "99", check_head_sha: null, state: "active" });
+    await expect(
+      database.prepare("UPDATE pre_run_checks SET check_head_sha=?").bind(sourceSha).run(),
+    ).rejects.toThrow("Check head conflicts with stored identity");
   });
 
   it("recovers one ambiguous POST and rejects duplicate external identities", async () => {
@@ -2285,7 +2452,7 @@ describe("pre-run App checks", () => {
     await ensureSignedAttemptCheck(apiContext(preRunBindings), fixture.github, signed);
     expect(fixture.state.posts).toBe(1);
     expect(fixture.state.checks.get("1")).toMatchObject({
-      head_sha: mergeSha,
+      head_sha: sourceSha,
       external_id: `visonaut:pre:${mergeSha}`,
       status: "in_progress",
     });
@@ -2524,7 +2691,7 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(2);
     expect(fixture.state.checks.get("2")).toMatchObject({
       status: "in_progress",
-      head_sha: mergeSha,
+      head_sha: sourceSha,
       external_id: `visonaut:pre:${mergeSha}:1`,
     });
     expect(
@@ -4064,30 +4231,53 @@ describe("restored workflow and delivery fencing", () => {
     expect(report).toEqual({ checked: 0, progressed: 0, errors: [] });
   });
 
-  it("creates a fresh check generation for a new capture at the same tested SHA", async () => {
-    const fixture = preRunFixture();
-    const candidate = {
-      testedSha: mergeSha,
-      sourceSha,
-      baseSha,
-      kind: "pull_request" as const,
-      ref: "refs/pull/7/merge",
-      pullRequestNumber: 7,
-      docsOnly: false,
-    };
-    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
-    await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
-    await sanitizeRestoredDatabase(database, Date.now() - 1000);
-    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
-    expect(
-      await database
-        .prepare("SELECT generation,external_id FROM pre_run_checks ORDER BY generation")
-        .all(),
-    ).toMatchObject({
-      results: [
-        { generation: 0, external_id: `visonaut:pre:${mergeSha}` },
-        { generation: 1, external_id: `visonaut:pre:${mergeSha}:1` },
-      ],
-    });
-  });
+  it.each([false, true])(
+    "creates a fresh check generation for a new capture at the same tested SHA (legacy merge: %s)",
+    async (legacyMerge) => {
+      const fixture = preRunFixture();
+      const candidate = {
+        testedSha: mergeSha,
+        sourceSha,
+        baseSha,
+        kind: "pull_request" as const,
+        ref: "refs/pull/7/merge",
+        pullRequestNumber: 7,
+        docsOnly: false,
+      };
+      if (legacyMerge) {
+        await database
+          .prepare(`INSERT INTO pre_run_checks
+        (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
+        docs_only,external_id,created_at,updated_at)
+        VALUES (?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,?,1,1)`)
+          .bind(mergeSha, sourceSha, baseSha, `visonaut:pre:${mergeSha}`)
+          .run();
+      } else {
+        await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+      }
+      await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
+      await sanitizeRestoredDatabase(database, Date.now() - 1000);
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+      expect(
+        await database
+          .prepare(
+            "SELECT generation,external_id,check_head_sha FROM pre_run_checks ORDER BY generation",
+          )
+          .all(),
+      ).toMatchObject({
+        results: [
+          {
+            generation: 0,
+            external_id: `visonaut:pre:${mergeSha}`,
+            check_head_sha: legacyMerge ? null : sourceSha,
+          },
+          {
+            generation: 1,
+            external_id: `visonaut:pre:${mergeSha}:1`,
+            check_head_sha: legacyMerge ? null : sourceSha,
+          },
+        ],
+      });
+    },
+  );
 });

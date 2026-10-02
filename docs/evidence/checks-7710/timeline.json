@@ -1,0 +1,272 @@
+{
+  "subject": "https://github.com/ariakit/ariakit/pull/7710",
+  "workflow_run_id": "37050749851",
+  "attempt": 1,
+  "tested_merge_sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+  "source_head_sha": "830ece4e090150023d9f5d8a92dd2dcf2eb7a030",
+  "checks": [
+    {
+      "id": 110990180117,
+      "head_sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+      "external_id": "visonaut:pre:1bdd777e31f106d1339b468dde7de6420fde198d",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T19:14:45Z",
+      "completed_at": "2026-10-02T19:28:45Z",
+      "details_url": "https://visonaut.com/runs/bc944613-b772-49e8-80b0-51c697237415",
+      "suite_id": 100366893108,
+      "app": {
+        "id": 5028451,
+        "slug": "visonaut-ci"
+      }
+    },
+    {
+      "id": 110990341692,
+      "head_sha": "830ece4e090150023d9f5d8a92dd2dcf2eb7a030",
+      "external_id": "visonaut:review:7710:830ece4e090150023d9f5d8a92dd2dcf2eb7a030",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T19:15:12Z",
+      "completed_at": "2026-10-02T19:26:20Z",
+      "details_url": "https://visonaut.com/pulls/7710?check=visonaut%3Apre%3A1bdd777e31f106d1339b468dde7de6420fde198d",
+      "suite_id": 100360963992,
+      "app": {
+        "id": 5028451,
+        "slug": "visonaut-ci"
+      }
+    }
+  ],
+  "jobs": [
+    {
+      "id": 110984641114,
+      "name": "App / Visual Capture (linux)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T18:59:48Z",
+      "completed_at": "2026-10-02T19:10:09Z",
+      "html_url": "https://github.com/ariakit/ariakit/actions/runs/37050749851/job/110984641114"
+    },
+    {
+      "id": 110984641133,
+      "name": "App / Visual Capture (safari)",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T19:00:46Z",
+      "completed_at": "2026-10-02T19:14:15Z",
+      "html_url": "https://github.com/ariakit/ariakit/actions/runs/37050749851/job/110984641133"
+    },
+    {
+      "id": 110989996695,
+      "name": "App / Visual Submit",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T19:14:19Z",
+      "completed_at": "2026-10-02T19:17:29Z",
+      "html_url": "https://github.com/ariakit/ariakit/actions/runs/37050749851/job/110989996695"
+    },
+    {
+      "id": 110992341734,
+      "name": "Gate",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-02T19:20:38Z",
+      "completed_at": "2026-10-02T19:20:50Z",
+      "html_url": "https://github.com/ariakit/ariakit/actions/runs/37050749851/job/110992341734"
+    }
+  ],
+  "service": {
+    "submitted_at": "2026-10-02T19:17:23.642Z",
+    "reserved_at": "2026-10-02T19:21:16.266Z",
+    "sealed_at": "2026-10-02T19:22:21.166Z",
+    "comparison_created_at": "2026-10-02T19:22:21.561Z",
+    "approvals": [
+      {
+        "kind": "automatic",
+        "verdict": "approved",
+        "count": 8,
+        "first_at": "2026-10-02T19:22:22.960Z",
+        "last_at": "2026-10-02T19:22:22.960Z"
+      },
+      {
+        "kind": "human",
+        "verdict": "approved",
+        "count": 4,
+        "first_at": "2026-10-02T19:25:48.160Z",
+        "last_at": "2026-10-02T19:25:48.160Z"
+      }
+    ],
+    "review_command": {
+      "id": "83a9b566-6b04-4017-bdb3-48ceff3c56eb",
+      "enqueued_at": "2026-10-02T19:24:55.636Z",
+      "committed_at": "2026-10-02T19:25:48.160Z",
+      "receipt_completed_at": "2026-10-02T19:25:49.005Z",
+      "state": "complete",
+      "attempts": 1
+    },
+    "outbox": [
+      {
+        "check_id": "110990180117",
+        "revision": 893,
+        "run_id": "bc944613-b772-49e8-80b0-51c697237415",
+        "attempt": 1,
+        "conclusion": "failure",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": "2026-10-02T19:23:10.814Z",
+        "last_error": null
+      },
+      {
+        "check_id": "110990180117",
+        "revision": 898,
+        "run_id": "bc944613-b772-49e8-80b0-51c697237415",
+        "attempt": 1,
+        "conclusion": "success",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": "2026-10-02T19:26:09.674Z",
+        "last_error": null
+      },
+      {
+        "check_id": "110990180117",
+        "revision": 902,
+        "run_id": "bc944613-b772-49e8-80b0-51c697237415",
+        "attempt": 1,
+        "conclusion": "success",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": "2026-10-02T19:28:45.535Z",
+        "last_error": null
+      },
+      {
+        "check_id": "110990341692",
+        "revision": 3,
+        "run_id": "37050749851",
+        "attempt": 1,
+        "conclusion": "success",
+        "state": "complete",
+        "attempts": 1,
+        "available_at": "2026-10-02T19:26:21.523Z",
+        "last_error": null
+      }
+    ],
+    "check_delivery_state": [
+      {
+        "id": "110990180117",
+        "desired_revision": 902,
+        "delivered_revision": 902,
+        "ambiguous": 0
+      },
+      {
+        "id": "110990341692",
+        "desired_revision": 3,
+        "delivered_revision": 3,
+        "ambiguous": 0
+      }
+    ]
+  },
+  "intervals_ms": {
+    "submit_to_reservation": 232624,
+    "reservation_to_seal": 64900,
+    "submit_to_automatic_approval": 299318,
+    "review_queue_to_commit": 52524,
+    "review_queue_to_receipt": 53369,
+    "approval_to_merge_success_intent": 21514,
+    "approval_to_head_success_intent": 33363
+  },
+  "read_only_inspection": {
+    "d1_rows_written": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "app_events": ["check_run", "merge_group", "pull_request", "push", "workflow_run"]
+  },
+  "workflow": {
+    "id": 37050749851,
+    "run_attempt": 1,
+    "event": "pull_request",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "830ece4e090150023d9f5d8a92dd2dcf2eb7a030",
+    "check_suite_id": 100360988624,
+    "created_at": "2026-10-02T18:55:55Z",
+    "updated_at": "2026-10-02T19:20:51Z",
+    "path": ".github/workflows/ci.yml",
+    "html_url": "https://github.com/ariakit/ariakit/actions/runs/37050749851",
+    "referenced_workflows": [
+      {
+        "path": "ariakit/ariakit/.github/workflows/docs.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/main.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/perf.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/og-images.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/plus.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/app.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/deploy-preview.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      },
+      {
+        "path": "ariakit/ariakit/.github/workflows/release-preview.yml@1bdd777e31f106d1339b468dde7de6420fde198d",
+        "sha": "1bdd777e31f106d1339b468dde7de6420fde198d",
+        "ref": "refs/pull/7710/merge"
+      }
+    ]
+  },
+  "commit_statuses": {
+    "1bdd777e31f106d1339b468dde7de6420fde198d": [],
+    "830ece4e090150023d9f5d8a92dd2dcf2eb7a030": [
+      {
+        "context": "CodeRabbit",
+        "state": "success"
+      },
+      {
+        "context": "Preview (branch)",
+        "state": "success"
+      },
+      {
+        "context": "Preview (commit)",
+        "state": "success"
+      },
+      {
+        "context": "Preview (branch)",
+        "state": "pending"
+      },
+      {
+        "context": "Preview (commit)",
+        "state": "pending"
+      },
+      {
+        "context": "Vercel",
+        "state": "success"
+      },
+      {
+        "context": "CodeRabbit",
+        "state": "pending"
+      },
+      {
+        "context": "Vercel",
+        "state": "pending"
+      }
+    ]
+  }
+}

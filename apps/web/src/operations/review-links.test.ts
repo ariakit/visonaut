@@ -471,3 +471,64 @@ it("keeps actual main checks on their captured tested SHA", async () => {
     }),
   ]);
 });
+
+it("updates one PR-head attempt check through review and Undo without a mirror", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const service = await captured(fixture.context);
+  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
+  const externalId = `visonaut:pre:${firstMergeSha}`;
+  await database
+    .prepare(`INSERT INTO pre_run_checks(
+    tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,
+    docs_only,external_id,check_id,check_head_sha,state,workflow_run_id,workflow_attempt,
+    plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha,created_at,updated_at)
+    VALUES (?,0,'123',?,'d','pull_request','refs/pull/7/merge',7,0,?,'99',?,'active','run',1,1,1,'plan-job','caller',1,1)`)
+    .bind(firstMergeSha, sourceSha, externalId, sourceSha)
+    .run();
+  await database
+    .prepare(`INSERT INTO operations_check_creations
+    (run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at)
+    VALUES ('run',?,'99','complete',1,1,1,1)`)
+    .bind(externalId)
+    .run();
+  fixture.state.checks.set("99", {
+    id: "99",
+    app: { id: 12 },
+    name: "Visonaut",
+    head_sha: sourceSha,
+    external_id: externalId,
+    status: "in_progress",
+    conclusion: null,
+  });
+  await saveReview(service, fixture.state.time, "rejected");
+  const publish = async () => {
+    await deliverGitHubStatuses(fixture.context);
+    await publishReviewLinks(fixture.context);
+  };
+  await publish();
+  expect([...fixture.state.checks.values()]).toEqual([
+    expect.objectContaining({
+      id: "99",
+      conclusion: "failure",
+      details_url: `${fixture.context.origin}/runs/run`,
+    }),
+  ]);
+  await saveReview(service, fixture.state.time);
+  await publish();
+  expect(fixture.state.checks.get("99")).toMatchObject({ conclusion: "success" });
+  await service.undo({
+    commandId: "approve-run",
+    undoCommandId: "undo-approve-run",
+    actorId: "reviewer",
+    sessionId: "session",
+    expectedBaselineRevision: (await service.project("project")).baseline_revision,
+    now: fixture.state.time + 1,
+  });
+  await publish();
+  expect(fixture.state.checks.get("99")).toMatchObject({ conclusion: "failure" });
+  expect(fixture.state.posts).toBe(0);
+  expect(
+    await database.prepare("SELECT COUNT(*) AS count FROM operations_review_links").first(),
+  ).toEqual({ count: 0 });
+});
