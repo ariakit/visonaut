@@ -953,6 +953,7 @@ export class Service {
     const run = await this.run(input.runId);
     const project = await this.project(run.project_id);
     const historical = input.purpose === "historical";
+    const baselineRevision = input.expectedBaselineRevision ?? project.baseline_revision;
     if (!input.localComparison) {
       const local = await this.sql(
         "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
@@ -974,10 +975,14 @@ export class Service {
     }
     const guards = [
       this.projectGuard(project),
-      this.guard(
-        "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND baseline_revision = ?)",
-        [project.id, input.expectedBaselineRevision ?? project.baseline_revision],
-      ),
+      ...(run.kind === "pull_request" && input.localComparison
+        ? []
+        : [
+            this.guard(
+              "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND baseline_revision = ?)",
+              [project.id, baselineRevision],
+            ),
+          ]),
       historical
         ? this.guard(
             "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 0 AND revision = ? AND detail_archived=0 AND closed_at>? AND NOT EXISTS(SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=visonaut_runs.id))",
@@ -1020,7 +1025,11 @@ export class Service {
           ],
         ),
       );
-    } else {
+    } else if (
+      run.kind !== "pull_request" ||
+      !input.localComparison ||
+      input.localComparison.reference.captureCount !== 0
+    ) {
       guards.push(
         this.guard(
           "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND fresh_setup = 1 AND snapshot_id IS NULL)",
@@ -1110,7 +1119,7 @@ export class Service {
           input.id,
           run.id,
           input.referenceSnapshotId,
-          project.baseline_revision,
+          baselineRevision,
           project.policy_digest,
           input.now,
           historical ? "historical" : "review",
@@ -2067,7 +2076,10 @@ export class Service {
     const comparison = await this.comparison(command.comparison_id);
     const run = await this.run(comparison.run_id);
     const project = await this.project(run.project_id);
-    if (project.baseline_revision !== input.expectedBaselineRevision) {
+    if (
+      run.kind !== "pull_request" &&
+      project.baseline_revision !== input.expectedBaselineRevision
+    ) {
       throw new ConflictError("The baseline changed after this command.", project);
     }
     const promoted = await this.sql(
@@ -2431,7 +2443,7 @@ export class Service {
     );
     statements.push(
       this.sql(
-        "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE id != ? AND run_id IN (SELECT id FROM visonaut_runs WHERE project_id = ? AND active = 1 AND state != 'accepted')",
+        "UPDATE visonaut_comparisons SET state = 'invalidated' WHERE id != ? AND run_id IN (SELECT id FROM visonaut_runs WHERE project_id = ? AND active = 1 AND state != 'accepted' AND kind != 'pull_request')",
         [comparison.id, project.id],
       ),
     );

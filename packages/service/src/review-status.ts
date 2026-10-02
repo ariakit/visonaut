@@ -17,7 +17,7 @@ export const rejectedReviewCountSql = `COALESCE(SUM(CASE WHEN decision.verdict =
   AND decision.revoked = 0 THEN 1 ELSE 0 END), 0)`;
 
 interface ReviewStatusInput {
-  run: Pick<RunRow, "active" | "state" | "comparison_id" | "sealed_at">;
+  run: Pick<RunRow, "kind" | "active" | "state" | "comparison_id" | "sealed_at">;
   comparison?: Pick<ComparisonRow, "state" | "baseline_revision">;
   failures?: boolean;
   pending?: number;
@@ -59,7 +59,12 @@ export function reviewStatus({
   if (comparison?.state === "invalidated") return empty("needs-recompare");
   if (failures) return empty("failed");
   if (comparison?.state !== "ready") return empty("comparing");
-  if (pending === 0 && !currentPromotion && comparison.baseline_revision !== baselineRevision) {
+  if (
+    run.kind !== "pull_request" &&
+    pending === 0 &&
+    !currentPromotion &&
+    comparison.baseline_revision !== baselineRevision
+  ) {
     return { status: "needs-recompare", pending, rejected };
   }
   return {

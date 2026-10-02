@@ -20,7 +20,7 @@ import {
   releaseExpiredComparisonReferences,
   retireSnapshot,
 } from "./retention.ts";
-import { claimExpiredRun, closedRunRetentionMs, reconcileWork } from "./work.ts";
+import { claimExpiredRun, claimStatus, closedRunRetentionMs, reconcileWork } from "./work.ts";
 import {
   archiveEligibilitySql,
   compactRunHistory,
@@ -989,6 +989,78 @@ describe("full run and immutable comparison state", () => {
     ).toMatchObject({ kind: "automatic", actor_id: null });
   });
 
+  it("keeps separate PR reviews on their pinned baseline after main advances", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    const first = await fixture(service, { id: "first-pr", kind: "pull_request" });
+    const second = await fixture(service, {
+      id: "second-pr",
+      kind: "pull_request",
+      finalize: false,
+    });
+    const approval = await review(service, first);
+    const intent = {
+      runId: "first-pr",
+      checkId: "pr-check",
+      detailsUrl: "https://visonaut.example/runs/first-pr",
+      maxAttempts: 3,
+      now: 8,
+    };
+    expect((await service.prepareStatusIntent(intent)).conclusion).toBe("success");
+    const delivery = await claimStatus(database, {
+      id: "pr-check",
+      token: "lease",
+      now: 9,
+      leaseMs: 100,
+    });
+    if (!delivery) throw new Error("Missing queued success");
+    expect(await service.isStatusIntentCurrent(delivery)).toBe(true);
+    await fixture(service, {
+      id: "next-main",
+      compare: () => ({
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        engineVersion: "engine",
+        codecVersion: "codec",
+      }),
+    });
+    await promote(service, "next-main");
+
+    expect(await service.comparison(first)).toMatchObject({
+      state: "ready",
+      reference_snapshot_id: "snapshot-seed",
+      baseline_revision: 1,
+    });
+    expect((await service.status("first-pr")).status).toBe("passed");
+    expect(await service.isStatusIntentCurrent(delivery)).toBe(false);
+    expect((await service.prepareStatusIntent({ ...intent, now: 12 })).conclusion).toBe("success");
+    expect((await service.run("first-pr")).tested_sha).toBe("sha-first-pr");
+    await service.finalizeComparison({ comparisonId: second, now: 12 });
+    expect((await service.status("second-pr")).status).toBe("needs-review");
+    await review(service, second);
+    expect((await service.status("second-pr")).status).toBe("passed");
+    await service.undo({
+      commandId: approval.commandId,
+      undoCommandId: "undo-frozen-pr",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      expectedBaselineRevision: approval.baselineRevision,
+      now: 12,
+    });
+    expect((await service.status("first-pr")).status).toBe("needs-review");
+    expect((await review(service, first)).baselineRevision).toBe(2);
+    await expect(
+      service.preparePromotion({
+        snapshotId: "cannot-promote-pr",
+        comparisonId: first,
+        prefix: "baselines/pr",
+        now: 12,
+      }),
+    ).rejects.toThrow("Only a complete main run");
+  });
+
   it("promotes tolerated candidate bytes as the next comparison baseline", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -1815,7 +1887,7 @@ describe("restoration and workflow attempt inheritance", () => {
     },
   );
 
-  it("blocks source Undo after related main promotion", async () => {
+  it("keeps copied main approval when the source PR approval is undone", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -1832,7 +1904,7 @@ describe("restoration and workflow attempt inheritance", () => {
         expectedBaselineRevision: 2,
         now: 30,
       }),
-    ).rejects.toBeInstanceOf(ConflictError);
+    ).resolves.toMatchObject({ commandId: "undo-source" });
     expect((await service.status("main")).status).toBe("passed");
     expect((await service.project("project")).snapshot_id).toBe("snapshot-main");
   });
@@ -1886,11 +1958,11 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.prepareStatusIntent({ ...input, now: 12 })).conclusion).toBe("failure");
   });
 
-  it("does not revive an invalidated comparison in place", async () => {
+  it("does not revive an invalidated main comparison in place", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
-    await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
+    await fixture(service, { id: "pr", kind: "main", color: "red" });
     await review(service, "comparison-pr");
     await fixture(service, { id: "main", color: "red", related: ["pr"] });
     await promote(service, "main");
@@ -1900,7 +1972,7 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.comparison("comparison-pr")).state).toBe("invalidated");
   });
 
-  it("moves invalidated in-flight PR comparisons out of active capture after promotion", async () => {
+  it("keeps in-flight PR comparisons on their reference after promotion", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -1918,14 +1990,14 @@ describe("restoration and workflow attempt inheritance", () => {
     await review(service, "comparison-main");
     await promote(service, "main");
 
-    expect((await service.comparison("pending-pr")).state).toBe("invalidated");
-    expect((await service.run("pr")).state).toBe("reviewing");
-    expect((await service.status("pr")).status).toBe("needs-recompare");
+    expect((await service.comparison("pending-pr")).state).toBe("comparing");
+    expect((await service.run("pr")).state).toBe("comparing");
+    expect((await service.status("pr")).status).toBe("comparing");
     expect(
       database.connection
         .prepare("SELECT COUNT(*) AS count FROM visonaut_runs WHERE active=1 AND state='comparing'")
         .get()?.count,
-    ).toBe(0);
+    ).toBe(1);
   });
 
   it("does not claim queued work after a review comparison is invalidated", async () => {
@@ -1935,7 +2007,7 @@ describe("restoration and workflow attempt inheritance", () => {
     await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
     const row = (await service.comparisonRows("comparison-pr"))[0];
     if (!row) throw new Error("Missing comparison row");
-    // Reproduce a queued message left behind when a newer baseline invalidates its comparison.
+    // Reproduce a queued message left behind after its comparison is invalidated.
     database.connection
       .prepare("UPDATE visonaut_comparison_rows SET outcome='pending', result_json=NULL WHERE id=?")
       .run(row.id);
