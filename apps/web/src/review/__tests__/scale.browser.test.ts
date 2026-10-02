@@ -123,6 +123,31 @@ test("accepted items mount only when opened and focus spans both groups", async 
   await expect(page.locator(".review-item")).toHaveCount(1);
 });
 
+test("accepted additions stay in the virtual main list", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const last = model.items.at(-1);
+    if (!last) throw new Error("Missing added item fixture");
+    for (const variant of last.variants) {
+      variant.kind = "added";
+      variant.reference = null;
+      variant.diff = null;
+      variant.verdict = "approved";
+      variant.source = "automatic";
+    }
+    window.reviewFixture.update(model);
+  });
+  await row(page, 0).focus();
+  await page.keyboard.press("End");
+  await expect(row(page, 999)).toBeFocused();
+  await expect(row(page, 999)).toHaveAccessibleDescription("Item 1000 of 1000");
+  await expect(row(page, 999)).toContainText("0 of 2 need review");
+  await expect(page.getByRole("button", { name: /^Accepted/ })).toHaveCount(0);
+  await expect.poll(() => page.locator(".review-item").count()).toBeLessThan(30);
+  await page.keyboard.press("Home");
+  await expect(row(page, 0)).toBeFocused();
+});
+
 test("approval, Undo and removal retain useful focus and stable identities", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();

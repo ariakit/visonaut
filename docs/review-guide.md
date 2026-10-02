@@ -22,6 +22,8 @@ A run must have its complete capture and finished comparison before review actio
 
 The item list groups all variants for one item. Select an item, then select a variant. The full variant label and result appear above the image controls. Counts show how many variants still need review.
 
+Items with a new variant stay in the main list for inspection, including after approval. Automatically accepted new variants do not add to the pending review count. Ordinary accepted and unchanged items stay under **Accepted**.
+
 The thumbnail stays tied to the item's first declared candidate variant. A wholly removed item uses its first reference variant. Selecting another variant changes the viewer, not the thumbnail.
 
 | Control            | Image shown                                  |
