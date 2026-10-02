@@ -1071,16 +1071,61 @@ describe("exact acceptance and automatic reservations", () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
+    const queries = vi.spyOn(database, "prepare");
     await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
     await review(service, "comparison-pr");
     await fixture(service, { id: "unrelated", kind: "pull_request", color: "red" });
     expect((await service.status("unrelated")).status).toBe("needs-review");
+    await fixture(service, {
+      id: "different-profile",
+      kind: "pull_request",
+      color: "red",
+      captureProfileDigest: "different-profile",
+      related: ["pr"],
+    });
+    expect((await service.status("different-profile")).status).toBe("needs-review");
     await fixture(service, { id: "merged", color: "red", related: ["pr"] });
     expect((await service.status("merged")).status).toBe("passed");
     const reused = await service.comparisonRows("comparison-merged");
     expect(reused[0]?.source_decision_id).toBeNull();
     expect(reused[0]?.decision_id).toBe(`copied:${reused[0]?.id}`);
+    const copyQuery = queries.mock.calls.find(([sql]) => sql.includes("SELECT 'copied:'"))?.[0];
+    if (!copyQuery) {
+      throw new Error("Missing approval copy query");
+    }
+    const plan = database.connection
+      .prepare(`EXPLAIN QUERY PLAN ${copyQuery}`)
+      .all(0, "comparison-merged");
+    expect(plan.map((entry) => entry.detail)).toContainEqual(
+      expect.stringContaining("SEARCH decision USING INDEX visonaut_decisions_pixels"),
+    );
   });
+
+  it.each(["introduction", "removal"])(
+    "reuses exact %s approval with a null image digest",
+    async (kind) => {
+      using database = new TestDatabase();
+      const service = new Service(database);
+      await seed(service, ["dialog", "menu"]);
+      const items = kind === "introduction" ? ["dialog", "menu", "new"] : ["dialog"];
+      await fixture(service, { id: "first", kind: "pull_request", lineage: "pr-1", items });
+      await fixture(service, {
+        id: "retry",
+        kind: "pull_request",
+        lineage: "pr-1",
+        items,
+        related: ["first"],
+      });
+      const rows = await service.comparisonRows("comparison-retry");
+      const reused = rows.find(
+        (row) => row.item_key === (kind === "introduction" ? "new" : "menu"),
+      );
+      if (!reused) {
+        throw new Error("Missing copied approval row");
+      }
+      expect(reused.decision_id).toBe(`copied:${reused.id}`);
+    },
+  );
 
   it("keeps copied approval after source rejection and permits verified descendants", async () => {
     using database = new TestDatabase();
