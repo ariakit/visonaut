@@ -586,8 +586,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
               durable: reviewQueue.current.every((entry) =>
                 durableCommands.current.has(entry.command.commandId),
               ),
-              message:
-                "Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.",
+              message: `Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.${error instanceof ReviewCommandError && error.reference ? ` Reference: ${error.reference}.` : ""}`,
             }));
           }
           if (discarded) {

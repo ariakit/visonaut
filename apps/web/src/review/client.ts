@@ -269,9 +269,12 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   if (!response.ok) {
     const data = record(result);
     const error = record(data.error);
-    throw new ReviewCommandError(string(error.message), {
+    const reference = optionalString(error.reference);
+    const message = `${string(error.message)}${reference ? ` Reference: ${reference}.` : ""}`;
+    throw new ReviewCommandError(message, {
       conflict: response.status === 409,
       status: response.status,
+      reference,
       model: data.model ? parseReviewModel(data.model) : undefined,
       reviewer: optionalString(data.reviewer),
     });

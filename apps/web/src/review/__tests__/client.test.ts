@@ -268,6 +268,29 @@ test("HTML failures and invalid review models cannot become review data", async 
   expect(() => parseReviewModel(raw)).toThrow();
 });
 
+test("unexpected review failures include the support reference in the retry error", async () => {
+  const reference = "af4a9c01-3e33-4faa-903c-31c1b20d2bac";
+  vi.stubGlobal("fetch", async () =>
+    json(
+      {
+        error: {
+          code: "service_unavailable",
+          message: "The service is temporarily unavailable.",
+          reference,
+        },
+      },
+      503,
+    ),
+  );
+  await expect(createReviewCommands("run-42").refresh()).rejects.toMatchObject({
+    name: "ReviewCommandError",
+    status: 503,
+    conflict: false,
+    reference,
+    message: `The service is temporarily unavailable. Reference: ${reference}.`,
+  });
+});
+
 test("unknown additive API fields stay compatible, but unsupported verdicts fail clearly", () => {
   const model = fixtureModel();
   expect(

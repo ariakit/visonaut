@@ -1,8 +1,11 @@
-interface OperationFailure {
-  operation: string;
-  code: string;
+export interface OperationFailureContext {
   correlationId: string;
   startedAt: number;
+}
+
+interface OperationFailure extends OperationFailureContext {
+  operation: string;
+  code: string;
   runId?: string;
   taskId?: string;
 }

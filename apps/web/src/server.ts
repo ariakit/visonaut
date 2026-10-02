@@ -30,7 +30,7 @@ function launchEnabled(value: string) {
   return value === "true";
 }
 
-function privateFailure(error: unknown) {
+function privateFailure(error: unknown, correlationId: string) {
   return securePrivateResponse(
     Response.json(
       {
@@ -40,6 +40,7 @@ function privateFailure(error: unknown) {
             error instanceof SecurityError
               ? error.message
               : "The service is temporarily unavailable.",
+          ...(error instanceof SecurityError ? {} : { reference: correlationId }),
         },
       },
       {
@@ -51,7 +52,7 @@ function privateFailure(error: unknown) {
 }
 
 export default {
-  async fetch(request: Request, env: Env, lifetime: ExecutionContext) {
+  async fetch(request: Request, env: Env, lifetime: Pick<ExecutionContext, "waitUntil">) {
     const startedAt = Date.now();
     const correlationId = crypto.randomUUID();
     const url = new URL(request.url);
@@ -106,7 +107,10 @@ export default {
         url.pathname.startsWith("/images/") ||
         url.pathname === "/webhooks/github"
       ) {
-        const response = await handleApi(request, apiBindings(env), lifetime);
+        const response = await handleApi(request, apiBindings(env), {
+          waitUntil: (promise) => lifetime.waitUntil(promise),
+          failure: { correlationId, startedAt },
+        });
         if (response) return response;
       }
       return await render(request);
@@ -117,7 +121,7 @@ export default {
         correlationId,
         startedAt,
       });
-      return privateFailure(error);
+      return privateFailure(error, correlationId);
     }
   },
   async scheduled(_controller: ScheduledController, env: Env) {

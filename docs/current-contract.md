@@ -58,6 +58,18 @@ An issue #204 D-number is separate from a revision 9 D-number. The replacement s
 
 W03 and W10 can collect evidence after W01. W04/W05 require W02. W06 needs W02 and W03; W07 needs W03 and W06; W08 needs W03 and W05-W07; W09 needs W02 and W06-W08. Unknown required facts hold dependent removal. Keep independent selected work moving. Cloud mutations, deployments, package publication, consumer changes, GitHub rules, and issue updates each need a separate instruction and one external owner. The remote inspection runner creates a provider proxy during setup, so its setup is an external write. Hosted recovery also needs separate resource/write authorization.
 
+## Request failure references
+
+D13/W04 now passes the outer request UUID and start time to API failure handling. An unexpected API or outer HTTP failure returns HTTP 503 with `error.reference`, the existing private headers, and `Retry-After: 1`. The reference matches exactly one `operation-failed` log with fixed operation, code, correlation ID, and elapsed-time fields. No request body, token, URL, SQL, raw exception, or private label is added to that log.
+
+Known authorization, validation, incomplete-capture, and conflict responses keep their current status, message, and retry semantics without a support reference. The review client shows the reference beside its retry error, including when it cannot confirm an admitted server command. The queued-command notice and exact-command retry remain intact. This is source behavior; deployment of D13 remains unverified. D15's numeric-default change is separate work.
+
+```text
+Response: error.reference = request UUID
+Safe log: correlationId = the same request UUID
+Review error: Reference: request UUID. [Retry same command]
+```
+
 ## Comparison settings and rendering identity
 
 C03 keeps rendering identity separate from comparison policy, engine, and codec identity. Rendering identity records the browser, OS, fonts, viewport, locale, media, and screenshot settings. Current local comparison uses each capture's recorded `comparison` object; it does not apply a blanket 0.05% allowance. C05/revision 9 D43's `visible-ratio-v3` policy has `maxChangedRatio: 0.0005` and belongs to the retained RGBA Worker path and its dated results. Keep the [historical policy evidence](evidence/comparator-policy.md) unchanged. A source constant or this guide does not change a stored policy or the consumer's settings.

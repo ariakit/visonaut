@@ -8,6 +8,7 @@ import {
   SecurityError,
 } from "@visonaut/security";
 import { ConflictError, IncompleteError } from "@visonaut/service";
+import { logOperationFailure, type OperationFailureContext } from "../operations/failure.ts";
 import { apiContext, assertConfiguredProject, type ApiBindings } from "./context.js";
 import { runStatus } from "./ingest.js";
 import { uuid } from "./input.js";
@@ -31,7 +32,7 @@ export * from "./context.js";
 export { reconcileStagedWorkflows } from "./workflow-materialize.js";
 export { reconcileWebhooks } from "./webhooks.js";
 
-function errorResponse(error: unknown) {
+function errorResponse(error: unknown, failure: OperationFailureContext) {
   if (error instanceof SecurityError) {
     console.warn(JSON.stringify({ event: "api_rejected", code: error.code, status: error.status }));
     return Response.json(
@@ -63,13 +64,20 @@ function errorResponse(error: unknown) {
       { status: 409 },
     );
   }
-  console.error(
-    JSON.stringify({ event: "api-failed", kind: error instanceof Error ? error.name : "unknown" }),
-  );
+  logOperationFailure({
+    operation: "api",
+    code: "service_unavailable",
+    correlationId: failure.correlationId,
+    startedAt: failure.startedAt,
+  });
   return Response.json(
     {
       schemaVersion: SCHEMA_VERSION,
-      error: { code: "service_unavailable", message: "The service is temporarily unavailable." },
+      error: {
+        code: "service_unavailable",
+        message: "The service is temporarily unavailable.",
+        reference: failure.correlationId,
+      },
     },
     { status: 503, headers: { "Retry-After": "1" } },
   );
@@ -78,7 +86,10 @@ function errorResponse(error: unknown) {
 export async function handleApi(
   request: Request,
   bindings: ApiBindings,
-  lifetime: { waitUntil(promise: Promise<unknown>): void },
+  lifetime: {
+    waitUntil(promise: Promise<unknown>): void;
+    failure?: OperationFailureContext;
+  },
 ): Promise<Response | null> {
   const url = new URL(request.url);
   const path = url.pathname;
@@ -89,6 +100,10 @@ export async function handleApi(
     path !== "/webhooks/github"
   )
     return null;
+  const failure = lifetime.failure ?? {
+    correlationId: crypto.randomUUID(),
+    startedAt: Date.now(),
+  };
   const context = apiContext(bindings);
   const privateResponse = (response: Response) => securePrivateResponse(response);
   try {
@@ -207,6 +222,6 @@ export async function handleApi(
     }
     return privateResponse(result);
   } catch (error) {
-    return privateResponse(errorResponse(error));
+    return privateResponse(errorResponse(error, failure));
   }
 }
