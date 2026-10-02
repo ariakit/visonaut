@@ -52,12 +52,41 @@ export function reviewTargets(item: ReviewItem) {
   );
 }
 
+export function applyPendingReviews(model: ReviewModel, commands: ReviewCommand[]): ReviewModel {
+  const changes = new Map<string, { revision: number; verdict: ReviewCommand["verdict"] }>();
+  for (const command of commands) {
+    for (const target of command.targets) {
+      // Later queued decisions follow the preceding decision's revision.
+      changes.set(target.id, { revision: target.expectedRevision + 1, verdict: command.verdict });
+    }
+  }
+  return {
+    ...model,
+    items: model.items.map((item) => ({
+      ...item,
+      variants: item.variants.map((variant) => {
+        const change = changes.get(variant.id);
+        if (!change) return variant;
+        return { ...variant, ...change, source: "human", reviewer: undefined };
+      }),
+    })),
+  };
+}
+
+export function latestReviewModel(current: ReviewModel, next: ReviewModel): ReviewModel {
+  // Receipt polls can finish in a different order from their commands.
+  if (next.run.id === current.run.id && next.comparisonRevision < current.comparisonRevision) {
+    return current;
+  }
+  return next;
+}
+
 export function applySavedReview(
   model: ReviewModel,
   command: ReviewCommand,
   result: ReviewSaveResult,
 ): ReviewModel {
-  if (result.model) return result.model;
+  if (result.model) return latestReviewModel(model, result.model);
   if (result.noop) return model;
   if (
     result.runRevision === undefined ||

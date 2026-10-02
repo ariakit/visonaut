@@ -108,6 +108,7 @@ export interface ReviewTarget {
 
 export interface ReviewCommand {
   commandId: string;
+  previousCommandId?: string;
   comparisonId: string;
   verdict: ReviewVerdict;
   targets: ReviewTarget[];
@@ -145,7 +146,13 @@ export interface ReviewSaveResult {
 }
 
 export interface ReviewCommands {
-  save(command: ReviewCommand): Promise<ReviewSaveResult>;
+  save(
+    command: ReviewCommand,
+    options?: {
+      onQueued?(): void;
+      signal?: AbortSignal;
+    },
+  ): Promise<ReviewSaveResult>;
   undo(command: UndoCommand): Promise<ReviewCommandResult>;
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;

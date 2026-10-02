@@ -1,3 +1,4 @@
+import { processReviewQueue } from "./review-queue.ts";
 import { reportComparisonRecovery } from "./comparison-alerts.ts";
 import { pruneCaptureProfiles } from "../profiles.ts";
 import {
@@ -58,6 +59,7 @@ export async function runOperations(
     await reportComparisonRecovery(context, publication, finalized);
   }
   const steps: [string, () => Promise<OperationReport>][] = [
+    ["review-decisions", () => processReviewQueue(context)],
     ["checks", () => deliverGitHubStatuses(context)],
     ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
@@ -72,7 +74,7 @@ export async function runOperations(
       () => pruneCaptureProfiles(context.database, context.budget.objectsPerStep),
     ],
   ];
-  const statusNames = new Set(["checks", "review-links", "promotion"]);
+  const statusNames = new Set(["review-decisions", "checks", "review-links", "promotion"]);
   const familyNames = {
     history: new Set(["history"]),
     retention: new Set([

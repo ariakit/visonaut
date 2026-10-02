@@ -438,3 +438,91 @@ test("a preview review has image fixtures and no live actions or login", async (
   ).toHaveAccessibleName(/Dark/);
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
+
+test("an early conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  const conflictModel = structuredClone(initial);
+  conflictModel.comparisonRevision += 2;
+  const approved = conflictModel.items[0]?.variants[0];
+  if (!approved) throw new Error("Missing first variant");
+  Object.assign(approved, { verdict: "approved", source: "human", revision: 1 });
+  const latest = structuredClone(conflictModel);
+  latest.comparisonRevision++;
+  const changed = latest.items[0]?.variants[2];
+  if (!changed) throw new Error("Missing concurrent variant");
+  Object.assign(changed, { verdict: "rejected", source: "human", revision: 1 });
+  const posted: Array<{ commandId: string; previousCommandId?: string; selection: unknown }> = [];
+  let releaseFirst = false;
+  let earlyConflict = false;
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions")
+      return route.fulfill({ json: { reviewSessionId: "session-conflict" } });
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON();
+      posted.push(command);
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/queued")) {
+      const index = posted.findIndex((command) => path.includes(command.commandId));
+      const command = posted[index];
+      if (!command) throw new Error("Missing queued command");
+      if (index === 1) {
+        await route.fulfill({
+          status: 409,
+          json: {
+            error: { code: "conflict", message: "The second decision changed." },
+            model: compactReviewModel(conflictModel),
+          },
+        });
+        earlyConflict = true;
+        return;
+      }
+      if (index === 0 && releaseFirst) {
+        return route.fulfill({
+          json: {
+            commandId: command.commandId,
+            selection: command.selection,
+            revisions: [],
+            baselineRevision: initial.baselineRevision,
+            promotionId: null,
+            model: compactReviewModel(latest),
+          },
+        });
+      }
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: {
+          run: initial.run,
+          comparisonState: "ready",
+          reviewReady: true,
+          archived: false,
+        },
+      });
+    }
+    return route.fulfill({ json: compactReviewModel(initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  const approve = page.getByRole("button", { name: "Approve A", exact: true });
+  const reject = page.getByRole("button", { name: "Reject X", exact: true });
+  await approve.click();
+  await expect(reject).toBeEnabled();
+  await reject.click();
+  await expect.poll(() => earlyConflict).toBe(true);
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(3);
+  expect.soft(posted[1]?.previousCommandId).toBe(posted[0]?.commandId);
+  expect.soft(posted[2]?.previousCommandId).toBe(posted[1]?.commandId);
+  releaseFirst = true;
+  await expect(page.getByRole("alert")).toContainText("Later queued decisions were not saved");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect.soft(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(4);
+  expect(posted[3]).not.toHaveProperty("previousCommandId");
+});

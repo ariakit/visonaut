@@ -423,7 +423,11 @@ export async function runScheduledOperations(
           delaySeconds: 1,
         });
     }
-    if (["checks", "review-links", "promotion"].some((name) => result.reports[name]?.hasMore))
+    if (
+      ["review-decisions", "checks", "review-links", "promotion"].some(
+        (name) => result.reports[name]?.hasMore,
+      )
+    )
       await env.OPERATIONS.send({ kind: "status" } satisfies OperationsMessage, {
         delaySeconds: 1,
       });

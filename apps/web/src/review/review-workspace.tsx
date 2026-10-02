@@ -39,11 +39,14 @@ import type {
   ReviewPollState,
   ReviewSelection,
   ReviewVerdict,
+  ReviewSaveResult,
   ReviewZoom,
   UndoCommand,
 } from "./model.ts";
 import {
+  applyPendingReviews,
   applySavedReview,
+  latestReviewModel,
   needsReview,
   nextPending,
   partitionItems,
@@ -73,11 +76,20 @@ interface SavedCommand {
   selection: ReviewSelection;
 }
 
+interface QueuedReview {
+  command: ReviewCommand;
+  controller?: AbortController;
+  response?: Promise<
+    { result: ReviewSaveResult; error?: never } | { error: unknown; result?: never }
+  >;
+}
+
 interface SaveState {
   status: "idle" | "saving" | "error" | "conflict";
   message: string;
   failed?: ReviewCommand;
   failedUndo?: UndoCommand;
+  durable?: boolean;
 }
 
 function excludesShortcuts(event: globalThis.KeyboardEvent) {
@@ -223,7 +235,13 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
 
 function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: ReviewWorkspaceProps) {
   const [previousModel, setPreviousModel] = useState(suppliedModel);
-  const [model, setModel] = useState(suppliedModel);
+  const [savedModel, setModel] = useState(suppliedModel);
+  const [pendingReviews, setPendingReviews] = useState<ReviewCommand[]>([]);
+  const [queuedCommands, setQueuedCommands] = useState(new Set<string>());
+  const model = useMemo(
+    () => applyPendingReviews(savedModel, pendingReviews),
+    [savedModel, pendingReviews],
+  );
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const [mode, setMode] = useState<ReviewMode>("side");
   const [zoom, setZoom] = useState<ReviewZoom>("fit");
@@ -241,6 +259,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   );
   const workspace = useRef<HTMLDivElement>(null);
   const saving = useRef(false);
+  const reviewQueue = useRef<QueuedReview[]>([]);
+  const durableCommands = useRef(new Set<string>());
   const routedSelection = route?.selection;
   const onRouteSelect = route?.onSelect;
   const routedItem = model.items.find((entry) => entry.key === routedSelection?.itemKey);
@@ -272,6 +292,11 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     model.reviewReady &&
     evidence.status === "ready";
   const busy = saveState.status === "saving";
+  const reviewBlocked = busy && !pendingReviews.length;
+  const sendingCount = pendingReviews.filter(
+    (command) => !queuedCommands.has(command.commandId),
+  ).length;
+  const queuedCount = pendingReviews.length - sendingCount;
   const targets = item ? reviewTargets(item) : [];
   const counts = useMemo(
     () => ({
@@ -304,7 +329,9 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
 
   if (previousModel !== suppliedModel) {
     setPreviousModel(suppliedModel);
-    setModel(suppliedModel);
+    if (!pendingReviews.length && !saveState.failed) {
+      setModel(suppliedModel);
+    }
   }
   if (
     !route &&
@@ -321,13 +348,23 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
   }, [item, variant, routedSelection, onRouteSelect]);
   useEffect(() => {
+    return () => {
+      for (const entry of reviewQueue.current) {
+        entry.controller?.abort();
+      }
+      reviewQueue.current = [];
+    };
+  }, []);
+  useEffect(() => {
     if (saveState.status !== "saving" && saveState.status !== "error") return;
+    if (pendingReviews.length && !sendingCount) return;
+    if (saveState.durable) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [saveState.status]);
+  }, [saveState.status, saveState.durable, pendingReviews.length, sendingCount]);
   useEffect(() => {
     if (!awaitingComparison) return;
     let cancelled = false;
@@ -436,7 +473,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         ? error.message
         : "The command could not be saved. Check your connection.";
     if (error instanceof ReviewCommandError && error.model) {
-      setModel(error.model);
+      const currentModel = error.model;
+      setModel((model) => latestReviewModel(model, currentModel));
     }
     const conflict = error instanceof ReviewCommandError && error.conflict;
     const reviewer =
@@ -450,66 +488,124 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   };
   const save = async (command: ReviewCommand) => {
     if (model.archived) return;
-    if (saving.current) return;
-    saving.current = true;
+    if (saving.current && !reviewQueue.current.length) return;
+    if (!reviewQueue.current.some((entry) => entry.command.commandId === command.commandId)) {
+      reviewQueue.current.push({ command });
+    }
+    reviewQueue.current = reviewQueue.current.map((entry) => {
+      if (entry.response) return entry;
+      const controller = new AbortController();
+      const response = commands
+        .save(entry.command, {
+          signal: controller.signal,
+          onQueued: () => {
+            durableCommands.current.add(entry.command.commandId);
+            setQueuedCommands((previous) => new Set([...previous, entry.command.commandId]));
+          },
+        })
+        .then(
+          (result) => ({ result }),
+          (error) => ({ error }),
+        );
+      return { ...entry, controller, response };
+    });
+    const queued = reviewQueue.current.map((entry) => entry.command);
+    setPendingReviews(queued);
     setSaveState({
       status: "saving",
-      message: `Saving ${command.targets.length} variant${command.targets.length === 1 ? "" : "s"}…`,
+      message: `Saving ${queued.length} decision${queued.length === 1 ? "" : "s"}…`,
     });
-    const optimisticModel = {
-      ...model,
-      items: model.items.map((item) => ({
-        ...item,
-        variants: item.variants.map((variant) =>
-          command.targets.some((target) => target.id === variant.id)
-            ? {
-                ...variant,
-                verdict: command.verdict,
-                source: "human" as const,
-                reviewer: undefined,
-              }
-            : variant,
-        ),
-      })),
-    };
-    setModel(optimisticModel);
-    const next = nextPending(optimisticModel.items, command.selection);
+    const optimisticModel = applyPendingReviews(savedModel, queued);
+    const next = nextPending(optimisticModel.items, queued.at(-1)?.selection ?? command.selection);
     if (next) {
       select(next);
     }
     focusWorkspace();
+    if (saving.current) return;
+    saving.current = true;
+    let currentModel = savedModel;
     try {
-      const result = await commands.save(command);
-      const nextModel = applySavedReview(model, command, result);
-      setModel(nextModel);
-      if (!result.noop) {
-        setHistory((entries) => [
-          ...entries,
-          { id: result.commandId, selection: command.selection },
-        ]);
+      while (reviewQueue.current.length) {
+        const entry = reviewQueue.current[0];
+        if (!entry) break;
+        const currentCommand = entry.command;
+        try {
+          const response = await entry.response;
+          if (!response) throw new Error("The decision has not been submitted.");
+          if ("error" in response) throw response.error;
+          const result = response.result;
+          if (reviewQueue.current[0] !== entry) return;
+          currentModel = applySavedReview(currentModel, currentCommand, result);
+          setModel(currentModel);
+          reviewQueue.current.shift();
+          if (result.noop) {
+            const discarded = reviewQueue.current.length;
+            for (const pending of reviewQueue.current) {
+              pending.controller?.abort();
+            }
+            reviewQueue.current = [];
+            setPendingReviews([]);
+            setSaveState({
+              status: "idle",
+              message: `This acceptance is already saved.${discarded ? " Later queued decisions were not saved. Review them again." : ""}`,
+            });
+            select(currentCommand.selection);
+            return;
+          }
+          setHistory((entries) => [
+            ...entries,
+            { id: result.commandId, selection: currentCommand.selection },
+          ]);
+          const remaining = reviewQueue.current.map((entry) => entry.command);
+          setPendingReviews(remaining);
+          setSaveState({
+            status: remaining.length ? "saving" : "idle",
+            message: remaining.length
+              ? `Saving ${remaining.length} decision${remaining.length === 1 ? "" : "s"}…`
+              : `${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}. Saved.`,
+          });
+          if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
+            setAnnouncement("Review complete. No variants need review.");
+          }
+        } catch (error) {
+          if (reviewQueue.current[0] !== entry) return;
+          setPendingReviews([]);
+          select(currentCommand.selection);
+          const conflict = error instanceof ReviewCommandError && error.conflict;
+          const discarded = conflict && reviewQueue.current.length > 1;
+          for (const pending of reviewQueue.current) {
+            pending.controller?.abort();
+          }
+          reviewQueue.current = conflict
+            ? []
+            : reviewQueue.current.map(({ command }) => ({ command }));
+          reportError(error, currentCommand);
+          if (durableCommands.current.has(currentCommand.commandId) && !conflict) {
+            setSaveState((state) => ({
+              ...state,
+              durable: reviewQueue.current.every((entry) =>
+                durableCommands.current.has(entry.command.commandId),
+              ),
+              message:
+                "Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.",
+            }));
+          }
+          if (discarded) {
+            setSaveState((state) => ({
+              ...state,
+              message: `${state.message} Later queued decisions were not saved. Review them again.`,
+            }));
+          }
+          return;
+        }
       }
-      setSaveState({
-        status: "idle",
-        message: result.noop
-          ? "This acceptance is already saved."
-          : `${command.targets.length} variant${command.targets.length === 1 ? "" : "s"} ${command.verdict}. Saved.`,
-      });
-      if (result.noop) {
-        select(command.selection);
-      } else if (!nextPending(nextModel.items, command.selection)) {
-        setAnnouncement("Review complete. No variants need review.");
-      }
-    } catch (error) {
-      setModel(model);
-      select(command.selection);
-      reportError(error, command);
     } finally {
       saving.current = false;
     }
   };
   const review = (verdict: ReviewVerdict, wholeItem = false) => {
     if (!item || !variant) return;
-    if (!ready || saving.current) return;
+    if (!ready || reviewBlocked) return;
     if (saveState.status === "error") {
       setAnnouncement("Resolve the unsaved command before saving another review.");
       return;
@@ -533,6 +629,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     }
     void save({
       commandId: crypto.randomUUID(),
+      previousCommandId: reviewQueue.current.at(-1)?.command.commandId,
       comparisonId: model.comparisonId,
       verdict,
       targets: selectedTargets.map((entry) => ({ id: entry.id, expectedRevision: entry.revision })),
@@ -576,6 +673,11 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   };
   const refresh = async () => {
     if (saving.current) return;
+    for (const pending of reviewQueue.current) {
+      pending.controller?.abort();
+    }
+    reviewQueue.current = [];
+    setPendingReviews([]);
     saving.current = true;
     setSaveState({ status: "saving", message: "Refreshing the current comparison…" });
     try {
@@ -763,7 +865,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
               <Button
                 disabled={
                   !ready ||
-                  busy ||
+                  reviewBlocked ||
                   saveState.status === "error" ||
                   !targets.some((entry) => entry.id === variant?.id) ||
                   !!variant?.approveDisabledReason
@@ -776,7 +878,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
               <Button
                 disabled={
                   !ready ||
-                  busy ||
+                  reviewBlocked ||
                   saveState.status === "error" ||
                   !targets.some((entry) => entry.id === variant?.id) ||
                   !!variant?.rejectDisabledReason
@@ -1073,7 +1175,9 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                   </span>
                   <Button
                     className="text-xs"
-                    disabled={!ready || busy || saveState.status === "error" || !targets.length}
+                    disabled={
+                      !ready || reviewBlocked || saveState.status === "error" || !targets.length
+                    }
                     onClick={() => review("approved", true)}
                   >
                     Approve whole item ({targets.length}){" "}
@@ -1081,7 +1185,9 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                   </Button>
                   <Button
                     className="text-xs"
-                    disabled={!ready || busy || saveState.status === "error" || !targets.length}
+                    disabled={
+                      !ready || reviewBlocked || saveState.status === "error" || !targets.length
+                    }
                     onClick={() => review("rejected", true)}
                   >
                     Reject whole item ({targets.length}){" "}
@@ -1178,7 +1284,9 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
             saveState.status === "error" || saveState.status === "conflict" ? "alert" : "status"
           }
         >
-          {saveState.message}
+          {busy && pendingReviews.length
+            ? `${sendingCount ? `Sending ${sendingCount} decision${sendingCount === 1 ? "" : "s"}… ` : ""}${queuedCount ? `${queuedCount} queued on server.${sendingCount ? "" : " You can close this window."}` : ""}`
+            : saveState.message}
           {!model.archived && saveState.status === "error" && saveState.failed && (
             <Button
               className="text-xs"

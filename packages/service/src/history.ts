@@ -157,6 +157,11 @@ export async function compactRunHistory(database: Database, input: CompactRunHis
     ),
     statement(
       database,
+      "DELETE FROM work_tasks WHERE kind='review' AND json_extract(payload, '$.comparisonId') IN (SELECT id FROM visonaut_comparisons WHERE run_id=?)",
+      [input.runId],
+    ),
+    statement(
+      database,
       `DELETE FROM visonaut_comparison_rows WHERE comparison_id IN (SELECT id FROM visonaut_comparisons WHERE run_id=?) AND NOT EXISTS(SELECT 1 FROM visonaut_decisions decision WHERE decision.row_id=visonaut_comparison_rows.id)`,
       [input.runId],
     ),

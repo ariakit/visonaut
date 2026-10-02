@@ -1,3 +1,4 @@
+import { enqueueReview, reviewTaskId } from "./review-queue.ts";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closedRunRetentionMs, Service } from "@visonaut/service";
 import { captured, context, digest, reserve, TestDatabase } from "./test-fixtures.ts";
@@ -285,13 +286,34 @@ describe("permanent closed decision summaries", () => {
 it("runs a status wakeup without scanning history, byte retention, or comparison recovery", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  await captured(fixture.context, "run");
+  const service = await captured(fixture.context, "run");
+  const row = (await service.comparisonRows("comparison-run"))[0];
+  if (!row) throw new Error("Missing comparison");
+  await enqueueReview(database, {
+    commandId: "queued-status-review",
+    actorId: "actor",
+    sessionId: "session",
+    comparisonId: "comparison-run",
+    verdict: "rejected",
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: "dialog", variantKey: "light" },
+  });
+  fixture.state.time = Date.now();
   const { runOperations } = await import("./index.ts");
   const result = await runOperations(fixture.context, {
     kind: "status",
     comparisonId: "comparison-run",
   });
-  expect(Object.keys(result.reports)).toEqual(["checks", "review-links", "promotion"]);
+  expect((await service.status("run")).status).toBe("rejected");
+  expect(Object.keys(result.reports)).toEqual([
+    "review-decisions",
+    "checks",
+    "review-links",
+    "promotion",
+  ]);
+  expect(result.reports["review-decisions"]?.completed).toEqual([
+    reviewTaskId("queued-status-review"),
+  ]);
 
   const ingest = await runOperations(fixture.context, { kind: "ingest" });
   expect(Object.keys(ingest.reports)).toEqual(["comparisons", "finalization"]);
