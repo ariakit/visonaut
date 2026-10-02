@@ -318,6 +318,70 @@ it("keeps tolerated observed bytes in the full manifest and uploads only unique 
   console.info(`LOCAL_COMPARISON_FIXTURE ${JSON.stringify(counts)}`);
 });
 
+it.each([false, true])(
+  "reuses identical reference bytes and preserves a profile change: %s",
+  async (profileChanged) => {
+    const local = await localFixture();
+    const capture = local.manifest.captures.find((entry) => entry.itemKey === "same");
+    if (!capture) {
+      throw new Error("No identical fixture capture");
+    }
+    local.manifest.captures = [capture];
+    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+    const reference = local.reference
+      .filter((entry) => entry.itemKey === "same")
+      .map((entry) => ({
+        ...entry,
+        profileDigest: profileChanged ? "f".repeat(64) : entry.profileDigest,
+      }));
+    const service = await mockService(local, { reference });
+    const result = await execute(local.environment);
+    expect(service.downloads).toEqual([]);
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    expect(service.declarations[0]?.localComparison?.captures).toEqual([
+      {
+        itemKey: capture.itemKey,
+        variantKey: capture.variant.key,
+        candidateDigest: capture.image.digest,
+        referenceDigest: capture.image.digest,
+        outcome: profileChanged ? "changed" : "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        sizeChanged: false,
+      },
+    ]);
+    expect(service.uploads).toEqual(
+      profileChanged ? [{ digest: capture.image.digest, bytes: capture.image.bytes }] : [],
+    );
+  },
+);
+
+it.each(["digest", "width", "height", "bytes"] as const)(
+  "validates downloaded reference bytes when %s metadata differs",
+  async (field) => {
+    const local = await localFixture();
+    const reference = local.reference.map((entry) =>
+      entry.itemKey === "same"
+        ? {
+            ...entry,
+            image: {
+              ...entry.image,
+              [field]: field === "digest" ? "f".repeat(64) : entry.image[field] + 1,
+            },
+          }
+        : entry,
+    );
+    const service = await mockService(local, { reference });
+    const result = await execute(local.environment);
+    expect(service.downloads).toEqual(["image-same"]);
+    expect(result.code).toBe(1);
+    expect(result.error).toContain("An image does not match its declared PNG metadata.");
+    expect(service.declarations).toEqual([]);
+    expect(service.uploads).toEqual([]);
+  },
+);
+
 it.each(["current", "inherited", "legacy long"] as const)(
   "submits accepted reference captures with %s service IDs",
   async (source) => {
