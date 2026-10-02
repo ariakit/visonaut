@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.5.3
+
+### Patch Changes
+
+- 7893072: Fixed local comparisons that required review for a capture profile change when no pixels changed. Image size changes and profile changes with different pixels still require review.
+
 ## 0.5.2
 
 ### Patch Changes
