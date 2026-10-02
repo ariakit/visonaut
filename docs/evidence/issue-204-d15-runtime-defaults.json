@@ -1,0 +1,235 @@
+{
+  "date": "2026-10-02",
+  "sourceScope": "Committed preview and production numeric configuration; no live override inventory or deployment.",
+  "previousSource": "3d575bd652ae29b12cb18155310cd8437a8ef826",
+  "dependencySource": "dd611f64a91b253062378e3bc6334b3b166b3a85",
+  "runtime": {
+    "node": "24.18.0",
+    "pnpm": "12.5.1",
+    "wrangler": "4.136.1"
+  },
+  "sourceSha256": {
+    "apps/web/src/runtime.ts": "1c73d50954086c2f36521669adf89e138ffedd2c8be454d97e2796a7838fccaf",
+    "apps/web/src/runtime-defaults.ts": "b43bfe9815f68da8fa2801c5d3b55b2bc7d7b9fb2e10f45b8d2bdb0363b7ec34",
+    "apps/web/wrangler.jsonc": "82219f7cf044c6be2adfe651ded68e5db0fbcc136a7d3d01e29712961e68259d"
+  },
+  "comparison": {
+    "preview": {
+      "apiLimits": {
+        "maximumImageBytes": {
+          "before": 2097152,
+          "after": 2097152
+        },
+        "maximumShardBytes": {
+          "before": 536870912,
+          "after": 536870912
+        },
+        "maximumRunBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumStagedBytes": {
+          "before": 8589934592,
+          "after": 8589934592
+        },
+        "maximumManifestBytes": {
+          "before": 16777216,
+          "after": 16777216
+        },
+        "maximumPlanBytes": {
+          "before": 1500000,
+          "after": 1500000
+        },
+        "maximumCaptures": {
+          "before": 40000,
+          "after": 40000
+        },
+        "comparisonMaxAttempts": {
+          "before": 5,
+          "after": 5
+        },
+        "databaseWarningBytes": {
+          "before": 1610612736,
+          "after": 1610612736
+        },
+        "databaseAdmissionBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumActiveRuns": {
+          "before": 5,
+          "after": 5
+        }
+      },
+      "operationsBudget": {
+        "tasksPerStep": {
+          "before": 25,
+          "after": 25
+        },
+        "objectsPerStep": {
+          "before": 1000,
+          "after": 1000
+        },
+        "leaseMilliseconds": {
+          "before": 720000,
+          "after": 720000
+        },
+        "maxAttempts": {
+          "before": 5,
+          "after": 5
+        },
+        "maximumObjectBytes": {
+          "before": 16777216,
+          "after": 16777216
+        },
+        "maximumMetadataBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumExportEntries": {
+          "before": 200000,
+          "after": 200000
+        }
+      }
+    },
+    "production": {
+      "apiLimits": {
+        "maximumImageBytes": {
+          "before": 2097152,
+          "after": 2097152
+        },
+        "maximumShardBytes": {
+          "before": 536870912,
+          "after": 536870912
+        },
+        "maximumRunBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumStagedBytes": {
+          "before": 8589934592,
+          "after": 8589934592
+        },
+        "maximumManifestBytes": {
+          "before": 16777216,
+          "after": 16777216
+        },
+        "maximumPlanBytes": {
+          "before": 1500000,
+          "after": 1500000
+        },
+        "maximumCaptures": {
+          "before": 40000,
+          "after": 40000
+        },
+        "comparisonMaxAttempts": {
+          "before": 5,
+          "after": 5
+        },
+        "databaseWarningBytes": {
+          "before": 1610612736,
+          "after": 1610612736
+        },
+        "databaseAdmissionBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumActiveRuns": {
+          "before": 5,
+          "after": 5
+        }
+      },
+      "operationsBudget": {
+        "tasksPerStep": {
+          "before": 25,
+          "after": 25
+        },
+        "objectsPerStep": {
+          "before": 1000,
+          "after": 1000
+        },
+        "leaseMilliseconds": {
+          "before": 720000,
+          "after": 720000
+        },
+        "maxAttempts": {
+          "before": 5,
+          "after": 5
+        },
+        "maximumObjectBytes": {
+          "before": 16777216,
+          "after": 16777216
+        },
+        "maximumMetadataBytes": {
+          "before": 2147483648,
+          "after": 2147483648
+        },
+        "maximumExportEntries": {
+          "before": 200000,
+          "after": 200000
+        }
+      }
+    }
+  },
+  "publicResolutionProof": "runtime-config.test.ts asserts the exact resolved values through apiBindings, databaseCapacityPolicy, and operationsBudget for both Wrangler environments, missing bindings, empty objects, partial overrides, and complete existing JSON objects including decimal strings.",
+  "regressionProof": {
+    "oldReaderSource": "dd611f64a91b253062378e3bc6334b3b166b3a85",
+    "redCases": 8,
+    "reasons": [
+      "Missing and partial overrides did not resolve defaults.",
+      "Unknown and prototype-named own fields were silently ignored.",
+      "An image bound above the decoder cap was accepted by the configuration reader."
+    ],
+    "restoration": "Exit trap, identical runtime hash, and identical before/after Git patch.",
+    "restoredConfigurationCasesPassed": 42
+  },
+  "checks": {
+    "affectedSuites": {
+      "files": 9,
+      "passed": 188,
+      "workers": 2
+    },
+    "workspaceTypecheck": "passed",
+    "workspaceBuild": "passed; comparison Worker packaging used --dry-run",
+    "browser": {
+      "sourcePort": 45204,
+      "passed": 112
+    },
+    "builtAppManual": {
+      "sourcePort": 45205,
+      "fixture": "Existing local-routes harness in a temporary copy, with ephemeral native D1/R2 and a local operations consumer to process durable decisions. The copy was removed after inspection.",
+      "browser": "Chrome 154.0.8037.93",
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "passed": [
+        "Direct route and client script/style loads.",
+        "Expected unauthenticated metadata refusal with HTTP 401.",
+        "Decoded synthetic image.",
+        "Approval admission with HTTP 202, saved receipt with HTTP 200, and next-variant selection.",
+        "Saved approval retained after reload.",
+        "A second in-session approval and Undo with HTTP 200, verified in native D1.",
+        "Client navigation and browser Back retained the selected URL and ready image."
+      ],
+      "expectedBehavior": "Reload clears the local Undo stack, as documented in docs/review-guide.md. Undo was checked on a new command in the current page session.",
+      "storedHumanDecisions": [
+        {
+          "verdict": "approved",
+          "revoked": 0
+        },
+        {
+          "verdict": "approved",
+          "revoked": 1
+        }
+      ],
+      "limits": "Synthetic local session and GitHub responses; no production auth, capture execution, remote data, or deployment."
+    },
+    "lint": "passed",
+    "releaseGuards": {
+      "passed": 70
+    },
+    "packedPackages": "passed; no package publication"
+  },
+  "compatibility": "Both existing numeric override variable names and string readers remain. All known complete JSON fields and decimal strings remain supported. Unknown fields reject the complete object instead of being discarded. Export fields remain. Live values must be reconciled before any separately authorized deployment."
+}

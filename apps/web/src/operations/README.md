@@ -9,7 +9,7 @@ await operationsQueue.send({ kind: "status", comparisonId });
 await operationsQueue.send({ kind: "maintenance", family: "history" });
 ```
 
-D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. Set each budget field from measured deployment limits. `maximumObjectBytes` bounds one image or metadata page. `maximumMetadataBytes` bounds total manual-export metadata. `maximumExportEntries` bounds the exported payload. These limits are separate from database-capacity admission.
+D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. The [typed runtime defaults](../runtime-defaults.ts) preserve the committed preview and production budgets. Use the existing `VISONAUT_OPERATIONS_BUDGET` JSON string for validated incident overrides. A missing binding or `{}` uses those defaults; a partial object changes only its named fields. Complete existing objects and decimal-string values remain supported. Unknown fields and invalid values reject the whole override. Operations pages still cannot exceed 1,000 entries. `maximumObjectBytes` bounds one image or metadata page. `maximumMetadataBytes` bounds total manual-export metadata. `maximumExportEntries` bounds the exported payload. These limits are separate from database-capacity admission.
 
 ## Durable decisions and sealed recovery
 

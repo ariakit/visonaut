@@ -1,4 +1,10 @@
 import { logOperationFailure } from "./operations/failure.ts";
+import { imageLimits } from "@visonaut/compare";
+import {
+  apiLimitDefaults,
+  operationsBudgetDefaults,
+  type RuntimeApiLimits,
+} from "./runtime-defaults.ts";
 import { recoverGitHubDeliveries } from "./operations/github-deliveries.ts";
 import { readClosedSummary } from "./operations/closed-summary.ts";
 import type { OperationsMessage } from "@visonaut/service";
@@ -54,6 +60,46 @@ function configurationObject(value: unknown, name: string): Record<string, unkno
   return parsed as Record<string, unknown>;
 }
 
+function numericOverrides(
+  value: unknown,
+  name: string,
+  defaults: Readonly<Record<string, number>>,
+): Record<string, number> {
+  if (value === undefined) return {};
+  let overrides: Record<string, unknown>;
+  try {
+    overrides = configurationObject(value, name);
+  } catch {
+    throw new Error(`${name} must be a JSON object.`);
+  }
+  const result: Record<string, number> = {};
+  for (const [key, override] of Object.entries(overrides)) {
+    if (!Object.hasOwn(defaults, key)) {
+      throw new Error(`${name}.${key} is not a supported override.`);
+    }
+    result[key] = positive(override, `${name}.${key}`);
+  }
+  return result;
+}
+
+function runtimeApiLimits(env: Env): RuntimeApiLimits {
+  const limits = {
+    ...apiLimitDefaults,
+    ...numericOverrides(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS", apiLimitDefaults),
+  };
+  validateCapacityPolicy({
+    databaseWarningBytes: limits.databaseWarningBytes,
+    databaseAdmissionBytes: limits.databaseAdmissionBytes,
+    maximumActiveRuns: limits.maximumActiveRuns,
+  });
+  if (limits.maximumImageBytes > imageLimits.maxEncodedBytes) {
+    throw new Error(
+      `VISONAUT_API_LIMITS.maximumImageBytes cannot exceed ${imageLimits.maxEncodedBytes}.`,
+    );
+  }
+  return limits;
+}
+
 export function authConfiguration(env: Env): AuthConfiguration {
   return {
     database: env.DB,
@@ -76,29 +122,25 @@ export function githubConfiguration(env: Env): GitHubAppConfiguration {
 }
 
 export function operationsBudget(env: Env): OperationsBudget {
-  const budget = configurationObject(env.VISONAUT_OPERATIONS_BUDGET, "VISONAUT_OPERATIONS_BUDGET");
   const result: OperationsBudget = {
-    tasksPerStep: positive(budget.tasksPerStep, "tasksPerStep"),
-    objectsPerStep: positive(budget.objectsPerStep, "objectsPerStep"),
-    leaseMilliseconds: positive(budget.leaseMilliseconds, "leaseMilliseconds"),
-    maxAttempts: positive(budget.maxAttempts, "maxAttempts"),
-    maximumObjectBytes: positive(budget.maximumObjectBytes, "maximumObjectBytes"),
-    maximumMetadataBytes: positive(budget.maximumMetadataBytes, "maximumMetadataBytes"),
-    maximumExportEntries: positive(budget.maximumExportEntries, "maximumExportEntries"),
+    ...operationsBudgetDefaults,
+    ...numericOverrides(
+      env.VISONAUT_OPERATIONS_BUDGET,
+      "VISONAUT_OPERATIONS_BUDGET",
+      operationsBudgetDefaults,
+    ),
   };
   validateBudget(result);
   return result;
 }
 
 export function databaseCapacityPolicy(env: Env): CapacityPolicy {
-  const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
-  const policy: CapacityPolicy = {
-    databaseWarningBytes: positive(limits.databaseWarningBytes, "databaseWarningBytes"),
-    databaseAdmissionBytes: positive(limits.databaseAdmissionBytes, "databaseAdmissionBytes"),
-    maximumActiveRuns: positive(limits.maximumActiveRuns, "maximumActiveRuns"),
+  const limits = runtimeApiLimits(env);
+  return {
+    databaseWarningBytes: limits.databaseWarningBytes,
+    databaseAdmissionBytes: limits.databaseAdmissionBytes,
+    maximumActiveRuns: limits.maximumActiveRuns,
   };
-  validateCapacityPolicy(policy);
-  return policy;
 }
 
 /** All clients and binding references belong to the current request or event. */
@@ -166,7 +208,7 @@ async function assertExportProject(env: Env, exportId: string) {
 }
 
 export function apiBindings(env: Env): ApiBindings {
-  const limits = configurationObject(env.VISONAUT_API_LIMITS, "VISONAUT_API_LIMITS");
+  const limits = runtimeApiLimits(env);
   const auth = authConfiguration(env);
   const workflowOwned = configurationObject(env.VISONAUT_WORKFLOW_OWNED, "VISONAUT_WORKFLOW_OWNED");
   const workflowOwnedConfiguration = {
@@ -215,15 +257,15 @@ export function apiBindings(env: Env): ApiBindings {
       env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
       "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
     ),
-    comparisonMaxAttempts: positive(limits.comparisonMaxAttempts, "comparisonMaxAttempts"),
+    comparisonMaxAttempts: limits.comparisonMaxAttempts,
     limits: {
-      maximumImageBytes: positive(limits.maximumImageBytes, "maximumImageBytes"),
-      maximumShardBytes: positive(limits.maximumShardBytes, "maximumShardBytes"),
-      maximumRunBytes: positive(limits.maximumRunBytes, "maximumRunBytes"),
-      maximumStagedBytes: positive(limits.maximumStagedBytes, "maximumStagedBytes"),
-      maximumManifestBytes: positive(limits.maximumManifestBytes, "maximumManifestBytes"),
-      maximumPlanBytes: positive(limits.maximumPlanBytes, "maximumPlanBytes"),
-      maximumCaptures: positive(limits.maximumCaptures, "maximumCaptures"),
+      maximumImageBytes: limits.maximumImageBytes,
+      maximumShardBytes: limits.maximumShardBytes,
+      maximumRunBytes: limits.maximumRunBytes,
+      maximumStagedBytes: limits.maximumStagedBytes,
+      maximumManifestBytes: limits.maximumManifestBytes,
+      maximumPlanBytes: limits.maximumPlanBytes,
+      maximumCaptures: limits.maximumCaptures,
     },
   };
   return {
