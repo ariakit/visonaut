@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { summarize } from "./run.mjs";
 
 const sourceRoot = fileURLToPath(new URL("../../../../", import.meta.url));
-const profiles = [
+const availableProfiles = [
   { name: "local", cpuRate: 1, latencyMs: 0, downloadBytesPerSecond: -1, uploadBytesPerSecond: -1 },
   {
     name: "slow",
@@ -63,18 +63,38 @@ async function resources(page) {
   );
 }
 
-async function committedResult(page, response) {
-  if (!response.ok()) throw new Error(`The actual save API returned ${response.status()}.`);
+export async function committedResult(page, response) {
+  if (!response.ok()) {
+    throw new Error(`The actual decision API returned ${response.status()}.`);
+  }
   const result = await response.json();
-  if (!result.queued) return result;
-  const receipt = await page.waitForFunction(async (commandId) => {
-    const response = await fetch(`/api/commands/${commandId}/queued`, { cache: "no-store" });
-    if (response.status === 202) return false;
-    if (!response.ok) throw new Error(`The actual decision failed: ${response.status}.`);
-    return response.json();
-  }, result.commandId);
+  if (!result.queued) {
+    return { result, status: response.status() };
+  }
+  if (response.status() !== 202 || typeof result.commandId !== "string") {
+    throw new Error("The actual decision returned an invalid admission receipt.");
+  }
+  // Use a fixed interval so receipt reads do not run on every animation frame.
+  const receipt = await page.waitForFunction(
+    async (commandId) => {
+      const response = await fetch(`/api/commands/${encodeURIComponent(commandId)}/queued`, {
+        cache: "no-store",
+      });
+      if (response.status === 202) return false;
+      if (!response.ok) {
+        throw new Error(`The actual decision failed: ${response.status}.`);
+      }
+      return { result: await response.json(), status: response.status };
+    },
+    result.commandId,
+    { polling: 500 },
+  );
   try {
-    return await receipt.jsonValue();
+    const completed = await receipt.jsonValue();
+    if (completed.result.commandId !== result.commandId || completed.result.queued) {
+      throw new Error("The terminal receipt must complete the admitted command.");
+    }
+    return completed;
   } finally {
     await receipt.dispose();
   }
@@ -94,6 +114,14 @@ export async function runRoutes(chromium) {
   const samples = Number(process.env.SAMPLES || 3);
   if (!Number.isSafeInteger(samples) || samples < 1)
     throw new Error("SAMPLES must be a positive integer.");
+  const profileNames = (process.env.REVIEW_ROUTE_PROFILES || "local,slow").split(",");
+  const profiles = availableProfiles.filter((profile) => profileNames.includes(profile.name));
+  if (
+    !profiles.length ||
+    profileNames.some((name) => !profiles.some((profile) => profile.name === name))
+  ) {
+    throw new Error("REVIEW_ROUTE_PROFILES must select local, slow, or local,slow.");
+  }
   const output = resolve(
     process.env.REVIEW_ROUTE_OUTPUT || resolve(sourceRoot, "artifacts/review-routes"),
   );
@@ -175,9 +203,14 @@ export async function runRoutes(chromium) {
           const saveStart = performance.now();
           await approve.click();
           const response = await saved;
-          const result = await committedResult(page, response);
+          const { result, status } = await committedResult(page, response);
           if (result.noop || !result.revisions?.length)
             throw new Error("The actual save must commit a new approval.");
+          await page
+            .locator(".review-save-state")
+            .getByText(/variant(?:s)? approved\. Saved\./u)
+            .waitFor();
+          const saveToConfirmationMs = performance.now() - saveStart;
           await page.waitForFunction((previous) => {
             const selected = document.querySelector(
               '[aria-label="Variants"] [aria-current="page"]',
@@ -185,17 +218,23 @@ export async function runRoutes(chromium) {
             return selected?.id && selected.id !== previous;
           }, previous);
           await imageReady(page);
-          record.samples.push({
+          const measurement = {
             profile: profile.name,
             sample,
             cache,
             openRunToFirstImageMs,
             saveToNextImageMs: performance.now() - saveStart,
-            saveStatus: response.status(),
+            saveToConfirmationMs,
+            admissionStatus: response.status(),
+            saveStatus: status,
+            commandId: result.commandId,
             savedTargets: result.revisions.length,
             openResources,
             saveResources: await resources(page),
-          });
+          };
+          if (!record.samples.length) {
+            await page.screenshot({ path: resolve(output, "saved-confirmation.png") });
+          }
           // Undo restores the synthetic PR fixture before the next sample.
           const undone = page.waitForResponse(
             (response) =>
@@ -203,7 +242,28 @@ export async function runRoutes(chromium) {
               /\/api\/commands\/[^/]+\/undo$/u.test(new URL(response.url()).pathname),
           );
           await page.getByRole("button", { name: /^Undo(?: |$)/ }).click();
-          await committedResult(page, await undone);
+          const undoResponse = await undone;
+          const restored = await committedResult(page, undoResponse);
+          const restoredTargets = restored.result.model?.items
+            .flatMap((item) => item.variants)
+            .filter((variant) => result.revisions.some((target) => target.id === variant.id));
+          if (
+            restored.result.noop ||
+            restoredTargets?.length !== result.revisions.length ||
+            restoredTargets.some(
+              (variant) => variant.verdict !== null || variant.source !== null,
+            ) ||
+            restored.result.selection?.itemKey !== result.selection.itemKey ||
+            restored.result.selection?.variantKey !== result.selection.variantKey
+          ) {
+            throw new Error("Undo must restore every saved target and the original selection.");
+          }
+          await page
+            .locator(".review-save-state")
+            .getByText("Undo saved. The original selection and verdicts were restored.", {
+              exact: true,
+            })
+            .waitFor();
           await page.waitForFunction(
             (previous) =>
               document.querySelector('[aria-label="Variants"] [aria-current="page"]')?.id ===
@@ -211,6 +271,14 @@ export async function runRoutes(chromium) {
             previous,
           );
           await imageReady(page);
+          if (!record.samples.length) {
+            await page.screenshot({ path: resolve(output, "undo-restored.png") });
+          }
+          record.samples.push({
+            ...measurement,
+            undoStatus: restored.status,
+            restoredTargets: restoredTargets.length,
+          });
           write();
         }
       } catch (error) {
@@ -241,6 +309,9 @@ export async function runRoutes(chromium) {
                 selected.map((sample) => sample.openRunToFirstImageMs),
               ),
               saveToNextImageMs: summarize(selected.map((sample) => sample.saveToNextImageMs)),
+              saveToConfirmationMs: summarize(
+                selected.map((sample) => sample.saveToConfirmationMs),
+              ),
             },
           ];
         }),
@@ -250,4 +321,5 @@ export async function runRoutes(chromium) {
   write();
   if (record.errors.length) throw new Error("Route measurements contained page errors.");
   console.log(`Saved ${resolve(output, "measurements.json")}`);
+  return record;
 }

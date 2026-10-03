@@ -63,6 +63,7 @@ const runtime = new Miniflare(
     d1Databases: ["DB"],
     r2Buckets: ["IMAGES", "QUARANTINE"],
     queueProducers: { OPERATIONS: "local-operations" },
+    queueConsumers: { "local-operations": { maxBatchSize: 1, maxBatchTimeout: 0 } },
     serviceBindings: {
       COMPARATOR: async () =>
         new Response("Comparison is outside this route probe.", { status: 503 }),
@@ -313,15 +314,26 @@ try {
   if (!startup.ok)
     throw new Error(`Built route startup failed: ${startup.status} ${await startup.text()}`);
   await startup.body?.cancel();
-  await runRoutes(chromium);
+  const measurements = await runRoutes(chromium);
   const saved = await database
     .prepare("SELECT verdict,revoked FROM visonaut_decisions WHERE kind='human'")
     .all();
   if (
-    saved.results.length !== Number(process.env.SAMPLES || 3) * 4 ||
+    saved.results.length !==
+      measurements.samples.reduce((total, sample) => total + sample.savedTargets, 0) ||
     saved.results.some((row) => row.verdict !== "approved" || row.revoked !== 1)
-  )
+  ) {
     throw new Error("The route probe did not save and undo every approval.");
+  }
+  const receipts = await database
+    .prepare("SELECT state,result FROM work_tasks WHERE kind='review'")
+    .all();
+  if (
+    receipts.results.length !== measurements.samples.length ||
+    receipts.results.some((receipt) => receipt.state !== "complete" || !receipt.result)
+  ) {
+    throw new Error("Every admitted approval must have a completed durable receipt.");
+  }
   const outputDirectory = resolve(
     process.env.REVIEW_ROUTE_OUTPUT || resolve(sourceRoot, "artifacts/review-routes"),
   );
@@ -334,10 +346,12 @@ try {
     syntheticProfileIdentities: true,
     knownMainIdentities: true,
     decisions: saved.results.length,
+    completedReceipts: receipts.results.length,
+    operationsQueue: "native local producer and consumer",
     githubRequests,
     persistence: "ephemeral native D1 and R2; disposed after the probe",
     limits:
-      "Synthetic three-variant PR; external GitHub responses are local. Capture, comparison execution, production networking, and Queue processing are outside the measurement.",
+      "Synthetic three-variant PR with native local OPERATIONS delivery; external GitHub responses are local. Capture, comparison execution, and production networking are outside the measurement.",
   };
   writeFileSync(
     resolve(outputDirectory, "local-fixture.json"),
