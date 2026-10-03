@@ -3,6 +3,7 @@ export * from "./types.ts";
 export * from "./service.ts";
 export * from "./work.ts";
 export * from "./comparison-publication.ts";
+export * from "./comparison-result.ts";
 export * from "./history.ts";
 export * from "./retention.ts";
 export * from "./lineage.ts";

@@ -11,6 +11,7 @@ import type { Database, SqlValue } from "./database.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
+import { localResultReferenceJson } from "./comparison-result.ts";
 
 async function readRows<T>(database: Database, sql: string, values: SqlValue[] = []) {
   return (await statement(database, sql, values).all<T>()).results ?? [];
@@ -152,7 +153,8 @@ export async function createLocalComparison(
       AND json_extract(c.metadata_json,'$.localResult.maskImageId') IS NULL
       AND json_extract(c.metadata_json,'$.localResult.maskExpected') IS NOT 1`;
   const outcome = `CASE WHEN ${localZeroPixelChange} THEN 'unchanged' ELSE json_extract(c.metadata_json,'$.localResult.outcome') END`;
-  const result = `CASE WHEN ${localZeroPixelChange} THEN json_set(json_extract(c.metadata_json,'$.localResult'),'$.outcome','unchanged') ELSE json_extract(c.metadata_json,'$.localResult') END`;
+  // Captures exist before sealed-run recovery and can outlive this comparison.
+  const result = `'${localResultReferenceJson}'`;
   await atomic(service.database, [
     ...guards,
     statement(

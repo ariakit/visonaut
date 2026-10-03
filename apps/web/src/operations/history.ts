@@ -7,6 +7,7 @@ import {
   assertion,
   atomic,
   compactRunHistory,
+  comparisonResultSql,
   commandRequestDigest,
   prepareArchivedCommandReplay,
   ConflictError,
@@ -164,8 +165,7 @@ const comparisonSources: Partial<Record<HistorySection, { table: string; scope: 
   },
   images: {
     table: "visonaut_images",
-    scope:
-      "record.id IN(SELECT capture.image_id FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.candidate_capture_id=capture.id WHERE row.comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.maskImageId') FROM visonaut_comparison_rows WHERE comparison_id=?) OR record.id IN(SELECT json_extract(result_json,'$.thumbnailImageId') FROM visonaut_comparison_rows WHERE comparison_id=?)",
+    scope: `record.id IN(SELECT capture.image_id FROM visonaut_captures capture JOIN visonaut_comparison_rows row ON row.candidate_capture_id=capture.id WHERE row.comparison_id=?) OR record.id IN(SELECT json_extract(${comparisonResultSql("row")},'$.maskImageId') FROM visonaut_comparison_rows row WHERE row.comparison_id=?) OR record.id IN(SELECT json_extract(${comparisonResultSql("row")},'$.thumbnailImageId') FROM visonaut_comparison_rows row WHERE row.comparison_id=?)`,
   },
   referenceImages: {
     table: "visonaut_images",
@@ -438,7 +438,12 @@ async function sourceReadLimit(context: OperationsContext, input: SourceReadLimi
     }
     cache.set(input.table, columns);
   }
-  const fields = columns.map((column) => `'${column}',record.${column}`).join(",");
+  const expressions = columns.map((column) =>
+    input.table === "visonaut_comparison_rows" && column === "result_json"
+      ? comparisonResultSql("record")
+      : `record.${column}`,
+  );
+  const fields = columns.map((column, index) => `'${column}',${expressions[index]}`).join(",");
   const sizes = await context.database
     .prepare(`SELECT length(CAST(json_object(${fields}) AS BLOB)) AS bytes
     FROM ${input.table} record WHERE ${input.predicate} ORDER BY ${input.order} LIMIT ?`)
@@ -458,7 +463,10 @@ async function sourceReadLimit(context: OperationsContext, input: SourceReadLimi
     count++;
     if (bytes >= budget) break;
   }
-  return count;
+  return {
+    count,
+    projection: columns.map((column, index) => `${expressions[index]} AS ${column}`).join(","),
+  };
 }
 
 async function sourcePage(
@@ -558,9 +566,9 @@ async function sourcePage(
   const rowLimit = ["captures", "referenceCaptures", "commands"].includes(section)
     ? 100
     : maximumHistoryRowsPerPage;
-  const limit =
+  const read =
     section === "run"
-      ? 1
+      ? { count: 1, projection: "record.*" }
       : await sourceReadLimit(context, {
           table: source.table,
           predicate: `(${source.scope}) AND ${boundary}`,
@@ -568,12 +576,12 @@ async function sourcePage(
           parameters: [...runParameters, ...cursorValues],
           limit: rowLimit,
         });
-  if (!limit) return [];
+  if (!read.count) return [];
   const page = await context.database
     .prepare(
-      `SELECT ${encodedCursor} AS _history_cursor,record.* FROM ${source.table} record WHERE (${source.scope}) AND ${boundary} ORDER BY ${columns.join(",")} LIMIT ?`,
+      `SELECT ${encodedCursor} AS _history_cursor,${read.projection} FROM ${source.table} record WHERE (${source.scope}) AND ${boundary} ORDER BY ${columns.join(",")} LIMIT ?`,
     )
-    .bind(...runParameters, ...cursorValues, limit)
+    .bind(...runParameters, ...cursorValues, read.count)
     .all<SourceRow>();
   const rows = page.results ?? [];
   if (section === "commands") {

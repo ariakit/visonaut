@@ -49,6 +49,7 @@ import {
   evidenceFence,
   evidenceImageAssertions,
   exactEvidenceImages,
+  imageDescriptorPages,
   readManifestEvidence,
   stagedManifestEvidence,
   writeEvidencePages,
@@ -665,27 +666,12 @@ export async function declareStaged(
     await writeEvidencePages({ database: context.database, stored: storedManifest, encoded });
   }
   await readManifestEvidence(context, storedManifest, true);
-  const entries = [...images.values()];
   // One bounded JSON parameter carries descriptors; SQL and parameter counts
   // stay constant even for the configured complete capture inventory.
-  for (
-    let offset = 0;
-    !storedManifest.declaration_complete && offset < entries.length;
-    offset += 1024
-  ) {
-    const batch = entries.slice(offset, offset + 1024).map((image) => {
-      const imageId = crypto.randomUUID();
-      return {
-        ...image,
-        imageId,
-        objectKey: `runs/${run.id}/images/${imageId}`,
-        quarantineKey: `quarantine/staged/${run.id}/${job.job_id}/${image.digest}`,
-      };
-    });
-    const descriptors = JSON.stringify(batch);
-    if (new TextEncoder().encode(descriptors).length > 512 * 1024) {
-      throw new SecurityError("upload_limit", 413, "The descriptor page exceeds its byte limit.");
-    }
+  const descriptorPages = storedManifest.declaration_complete
+    ? []
+    : imageDescriptorPages({ images: images.values(), runId: run.id, jobId: job.job_id });
+  for (const descriptors of descriptorPages) {
     await atomic(context.database, [
       evidenceFence(context.database, storedManifest),
       context.database

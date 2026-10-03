@@ -3556,6 +3556,90 @@ describe("workflow-owned upload staging", () => {
 });
 
 describe("temporary D1 upload evidence", () => {
+  it("projects SQL descriptors and splits declaration pages by serialized bytes", async () => {
+    const test = await fixture();
+    const capture = test.manifest.captures[0];
+    if (!capture) {
+      throw new Error("Missing capture.");
+    }
+    capture.image.path = `images/${image.digest}.png`;
+    test.manifest.captures.push({
+      ...capture,
+      itemKey: "dialog/other",
+      ordinal: 1,
+      image: {
+        ...capture.image,
+        digest: profiledImage.digest,
+        bytes: profiledPng.byteLength,
+        width: profiledImage.width,
+        height: profiledImage.height,
+        path: `images/${profiledImage.digest}.png`,
+      },
+    });
+    const session = await localSession(test);
+    const generate = evidence.imageDescriptorPages;
+    const ordinary = [
+      ...generate({
+        images: [capture.image],
+        runId: test.runId,
+        jobId: "12345678901",
+      }),
+    ][0];
+    if (!ordinary) {
+      throw new Error("Missing descriptor page.");
+    }
+    const ordinaryBytes = new TextEncoder().encode(ordinary).length;
+    expect(2 + 1024 * (ordinaryBytes - 2) + 1023).toBeLessThanOrEqual(512 * 1024);
+    const pages: string[] = [];
+    // Two real images cross a reduced byte bound without a capacity fixture.
+    const pageSize = vi
+      .spyOn(evidence, "imageDescriptorPages")
+      .mockImplementation(function* (params) {
+        for (const page of generate({ ...params, maximumBytes: 700 })) {
+          pages.push(page);
+          yield page;
+        }
+      });
+    try {
+      const declaration = await declareStaged(
+        session.post(test.manifest),
+        test.context,
+        test.runId,
+        test.shardKey,
+      );
+      expect(await declaration.json()).toHaveProperty("uploads.length", 2);
+      expect(pages).toHaveLength(2);
+      for (const page of pages) {
+        expect(new TextEncoder().encode(page).length).toBeLessThanOrEqual(700);
+        const descriptors = JSON.parse(page);
+        expect(descriptors).toHaveLength(1);
+        expect(Object.keys(descriptors[0]).sort()).toEqual([
+          "bytes",
+          "digest",
+          "height",
+          "imageId",
+          "mediaType",
+          "objectKey",
+          "quarantineKey",
+          "width",
+        ]);
+      }
+      const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
+      expect(stored.declaration_complete).toBe(1);
+      expect(await evidence.readManifestEvidence(test.context, stored)).toEqual(test.manifest);
+      const replay = await declareStaged(
+        session.post(test.manifest),
+        test.context,
+        test.runId,
+        test.shardKey,
+      );
+      expect(await replay.json()).toHaveProperty("uploads.length", 2);
+      expect(pages).toHaveLength(2);
+    } finally {
+      pageSize.mockRestore();
+    }
+  });
+
   it("stores canonical Unicode pages and admits images without reading the manifest", async () => {
     const test = await fixture();
     const testEntry = test.manifest.tests[0];

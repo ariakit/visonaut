@@ -48,6 +48,60 @@ interface EncodedEvidence {
 const maximumPageBytes = 256 * 1024;
 const pagesPerBatch = 4;
 const maximumPageCount = 256;
+const maximumDescriptorPageBytes = 512 * 1024;
+
+interface ImageDescriptorPagesParams {
+  images: Iterable<Manifest["captures"][number]["image"]>;
+  runId: string;
+  jobId: string;
+  maximumBytes?: number;
+}
+
+export function* imageDescriptorPages({
+  images,
+  runId,
+  jobId,
+  maximumBytes = maximumDescriptorPageBytes,
+}: ImageDescriptorPagesParams) {
+  if (
+    !Number.isSafeInteger(maximumBytes) ||
+    maximumBytes < 2 ||
+    maximumBytes > maximumDescriptorPageBytes
+  ) {
+    throw new TypeError("Invalid descriptor page size.");
+  }
+  const encoder = new TextEncoder();
+  let entries: string[] = [];
+  let bytes = 2;
+  for (const image of images) {
+    const imageId = crypto.randomUUID();
+    // Keep paths and extensions in canonical evidence, outside the SQL parameter.
+    const descriptor = JSON.stringify({
+      digest: image.digest,
+      mediaType: image.mediaType,
+      bytes: image.bytes,
+      width: image.width,
+      height: image.height,
+      imageId,
+      objectKey: `runs/${runId}/images/${imageId}`,
+      quarantineKey: `quarantine/staged/${runId}/${jobId}/${image.digest}`,
+    });
+    const length = encoder.encode(descriptor).length;
+    if (length + 2 > maximumBytes) {
+      throw new SecurityError("upload_limit", 413, "The image descriptor exceeds its byte limit.");
+    }
+    if (entries.length && (entries.length === 1024 || bytes + 1 + length > maximumBytes)) {
+      yield `[${entries.join(",")}]`;
+      entries = [];
+      bytes = 2;
+    }
+    bytes += length + (entries.length ? 1 : 0);
+    entries.push(descriptor);
+  }
+  if (entries.length) {
+    yield `[${entries.join(",")}]`;
+  }
+}
 
 export async function encodeManifestEvidence(
   manifest: Manifest,

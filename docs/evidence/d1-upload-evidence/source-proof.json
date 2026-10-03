@@ -1,4 +1,7 @@
 {
+  "recorded_date": "2026-10-03",
+  "measurement_source_revision": "bababaa942c44501123829e18d88fb4bb8ec6747",
+  "measurement_scope": "Recorded SQL/index baseline and upload evidence snapshot before result-storage PR 240 integration; not combined-result cost measurements.",
   "base_sha": "2d97f1a9620cec6555966dee63d677dbb24e2e18",
   "base_sources": {
     "apps/web/src/api/workflow-owned.ts": "229a091da94fadac546cb4539311969f8f7946249b55a315d20d7900c5594962",
