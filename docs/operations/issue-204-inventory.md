@@ -146,13 +146,23 @@ A future proposal targets only the nine exact tables above in the verified previ
 
 A locked install used Node `24.18.0` and pnpm `12.5.1`. Eight existing test files passed, with 64 tests: all-numbered-migration parity in SQLite and native D1, isolated SQLite snapshot rewind and recovery fencing, history, history formats, exports, local capture history, native streams, and snapshot retention. A separate fresh SQLite read applied all 29 migrations at 20:02:37 UTC, created 73 tables, found the nine retired tables and six FK edges, returned no foreign-key violations, and returned `integrity_check='ok'`. No new tests or runtime code were added.
 
-Representative repeatable local checks are:
+The recorded 64-test result belongs to source snapshot [`4a4cefc`](https://github.com/ariakit/visonaut/commit/4a4cefcb23ad502c5534bc047b94630744e56b26). To repeat those historical checks, use an isolated checkout of that snapshot with its pinned runtime and lockfile. The [export history test](https://github.com/ariakit/visonaut/blob/4a4cefcb23ad502c5534bc047b94630744e56b26/apps/web/src/operations/export-history.test.ts) is retained there. Run these commands in that historical checkout:
 
 ```sh
 pnpm test apps/web/src/operations/test-migrations.test.ts apps/web/src/operations/recovery.test.ts
 pnpm test apps/web/src/operations/history.test.ts apps/web/src/operations/history-format.test.ts apps/web/src/operations/export-history.test.ts apps/web/src/operations/local-capture-history.test.ts
 pnpm test apps/web/src/operations/native-stream.test.ts apps/web/src/operations/snapshot-retention.test.ts
 ```
+
+For the current checkout, omit the retired export history test and include the retained export cleanup checks:
+
+```sh
+pnpm test apps/web/src/operations/test-migrations.test.ts apps/web/src/operations/recovery.test.ts
+pnpm test apps/web/src/operations/history.test.ts apps/web/src/operations/history-format.test.ts apps/web/src/operations/local-capture-history.test.ts apps/web/src/operations/operations.test.ts
+pnpm test apps/web/src/operations/native-stream.test.ts apps/web/src/operations/snapshot-retention.test.ts
+```
+
+These current commands do not reproduce the recorded export tests or change the historical 64-test result.
 
 The private receipt records exact SELECT statements and errors. The initial oversized UNION failed with `SQLITE_ERROR`; successful bounded scalar queries replaced it. The initial event subset omitted finalization/task kinds; the complete later query above supersedes it. No failed query or absent result became zero. Required original-byte/hash and full profile validation remain open. Hosted Time Travel is optional and **UNVERIFIED** under the existing O19 decision; these local checks do not add a hosted rehearsal gate or reopen waived cutover probes.
 
