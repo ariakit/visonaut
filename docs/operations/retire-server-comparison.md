@@ -1,6 +1,6 @@
 # Retire server comparison in stages
 
-[Issue #204 W08](https://github.com/ariakit/visonaut/issues/204#w08) selects trusted local Submit as the normal path. Preparation does not prove live rollout readiness. Keep the two source stages separate. Deploy each stage only after its own evidence passes. W08 integration follows W06, W07, and verified W05 coverage.
+[Issue #204 W08](https://github.com/ariakit/visonaut/issues/204#w08) selects trusted local Submit as the normal path. Preparation does not prove live rollout readiness. Keep the two source stages separate. Deploy each stage only after its own evidence passes. The admission fence can precede W06 export drain and W07 conversion cleanup when supported trusted local Submit is verified and all admitted-work handlers and readers remain in place. Final handler removal follows W06, W07, and verified W05 coverage.
 
 ## Stage A: stop new admissions
 
@@ -12,9 +12,13 @@
 
 Use a compatible trusted CLI and a new complete capture. Adding the field alone does not supply a verified receipt. Reference binding, the complete inventory, signed Submit, source jobs, artifact digests, image limits, and local receipt validation still apply.
 
+`POST /api/runs/:id/recompare` also stops new server comparison work for active legacy runs. It returns HTTP 409 with `local_comparison_required` and a new complete capture instruction. Review models set `recompareAllowed: false`. Current review, approval, history, originals, and already-admitted task recovery retain their existing rules. Closed and promoted history still returns `history_closed`; local runs retain their complete-Submit guidance.
+
 Before deploying stage A, record the exact supported client, CLI, adapter, service, workflow pin, and executor versions. Verify their real capture, reservation, reference, upload, signed Submit, recovery, review, status, and promotion flow. Include older in-flight attempts. The public adapter comparison-default setting does not change the `local-v1` Submit format. A published bridge or reviewed consumer patch does not prove deployed adoption.
 
-Previously issued legacy capabilities can finish their declared uploads and signed Submit during drain. Keep server scheduling, comparison publication, consumers, leases, retry, dead-letter handling, and manual recovery executable. Keep their queue bindings and settings. Capture this admitted cohort before final retirement. Existing staged legacy work can create comparison tasks after the new reservation boundary closes.
+Verified bridge PR/main adoption can supply this compatibility proof. Strict adapter publication is a separate release step; the admission fence does not require a second consumer rollout when the already-supported trusted Submit sends the required local mode and receipt. Stage A keeps existing export drain and conversion controllers executable. Its rollout closes new request paths; it does not declare old work terminal or authorize consumer removal.
+
+Previously issued legacy capabilities can finish their declared uploads and signed Submit during drain. Keep server scheduling for already-admitted stages, comparison publication, consumers, leases, retry, dead-letter handling, and manual recovery executable. Keep their queue bindings and settings. Capture this admitted cohort before final retirement. Existing staged legacy work can create comparison tasks after the new reservation and recompare boundaries close.
 
 ## Stage B: retire producers and handlers
 

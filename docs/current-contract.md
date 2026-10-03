@@ -62,7 +62,7 @@ The [W10 measurement record](evidence/issue-204-ci/README.md) retains dated D04/
 
 ## Server comparison admission
 
-The [W08 retirement guide](operations/retire-server-comparison.md) separates source preparation from live rollout. New `POST /v1/runs` reservations require `comparisonMode: "local-v1"`. An omitted mode receives an upgrade and complete-recapture instruction. Previously issued capabilities, legacy scheduling, queue consumers, retry, dead-letter handling, and recovery remain executable during drain. Supported-client coverage and an exact terminal legacy cohort are deployment gates, not claims established by this source change.
+The [W08 retirement guide](operations/retire-server-comparison.md) separates source preparation from live rollout. New `POST /v1/runs` reservations require `comparisonMode: "local-v1"`. An omitted mode receives an upgrade and complete-recapture instruction. Active legacy runs also reject new stored recomparison and require a new complete capture with trusted local Submit. Review models disable recompare. Existing review, approval, history, and original-capture rules remain in place. Previously issued capabilities, scheduling for admitted stages, queue consumers, retry, dead-letter handling, and recovery remain executable during drain. The admission fence can precede W06 export drain and W07 conversion cleanup after verified compatible trusted Submit coverage, including bridge PR/main adoption. Final handler removal needs W03/W05/W06/W07 and exact terminal/replay proof. Strict adapter publication does not add a second consumer rollout requirement for the admission fence. These live proofs and separately approved actions are not established by this source change.
 
 ## Request failure references
 
