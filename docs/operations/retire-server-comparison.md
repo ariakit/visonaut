@@ -2,6 +2,8 @@
 
 [Issue #204 W08](https://github.com/ariakit/visonaut/issues/204#w08) selects trusted local Submit as the normal path. Preparation does not prove live rollout readiness. Keep the two source stages separate. Deploy each stage only after its own evidence passes. The admission fence can precede W06 export drain and W07 conversion cleanup when supported trusted local Submit is verified and all admitted-work handlers and readers remain in place. Final handler removal follows W06, W07, and verified W05 coverage.
 
+The selected production rollout completed on 2026-10-03: PR #224 deployed the admission fence; PR #230 deployed final producer/handler removal after exact terminal-work proof and consumer detachment. Both Workers passed version and retained-binding readback. See the [dated completion evidence](../evidence/issue-204-completion.md#dated-production-removal-evidence). Queue objects and messages were retained. The stages below preserve the prerequisites and rollback limits; they are not a request to repeat the rollout. Preview runtime was not selected for deployment.
+
 ## Stage A: stop new admissions
 
 `POST /v1/runs` requires `comparisonMode: "local-v1"`. An omitted mode returns HTTP 409 with `local_comparison_required` and an upgrade and recapture instruction. An unknown mode returns HTTP 400 with `comparison_mode`. The request fails before GitHub work, staging, or capability issuance.

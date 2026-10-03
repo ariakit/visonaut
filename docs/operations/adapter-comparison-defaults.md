@@ -1,8 +1,8 @@
 # Public adapter comparison defaults
 
-This record describes the earlier compatibility preparation. The [strict adapter preparation](strict-adapter-comparison-defaults.md) records the later breaking source and its release hold.
+This record preserves the compatibility stage of D07/W05. Adapter `0.4.1` was published through [PR #218](https://github.com/ariakit/visonaut/pull/218), and Ariakit adopted its explicit public defaults through [PR #7718](https://github.com/ariakit/ariakit/pull/7718). The [completion record](../evidence/issue-204-completion.md) links the verified rollout. The later [strict adapter release](strict-adapter-comparison-defaults.md) removes private inheritance in published `0.5.0`; that publication does not replace the verified consumer version.
 
-This is the compatibility stage of issue #204 D07/W05. The adapter source accepts `project.metadata.visonaut.comparisonDefaults` beside `profile`. Explicit defaults, including `{}`, bypass private screenshot inheritance. Missing defaults retain the tested Playwright `1.63.0` fallback for unchanged consumers. The compatible changeset is prepared; no package publication, consumer change, deployment, or final private-field retirement is proved by this record.
+The retained preparation below describes the compatibility stage of issue #204 D07/W05. The compatible adapter source accepts `project.metadata.visonaut.comparisonDefaults` beside `profile`. Explicit defaults, including `{}`, bypass private screenshot inheritance. Missing defaults retain the tested Playwright `1.63.0` fallback for unchanged consumers. The original preparation below retains its source and validation scope; later publication and adoption are recorded above.
 
 ```ts
 const comparisonDefaults = { threshold: 0.2, maxDiffPixels: 0 };
@@ -20,14 +20,14 @@ The [configuration patch](ariakit-comparison-defaults.patch) targets Ariakit sou
 
 The patch passes `git apply --check` against that exact source snapshot. This is local source evidence, not consumer adoption. Apply it only after the compatible adapter release is available and the current consumer source has been reviewed again. Install the verified exact adapter version and regenerate the consumer lockfile through its normal package manager. The existing consumer uses adapter `0.4.0`; the new patch requires the compatible release. Do not fabricate the unpublished package integrity or edit the consumer repository in this Visonaut task.
 
-## Release order and final hold
+## Historical release order and hold
 
 1. Review and merge the compatible adapter source, its capture evidence, and `.changeset/200-public-comparison-defaults.md`. The v0 feature uses a patch changeset and keeps the exact Playwright `1.63.0` peer. Package publication requires a separate instruction.
 2. Publish and verify the compatible version through the approved release workflow. Recheck the prepared consumer patch, install that version, and test real captures and manifests through the consumer's existing jobs. Consumer changes require a separate instruction.
 3. Verify adoption by every supported consumer identified by W03. A source patch, one consumer, or an unknown inventory does not establish complete adoption. Keep the tested compatibility fallback while that evidence is missing.
 4. Prepare the declared breaking release. Require an explicit `comparisonDefaults` object, including `{}` for the built-in policy. Missing configuration must fail with a clear setup error. Remove the private `_projectInternal` reader only in that release after the adoption gate passes.
 
-The final D07 private-field retirement remains **held**. The public API has a compatibility bridge in this stage. Do not widen the Playwright peer range, relabel old receipts, or mark W05's final removal complete from compatible source alone. Retain the reviewed adapter/consumer pair as rollback material; do not restore a bridge for an untested Playwright version.
+At this historical compatibility checkpoint, final D07 private-field retirement was held; the later strict release recorded above completed it. The public API has a compatibility bridge in this stage. Do not widen the Playwright peer range, relabel old receipts, or mark W05's final removal complete from compatible source alone. Retain the reviewed adapter/consumer pair as rollback material; do not restore a bridge for an untested Playwright version.
 
 ## Local validation
 
