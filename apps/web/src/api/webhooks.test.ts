@@ -1866,11 +1866,319 @@ describe("pre-run App checks", () => {
     });
   });
 
-  it.each(["unbound-check", "stage", "run", "head-link", "head-intent"])(
-    "keeps a terminal no-PR receipt retryable when a %s owns its work",
-    async (owner) => {
+  it.each([
+    ["head-changed", "completed"],
+    ["head-changed", "in_progress"],
+    ["head-changed", "requested"],
+    ["closed", "completed"],
+    ["closed", "in_progress"],
+    ["closed", "requested"],
+    ["non-main", "completed"],
+    ["non-main", "in_progress"],
+    ["non-main", "requested"],
+  ])("acknowledges an unowned terminal PR receipt after %s: %s", async (change, action) => {
+    const fixture = preRunFixture();
+    fixture.state.run.pull_requests = [
+      { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+    ];
+    if (change === "closed") {
+      fixture.state.pullState = "closed";
+    } else if (change === "non-main") {
+      fixture.state.pullBaseRef = "release";
+    } else {
+      fixture.state.pullHeadSha = "d".repeat(40);
+    }
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = action;
+    if (action !== "completed") {
+      object(webhook.payload.workflow_run).status = action === "requested" ? "queued" : action;
+      object(webhook.payload.workflow_run).conclusion = null;
+    }
+    expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
+      "historical",
+    );
+    expect(fixture.state.posts).toBe(0);
+    expect(fixture.state.checks.size).toBe(0);
+    expect(await database.prepare("SELECT count(*) AS count FROM pre_run_checks").first()).toEqual({
+      count: 0,
+    });
+  });
+
+  it("keeps an associated terminal receipt retryable when an owner appears during the PR read", async () => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [
+      { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+    ];
+    let owner: unknown;
+    const request = fixture.github.request;
+    fixture.github.request = async (path, init) => {
+      const result = await request(path, init);
+      if (path.endsWith("/pulls/7")) {
+        await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+        await database
+          .prepare("UPDATE pre_run_checks SET state='ambiguous',check_id='1',request_started=1")
+          .run();
+        owner = (await database.prepare("SELECT * FROM pre_run_checks").all()).results;
+      }
+      return result;
+    };
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(owner).toHaveLength(1);
+    expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(owner);
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it.each([
+    "current-head",
+    "nonterminal",
+    "identity-drift",
+    "multiple-associations",
+    "association-repository",
+    "pull-repository",
+    "missing-base-ref",
+    "invalid-base-ref",
+    "empty-base-ref",
+    "whitespace-base-ref",
+  ])("keeps an unbound associated PR receipt retryable after %s", async (condition) => {
+    const fixture = preRunFixture();
+    fixture.state.run.pull_requests = [
+      { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+    ];
+    const webhook = fixture.workflowWebhook();
+    if (condition !== "current-head") {
+      fixture.state.pullHeadSha = "d".repeat(40);
+    }
+    if (condition === "nonterminal") {
+      fixture.state.run.status = "in_progress";
+      webhook.payload.action = "in_progress";
+    } else if (condition === "identity-drift") {
+      fixture.state.run.head_sha = "f".repeat(40);
+    } else if (condition === "multiple-associations") {
+      fixture.state.run.pull_requests = [{ number: 7 }, { number: 8 }];
+    } else if (condition === "association-repository") {
+      fixture.state.run.pull_requests = [
+        { number: 7, head: { repo: { id: 999 } }, base: { repo: { id: 100 } } },
+      ];
+    } else if (condition === "pull-repository") {
+      const request = fixture.github.request;
+      fixture.github.request = async (path, init) => {
+        const result = object(await request(path, init));
+        if (path.endsWith("/pulls/7")) {
+          return { ...result, head: { ...object(result.head), repo: { id: 999 } } };
+        }
+        return result;
+      };
+    } else if (condition.endsWith("base-ref")) {
+      const request = fixture.github.request;
+      fixture.github.request = async (path, init) => {
+        const result = object(await request(path, init));
+        if (!path.endsWith("/pulls/7")) return result;
+        const ref =
+          condition === "missing-base-ref"
+            ? undefined
+            : condition === "invalid-base-ref"
+              ? 1
+              : condition === "empty-base-ref"
+                ? ""
+                : "release branch";
+        return { ...result, base: { ...object(result.base), ref } };
+      };
+    }
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook),
+    ).rejects.toMatchObject({
+      code: condition === "identity-drift" ? "workflow_identity" : "workflow_candidate",
+    });
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it.each([
+    ["same-head", "completed"],
+    ["same-head", "in_progress"],
+    ["same-head", "requested"],
+    ["changed-head", "completed"],
+    ["changed-head", "in_progress"],
+    ["changed-head", "requested"],
+  ])("preserves an uncreated closed-PR candidate after %s: %s", async (change, action) => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    if (change === "changed-head") {
+      fixture.state.pullHeadSha = "d".repeat(40);
+    }
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = action;
+    if (action !== "completed") {
+      object(webhook.payload.workflow_run).status = action === "requested" ? "queued" : action;
+      object(webhook.payload.workflow_run).conclusion = null;
+    }
+    expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
+      "historical",
+    );
+    expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+      before.results,
+    );
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it("reuses the uncreated candidate when an acknowledged closed PR reopens", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    expect(
+      await settlePreRunWorkflow(
+        apiContext(preRunBindings),
+        fixture.github,
+        fixture.workflowWebhook(),
+      ),
+    ).toBe("historical");
+    fixture.state.pullState = "open";
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    expect(fixture.state.posts).toBe(1);
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
+  it("admits a main successor after acknowledging the passive closed-PR candidate", async () => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    expect(
+      await settlePreRunWorkflow(
+        apiContext(preRunBindings),
+        fixture.github,
+        fixture.workflowWebhook(),
+      ),
+    ).toBe("historical");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
+      testedSha: mergeSha,
+      sourceSha: mergeSha,
+      baseSha,
+      kind: "main",
+      ref: "refs/heads/main",
+      pullRequestNumber: null,
+      docsOnly: false,
+    });
+    expect(
+      (
+        await database
+          .prepare("SELECT generation,kind,state FROM pre_run_checks ORDER BY generation")
+          .all()
+      ).results,
+    ).toEqual([
+      { generation: 0, kind: "pull_request", state: "pending" },
+      { generation: 1, kind: "main", state: "pending" },
+    ]);
+  });
+
+  it.each([
+    { condition: "started", update: "request_started=1" },
+    { condition: "leased", update: "lease_until=9999999999999" },
+    { condition: "check", update: "check_id='1'" },
+    { condition: "binding", update: "workflow_run_id='77',workflow_attempt=1" },
+    { condition: "Plan-required", update: "plan_visual_required=1" },
+    { condition: "Plan-not-required", update: "plan_visual_required=0" },
+    { condition: "Plan-time", update: "plan_reported_at=1" },
+    { condition: "Plan-job", update: "plan_job_id='101'" },
+    { condition: "Plan-workflow", update: "plan_workflow_sha='workflow'" },
+    { condition: "ambiguous", update: "state='ambiguous'" },
+    { condition: "creating", update: "state='creating'" },
+    { condition: "failed", update: "state='failed'" },
+    { condition: "wrong-ref", update: "ref='refs/pull/8/merge'" },
+  ])("keeps a closed-PR candidate retryable while $condition", async ({ update }) => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    await database.prepare(`UPDATE pre_run_checks SET ${update}`).run();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: expect.stringMatching(/workflow_candidate|check_pending/) });
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it.each(["open-PR", "second-candidate", "stage", "run", "head-link", "head-intent"])(
+    "keeps a passive closed-PR candidate retryable with %s",
+    async (condition) => {
       const fixture = preRunFixture();
+      const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+      if (!candidate) throw new Error("Missing candidate");
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
       fixture.state.run.pull_requests = [];
+      if (condition !== "open-PR") {
+        fixture.state.pullState = "closed";
+      }
+      if (condition === "second-candidate") {
+        await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
+          ...candidate,
+          testedSha: "f".repeat(40),
+        });
+      } else if (condition === "stage") {
+        await database
+          .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
+            workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+            capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at)
+            VALUES('stage','100','77',1,?,'digest','path','ref','capture','submit','{}',1,1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (condition === "run") {
+        await database
+          .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
+            kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
+            VALUES('owned','project','77',1,'pull_request',?,'pr:7','plan','{}','failed',1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (condition === "head-link") {
+        await database
+          .prepare(`INSERT INTO operations_review_links(repository_id,pull_request_number,
+            source_sha,external_id,check_id,request_started) VALUES('100',7,?,'head-link','1',1)`)
+          .bind(sourceSha)
+          .run();
+      } else if (condition === "head-intent") {
+        await database.prepare("INSERT INTO work_checks(id,desired_revision) VALUES('1',1)").run();
+        await database
+          .prepare(`INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,
+            source_revision,comparison_revision,conclusion,details_url,state,max_attempts,available_at)
+            VALUES('1',1,'77',1,0,0,'pending','https://preview.example','dead',5,1)`)
+          .run();
+      }
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
+
+  it.each(
+    ["unbound-check", "stage", "run", "head-link", "head-intent"].flatMap((owner) =>
+      ["no-PR", "head-changed"].map((association) => [owner, association]),
+    ),
+  )(
+    "keeps a terminal receipt retryable when a %s owns its work: %s",
+    async (owner, association) => {
+      const fixture = preRunFixture();
+      fixture.state.run.pull_requests =
+        association === "no-PR"
+          ? []
+          : [{ number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } }];
+      fixture.state.pullHeadSha = "d".repeat(40);
       if (owner === "unbound-check") {
         await database
           .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,
