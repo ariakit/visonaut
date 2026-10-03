@@ -2,7 +2,6 @@ import {
   digestEnvironmentProfile,
   digestJson,
   identityKey,
-  parseManifest,
   SCHEMA_VERSION,
   sha256,
   uploadImages,
@@ -25,6 +24,11 @@ import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
 import { reconcileWorkflowJobSet, type ReconciledBundle } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
+import {
+  evidenceImages,
+  readManifestEvidence,
+  stagedManifestEvidence,
+} from "./workflow-evidence.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
 interface StagedImage {
@@ -157,13 +161,13 @@ async function materializeImages({
   if (bundle.sourceRunId !== runId) {
     throw new IncompleteError("Submit must upload a fresh combined bundle for this attempt.");
   }
-  const images = await context.database
-    .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
-    .bind(bundle.sourceRunId, bundle.jobId)
-    .all<StagedImage>();
+  const images = await evidenceImages(
+    context,
+    await stagedManifestEvidence(context, bundle.sourceRunId, bundle.jobId),
+  );
   const expected = uploadImages(bundle.manifest);
   const originalDigests = new Set(bundle.manifest.captures.map((capture) => capture.image.digest));
-  if (images.results.length !== expected.size) {
+  if (images.length !== expected.size) {
     throw new IncompleteError("The validated staged image set changed.");
   }
   const ids = new Map<string, string>();
@@ -208,10 +212,10 @@ async function materializeImages({
     }
     return image;
   };
-  for (let offset = 0; offset < images.results.length;) {
-    const end = materializationBatchEnd(images.results, offset);
+  for (let offset = 0; offset < images.length;) {
+    const end = materializationBatchEnd(images, offset);
     const verificationStarted = performance.now();
-    const results = await Promise.allSettled(images.results.slice(offset, end).map(verifyImage));
+    const results = await Promise.allSettled(images.slice(offset, end).map(verifyImage));
     measurements.verificationMs += performance.now() - verificationStarted;
     const verified: StagedImage[] = [];
     for (const result of results) {
@@ -368,10 +372,13 @@ async function materializeBundle({
       manifest.captures.map((capture) => [capture.image.digest, capture.image.bytes]),
     ).values(),
   ].reduce((sum, bytes) => sum + bytes, 0);
-  const manifestObjectKey = `manifests/${run.id}/${bundle.manifestDigest}.json`;
+  const manifestObjectKey =
+    bundle.evidenceVersion === 1
+      ? bundle.manifestObjectKey
+      : `d1:manifest/${run.id}/${bundle.key}/${bundle.manifestDigest}`;
   await context.database
     .prepare(
-      "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?) ON CONFLICT(run_id, shard_key) DO NOTHING",
+      "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(run_id, shard_key) DO NOTHING",
     )
     .bind(
       run.id,
@@ -382,16 +389,28 @@ async function materializeBundle({
       manifest.captures.length,
       declaredBytes,
       Date.now(),
+      bundle.evidenceVersion,
     )
     .run();
   const stored = await context.database
     .prepare(
-      "SELECT digest, job_id, declared_bytes, finalized FROM ingest_manifests WHERE run_id = ? AND shard_key = ?",
+      "SELECT digest, object_key, job_id, capture_count, declared_bytes, finalized, storage_version FROM ingest_manifests WHERE run_id = ? AND shard_key = ?",
     )
     .bind(run.id, bundle.key)
-    .first<{ digest: string; job_id: string; declared_bytes: number; finalized: number }>();
+    .first<{
+      digest: string;
+      object_key: string;
+      job_id: string;
+      capture_count: number;
+      declared_bytes: number;
+      finalized: number;
+      storage_version: number;
+    }>();
   if (
     stored?.digest !== bundle.manifestDigest ||
+    stored.object_key !== manifestObjectKey ||
+    stored.storage_version !== bundle.evidenceVersion ||
+    stored.capture_count !== manifest.captures.length ||
     stored.job_id !== bundle.jobId ||
     stored.declared_bytes !== declaredBytes ||
     stored.finalized !== 1
@@ -432,16 +451,15 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
           .first();
         if (local) {
           const staged = await context.database
-            .prepare(
-              "SELECT manifest_object_key FROM ingest_staged_manifests WHERE run_id=? AND complete=1",
-            )
+            .prepare("SELECT job_id FROM ingest_staged_manifests WHERE run_id = ? AND complete = 1")
             .bind(previous.id)
-            .first<{ manifest_object_key: string }>();
-          const stored = staged ? await context.quarantine.get(staged.manifest_object_key) : null;
-          if (!stored || stored.size > context.configuration.limits.maximumManifestBytes)
+            .first<{ job_id: string }>();
+          if (!staged) {
             throw new IncompleteError("The local Submit receipt is unavailable.");
-          const manifest = parseManifest(
-            JSON.parse(new TextDecoder().decode(await stored.arrayBuffer())),
+          }
+          const manifest = await readManifestEvidence(
+            context,
+            await stagedManifestEvidence(context, previous.id, staged.job_id),
           );
           await validateLocalSubmission(context, previous.id, manifest);
           const receipt = manifest.localComparison;
@@ -570,25 +588,30 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     precreatedCheck,
     now: Date.now(),
   };
-  const planObjectKey = `plans/workflow/${jobSetDigest}.json`;
-  await context.quarantine.put(
-    planObjectKey,
-    JSON.stringify({
-      schemaVersion: SCHEMA_VERSION,
-      source: "workflow-owned",
-      workflowSourceDigest: staged.workflow_source_digest,
-      jobSetDigest,
-      callerWorkflowPath: staged.caller_workflow_path,
-      reusableWorkflowRef: staged.reusable_workflow_ref,
-      bundles: bundles.map(({ key, sourceAttempt, jobId, manifestDigest }) => ({
-        key,
-        sourceAttempt,
-        jobId,
-        manifestDigest,
-      })),
-    }),
-    { httpMetadata: { contentType: "application/json" } },
-  );
+  const storageVersion = bundles.every((bundle) => bundle.evidenceVersion === 2) ? 2 : 1;
+  const planObjectKey =
+    storageVersion === 2
+      ? `d1:provenance/${staged.id}/${jobSetDigest}`
+      : `plans/workflow/${jobSetDigest}.json`;
+  const planEvidence = {
+    schemaVersion: SCHEMA_VERSION,
+    source: "workflow-owned",
+    workflowSourceDigest: staged.workflow_source_digest,
+    jobSetDigest,
+    callerWorkflowPath: staged.caller_workflow_path,
+    reusableWorkflowRef: staged.reusable_workflow_ref,
+    bundles: bundles.map(({ key, sourceAttempt, jobId, manifestDigest }) => ({
+      key,
+      sourceAttempt,
+      jobId,
+      manifestDigest,
+    })),
+  };
+  if (storageVersion === 1) {
+    await context.quarantine.put(planObjectKey, JSON.stringify(planEvidence), {
+      httpMetadata: { contentType: "application/json" },
+    });
+  }
   const liveStage = await context.database
     .prepare("SELECT id FROM ingest_staged_runs WHERE id = ? AND retention_state = 'live'")
     .bind(staged.id)
@@ -616,12 +639,15 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   }
   await context.database
     .prepare(
-      "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING",
+      "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING",
     )
     .bind(
       run.id,
       JSON.stringify({
         ...submit,
+        workflowSourceDigest: staged.workflow_source_digest,
+        callerWorkflowPath: staged.caller_workflow_path,
+        bundles: planEvidence.bundles,
         lineageProof: lineage.proof,
         reusableWorkflowRef: staged.reusable_workflow_ref,
         reusableWorkflowSha: context.configuration.workflowOwned?.reusableWorkflowSha,
@@ -630,6 +656,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       }),
       planObjectKey,
       Date.now(),
+      storageVersion,
     )
     .run();
   if (!run.active) {
