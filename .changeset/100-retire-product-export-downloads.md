@@ -4,7 +4,7 @@
 
 Product export endpoints are removed
 
-**BREAKING** if you use a product export URL. After verified drain, the [export endpoints](https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md#manual-evidence-export) return `404 not_found`. Use retained run history to read existing evidence, or capture a new complete run for new evidence.
+**BREAKING** if you use a product export URL. The [export endpoints](https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md#manual-evidence-export) return `404 not_found`, including existing links whose promised expiry has not passed. Endpoint retirement does not wait for export expiry, active download leases, or completed cleanup. Use retained run history to read existing evidence, or capture a new complete run for new evidence.
 
 Before:
 
@@ -19,4 +19,4 @@ After:
 GET /api/runs/<run-id>
 ```
 
-Native recovery and ordinary image retention remain available. Recovery cannot recreate expired R2 image bytes. Remove `maximumExportEntries` and `maximumMetadataBytes` from custom `VISONAUT_OPERATIONS_BUDGET` overrides; the remaining limits keep their defaults.
+Retained export pages and matching owner pins remain until ordinary bounded cleanup is eligible under its unchanged expiry and active-lease checks. Pins release only after private-page deletion completes. No forced expiry or deletion is required. Native recovery and ordinary image retention remain available. Recovery cannot recreate expired R2 image bytes. Preserve any specifically required private evidence. Remove `maximumExportEntries` and `maximumMetadataBytes` from custom `VISONAUT_OPERATIONS_BUDGET` overrides; the remaining limits keep their defaults.

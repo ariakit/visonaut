@@ -2,6 +2,8 @@
 
 This is unpublished handoff text for the parent task to review. W01 does not edit GitHub issues or publish this text. PR #205 already completed the repository authority redirect on 2026-10-02; the [existing pinned notice](https://github.com/ariakit/visonaut/issues/1#issuecomment-5958332349) preserves the full issue body. Keep its title, closed/completed state, body, original notice, design decisions, and dated evidence. This draft adds the #204 selections to that completed handoff.
 
+The proposed D06 wording below records W01's selection. The [2026-10-03 endpoint retirement selection](current-contract.md#product-export-endpoint-retirement) supersedes its export availability and pre-deployment drain wait. Update that wording before any later publication; this historical draft is not a current rollout requirement.
+
 ## Proposed notice text
 
 The [current implementation contract](https://github.com/ariakit/visonaut/blob/main/docs/current-contract.md) is the repository authority. PR #205 completed this redirect on 2026-10-02. The complete issue body, 61 revision 9 decisions, 45 simplification-audit selections, and dated evidence remain historical records. Every unaffected requirement remains binding.
