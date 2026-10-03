@@ -289,7 +289,8 @@ it("runs a status wakeup without scanning history, byte retention, or comparison
   ]);
 
   const ingest = await runOperations(fixture.context, { kind: "ingest" });
-  expect(Object.keys(ingest.reports)).toEqual(["finalization"]);
+  expect(Object.keys(ingest.reports)).toEqual(["main-retirement", "finalization"]);
+  expect(ingest.reports["main-retirement"]?.completed).toEqual([]);
   const history = await runOperations(fixture.context, { kind: "maintenance", family: "history" });
   expect(Object.keys(history.reports)).toEqual(["history"]);
 });
