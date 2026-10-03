@@ -1,6 +1,6 @@
 # Strict adapter comparison defaults
 
-This is local preparation of the final issue #204 D07/W05 breaking adapter source. It requires public `visonaut` and `comparisonDefaults` objects as own properties in `project.metadata`. It removes the private Playwright screenshot-default reader. The published compatible adapter `0.4.1` retains its bridge. This source preparation does not prove consumer adoption or final retirement in the live system.
+The final issue #204 D07/W05 adapter was published as `0.5.0` through [PR #223](https://github.com/ariakit/visonaut/pull/223) after compatible public-default adoption was verified. The registry archive, intended-package tests, and normal release were checked. See the [completion record](../evidence/issue-204-completion.md). This release requires public `visonaut` and `comparisonDefaults` own properties and removes the private Playwright screenshot-default reader. The compatible `0.4.1` consumer retains its bridge; no second consumer rollout is claimed.
 
 ```ts
 const comparisonDefaults = { threshold: 0.2, maxDiffPixels: 0 };
@@ -12,9 +12,11 @@ export default defineConfig({
 
 Missing or inherited public configuration fails with a clear setup error, even when a capture supplies all comparison settings. An explicit `{}` selects threshold `0.2` and zero allowed pixels. Invalid explicit defaults also fail before overrides can hide them. Only own comparison fields count, including non-enumerable fields. Project, batch, and image precedence, explicit `undefined` clearing, both pixel caps, and the requirement for consecutive identical images stay the same.
 
-The breaking changeset uses `minor` because the adapter is in v0. From the current package version `0.4.1`, it prepares `0.5.0` through the normal Changesets release process. This branch does not manually change the package version or changelog. The exact Playwright peer remains `1.63.0`. Comparison engine, codec, manifest, rendering-profile, and signature contracts do not change.
+The breaking changeset used `minor` because the adapter is in v0. From the prior package version `0.4.1`, it prepared `0.5.0` through the normal Changesets release process. The normal Changesets Publish PR supplied the version and changelog. The exact Playwright peer remains `1.63.0`. Comparison engine, codec, manifest, rendering-profile, and signature contracts do not change.
 
-## Adoption and release hold
+## Historical adoption and release gate
+
+The conditions below describe the preparation checkpoint. The later approved release and compatible adoption satisfy this gate as recorded above; do not restore the old publication hold. A future consumer or trust-pin change remains a separate action.
 
 The service trust-pin change and the Ariakit compatible-adapter adoption patch remain separate from this branch. Preserve their reviewed commits and rollout packet. Do not substitute this unpublished strict adapter for the compatible package in that pair.
 

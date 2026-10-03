@@ -1,12 +1,12 @@
 # Ariakit adapter service pins
 
-This is the production service configuration for issue #204 D07/W05 adapter adoption. It is a prepared change, not proof of deployment or consumer adoption. Live actions require approval of the reviewed service and consumer patches, a fresh check of their exact bytes, and the caller census below. The compatibility bridge and final private-field retirement hold in [the adapter record](adapter-comparison-defaults.md) still apply.
+This is the production service configuration used for issue #204 D07/W05 compatible adapter adoption. [PR #220](https://github.com/ariakit/visonaut/pull/220) and Ariakit [PR #7718](https://github.com/ariakit/ariakit/pull/7718) completed the coordinated rollout. The [completion record](../evidence/issue-204-completion.md) records normal PR/main capture, signed Submit, single-check, and service readback evidence. The tuple below remains the production tuple after W08. The original rollout procedure and rollback limits remain for reference; they do not authorize another consumer change.
 
 ## Matching trust tuple
 
 The service trusts one App workflow blob and one executor digest. Keep these values together for `ariakit/ariakit`, repository ID `104133653`, and project `ariakit`.
 
-| Value                     | Prepared tuple                                                     | Previous tuple                                                     |
+| Value                     | Deployed tuple                                                     | Previous tuple                                                     |
 | ------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | App workflow blob B       | `3858bc67dda6d70381c3ad189f85dd6266fc7942`                         | `ec8ba1563228164856c33c94f4fa96645448c730`                         |
 | Native CI workflow blob C | `3dbaca30542ae9e84bbbba3f87cc29891bdf7856`                         | `3dbaca30542ae9e84bbbba3f87cc29891bdf7856`                         |
