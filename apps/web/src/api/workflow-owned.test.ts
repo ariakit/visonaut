@@ -16,7 +16,7 @@ import {
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
-import { issueIngestCapability, verifyIngestCapability } from "@visonaut/security";
+import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
 import { retireSnapshot } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -2326,6 +2326,165 @@ describe("workflow-owned upload staging", () => {
       check_id: String(Number(test.manifest.run.workflowRunId) + 20_000),
       state: "complete",
     });
+  });
+
+  it("fails an unsealed stale local receipt without releasing evidence or the terminal check", async () => {
+    const test = await fixture();
+    const reference = await acceptedReference(test);
+    const session = await localSession(test);
+    const declaration = await stageLocal(test, session);
+    expect(declaration.uploads).toEqual([]);
+    const subject = `${test.manifest.run.workflowRunId}:1`;
+    await recordEvent(database, {
+      kind: "staged-reconciliation",
+      subject,
+      code: "retry-delayed",
+      now: Date.now(),
+    });
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 1,
+      progressed: 0,
+      errors: [{ runId: test.runId, code: "stale_reference" }],
+    });
+    expect(await test.context.service.run(test.runId)).toMatchObject({
+      active: 1,
+      state: "failed",
+      sealed_at: null,
+      comparison_id: null,
+    });
+    expect(await test.context.service.status(test.runId)).toMatchObject({ status: "failed" });
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 0,
+      progressed: 0,
+      errors: [],
+    });
+    expect(
+      await database
+        .prepare(
+          "SELECT code,resolved_at FROM operations_events WHERE kind=? AND subject_id=? ORDER BY code",
+        )
+        .bind("staged-reconciliation", subject)
+        .all(),
+    ).toMatchObject({
+      results: [
+        { code: "retry-delayed", resolved_at: expect.any(Number) },
+        { code: "stale-reference", resolved_at: null },
+      ],
+    });
+    const staged = await database
+      .prepare("SELECT retention_state,verified_json FROM ingest_staged_runs WHERE id=?")
+      .bind(test.runId)
+      .first<{ retention_state: string; verified_json: string }>();
+    expect(staged?.retention_state).toBe("live");
+    expect(JSON.parse(staged?.verified_json ?? "{}").localReference).toEqual(
+      session.page.reference,
+    );
+    expect(
+      await quarantine.get(`manifests/${test.runId}/${declaration.manifestDigest}.json`),
+    ).not.toBeNull();
+    expect(
+      await database
+        .prepare("SELECT snapshot_id FROM visonaut_pins WHERE reason='local-submit' AND owner_id=?")
+        .bind(`submit:${test.runId}`)
+        .first(),
+    ).toEqual({ snapshot_id: reference.snapshotId });
+    const check = await database
+      .prepare(
+        "SELECT check_id,state FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt=1",
+      )
+      .bind(test.manifest.run.workflowRunId)
+      .first<{ check_id: string; state: string }>();
+    if (!check) throw new Error("Expected the terminal App check.");
+    expect(check.state).toBe("active");
+    expect(await isCurrentPreRunCheck(database, check.check_id)).toBe(true);
+    expect(
+      await test.context.service.prepareStatusIntent({
+        runId: test.runId,
+        checkId: check.check_id,
+        detailsUrl: `https://preview.example/runs/${test.runId}`,
+        maxAttempts: 5,
+        now: Date.now(),
+      }),
+    ).toMatchObject({ conclusion: "failure" });
+  });
+
+  it.each([
+    new Error("Temporary image inventory failure."),
+    new SecurityError("storage_unavailable", 503, "Temporary image inventory failure."),
+  ])(
+    "retries an unsealed local receipt after $name without treating other errors as terminal",
+    async (error) => {
+      const test = await fixture();
+      await stageLocal(test, await localSession(test));
+      const list = vi.spyOn(test.context.images, "list").mockRejectedValueOnce(error);
+      const fail = vi.spyOn(test.context.service, "failRun");
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 0,
+        errors: [
+          { runId: test.runId, code: error instanceof SecurityError ? error.code : "incomplete" },
+        ],
+      });
+      expect(await test.context.service.run(test.runId)).toMatchObject({
+        active: 1,
+        state: "uploading",
+        sealed_at: null,
+      });
+      expect(fail).not.toHaveBeenCalled();
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+      expect(list).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("keeps a sealed stale local receipt on the comparison recovery path", async () => {
+    const test = await fixture();
+    await stageLocal(test, await localSession(test));
+    vi.spyOn(test.context.service, "createComparison").mockRejectedValueOnce(
+      new Error("Comparison creation interrupted."),
+    );
+    const fail = vi.spyOn(test.context.service, "failRun");
+    expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+      { runId: test.runId, code: "incomplete" },
+    ]);
+    const sealed = await test.context.service.run(test.runId);
+    expect(sealed.sealed_at).not.toBeNull();
+    expect(sealed).toMatchObject({ state: "comparing", comparison_id: null });
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+      { runId: test.runId, code: "stale_reference" },
+    ]);
+    expect(await test.context.service.run(test.runId)).toMatchObject({
+      state: "comparing",
+      sealed_at: sealed.sealed_at,
+      comparison_id: null,
+    });
+    expect(fail).not.toHaveBeenCalled();
+    // Restore only this synthetic baseline to exercise the same sealed receipt's retry.
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=0 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 1,
+      progressed: 1,
+      errors: [],
+    });
+    expect((await test.context.service.run(test.runId)).sealed_at).toBe(sealed.sealed_at);
+    expect((await test.context.service.run(test.runId)).comparison_id).not.toBeNull();
+    expect(fail).not.toHaveBeenCalled();
   });
 
   it.each(["local", "server"])(

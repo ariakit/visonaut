@@ -772,9 +772,11 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
         error instanceof StagedOriginalUnavailableError
           ? Math.min(row.missing_original_failures + 1, retryBurst)
           : 0;
-      if (failures === retryBurst) {
+      // A main receipt stays bound to its old baseline across every retry.
+      const staleReference = error instanceof SecurityError && error.code === "stale_reference";
+      if (staleReference || failures === retryBurst) {
         const run =
-          missingOriginalFailures === retryBurst
+          staleReference || missingOriginalFailures === retryBurst
             ? await context.database
                 .prepare(
                   "SELECT state FROM visonaut_runs WHERE id = ? AND active = 1 AND sealed_at IS NULL",
@@ -782,22 +784,27 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
                 .bind(row.id)
                 .first<{ state: string }>()
             : null;
-        const originalUnavailable = run?.state === "uploading";
-        if (originalUnavailable) {
+        const terminalFailure = run?.state === "uploading";
+        const failureCode = staleReference ? "stale-reference" : "original-unavailable";
+        if (terminalFailure) {
           await resolveEvents(context.database, "staged-reconciliation", subject, Date.now());
         }
-        await recordEvent(context.database, {
-          kind: "staged-reconciliation",
-          subject,
-          code: originalUnavailable ? "original-unavailable" : "retry-delayed",
-          now: Date.now(),
-        });
-        if (originalUnavailable) {
+        if (terminalFailure || failures === retryBurst) {
+          await recordEvent(context.database, {
+            kind: "staged-reconciliation",
+            subject,
+            code: terminalFailure ? failureCode : "retry-delayed",
+            now: Date.now(),
+          });
+        }
+        if (terminalFailure) {
           try {
             // Keep the pre-run record active so the status sender can publish failure.
             await context.service.failRun({
               runId: row.id,
-              reason: "The validated original is unavailable after repeated reconciliation.",
+              reason: staleReference
+                ? "The baseline changed after trusted Submit. Run trusted Submit again with the current reference."
+                : "The validated original is unavailable after repeated reconciliation.",
               now: Date.now(),
             });
           } catch (failure) {
