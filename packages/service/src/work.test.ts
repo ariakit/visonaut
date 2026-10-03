@@ -988,6 +988,7 @@ describe("named operation messages", () => {
       family: "retention",
     });
     expect(operationsMessage({ kind: "maintenance", family: "everything" })).toBeNull();
+    expect(operationsMessage({ kind: "maintenance", family: "baseline-conversion" })).toBeNull();
     expect(operationsMessage({ kind: "status", comparisonId: 1 })).toBeNull();
     expect(operationsMessage({ kind: "continue" })).toEqual({ kind: "recovery" });
   });

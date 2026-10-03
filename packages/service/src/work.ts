@@ -1,4 +1,4 @@
-export type MaintenanceFamily = "history" | "retention" | "profiles" | "baseline-conversion";
+export type MaintenanceFamily = "history" | "retention" | "profiles";
 export type OperationsMessage =
   | { kind: "status"; comparisonId?: string }
   | { kind: "ingest" }
@@ -18,10 +18,7 @@ export function operationsMessage(value: unknown): OperationsMessage | null {
   if (
     value.kind === "maintenance" &&
     "family" in value &&
-    (value.family === "history" ||
-      value.family === "retention" ||
-      value.family === "profiles" ||
-      value.family === "baseline-conversion")
+    (value.family === "history" || value.family === "retention" || value.family === "profiles")
   )
     return { kind: "maintenance", family: value.family };
   // Drain messages published by the previous deployed receiver through one full
