@@ -132,7 +132,7 @@ for (const [name, patch] of [
       queues: { producers: [{ binding: "COMPARISONS", queue: "visonaut-production-comparisons" }] },
     },
   ],
-  ["another consumer", { queues: { consumers: [] } }],
+  ["another consumer", { queues: { consumers: [{ queue: "visonaut-preview-comparisons" }] } }],
   [
     "a Durable Object binding",
     { durable_objects: { bindings: [{ name: "OTHER", class_name: "Other" }] } },

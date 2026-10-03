@@ -1,3 +1,8 @@
+import {
+  readLegacyComparisonTask,
+  seedLegacyComparison,
+  seedLegacyResult,
+} from "../../../../tooling/legacy-comparison-fixture.ts";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeAll, expect, it } from "vitest";
@@ -104,7 +109,7 @@ for (const changedProfile of [false, true]) {
         now: fixture.state.time,
       });
       await service.sealRun({ runId: id, now: fixture.state.time });
-      await service.createComparison({
+      await seedLegacyComparison(service, {
         id: `comparison-${id}`,
         runId: id,
         referenceSnapshotId: id === "seed" ? null : "snapshot-seed",
@@ -162,13 +167,7 @@ for (const changedProfile of [false, true]) {
       error: "Comparison stopped before evidence was available.",
     });
     database.connection.prepare("UPDATE work_tasks SET state = 'queued' WHERE id = ?").run(row.id);
-    const task = await service.claimComparisonTask({
-      taskId: row.id,
-      owner: "worker",
-      now: fixture.state.time,
-      leaseMilliseconds: 60_000,
-    });
-    if (!task) throw new Error("Missing comparison task.");
+    const task = await readLegacyComparisonTask(service, row.id);
     const processed = await processComparisonTask({
       task,
       images: {
@@ -179,26 +178,11 @@ for (const changedProfile of [false, true]) {
     });
     expect(processed.result).toMatchObject({ outcome: "unchanged", changedPixels: 1 });
     expect(processed.result).not.toHaveProperty("maskImageId");
-    await service.commitComparisonResult({
+    await seedLegacyResult(service, {
       taskId: row.id,
-      leaseOwner: "worker",
       ...processed,
-      now: fixture.state.time,
+      result: { ...processed.result, outcome: changedProfile ? "changed" : "unchanged" },
     });
-    await service.commitComparisonResult({
-      taskId: row.id,
-      leaseOwner: "worker",
-      ...processed,
-      now: fixture.state.time,
-    });
-    await expect(
-      service.commitComparisonResult({
-        taskId: row.id,
-        leaseOwner: "worker",
-        result: { ...processed.result, maskExpected: true },
-        now: fixture.state.time,
-      }),
-    ).rejects.toThrow("A comparison result is immutable.");
     await service.finalizeComparison({ comparisonId: "comparison-run", now: fixture.state.time });
     const model = parseReviewModel(await reviewModel(privateContext, "run"));
     const variant = model.items[0]?.variants[0];

@@ -158,11 +158,6 @@ export function operationsContext(env: Env): OperationsContext {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    comparisons: {
-      async send(message) {
-        await env.COMPARISONS.send(message);
-      },
-    },
     github,
     origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
     budget: operationsBudget(env),
@@ -235,7 +230,6 @@ export function apiBindings(env: Env): ApiBindings {
       env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
       "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
     ),
-    comparisonMaxAttempts: limits.comparisonMaxAttempts,
     limits: {
       maximumImageBytes: limits.maximumImageBytes,
       maximumShardBytes: limits.maximumShardBytes,

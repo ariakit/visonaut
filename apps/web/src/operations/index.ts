@@ -6,7 +6,7 @@ import {
   expireSnapshotImages,
   retireSourceBaselines,
 } from "./snapshot-retention.ts";
-import { reconcileWork, Service } from "@visonaut/service";
+import { Service } from "@visonaut/service";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { publishReviewLinks } from "./review-links.ts";
 import { recordEvent, resolveEvents, validateBudget } from "./common.ts";
@@ -29,21 +29,6 @@ export async function runOperations(
   let promotionMs = 0;
   const reports: Record<string, OperationReport> = {};
   if (message.kind === "recovery" || message.kind === "ingest") {
-    const publication = await reconcileWork(context.database, {
-      kind: "compare",
-      scope: "current-comparison",
-      now: context.now(),
-      limit: context.budget.tasksPerStep,
-      publish: (taskId, publicationAttempt) =>
-        context.comparisons.send({ taskId, publicationAttempt }),
-    });
-    reports.comparisons = {
-      completed: publication.published,
-      deferred: publication.failed,
-      attention: [],
-      hasMore: publication.hasMore,
-    };
-    // Queue receipts and bounded continuation feed the consumer without flooding it.
     const service = new Service(context.database);
     const finalized = await service.reconcileComparisons({
       now: context.now(),
@@ -55,7 +40,7 @@ export async function runOperations(
       attention: finalized.errors.map((error) => error.comparisonId),
       hasMore: finalized.completed.length === context.budget.tasksPerStep,
     };
-    await reportComparisonRecovery(context, publication, finalized);
+    await reportComparisonRecovery(context, { published: [], failed: [] }, finalized);
   }
   const steps: [string, () => Promise<OperationReport>][] = [
     ["review-decisions", () => processReviewQueue(context)],

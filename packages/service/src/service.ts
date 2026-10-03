@@ -11,12 +11,7 @@ import {
   type ComparisonPolicy,
 } from "@visonaut/protocol";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
-import {
-  historicalGuard,
-  historicalOwner,
-  finalizeHistoricalComparison,
-  expireHistoricalPreparations,
-} from "./historical.ts";
+import { finalizeHistoricalComparison, expireHistoricalPreparations } from "./historical.ts";
 import { ArchivedCommandResultError, commandRequestDigest } from "./history.ts";
 import { materializeLineageStatements } from "./lineage.ts";
 import {
@@ -27,22 +22,12 @@ import {
   rejectedReviewCountSql,
 } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
-import {
-  claimWork,
-  closedRunRetentionMs,
-  completeWorkStatement,
-  failWork,
-  getWork,
-  statusIntentStatements,
-  supersededReviewTaskSql,
-  workLeaseAssertion,
-} from "./work.ts";
+import { statusIntentStatements } from "./work.ts";
 import type { StatusDelivery } from "./work.ts";
 import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import type {
   CommandResult,
   CommitShardParams,
-  ComparisonResult,
   ComparisonRow,
   ProjectRow,
   ReserveRunParams,
@@ -75,16 +60,6 @@ interface CommandRow {
 
 interface PreviousCommandState {
   decisions: PreviousDecision[];
-}
-
-interface ImageRow {
-  id: string;
-  object_key: string;
-  digest: string;
-  width: number;
-  height: number;
-  bytes: number;
-  content_type: "image/png" | "image/webp";
 }
 
 export type { ComparisonPolicy } from "@visonaut/protocol";
@@ -916,66 +891,27 @@ export class Service {
     );
   }
 
-  async selectReferenceSnapshot(runId: string, historical = false) {
-    const run = await this.run(runId);
-    const project = await this.project(run.project_id);
-    if (project.fresh_setup && project.snapshot_id === null) return null;
-    const snapshot = await this.sql(
-      "SELECT snapshot.* FROM visonaut_snapshots snapshot JOIN visonaut_ancestry ancestry ON ancestry.ancestor_sha = snapshot.tested_sha AND ancestry.run_id = ? WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND snapshot.storage_mode='source' AND (? != 'main' OR snapshot.id = ?) AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY (snapshot.id = ?) DESC, snapshot.created_at DESC, snapshot.id LIMIT 1",
-      [
-        run.id,
-        project.id,
-        historical ? "historical" : run.kind,
-        project.snapshot_id,
-        project.snapshot_id,
-      ],
-    ).first<SnapshotRow>();
-    if (!snapshot) {
-      throw new IncompleteError(
-        "No retained accepted ancestor is eligible. Verify ancestry or capture current main.",
-      );
-    }
-    return snapshot.id;
-  }
-
   async createComparison(input: {
     id: string;
     runId: string;
     referenceSnapshotId: string | null;
     now: number;
-    maxAttempts: number;
     expectedBaselineRevision?: number;
-    purpose?: "review" | "historical";
-    expectedCaptureCount?: number;
-    requireCurrentCapturePolicy?: boolean;
-    localComparison?: LocalComparisonReceipt;
+    localComparison: LocalComparisonReceipt;
   }) {
     const run = await this.run(input.runId);
     const project = await this.project(run.project_id);
-    const historical = input.purpose === "historical";
     const baselineRevision = input.expectedBaselineRevision ?? project.baseline_revision;
-    if (!input.localComparison) {
-      const local = await this.sql(
-        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-        [run.id],
-      ).first();
-      if (local)
-        throw new IncompleteError(
-          "This run was compared in trusted Submit. Submit the complete CI bundle again, or capture a new run; stored representatives cannot replace omitted candidate bytes.",
-        );
-    }
+    if (!input.localComparison)
+      throw new IncompleteError(
+        "A verified local Submit receipt is required. Capture and submit a new complete run.",
+      );
     await this.convertRenderingProfiles(run.id, input.referenceSnapshotId);
     if (run.detail_archived)
       throw new ConflictError("Closed history is a read-only summary. Capture a new run.");
-    if (
-      historical &&
-      (!Number.isSafeInteger(input.expectedCaptureCount) || (input.expectedCaptureCount ?? 0) < 1)
-    ) {
-      throw new IncompleteError("The complete stored capture inventory is required.");
-    }
     const guards = [
       this.projectGuard(project),
-      ...(run.kind === "pull_request" && input.localComparison
+      ...(run.kind === "pull_request"
         ? []
         : [
             this.guard(
@@ -983,12 +919,7 @@ export class Service {
               [project.id, baselineRevision],
             ),
           ]),
-      historical
-        ? this.guard(
-            "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND active = 0 AND revision = ? AND detail_archived=0 AND closed_at>? AND NOT EXISTS(SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=visonaut_runs.id))",
-            [run.id, run.revision, input.now - closedRunRetentionMs],
-          )
-        : this.activeGuard(run),
+      this.activeGuard(run),
       this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND sealed_at IS NOT NULL)", [
         run.id,
       ]),
@@ -1009,27 +940,23 @@ export class Service {
       guards.push(
         this.sql(
           "INSERT OR IGNORE INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, ?, ?)",
-          [input.referenceSnapshotId, historical ? "historical" : "comparison", input.id],
+          [input.referenceSnapshotId, "comparison", input.id],
         ),
       );
       guards.push(
         this.sql(
           "INSERT OR IGNORE INTO work_retention_pins (run_id, owner, reason) SELECT run_id, ?, ? FROM visonaut_snapshots WHERE id = ? UNION SELECT image.run_id, ?, ? FROM visonaut_snapshot_images copy JOIN visonaut_images image ON image.id=copy.image_id WHERE copy.snapshot_id=?",
           [
-            historical ? historicalOwner(input.id) : `comparison:${input.id}`,
-            historical ? "manual" : "comparison",
+            `comparison:${input.id}`,
+            "comparison",
             input.referenceSnapshotId,
-            historical ? historicalOwner(input.id) : `comparison:${input.id}`,
-            historical ? "manual" : "comparison",
+            `comparison:${input.id}`,
+            "comparison",
             input.referenceSnapshotId,
           ],
         ),
       );
-    } else if (
-      run.kind !== "pull_request" ||
-      !input.localComparison ||
-      input.localComparison.reference.captureCount !== 0
-    ) {
+    } else if (run.kind !== "pull_request" || input.localComparison.reference.captureCount !== 0) {
       guards.push(
         this.guard(
           "EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND fresh_setup = 1 AND snapshot_id IS NULL)",
@@ -1039,7 +966,7 @@ export class Service {
     }
     // Main always compares with the current baseline. PRs may pin another
     // verified accepted ancestor, but cannot use a missing ancestor as empty.
-    if (run.kind === "main" && !historical) {
+    if (run.kind === "main") {
       guards.push(
         this.guard("EXISTS (SELECT 1 FROM visonaut_projects WHERE id = ? AND snapshot_id IS ?)", [
           project.id,
@@ -1047,56 +974,19 @@ export class Service {
         ]),
       );
     }
-    if (historical) {
-      guards.push(
-        this.guard(
-          "EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live')",
-          [run.id],
-        ),
-        this.guard("(SELECT COUNT(*) FROM visonaut_captures WHERE run_id = ?) = ?", [
-          run.id,
-          input.expectedCaptureCount ?? 0,
-        ]),
-        this.guard(
-          "NOT EXISTS (SELECT 1 FROM visonaut_captures capture LEFT JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ? AND (image.id IS NULL OR image.bytes_present != 1 OR image.validated != 1))",
-          [run.id],
-        ),
-        this.sql(
-          "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT ?, ?, 'manual' UNION SELECT image.run_id, ?, 'manual' FROM visonaut_captures capture JOIN visonaut_images image ON image.id = capture.image_id WHERE capture.run_id = ?",
-          [run.id, historicalOwner(input.id), historicalOwner(input.id), run.id],
-        ),
-      );
-      if (run.detail_archived) {
-        guards.push(
-          this.guard(
-            "EXISTS (SELECT 1 FROM visonaut_historical_preparations WHERE id = ? AND run_id = ? AND lease_until > ?)",
-            [input.id, run.id, input.now],
-          ),
-        );
-      }
-      guards.push(
-        this.sql("DELETE FROM visonaut_historical_preparations WHERE id = ?", [input.id]),
-      );
-    }
-    const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', ${input.localComparison ? "json_extract(c.metadata_json,'$.observedImage.digest')" : "ci.digest"}, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', ${input.localComparison ? "COALESCE(json_extract(c.metadata_json,'$.comparisonDigest'),?)" : "?"}, 'comparisonEngineVersion', '${input.localComparison ? LOCAL_COMPARISON_ENGINE : COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${input.localComparison ? LOCAL_COMPARISON_CODEC : IMAGE_CODEC_VERSION}')`;
-    const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', '${input.localComparison ? LOCAL_COMPARISON_ENGINE : COMPARISON_ENGINE_VERSION}', 'imageCodecVersion', '${input.localComparison ? LOCAL_COMPARISON_CODEC : IMAGE_CODEC_VERSION}')`;
-    const matchingProfiles = `COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest)
-      = COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest)`;
-    const identicalOriginals = `r.id IS NOT NULL AND length(ci.digest) = 64 AND ci.digest NOT GLOB '*[^0-9a-f]*' AND ri.digest = ci.digest AND ri.bytes = ci.bytes AND ri.width = ci.width AND ri.height = ci.height AND ri.content_type = ci.content_type AND ri.role = 'original' AND ci.role = 'original' AND ri.validated = 1 AND ci.validated = 1 AND ri.bytes_present = 1 AND (${matchingProfiles})`;
-    const identicalResult = `json_object('outcome', 'unchanged', 'changedPixels', 0, 'ratio', 0, 'engineVersion', 'sha256-identical-1', 'codecVersion', 'not-decoded', 'maskExpected', json('false'))`;
-    if (input.localComparison) {
-      if (
-        input.localComparison.reference.snapshotId !== input.referenceSnapshotId ||
-        input.localComparison.reference.baselineRevision !== input.expectedBaselineRevision
-      )
-        throw new IncompleteError("The local result is bound to another reference.");
-      guards.push(
-        this.guard(
-          "(SELECT count(*) FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' AND json_extract(metadata_json,'$.localResult.outcome') IN('changed','unchanged'))=?",
-          [run.id, input.localComparison.captures.length],
-        ),
-      );
-    }
+    const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', json_extract(c.metadata_json,'$.observedImage.digest'), 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', COALESCE(json_extract(c.metadata_json,'$.comparisonDigest'),?), 'comparisonEngineVersion', '${LOCAL_COMPARISON_ENGINE}', 'imageCodecVersion', '${LOCAL_COMPARISON_CODEC}')`;
+    const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', '${LOCAL_COMPARISON_ENGINE}', 'imageCodecVersion', '${LOCAL_COMPARISON_CODEC}')`;
+    if (
+      input.localComparison.reference.snapshotId !== input.referenceSnapshotId ||
+      input.localComparison.reference.baselineRevision !== input.expectedBaselineRevision
+    )
+      throw new IncompleteError("The local result is bound to another reference.");
+    guards.push(
+      this.guard(
+        "(SELECT count(*) FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' AND json_extract(metadata_json,'$.localResult.outcome') IN('changed','unchanged'))=?",
+        [run.id, input.localComparison.captures.length],
+      ),
+    );
     // Preserve signed receipts from older CLIs while applying the current
     // zero-pixel policy to their imported review results.
     const localZeroPixelChange = `r.id IS NOT NULL AND ri.width=ci.width AND ri.height=ci.height
@@ -1105,12 +995,8 @@ export class Service {
       AND json_extract(c.metadata_json,'$.localResult.ratio')=0
       AND json_extract(c.metadata_json,'$.localResult.maskImageId') IS NULL
       AND json_extract(c.metadata_json,'$.localResult.maskExpected') IS NOT 1`;
-    const outcome = input.localComparison
-      ? `CASE WHEN ${localZeroPixelChange} THEN 'unchanged' ELSE json_extract(c.metadata_json,'$.localResult.outcome') END`
-      : `CASE WHEN r.id IS NULL THEN 'changed' WHEN ${identicalOriginals} THEN 'unchanged' ELSE 'pending' END`;
-    const result = input.localComparison
-      ? `CASE WHEN ${localZeroPixelChange} THEN json_set(json_extract(c.metadata_json,'$.localResult'),'$.outcome','unchanged') ELSE json_extract(c.metadata_json,'$.localResult') END`
-      : `CASE WHEN ${identicalOriginals} THEN ${identicalResult} ELSE NULL END`;
+    const outcome = `CASE WHEN ${localZeroPixelChange} THEN 'unchanged' ELSE json_extract(c.metadata_json,'$.localResult.outcome') END`;
+    const result = `CASE WHEN ${localZeroPixelChange} THEN json_set(json_extract(c.metadata_json,'$.localResult'),'$.outcome','unchanged') ELSE json_extract(c.metadata_json,'$.localResult') END`;
     await atomic(this.database, [
       ...guards,
       this.sql(
@@ -1122,7 +1008,7 @@ export class Service {
           baselineRevision,
           project.policy_digest,
           input.now,
-          historical ? "historical" : "review",
+          "review",
           run.id,
         ],
       ),
@@ -1142,278 +1028,19 @@ export class Service {
           run.id,
         ],
       ),
-      this.sql(
-        "INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) SELECT id, 'compare', json_object('taskId', id), ?, ?, ?, ? FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome = 'pending'",
-        [input.maxAttempts, input.now, input.now, input.now, input.id],
+      this.sql("UPDATE visonaut_runs SET comparison_id = ?, state = 'comparing' WHERE id = ?", [
+        input.id,
+        run.id,
+      ]),
+      this.audit(
+        run,
+        "compare",
+        { comparisonId: input.id, referenceSnapshotId: input.referenceSnapshotId },
+        input.now,
       ),
-      ...(historical
-        ? []
-        : [
-            this.sql(
-              "UPDATE visonaut_runs SET comparison_id = ?, state = 'comparing' WHERE id = ?",
-              [input.id, run.id],
-            ),
-            this.audit(
-              run,
-              "compare",
-              { comparisonId: input.id, referenceSnapshotId: input.referenceSnapshotId },
-              input.now,
-            ),
-            ...this.touch(run, input.now),
-          ]),
+      ...this.touch(run, input.now),
     ]);
     return this.comparison(input.id);
-  }
-
-  async getComparisonTask(taskId: string): Promise<ComparisonTask> {
-    const row = await this.one<ReviewRow>("SELECT * FROM visonaut_comparison_rows WHERE id = ?", [
-      taskId,
-    ]);
-    const comparison = await this.comparison(row.comparison_id);
-    const readImage = async (captureId: string | null, reference: boolean) => {
-      if (!captureId) return null;
-      const image = reference
-        ? await this.one<ImageRow>(
-            "SELECT i.id, i.object_key, i.digest, i.width, i.height, i.bytes, i.content_type FROM visonaut_snapshot_images si JOIN visonaut_images i ON i.id = si.image_id JOIN visonaut_snapshots snapshot ON snapshot.id=si.snapshot_id WHERE si.snapshot_id = ? AND si.capture_id = ? AND si.copied = 1 AND snapshot.storage_mode='source'",
-            [comparison.reference_snapshot_id, captureId],
-          )
-        : await this.one<ImageRow>(
-            "SELECT i.* FROM visonaut_images i JOIN visonaut_captures c ON c.image_id = i.id WHERE c.id = ? AND i.bytes_present = 1",
-            [captureId],
-          );
-      return {
-        imageId: image.id,
-        objectKey: image.object_key,
-        digest: image.digest,
-        width: image.width,
-        height: image.height,
-        bytes: image.bytes,
-        contentType: image.content_type,
-      };
-    };
-    const policyRecord = await this.one<{ policy_json: string }>(
-      "SELECT policy_json FROM visonaut_policies WHERE digest = ?",
-      [comparison.policy_digest],
-    );
-    const policy = JSON.parse(policyRecord.policy_json) as ComparisonPolicy;
-    return {
-      id: row.id,
-      comparisonId: comparison.id,
-      runId: comparison.run_id,
-      policyDigest: comparison.policy_digest,
-      policy,
-      reference: await readImage(row.reference_capture_id, true),
-      candidate: await readImage(row.candidate_capture_id, false),
-    };
-  }
-
-  async getComparisonTaskState(taskId: string) {
-    const state = await this.sql(
-      "SELECT run.active, run.comparison_id, row.comparison_id AS row_comparison_id, comparison.purpose, comparison.state AS comparison_state FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id JOIN visonaut_runs run ON run.id = comparison.run_id WHERE row.id = ?",
-      [taskId],
-    ).first<{
-      active: number;
-      comparison_id: string;
-      row_comparison_id: string;
-      purpose: string;
-      comparison_state: string;
-    }>();
-    if (!state) {
-      const archived = await this.sql(
-        "SELECT 1 FROM visonaut_comparisons comparison JOIN visonaut_runs run ON run.id=comparison.run_id WHERE instr(?, ':') > 1 AND comparison.id=substr(?,1,instr(?, ':')-1) AND (run.detail_archived=1 OR EXISTS (SELECT 1 FROM operations_comparison_archives archive WHERE archive.comparison_id=comparison.id AND archive.state='ready')) LIMIT 1",
-        [taskId, taskId, taskId],
-      ).first();
-      if (archived) return { state: "superseded" as const };
-      throw new IncompleteError("The comparison task has not been scheduled.");
-    }
-    if (state.comparison_state === "invalidated") {
-      return { state: state.purpose === "historical" ? "dead" : "superseded" } as const;
-    }
-    if (
-      state.purpose !== "historical" &&
-      (!state.active || state.comparison_id !== state.row_comparison_id)
-    ) {
-      return { state: "superseded" as const };
-    }
-    const task = await getWork(this.database, taskId);
-    if (!task) {
-      throw new IncompleteError("The comparison task has not been scheduled.");
-    }
-    return task;
-  }
-
-  async claimComparisonTask(input: {
-    taskId: string;
-    owner: string;
-    now: number;
-    leaseMilliseconds: number;
-  }) {
-    const state = await this.getComparisonTaskState(input.taskId);
-    if (state.state === "superseded" || state.state === "dead") {
-      // An acknowledged stale message must release its Queue admission receipt.
-      await this.sql(
-        `UPDATE work_tasks SET state = 'complete', result = 'superseded',
-          lease_token = NULL, lease_until = NULL, publication_token = NULL,
-          last_error = NULL, updated_at = ?
-        WHERE id = ? AND kind = 'compare' AND state IN ('queued', 'leased')
-          AND ${supersededReviewTaskSql("work_tasks")}`,
-        [input.now, input.taskId],
-      ).run();
-      return null;
-    }
-    if (state.state === "complete") return null;
-    const claimed = await claimWork(this.database, {
-      id: input.taskId,
-      token: input.owner,
-      now: input.now,
-      leaseMs: input.leaseMilliseconds,
-    });
-    if (!claimed) return null;
-    return this.getComparisonTask(input.taskId);
-  }
-
-  async failComparisonTask(input: {
-    taskId: string;
-    owner: string;
-    now: number;
-    retryAt: number;
-    error: string;
-  }) {
-    return failWork(this.database, {
-      id: input.taskId,
-      token: input.owner,
-      now: input.now,
-      retryAt: input.retryAt,
-      error: input.error,
-    });
-  }
-
-  async commitComparisonResult(input: {
-    taskId: string;
-    leaseOwner: string;
-    result: ComparisonResult;
-    now: number;
-    artifacts?: Array<ValidatedImage & { role: "thumbnail" | "mask" }>;
-  }) {
-    const row = await this.one<ReviewRow>("SELECT * FROM visonaut_comparison_rows WHERE id = ?", [
-      input.taskId,
-    ]);
-    const tuple = JSON.parse(row.tuple_json) as {
-      referenceProfileDigest: string | null;
-      candidateProfileDigest: string | null;
-    };
-    const comparison = await this.comparison(row.comparison_id);
-    const requiresReview =
-      input.result.outcome === "unchanged" &&
-      input.result.changedPixels !== 0 &&
-      tuple.referenceProfileDigest !== tuple.candidateProfileDigest;
-    const result = requiresReview ? { ...input.result, outcome: "changed" as const } : input.result;
-    const run = await this.run(comparison.run_id);
-    if (row.result_json) {
-      if (row.result_json !== JSON.stringify(result)) {
-        throw new ConflictError("A comparison result is immutable.");
-      }
-      return;
-    }
-    if (
-      !Number.isFinite(input.result.ratio) ||
-      input.result.ratio < 0 ||
-      input.result.ratio > 1 ||
-      !Number.isSafeInteger(input.result.changedPixels) ||
-      input.result.changedPixels < 0
-    ) {
-      throw new IncompleteError("The comparison result is invalid.");
-    }
-    const artifactStatements: Statement[] = [];
-    for (const artifact of input.artifacts ?? []) {
-      if (artifact.runId !== run.id) {
-        throw new IncompleteError("Derived images belong to the comparison run.");
-      }
-      artifactStatements.push(
-        this.sql(
-          "INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING",
-          [
-            artifact.id,
-            artifact.runId,
-            artifact.digest,
-            artifact.objectKey,
-            artifact.contentType,
-            artifact.bytes,
-            artifact.width,
-            artifact.height,
-            artifact.role,
-          ],
-        ),
-      );
-      artifactStatements.push(
-        this.guard(
-          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND digest = ? AND object_key = ? AND content_type = ? AND bytes = ? AND width = ? AND height = ? AND role = ? AND bytes_present = 1)",
-          [
-            artifact.id,
-            artifact.runId,
-            artifact.digest,
-            artifact.objectKey,
-            artifact.contentType,
-            artifact.bytes,
-            artifact.width,
-            artifact.height,
-            artifact.role,
-          ],
-        ),
-      );
-    }
-    if (input.result.maskImageId) {
-      artifactStatements.push(
-        this.guard(
-          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND role = 'mask' AND bytes_present = 1)",
-          [input.result.maskImageId, run.id],
-        ),
-      );
-    }
-    if (input.result.thumbnailImageId) {
-      artifactStatements.push(
-        this.guard(
-          "EXISTS (SELECT 1 FROM visonaut_images WHERE id = ? AND run_id = ? AND role = 'thumbnail' AND bytes_present = 1)",
-          [input.result.thumbnailImageId, run.id],
-        ),
-      );
-    }
-    await atomic(this.database, [
-      workLeaseAssertion(this.database, {
-        id: input.taskId,
-        token: input.leaseOwner,
-        now: input.now,
-      }),
-      ...(comparison.purpose === "historical"
-        ? [historicalGuard(this.database, comparison.id)]
-        : [
-            this.activeGuard(run),
-            this.guard("EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND comparison_id = ?)", [
-              run.id,
-              comparison.id,
-            ]),
-          ]),
-      this.guard(
-        "EXISTS (SELECT 1 FROM visonaut_comparisons WHERE id = ? AND state = 'comparing')",
-        [comparison.id],
-      ),
-      this.guard(
-        "EXISTS (SELECT 1 FROM visonaut_comparison_rows WHERE id = ? AND result_json IS NULL)",
-        [row.id],
-      ),
-      ...artifactStatements,
-      this.sql("UPDATE visonaut_comparison_rows SET outcome = ?, result_json = ? WHERE id = ?", [
-        result.outcome,
-        JSON.stringify(result),
-        row.id,
-      ]),
-      completeWorkStatement(this.database, {
-        id: input.taskId,
-        token: input.leaseOwner,
-        now: input.now,
-        result: JSON.stringify(result),
-      }),
-    ]);
   }
 
   private acceptanceValiditySql() {

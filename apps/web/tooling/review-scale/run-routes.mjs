@@ -63,6 +63,23 @@ async function resources(page) {
   );
 }
 
+async function committedResult(page, response) {
+  if (!response.ok()) throw new Error(`The actual save API returned ${response.status()}.`);
+  const result = await response.json();
+  if (!result.queued) return result;
+  const receipt = await page.waitForFunction(async (commandId) => {
+    const response = await fetch(`/api/commands/${commandId}/queued`, { cache: "no-store" });
+    if (response.status === 202) return false;
+    if (!response.ok) throw new Error(`The actual decision failed: ${response.status}.`);
+    return response.json();
+  }, result.commandId);
+  try {
+    return await receipt.jsonValue();
+  } finally {
+    await receipt.dispose();
+  }
+}
+
 // Use only a writable, resettable local PR fixture. The service is never mocked.
 export async function runRoutes(chromium) {
   const origin = new URL(process.env.REVIEW_ROUTE_ORIGIN || "http://127.0.0.1:3000");
@@ -141,7 +158,7 @@ export async function runRoutes(chromium) {
           const openRunToFirstImageMs = performance.now() - start;
           const openResources = await resources(page);
           const previous = await page
-            .locator('[aria-label="Variants"] [aria-selected="true"]')
+            .locator('[aria-label="Variants"] [aria-current="page"]')
             .getAttribute("id");
           const approve = page.getByRole("button", { name: /^Approve(?: |$)/ }).first();
           if (!(await approve.isEnabled())) {
@@ -158,13 +175,12 @@ export async function runRoutes(chromium) {
           const saveStart = performance.now();
           await approve.click();
           const response = await saved;
-          if (!response.ok()) throw new Error(`The actual save API returned ${response.status()}.`);
-          const result = await response.json();
+          const result = await committedResult(page, response);
           if (result.noop || !result.revisions?.length)
             throw new Error("The actual save must commit a new approval.");
           await page.waitForFunction((previous) => {
             const selected = document.querySelector(
-              '[aria-label="Variants"] [aria-selected="true"]',
+              '[aria-label="Variants"] [aria-current="page"]',
             );
             return selected?.id && selected.id !== previous;
           }, previous);
@@ -181,10 +197,16 @@ export async function runRoutes(chromium) {
             saveResources: await resources(page),
           });
           // Undo restores the synthetic PR fixture before the next sample.
+          const undone = page.waitForResponse(
+            (response) =>
+              response.request().method() === "POST" &&
+              /\/api\/commands\/[^/]+\/undo$/u.test(new URL(response.url()).pathname),
+          );
           await page.getByRole("button", { name: /^Undo(?: |$)/ }).click();
+          await committedResult(page, await undone);
           await page.waitForFunction(
             (previous) =>
-              document.querySelector('[aria-label="Variants"] [aria-selected="true"]')?.id ===
+              document.querySelector('[aria-label="Variants"] [aria-current="page"]')?.id ===
               previous,
             previous,
           );

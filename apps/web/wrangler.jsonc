@@ -55,10 +55,6 @@
   "queues": {
     "producers": [
       {
-        "binding": "COMPARISONS",
-        "queue": "visonaut-preview-comparisons",
-      },
-      {
         "binding": "OPERATIONS",
         "queue": "visonaut-preview-operations",
       },
@@ -129,10 +125,6 @@
       ],
       "queues": {
         "producers": [
-          {
-            "binding": "COMPARISONS",
-            "queue": "visonaut-production-comparisons",
-          },
           {
             "binding": "OPERATIONS",
             "queue": "visonaut-production-operations",

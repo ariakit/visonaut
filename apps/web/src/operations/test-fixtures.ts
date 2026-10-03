@@ -1,3 +1,4 @@
+import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import type { CaptureProfile } from "@visonaut/protocol";
 import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
@@ -170,7 +171,6 @@ export function context(database: TestDatabase) {
     database,
     images,
     quarantine,
-    comparisons: { async send() {} },
     origin: "https://visonaut.example",
     budget: {
       tasksPerStep: 10,
@@ -287,7 +287,7 @@ export async function captured(
     now: context.now(),
   });
   await service.sealRun({ runId: id, now: context.now() });
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: `comparison-${id}`,
     runId: id,
     referenceSnapshotId: null,

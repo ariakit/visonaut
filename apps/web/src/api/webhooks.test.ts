@@ -99,7 +99,6 @@ const bindings: ApiBindings = {
     capability: { issuer: "https://preview.example", environment: "preview", secret },
     webhookSecret: secret,
     repositoryOwnerId: "5",
-    comparisonMaxAttempts: 3,
     limits: {
       maximumImageBytes: 1000,
       maximumShardBytes: 1000,

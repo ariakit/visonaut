@@ -27,8 +27,7 @@ export function operationsMessage(value: unknown): OperationsMessage | null {
   return null;
 }
 
-import { assertion, atomic, ConflictError, type Database, type Statement } from "./database.ts";
-import { touchRunStatusStatements } from "./status-touch.ts";
+import { assertion, type Database, type Statement } from "./database.ts";
 
 export interface WorkInput {
   id: string;
@@ -211,7 +210,6 @@ export interface ReconcileWorkParams {
   now: number;
   limit: number;
   kind?: string;
-  scope?: "current-comparison";
   maxOutstanding?: number;
   publish: (taskId: string, publicationAttempt: number) => Promise<void>;
 }
@@ -223,121 +221,6 @@ const defaultMaxOutstanding = 1024;
 // https://developers.cloudflare.com/queues/platform/limits/
 const receiptMilliseconds = (14 * 24 + 1) * 60 * 60 * 1000;
 const rejectedSendRetryMilliseconds = 5 * 60 * 1000;
-const maxQueuePublications = 3;
-
-// Run-history compaction can remove a review row while leaving its task ID.
-export function supersededReviewTaskSql(taskTable: string) {
-  return `(EXISTS (SELECT 1 FROM visonaut_comparison_rows row
-    JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-    JOIN visonaut_runs run ON run.id = comparison.run_id
-    WHERE row.id = ${taskTable}.id AND comparison.purpose = 'review'
-      AND (comparison.state = 'invalidated' OR run.active = 0
-        OR run.comparison_id IS NOT comparison.id))
-    OR (NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.id = ${taskTable}.id)
-      AND EXISTS (SELECT 1 FROM visonaut_comparisons comparison
-        JOIN visonaut_runs run ON run.id = comparison.run_id
-        WHERE comparison.purpose = 'review'
-          AND (run.detail_archived = 1 OR EXISTS (
-            SELECT 1 FROM operations_comparison_archives archive
-            WHERE archive.comparison_id = comparison.id AND archive.state = 'ready'))
-          AND instr(${taskTable}.id, ':') > 1
-          AND comparison.id = substr(${taskTable}.id, 1, instr(${taskTable}.id, ':') - 1))))`;
-}
-
-function currentComparisonTaskSql(taskTable: string) {
-  return `AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
-    JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-    JOIN visonaut_runs run ON run.id = comparison.run_id
-    WHERE row.id = ${taskTable}.id AND comparison.state = 'comparing'
-      AND (comparison.purpose = 'historical'
-        OR (comparison.purpose = 'review' AND run.active = 1
-          AND run.comparison_id = comparison.id)))`;
-}
-
-/** A dead-letter delivery releases only the matching, still-current Queue receipt. */
-export async function recoverDeadLetteredComparison(
-  database: Database,
-  params: { taskId: string; publicationAttempt: number; now: number },
-) {
-  positiveInteger(params.publicationAttempt, "publicationAttempt");
-  const eligible = `id = ? AND kind = 'compare' AND attempts < max_attempts
-    AND publication_attempts = ? AND publication_due_at > ?
-    AND (publication_token IS NULL OR publication_token NOT LIKE 'dead-letter:%')
-    AND (state = 'queued' OR (state = 'leased' AND lease_until <= ?))
-    ${currentComparisonTaskSql("work_tasks")}`;
-  if (params.publicationAttempt < maxQueuePublications) {
-    const recovered = await database
-      .prepare(`UPDATE work_tasks SET publication_due_at = ?,
-        publication_token = 'dead-letter:' || publication_attempts,
-        published_at = COALESCE(published_at, ?), updated_at = ?
-      WHERE ${eligible} RETURNING id`)
-      .bind(
-        params.now + rejectedSendRetryMilliseconds,
-        params.now,
-        params.now,
-        params.taskId,
-        params.publicationAttempt,
-        params.now,
-        params.now,
-      )
-      .first<{ id: string }>();
-    if (recovered) return "requeued" as const;
-  } else {
-    const owner = await database
-      .prepare(`SELECT run.id AS id, run.project_id AS projectId,
-        run.sealed_at AS sealedAt, comparison.purpose AS purpose FROM visonaut_comparison_rows row
-        JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-        JOIN visonaut_runs run ON run.id = comparison.run_id
-        WHERE row.id = ?`)
-      .bind(params.taskId)
-      .first<{ id: string; projectId: string; sealedAt: number | null; purpose: string }>();
-    const terminal = database
-      .prepare(`UPDATE work_tasks SET state = 'dead', lease_token = NULL,
-        lease_until = NULL, publication_token = NULL,
-        last_error = substr(COALESCE(last_error || '; ', '') ||
-          'Queue delivery exhausted', 1, 4096), updated_at = ?
-      WHERE ${eligible} RETURNING id`)
-      .bind(params.now, params.taskId, params.publicationAttempt, params.now, params.now);
-    if (owner?.purpose === "review" && owner.sealedAt !== null) {
-      try {
-        await atomic(database, [
-          assertion(
-            database,
-            `EXISTS (SELECT 1 FROM work_tasks WHERE ${eligible}
-              AND EXISTS (SELECT 1 FROM visonaut_comparison_rows row
-                JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-                JOIN visonaut_runs run ON run.id = comparison.run_id
-                WHERE row.id = work_tasks.id AND comparison.purpose = 'review'
-                  AND run.id = ? AND run.project_id = ? AND run.sealed_at IS NOT NULL))`,
-            [
-              params.taskId,
-              params.publicationAttempt,
-              params.now,
-              params.now,
-              owner.id,
-              owner.projectId,
-            ],
-          ),
-          terminal,
-          ...touchRunStatusStatements(database, owner, params.now),
-        ]);
-        return "exhausted" as const;
-      } catch (error) {
-        if (!(error instanceof ConflictError)) throw error;
-      }
-    } else if (await terminal.first<{ id: string }>()) {
-      return "exhausted" as const;
-    }
-  }
-  const activeLease = await database
-    .prepare(`SELECT 1 AS found FROM work_tasks WHERE id = ? AND kind = 'compare'
-      AND state = 'leased' AND lease_until > ? AND attempts < max_attempts
-      AND publication_attempts = ? AND publication_due_at > ?
-      ${currentComparisonTaskSql("work_tasks")} LIMIT 1`)
-    .bind(params.taskId, params.now, params.publicationAttempt, params.now)
-    .first<{ found: number }>();
-  return activeLease ? ("deferred" as const) : ("ignored" as const);
-}
 
 function definiteQueueRejection(error: unknown) {
   // Workers Queue errors append the code to message. These three codes mean
@@ -351,26 +234,6 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   positiveInteger(params.limit, "limit");
   const maxOutstanding = params.maxOutstanding ?? defaultMaxOutstanding;
   positiveInteger(maxOutstanding, "maxOutstanding");
-  if (params.scope && params.kind !== "compare") {
-    throw new Error("Current comparison publication requires compare tasks.");
-  }
-  // Queue delivery may never arrive after supersession. Retire a bounded page
-  // before counting outstanding receipts so obsolete work cannot block new work.
-  const retired = params.scope
-    ? await database
-        .prepare(`UPDATE work_tasks SET state = 'complete', result = 'superseded',
-          lease_token = NULL, lease_until = NULL, publication_token = NULL,
-          last_error = NULL, updated_at = ?
-        WHERE id IN (SELECT task.id FROM work_tasks task
-          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
-            AND ${supersededReviewTaskSql("task")}
-          ORDER BY task.id LIMIT ?) RETURNING id`)
-        .bind(params.now, params.limit)
-        .all<{ id: string }>()
-    : null;
-  // Superseded tasks can stay queued after their Queue messages are acknowledged.
-  const currentComparison = (taskTable: string) =>
-    params.scope ? currentComparisonTaskSql(taskTable) : "";
   await database
     .prepare(`
     UPDATE work_tasks SET state = 'dead', lease_token = NULL, lease_until = NULL,
@@ -382,7 +245,6 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
     .bind(params.now, params.now, params.kind ?? null, params.kind ?? null, params.limit)
     .run();
   const kind = params.kind ?? null;
-  // Superseded tasks can still have messages in Queue, so only candidate selection is scoped.
   const outstandingSql = `SELECT COUNT(*) AS count FROM work_tasks AS admitted
     WHERE admitted.publication_due_at > ?
       AND admitted.state IN ('queued', 'leased')
@@ -397,7 +259,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
       AND publication_due_at <= ?
       AND ((state = 'queued' AND available_at <= ?)
         OR (state = 'leased' AND lease_until <= ?))
-      AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")}
+      AND (? IS NULL OR kind = ?)
     ORDER BY CASE WHEN publication_attempts > 0 THEN 0 ELSE 1 END,
       publication_due_at, available_at, id
     LIMIT max(0, min(?, ? - (${outstandingSql})))
@@ -428,7 +290,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
       WHERE id = ? AND attempts < max_attempts AND publication_due_at <= ?
         AND ((state = 'queued' AND available_at <= ?)
           OR (state = 'leased' AND lease_until <= ?))
-        AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")}
+        AND (? IS NULL OR kind = ?)
         AND ? > (${outstandingSql})
       RETURNING id, publication_attempts
     `)
@@ -489,7 +351,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
       AND publication_due_at <= ?
       AND ((state = 'queued' AND available_at <= ?)
         OR (state = 'leased' AND lease_until <= ?))
-      AND (? IS NULL OR kind = ?) ${currentComparison("work_tasks")} LIMIT 1`)
+      AND (? IS NULL OR kind = ?) LIMIT 1`)
     .bind(params.now, params.now, params.now, kind, kind)
     .first<{ found: number }>();
   const outstanding = await database
@@ -499,9 +361,7 @@ export async function reconcileWork(database: Database, params: ReconcileWorkPar
   return {
     published,
     failed,
-    hasMore:
-      retired?.results?.length === params.limit ||
-      (pending !== null && (outstanding?.count ?? 0) < maxOutstanding),
+    hasMore: pending !== null && (outstanding?.count ?? 0) < maxOutstanding,
   };
 }
 

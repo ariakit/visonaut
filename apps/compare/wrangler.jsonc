@@ -20,9 +20,6 @@
       "fallthrough": true,
     },
   ],
-  "vars": {
-    "VISONAUT_COMPARISON_DEAD_LETTER_QUEUE": "visonaut-preview-comparison-dead-letter",
-  },
   // worker-only-v2 deletes the old namespace. Verify no active Container use before deployment.
   "migrations": [
     { "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] },
@@ -44,40 +41,15 @@
   "queues": {
     "producers": [
       {
-        "binding": "COMPARISONS",
-        "queue": "visonaut-preview-comparisons",
-      },
-      {
         "binding": "OPERATIONS",
         "queue": "visonaut-preview-operations",
       },
     ],
-    "consumers": [
-      {
-        "queue": "visonaut-preview-comparisons",
-        "max_batch_size": 1,
-        "max_batch_timeout": 1,
-        "max_concurrency": 1,
-        "max_retries": 10,
-        "retry_delay": 60,
-        "dead_letter_queue": "visonaut-preview-comparison-dead-letter",
-      },
-      {
-        "queue": "visonaut-preview-comparison-dead-letter",
-        "max_batch_size": 1,
-        "max_batch_timeout": 1,
-        "max_concurrency": 1,
-        "max_retries": 10,
-        "retry_delay": 60,
-      },
-    ],
+    "consumers": [],
   },
   "preview_urls": false,
   "env": {
     "production": {
-      "vars": {
-        "VISONAUT_COMPARISON_DEAD_LETTER_QUEUE": "visonaut-production-comparison-dead-letter",
-      },
       // Apply the same live-use gate before the production namespace deletion.
       "migrations": [
         { "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] },
@@ -99,33 +71,11 @@
       "queues": {
         "producers": [
           {
-            "binding": "COMPARISONS",
-            "queue": "visonaut-production-comparisons",
-          },
-          {
             "binding": "OPERATIONS",
             "queue": "visonaut-production-operations",
           },
         ],
-        "consumers": [
-          {
-            "queue": "visonaut-production-comparisons",
-            "max_batch_size": 1,
-            "max_batch_timeout": 1,
-            "max_concurrency": 5,
-            "max_retries": 10,
-            "retry_delay": 60,
-            "dead_letter_queue": "visonaut-production-comparison-dead-letter",
-          },
-          {
-            "queue": "visonaut-production-comparison-dead-letter",
-            "max_batch_size": 1,
-            "max_batch_timeout": 1,
-            "max_concurrency": 1,
-            "max_retries": 10,
-            "retry_delay": 60,
-          },
-        ],
+        "consumers": [],
       },
       "name": "visonaut-compare",
     },

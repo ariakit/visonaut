@@ -18,7 +18,7 @@ import {
 import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
-import { scheduleComparison, verifyAncestry, startComparisonPublication } from "./ingest.js";
+import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import { validateAdmittedMainReference, validateLocalSubmission } from "./local-comparison.ts";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
@@ -453,13 +453,15 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
             expectedBaselineRevision: receipt.reference.baselineRevision,
             localComparison: receipt,
             now: Date.now(),
-            maxAttempts: context.configuration.comparisonMaxAttempts,
           });
-          await startComparisonPublication(context, comparison.id);
-        } else await scheduleComparison(context, previous.id);
+          await finalizeSubmittedComparison(context, comparison.id);
+        } else
+          throw new IncompleteError(
+            "A verified local Submit receipt is required. Capture and submit a new complete run.",
+          );
       }
       if (previous.active && previous.comparison_id)
-        await startComparisonPublication(context, previous.comparison_id);
+        await finalizeSubmittedComparison(context, previous.comparison_id);
       await resolveEvents(
         context.database,
         "staged-reconciliation",
@@ -513,6 +515,13 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   ) {
     throw new IncompleteError("The trusted capture jobs must use one configured executor.");
   }
+  const local = bundles[0]?.manifest.localComparison;
+  if (!local)
+    throw new IncompleteError(
+      "A verified local Submit receipt is required. Capture and submit a new complete run.",
+    );
+  if (bundles.length !== 1 || bundles[0]?.key !== "combined")
+    throw new IncompleteError("Local comparison must admit one complete combined Submit bundle.");
   const plan = {
     digest: jobSetDigest,
     shards: await Promise.all(
@@ -665,24 +674,18 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       submitToSealMs: staged.submitted_at === null ? null : sealTimestamp - staged.submitted_at,
     }),
   );
-  const local = bundles[0]?.manifest.localComparison;
-  if (local) {
-    if (bundles.length !== 1 || bundles[0]?.key !== "combined")
-      throw new IncompleteError("Local comparison must admit one complete combined Submit bundle.");
-    const latest = await context.service.run(run.id);
-    const comparison = latest.comparison_id
-      ? await context.service.comparison(latest.comparison_id)
-      : await context.service.createComparison({
-          id: crypto.randomUUID(),
-          runId: run.id,
-          referenceSnapshotId: local.reference.snapshotId,
-          expectedBaselineRevision: local.reference.baselineRevision,
-          localComparison: local,
-          now: Date.now(),
-          maxAttempts: context.configuration.comparisonMaxAttempts,
-        });
-    await startComparisonPublication(context, comparison.id);
-  } else await scheduleComparison(context, run.id);
+  const latest = await context.service.run(run.id);
+  const comparison = latest.comparison_id
+    ? await context.service.comparison(latest.comparison_id)
+    : await context.service.createComparison({
+        id: crypto.randomUUID(),
+        runId: run.id,
+        referenceSnapshotId: local.reference.snapshotId,
+        expectedBaselineRevision: local.reference.baselineRevision,
+        localComparison: local,
+        now: Date.now(),
+      });
+  await finalizeSubmittedComparison(context, comparison.id);
   await resolveEvents(
     context.database,
     "staged-reconciliation",

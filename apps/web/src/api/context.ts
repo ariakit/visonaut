@@ -30,7 +30,6 @@ export interface ApiConfiguration {
     trustedWorkflowPath?: string;
   };
   trustedExecutorDigest?: string;
-  comparisonMaxAttempts: number;
   limits: {
     maximumImageBytes: number;
     maximumShardBytes: number;

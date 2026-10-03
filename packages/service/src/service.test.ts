@@ -1,3 +1,8 @@
+import {
+  readLegacyComparisonTask,
+  seedLegacyComparison,
+  seedLegacyResult,
+} from "../../../tooling/legacy-comparison-fixture.ts";
 import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -20,7 +25,7 @@ import {
   releaseExpiredComparisonReferences,
   retireSnapshot,
 } from "./retention.ts";
-import { claimExpiredRun, claimStatus, closedRunRetentionMs, reconcileWork } from "./work.ts";
+import { claimExpiredRun, claimStatus, closedRunRetentionMs } from "./work.ts";
 import {
   archiveEligibilitySql,
   compactRunHistory,
@@ -194,7 +199,7 @@ async function fixture(service: Service, input: FixtureInput) {
     now: 2,
   });
   await service.sealRun({ runId: input.id, now: 3 });
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: `comparison-${input.id}`,
     runId: input.id,
     referenceSnapshotId: project.snapshot_id,
@@ -203,17 +208,10 @@ async function fixture(service: Service, input: FixtureInput) {
   });
   for (const row of await service.comparisonRows(`comparison-${input.id}`)) {
     if (row.outcome === "pending") {
-      await service.claimComparisonTask({
+      await seedLegacyResult(service, {
         taskId: row.id,
-        owner: "worker",
-        now: 5,
-        leaseMilliseconds: 100,
-      });
-      await service.commitComparisonResult({
-        taskId: row.id,
-        leaseOwner: "worker",
         result: input.compare
-          ? input.compare(await service.getComparisonTask(row.id))
+          ? input.compare(await readLegacyComparisonTask(service, row.id))
           : {
               outcome: "changed",
               changedPixels: 1,
@@ -221,7 +219,6 @@ async function fixture(service: Service, input: FixtureInput) {
               engineVersion: "engine",
               codecVersion: "codec",
             },
-        now: 5,
       });
     }
   }
@@ -424,6 +421,35 @@ describe("rejection of inherited acceptance", () => {
 });
 
 describe("full run and immutable comparison state", () => {
+  it("rejects server comparison creation without changing retained results or creating work", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await setup(service);
+    await fixture(service, { id: "legacy" });
+    const rows = await service.comparisonRows("comparison-legacy");
+    const tasks = database.connection.prepare("SELECT * FROM work_tasks ORDER BY id").all();
+    const legacyRequest = {
+      id: "retired-server",
+      runId: "legacy",
+      referenceSnapshotId: null,
+      now: 10,
+      localComparison: undefined,
+      maxAttempts: 5,
+    };
+    await expect(
+      // @ts-expect-error The retired server call has no local receipt.
+      service.createComparison(legacyRequest),
+    ).rejects.toThrow("A verified local Submit receipt is required");
+    expect(await service.comparisonRows("comparison-legacy")).toEqual(rows);
+    expect(database.connection.prepare("SELECT * FROM work_tasks ORDER BY id").all()).toEqual(
+      tasks,
+    );
+    expect(
+      database.connection
+        .prepare("SELECT id FROM visonaut_comparisons WHERE id='retired-server'")
+        .get(),
+    ).toBeUndefined();
+  });
   it("logs the first comparison's seal-to-ready timing only once", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
@@ -525,104 +551,6 @@ describe("full run and immutable comparison state", () => {
     ).rejects.toBeInstanceOf(ConflictError);
     expect(count(database, "visonaut_images")).toBe(50);
   });
-
-  it("accepts equal validated originals without scheduling pixel comparisons", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "seed", items: ["dialog", "menu"], realDigest: true });
-    await promote(service, "seed");
-    await fixture(service, {
-      id: "identical",
-      items: ["dialog", "menu"],
-      kind: "pull_request",
-      realDigest: true,
-    });
-    const rows = await service.comparisonRows("comparison-identical");
-    expect(rows.map((row) => row.outcome)).toEqual(["unchanged", "unchanged"]);
-    expect(rows.map((row) => JSON.parse(row.result_json ?? "{}"))).toEqual([
-      expect.objectContaining({
-        outcome: "unchanged",
-        changedPixels: 0,
-        ratio: 0,
-        engineVersion: "sha256-identical-1",
-        maskExpected: false,
-      }),
-      expect.objectContaining({
-        outcome: "unchanged",
-        changedPixels: 0,
-        ratio: 0,
-        engineVersion: "sha256-identical-1",
-        maskExpected: false,
-      }),
-    ]);
-    expect(count(database, "work_tasks")).toBe(0);
-    expect((await service.status("identical")).status).toBe("passed");
-
-    await service.createComparison({
-      id: "recomparison-identical",
-      runId: "identical",
-      referenceSnapshotId: "snapshot-seed",
-      now: 20,
-      maxAttempts: 3,
-    });
-    expect(
-      (await service.comparisonRows("recomparison-identical")).map((row) => row.outcome),
-    ).toEqual(["unchanged", "unchanged"]);
-    expect(count(database, "work_tasks")).toBe(0);
-
-    await fixture(service, {
-      id: "profile-change",
-      items: ["dialog", "menu"],
-      kind: "pull_request",
-      realDigest: true,
-      measuredEnvironmentProfile: true,
-      captureProfileDigest: "new-full-profile",
-    });
-    expect(
-      (await service.comparisonRows("comparison-profile-change")).map((row) => row.outcome),
-    ).toEqual(["changed", "changed"]);
-    expect(count(database, "work_tasks")).toBe(2);
-
-    await fixture(service, {
-      id: "content-change",
-      items: ["dialog", "menu"],
-      kind: "pull_request",
-      realDigest: true,
-      color: "red",
-    });
-    expect(
-      (await service.comparisonRows("comparison-content-change")).map((row) => row.outcome),
-    ).toEqual(["changed", "changed"]);
-    expect(count(database, "work_tasks")).toBe(4);
-  });
-
-  it.each([0, 1])(
-    "reviews changed profiles only when pixels differ (%i pixels)",
-    async (changedPixels) => {
-      using database = new TestDatabase();
-      const service = new Service(database);
-      await seed(service);
-      await fixture(service, {
-        id: "new-profile",
-        kind: "pull_request",
-        measuredEnvironmentProfile: true,
-        captureProfileDigest: "new-full-profile",
-        compare: () => ({
-          outcome: "unchanged",
-          changedPixels,
-          ratio: changedPixels / 100,
-          engineVersion: "engine",
-          codecVersion: "codec",
-        }),
-      });
-      const rows = await service.comparisonRows("comparison-new-profile");
-      expect(rows.map((row) => row.outcome)).toEqual([changedPixels ? "changed" : "unchanged"]);
-      expect((await service.status("new-profile")).status).toBe(
-        changedPixels ? "needs-review" : "passed",
-      );
-    },
-  );
 
   it.each([true, false])(
     "migrates zero-pixel changes (finalized: %s) and preserves review history",
@@ -828,7 +756,7 @@ describe("full run and immutable comparison state", () => {
     },
   );
 
-  it("recompares an existing baseline under a new policy without mass review", async () => {
+  it("keeps saved policy and rendering identities in retained comparison results", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     const oldPolicy = {
@@ -901,7 +829,6 @@ describe("full run and immutable comparison state", () => {
         "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = 'project'",
       )
       .run(newPolicyDigest);
-    const tasksBeforePolicyChange = Number(count(database, "work_tasks"));
     const unchanged = () => ({
       outcome: "unchanged" as const,
       changedPixels: 0,
@@ -915,14 +842,10 @@ describe("full run and immutable comparison state", () => {
       items: ["dialog", "menu"],
       realDigest: true,
       captureProfileDigest: newProfileDigest,
+      compare: unchanged,
     });
     const policyOnlyRows = await service.comparisonRows("comparison-policy-only");
     expect(policyOnlyRows.map((row) => row.outcome)).toEqual(["unchanged", "unchanged"]);
-    expect(policyOnlyRows.map((row) => JSON.parse(row.result_json ?? "{}").engineVersion)).toEqual([
-      "sha256-identical-1",
-      "sha256-identical-1",
-    ]);
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange);
     expect((await service.status("policy-only")).status).toBe("passed");
     expect((await service.comparison("comparison-seed")).policy_digest).toBe(oldPolicyDigest);
     expect((await service.comparison("comparison-policy-only")).policy_digest).toBe(
@@ -942,7 +865,6 @@ describe("full run and immutable comparison state", () => {
         (row) => row.outcome,
       ),
     ).toEqual(["changed", "changed"]);
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 2);
 
     for (const [id, profileDigest] of [
       ["rendering-change", changedProfileDigest],
@@ -963,19 +885,6 @@ describe("full run and immutable comparison state", () => {
       ]);
       expect((await service.status(id)).status).toBe("passed");
     }
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 4);
-
-    const comparisonsBeforeRecompare = Number(count(database, "visonaut_comparisons"));
-    await service.createComparison({
-      id: "comparison-stale-recompare",
-      runId: "stale-policy-same-profile",
-      referenceSnapshotId: (await service.project("project")).snapshot_id,
-      requireCurrentCapturePolicy: true,
-      now: 5,
-      maxAttempts: 3,
-    });
-    expect(count(database, "visonaut_comparisons")).toBe(comparisonsBeforeRecompare + 1);
-    expect(count(database, "work_tasks")).toBe(tasksBeforePolicyChange + 4);
   });
 
   it("seeds a fresh full main baseline automatically and keeps candidate bytes", async () => {
@@ -1872,7 +1781,7 @@ describe("restoration and workflow attempt inheritance", () => {
         previousRunId = runId;
       }
       const comparisonId = crypto.randomUUID();
-      await service.createComparison({
+      await seedLegacyComparison(service, {
         id: comparisonId,
         runId: previousRunId,
         referenceSnapshotId: null,
@@ -1977,7 +1886,7 @@ describe("restoration and workflow attempt inheritance", () => {
     const service = new Service(database);
     await seed(service);
     await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
-    await service.createComparison({
+    await seedLegacyComparison(service, {
       id: "pending-pr",
       runId: "pr",
       referenceSnapshotId: "snapshot-seed",
@@ -1998,78 +1907,6 @@ describe("restoration and workflow attempt inheritance", () => {
         .prepare("SELECT COUNT(*) AS count FROM visonaut_runs WHERE active=1 AND state='comparing'")
         .get()?.count,
     ).toBe(1);
-  });
-
-  it("does not claim queued work after a review comparison is invalidated", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
-    const row = (await service.comparisonRows("comparison-pr"))[0];
-    if (!row) throw new Error("Missing comparison row");
-    // Reproduce a queued message left behind after its comparison is invalidated.
-    database.connection
-      .prepare("UPDATE visonaut_comparison_rows SET outcome='pending', result_json=NULL WHERE id=?")
-      .run(row.id);
-    database.connection
-      .prepare("UPDATE work_tasks SET state='queued', attempts=0, result=NULL WHERE id=?")
-      .run(row.id);
-    database.connection
-      .prepare("UPDATE work_tasks SET published_at=10, publication_due_at=100000 WHERE id=?")
-      .run(row.id);
-    database.connection
-      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='comparison-pr'")
-      .run();
-
-    await fixture(service, { id: "next", kind: "pull_request", color: "red" });
-    const nextRow = (await service.comparisonRows("comparison-next"))[0];
-    if (!nextRow) throw new Error("Missing replacement comparison row");
-    database.connection
-      .prepare("UPDATE visonaut_comparison_rows SET outcome='pending', result_json=NULL WHERE id=?")
-      .run(nextRow.id);
-    database.connection
-      .prepare(
-        "UPDATE work_tasks SET state='queued', attempts=0, result=NULL, publication_due_at=0, available_at=0 WHERE id=?",
-      )
-      .run(nextRow.id);
-    database.connection
-      .prepare("UPDATE visonaut_comparisons SET state='comparing' WHERE id='comparison-next'")
-      .run();
-    const publish = async () => {};
-    const input = {
-      now: 20,
-      limit: 1,
-      kind: "compare" as const,
-      scope: "current-comparison" as const,
-      maxOutstanding: 1,
-      publish,
-    };
-    expect(await reconcileWork(database, input)).toEqual({
-      published: [nextRow.id],
-      failed: [],
-      hasMore: true,
-    });
-    expect(
-      database.connection.prepare("SELECT state, attempts FROM work_tasks WHERE id=?").get(row.id),
-    ).toMatchObject({ state: "complete", attempts: 0 });
-
-    expect((await service.getComparisonTaskState(row.id)).state).toBe("superseded");
-    expect(
-      await service.claimComparisonTask({
-        taskId: row.id,
-        owner: "stale-worker",
-        now: 20,
-        leaseMilliseconds: 100,
-      }),
-    ).toBeNull();
-    expect(
-      database.connection.prepare("SELECT state, attempts FROM work_tasks WHERE id=?").get(row.id),
-    ).toMatchObject({ state: "complete", attempts: 0 });
-    expect(await reconcileWork(database, input)).toEqual({
-      published: [],
-      failed: [],
-      hasMore: false,
-    });
   });
 
   it("retires queued review work when a newer attempt supersedes its run", async () => {
@@ -2125,12 +1962,11 @@ describe("restoration and workflow attempt inheritance", () => {
         .prepare("SELECT state, result, lease_token, lease_until FROM work_tasks WHERE id=?")
         .get(row.id),
     ).toEqual({ state: "complete", result: "superseded", lease_token: null, lease_until: null });
-    const comparison = await service.createComparison({
+    const comparison = await seedLegacyComparison(service, {
       id: "historical-closed-review",
       runId: "closed-review",
       referenceSnapshotId: "snapshot-seed",
       purpose: "historical",
-      expectedCaptureCount: 1,
       now: 21,
       maxAttempts: 2,
     });
@@ -2139,136 +1975,6 @@ describe("restoration and workflow attempt inheritance", () => {
     await service.retireRun({ runId: "closed-review", now: 22 });
     expect(
       database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(historicalRow.id),
-    ).toEqual({ state: "queued" });
-  });
-
-  it("acknowledges superseded review work after its comparison row is archived", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "archived", kind: "pull_request", color: "red" });
-    const row = (await service.comparisonRows("comparison-archived"))[0];
-    if (!row) throw new Error("Missing review row");
-    database.connection
-      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
-      .run(row.id);
-    database.connection.prepare("DELETE FROM visonaut_comparison_rows WHERE id=?").run(row.id);
-    database.connection
-      .prepare("UPDATE visonaut_runs SET detail_archived=1 WHERE id='archived'")
-      .run();
-
-    expect(await service.getComparisonTaskState(row.id)).toEqual({ state: "superseded" });
-    expect(
-      await service.claimComparisonTask({
-        taskId: row.id,
-        owner: "worker",
-        now: 30,
-        leaseMilliseconds: 100,
-      }),
-    ).toBeNull();
-    expect(
-      database.connection.prepare("SELECT state, result FROM work_tasks WHERE id=?").get(row.id),
-    ).toEqual({ state: "complete", result: "superseded" });
-  });
-
-  it("acknowledges a stale review message for an inactive run", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "inactive", kind: "pull_request", color: "red" });
-    const row = (await service.comparisonRows("comparison-inactive"))[0];
-    if (!row) throw new Error("Missing review row");
-    database.connection
-      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id=?")
-      .run(row.id);
-    database.connection
-      .prepare("UPDATE visonaut_runs SET active=0,closed_at=19 WHERE id='inactive'")
-      .run();
-
-    expect(
-      await service.claimComparisonTask({
-        taskId: row.id,
-        owner: "worker",
-        now: 30,
-        leaseMilliseconds: 100,
-      }),
-    ).toBeNull();
-    expect(
-      database.connection.prepare("SELECT state, result FROM work_tasks WHERE id=?").get(row.id),
-    ).toEqual({ state: "complete", result: "superseded" });
-  });
-
-  it("drains superseded review work one page at a time and leaves historical work queued", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "inactive", kind: "pull_request", color: "red" });
-    await fixture(service, { id: "archived", kind: "pull_request", color: "red" });
-    await fixture(service, { id: "current", kind: "pull_request", color: "red" });
-    const inactiveRow = (await service.comparisonRows("comparison-inactive"))[0];
-    const archivedRow = (await service.comparisonRows("comparison-archived"))[0];
-    const currentRow = (await service.comparisonRows("comparison-current"))[0];
-    if (!inactiveRow || !archivedRow || !currentRow) throw new Error("Missing review rows");
-    database.connection
-      .prepare("UPDATE work_tasks SET state='queued', result=NULL WHERE id IN (?, ?)")
-      .run(inactiveRow.id, archivedRow.id);
-    database.connection
-      .prepare("UPDATE visonaut_runs SET active=0,closed_at=19 WHERE id='inactive'")
-      .run();
-    database.connection
-      .prepare("DELETE FROM visonaut_comparison_rows WHERE id=?")
-      .run(archivedRow.id);
-    database.connection
-      .prepare("UPDATE visonaut_runs SET detail_archived=1 WHERE id='archived'")
-      .run();
-    database.connection
-      .prepare(
-        "UPDATE work_tasks SET state='queued', result=NULL, publication_due_at=1000 WHERE id=?",
-      )
-      .run(currentRow.id);
-    database.connection
-      .prepare("UPDATE visonaut_comparisons SET state='comparing' WHERE id='comparison-current'")
-      .run();
-    const historical = await service.createComparison({
-      id: "historical-inactive",
-      runId: "inactive",
-      referenceSnapshotId: "snapshot-seed",
-      purpose: "historical",
-      expectedCaptureCount: 1,
-      now: 20,
-      maxAttempts: 2,
-    });
-    const historicalRow = (await service.comparisonRows(historical.id))[0];
-    if (!historicalRow) throw new Error("Missing historical row");
-    database.connection
-      .prepare("UPDATE work_tasks SET publication_due_at=1000 WHERE id=?")
-      .run(historicalRow.id);
-    const input = {
-      now: 30,
-      limit: 1,
-      kind: "compare" as const,
-      scope: "current-comparison" as const,
-      publish: async () => {},
-    };
-
-    expect((await reconcileWork(database, input)).hasMore).toBe(true);
-    expect(
-      database.connection
-        .prepare("SELECT COUNT(*) AS count FROM work_tasks WHERE id IN (?, ?) AND state='complete'")
-        .get(inactiveRow.id, archivedRow.id)?.count,
-    ).toBe(1);
-    expect((await reconcileWork(database, input)).hasMore).toBe(true);
-    expect(
-      database.connection
-        .prepare("SELECT COUNT(*) AS count FROM work_tasks WHERE id IN (?, ?) AND state='complete'")
-        .get(inactiveRow.id, archivedRow.id)?.count,
-    ).toBe(2);
-    expect((await reconcileWork(database, input)).hasMore).toBe(false);
-    expect(
-      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(historicalRow.id),
-    ).toEqual({ state: "queued" });
-    expect(
-      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(currentRow.id),
     ).toEqual({ state: "queued" });
   });
 });
@@ -2343,7 +2049,7 @@ describe("expanded SQL workload", () => {
     });
     expect(database.preparedQueries - before).toBeLessThan(1_000);
     await service.sealRun({ runId: "expanded", now: 3 });
-    await service.createComparison({
+    await seedLegacyComparison(service, {
       id: "comparison-expanded",
       runId: "expanded",
       referenceSnapshotId: null,
@@ -2458,7 +2164,7 @@ describe("trusted candidate discovery", () => {
     ).rejects.toThrow("did not pass");
     await service.commitShard({ ...shard, verifiedDiscovery: proof });
     await service.sealRun({ runId: "discovered", now: 23 });
-    await service.createComparison({
+    await seedLegacyComparison(service, {
       id: "comparison-discovered",
       runId: "discovered",
       referenceSnapshotId: "snapshot-seed",
@@ -2469,15 +2175,8 @@ describe("trusted candidate discovery", () => {
       (row) => row.item_key === "dialog",
     );
     if (!kept) throw new Error("Missing discovered comparison");
-    await service.claimComparisonTask({
+    await seedLegacyResult(service, {
       taskId: kept.id,
-      owner: "worker",
-      now: 25,
-      leaseMilliseconds: 100,
-    });
-    await service.commitComparisonResult({
-      taskId: kept.id,
-      leaseOwner: "worker",
       result: {
         outcome: "unchanged",
         changedPixels: 0,
@@ -2485,7 +2184,6 @@ describe("trusted candidate discovery", () => {
         engineVersion: "engine",
         codecVersion: "codec",
       },
-      now: 26,
     });
     await service.finalizeComparison({ comparisonId: "comparison-discovered", now: 27 });
     expect((await service.status("discovered")).status).toBe("passed");
@@ -2696,26 +2394,6 @@ describe("HTTP state integration", () => {
       }),
     ).rejects.toBeInstanceOf(ConflictError);
     expect((await service.status("failed")).status).toBe("failed");
-  });
-
-  it("rejects a baseline revision observed before asynchronous ancestry verification", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "pr-ancestry", kind: "pull_request", color: "red" });
-    const before = count(database, "visonaut_comparisons");
-    await expect(
-      service.createComparison({
-        id: "stale-ancestry",
-        runId: "pr-ancestry",
-        referenceSnapshotId: "snapshot-seed",
-        expectedBaselineRevision: 0,
-        maxAttempts: 3,
-        now: 20,
-      }),
-    ).rejects.toBeInstanceOf(ConflictError);
-    expect(count(database, "visonaut_comparisons")).toBe(before);
-    expect((await service.run("pr-ancestry")).comparison_id).toBe("comparison-pr-ancestry");
   });
 
   it("projects each run-owned copied approval independently", async () => {
@@ -3352,12 +3030,11 @@ describe("closed stored-run recomparison", () => {
   }
 
   async function historical(service: Service, id = "historical-closed") {
-    return service.createComparison({
+    return seedLegacyComparison(service, {
       id,
       runId: "closed",
       referenceSnapshotId: "snapshot-seed",
       purpose: "historical",
-      expectedCaptureCount: 2,
       now: 21,
       maxAttempts: 2,
     });
@@ -3377,35 +3054,7 @@ describe("closed stored-run recomparison", () => {
     ].map((table) => database.connection.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
   }
 
-  it("ends native historical recomparison at the exact closed-run retention boundary", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await closedFixture(service);
-    database.connection.exec(
-      "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('closed','manual','manual')",
-    );
-    await expect(
-      service.createComparison({
-        id: "too-late",
-        runId: "closed",
-        referenceSnapshotId: "snapshot-seed",
-        purpose: "historical",
-        expectedCaptureCount: 2,
-        now: 20 + closedRunRetentionMs,
-        maxAttempts: 2,
-      }),
-    ).rejects.toBeInstanceOf(ConflictError);
-    expect(
-      database.connection.prepare("SELECT id FROM visonaut_comparisons WHERE id='too-late'").get(),
-    ).toBeUndefined();
-    expect(
-      database.connection
-        .prepare("SELECT byte_state FROM work_retained_runs WHERE id='closed'")
-        .get(),
-    ).toEqual({ byte_state: "live" });
-  });
-
-  it("recompares a closed stored run without capture or live authority changes", async () => {
+  it("finalizes retained historical results without changing captures or live authority", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await closedFixture(service);
@@ -3418,18 +3067,8 @@ describe("closed stored-run recomparison", () => {
     const taskRow = rows.find((row) => row.outcome === "pending");
     expect(taskRow).toBeDefined();
     if (!taskRow) throw new Error("Missing task");
-    const task = await service.claimComparisonTask({
+    await seedLegacyResult(service, {
       taskId: taskRow.id,
-      owner: "history-worker",
-      now: 22,
-      leaseMilliseconds: 100,
-    });
-    expect(task?.candidate?.objectKey).toBe("runs/closed/dialog");
-    expect(task?.reference?.objectKey).toBe("runs/seed/dialog");
-    await service.commitComparisonResult({
-      taskId: taskRow.id,
-      leaseOwner: "history-worker",
-      now: 23,
       result: {
         outcome: "changed",
         changedPixels: 2,
@@ -3464,56 +3103,15 @@ describe("closed stored-run recomparison", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects expired candidates and retirement races before creating any comparison", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await closedFixture(service);
-    database.connection.exec(
-      "UPDATE visonaut_images SET bytes_present = 0 WHERE run_id = 'closed'",
-    );
-    await expect(historical(service)).rejects.toThrow();
-    expect(
-      database.connection
-        .prepare("SELECT id FROM visonaut_comparisons WHERE purpose = 'historical'")
-        .all(),
-    ).toEqual([]);
-    database.connection.exec(
-      "UPDATE visonaut_images SET bytes_present = 1 WHERE run_id = 'closed'",
-    );
-    database.beforeBatch = () =>
-      database.connection.exec(
-        "UPDATE visonaut_snapshots SET reference_eligible = 0 WHERE id = 'snapshot-seed'",
-      );
-    await expect(historical(service)).rejects.toThrow();
-    expect(
-      database.connection
-        .prepare("SELECT id FROM visonaut_comparisons WHERE purpose = 'historical'")
-        .all(),
-    ).toEqual([]);
-  });
-
-  it("fences stale workers and does not automatically accept historical additions", async () => {
+  it("does not automatically accept retained historical additions", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await closedFixture(service);
     const comparison = await historical(service);
-    await expect(historical(service, "concurrent-history")).rejects.toThrow();
     const row = (await service.comparisonRows(comparison.id)).find(
       (candidate) => candidate.outcome === "pending",
     );
     if (!row) throw new Error("Missing task");
-    await service.claimComparisonTask({
-      taskId: row.id,
-      owner: "old",
-      now: 22,
-      leaseMilliseconds: 2,
-    });
-    await service.claimComparisonTask({
-      taskId: row.id,
-      owner: "new",
-      now: 25,
-      leaseMilliseconds: 100,
-    });
     const result = {
       outcome: "changed",
       changedPixels: 1,
@@ -3521,10 +3119,7 @@ describe("closed stored-run recomparison", () => {
       engineVersion: "engine",
       codecVersion: "codec",
     } as const;
-    await expect(
-      service.commitComparisonResult({ taskId: row.id, leaseOwner: "old", now: 26, result }),
-    ).rejects.toThrow();
-    await service.commitComparisonResult({ taskId: row.id, leaseOwner: "new", now: 26, result });
+    await seedLegacyResult(service, { taskId: row.id, result });
     await service.finalizeComparison({ comparisonId: comparison.id, now: 27 });
     expect(
       (await service.comparisonRows(comparison.id)).find(
@@ -3549,7 +3144,7 @@ describe("closed stored-run recomparison", () => {
     expect((await service.comparison(comparison.id)).state).toBe("invalidated");
     expect(liveAuthority(database)).toEqual(authority);
   });
-  it("fails a historical job if its ancestor is revoked while its worker is running", async () => {
+  it("invalidates retained historical results after their ancestor is revoked", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await closedFixture(service);
@@ -3558,34 +3153,16 @@ describe("closed stored-run recomparison", () => {
       (candidate) => candidate.outcome === "pending",
     );
     if (!row) throw new Error("Missing task");
-    await service.claimComparisonTask({
-      taskId: row.id,
-      owner: "worker",
-      now: 22,
-      leaseMilliseconds: 100,
-    });
     database.connection.exec(
       "UPDATE visonaut_snapshots SET reference_eligible=0,state='revoked' WHERE id='snapshot-seed'",
     );
-    await expect(
-      service.commitComparisonResult({
-        taskId: row.id,
-        leaseOwner: "worker",
-        now: 23,
-        result: {
-          outcome: "unchanged",
-          changedPixels: 0,
-          ratio: 0,
-          engineVersion: "engine",
-          codecVersion: "codec",
-        },
-      }),
-    ).rejects.toThrow();
     expect((await service.reconcileComparisons({ now: 24, limit: 100 })).completed).toContain(
       comparison.id,
     );
     expect((await service.comparison(comparison.id)).state).toBe("invalidated");
-    expect((await service.getComparisonTaskState(row.id)).state).toBe("dead");
+    expect(
+      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(row.id),
+    ).toEqual({ state: "dead" });
     expect(
       (await service.comparisonRows(comparison.id)).find((candidate) => candidate.id === row.id)
         ?.outcome,
