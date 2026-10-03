@@ -3,15 +3,30 @@ import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
+import { replacedMainRunSql } from "./review-status.ts";
 
 // The scheduled reconciler drains tasks beyond the run transition's first page.
 export const reviewTaskRetirementPageSize = 100;
 
-export async function retireRun(service: Service, input: { runId: string; now: number }) {
+export async function retireRun(
+  service: Service,
+  input: { runId: string; now: number; replacementSnapshotId?: string },
+) {
   const run = await service.run(input.runId);
   const project = await service.project(run.project_id);
   await atomic(service.database, [
     projectGuard(service.database, project),
+    ...(input.replacementSnapshotId
+      ? [
+          activeGuard(service.database, run),
+          assertion(
+            service.database,
+            `EXISTS(SELECT 1 FROM visonaut_runs run JOIN visonaut_projects project ON project.id=run.project_id
+          WHERE run.id=? AND project.snapshot_id=? AND ${replacedMainRunSql("run")})`,
+            [run.id, input.replacementSnapshotId],
+          ),
+        ]
+      : []),
     assertion(
       service.database,
       "NOT EXISTS (SELECT 1 FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id WHERE snapshot.run_id = ?)",
@@ -54,7 +69,9 @@ export async function retireRun(service: Service, input: { runId: string; now: n
       database: service.database,
       run: run,
       action: "retire",
-      detail: {},
+      detail: input.replacementSnapshotId
+        ? { replacementSnapshotId: input.replacementSnapshotId }
+        : {},
       now: input.now,
     }),
   ]);

@@ -9,6 +9,7 @@ import {
 import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/security";
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { currentPreRunCheckSql, obsoleteCheckDeliverySql } from "./check-state.ts";
 
 interface CheckCreation {
   run_id: string;
@@ -33,14 +34,11 @@ export async function isCurrentPreRunCheck(
   database: OperationsContext["database"],
   checkId: string,
 ) {
-  const superseded = await database
-    .prepare(`SELECT 1 AS found FROM pre_run_checks previous WHERE previous.check_id = ?
-      AND (previous.state != 'active' OR previous.plan_visual_required IS NULL OR EXISTS (
-        SELECT 1 FROM pre_run_checks newer WHERE newer.tested_sha = previous.tested_sha
-          AND newer.generation > previous.generation))`)
+  const current = await database
+    .prepare(`SELECT 1 AS found WHERE ${currentPreRunCheckSql("?")}`)
     .bind(checkId)
     .first();
-  return superseded === null;
+  return current !== null;
 }
 
 async function createChecks(context: OperationsContext, report: OperationReport) {
@@ -204,7 +202,8 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     JOIN visonaut_projects project ON project.id=run.project_id
     JOIN operations_check_creations creation ON creation.run_id=run.id AND creation.state='complete'
     LEFT JOIN visonaut_status_outbox pending ON pending.run_id=run.id AND pending.delivered_at IS NULL
-    WHERE ${statusRunEligibleSql} AND (pending.id IS NOT NULL OR EXISTS(SELECT 1 FROM work_status_outbox stale JOIN work_checks checks ON checks.id=stale.check_id AND checks.desired_revision=stale.revision WHERE stale.check_id=creation.check_id AND stale.source_revision!=project.revision) OR NOT EXISTS(SELECT 1 FROM work_status_outbox current JOIN work_checks checks ON checks.id=current.check_id AND checks.desired_revision=current.revision WHERE current.check_id=creation.check_id))
+    WHERE ${statusRunEligibleSql} AND ${currentPreRunCheckSql("creation.check_id")}
+      AND (pending.id IS NOT NULL OR EXISTS(SELECT 1 FROM work_status_outbox stale JOIN work_checks checks ON checks.id=stale.check_id AND checks.desired_revision=stale.revision WHERE stale.check_id=creation.check_id AND stale.source_revision!=project.revision) OR NOT EXISTS(SELECT 1 FROM work_status_outbox current JOIN work_checks checks ON checks.id=current.check_id AND checks.desired_revision=current.revision WHERE current.check_id=creation.check_id))
     ORDER BY run.created_at,run.id LIMIT ?`)
     .bind(budget.tasksPerStep)
     .all<{ id: string; check_id: string }>();
@@ -224,7 +223,18 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     now: context.now(),
     limit: budget.tasksPerStep,
     attentionAfterId: cursor?.value ?? undefined,
+    eligibleCheckSql: `NOT ${obsoleteCheckDeliverySql("checks.id")}
+      AND (checks.ambiguous=1 OR outbox.state!='pending' OR ${currentPreRunCheckSql("checks.id")})`,
   });
+  // Reconciliation first fences expired sends. Resolve only exhausted alerts
+  // whose stored owner is now obsolete or has completed delivery.
+  await database
+    .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
+      SELECT id FROM operations_events WHERE kind='check-delivery' AND code='exhausted'
+        AND resolved_at IS NULL AND ${obsoleteCheckDeliverySql("subject_id")}
+      ORDER BY last_seen_at,id LIMIT ?)`)
+    .bind(context.now(), budget.tasksPerStep)
+    .run();
   const attention = deliveries.filter((item) => item.ambiguous || item.state === "dead");
   await database
     .prepare(
@@ -236,6 +246,15 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     deliveries,
     maximumConcurrentStatusDeliveries,
     async (delivery) => {
+      if (!delivery.ambiguous) {
+        const obsolete = await database
+          .prepare(`SELECT 1 AS found WHERE ${obsoleteCheckDeliverySql("?")}`)
+          .bind(delivery.id)
+          .first();
+        if (obsolete) {
+          return "skipped" as const;
+        }
+      }
       if (delivery.ambiguous || delivery.state === "dead") {
         await recordEvent(database, {
           kind: "check-delivery",
@@ -251,6 +270,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         .bind(delivery.id)
         .first();
       if (headCheck) return "skipped" as const;
+      if (!(await isCurrentPreRunCheck(database, delivery.id))) return "skipped" as const;
       const token = crypto.randomUUID();
       const intent = await claimStatus(database, {
         id: delivery.id,
@@ -326,6 +346,6 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   }
   report.hasMore =
     (updates.results?.length ?? 0) === budget.tasksPerStep ||
-    deliveries.some((item) => item.state === "pending");
+    deliveries.some((item, index) => item.state === "pending" && outcomes[index] !== "skipped");
   return report;
 }

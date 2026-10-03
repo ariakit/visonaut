@@ -15,6 +15,7 @@ import type { OperationsMessage } from "@visonaut/service";
 import { expireExports } from "./exports.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
+import { retireReplacedMainRuns } from "./main-retirement.ts";
 import type { OperationsContext, OperationReport } from "./types.ts";
 export * from "./types.ts";
 export * from "./exports.ts";
@@ -29,6 +30,7 @@ export async function runOperations(
   let promotionMs = 0;
   const reports: Record<string, OperationReport> = {};
   if (message.kind === "recovery" || message.kind === "ingest") {
+    reports["main-retirement"] = await retireReplacedMainRuns(context);
     const service = new Service(context.database);
     const finalized = await service.reconcileComparisons({
       now: context.now(),

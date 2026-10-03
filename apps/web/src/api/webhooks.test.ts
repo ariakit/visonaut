@@ -126,6 +126,7 @@ beforeEach(async () => {
   await database.prepare("DELETE FROM work_status_outbox").run();
   await database.prepare("DELETE FROM work_checks").run();
   await database.prepare("DELETE FROM pre_run_checks").run();
+  await database.prepare("DELETE FROM operations_review_links").run();
   await database.prepare("DELETE FROM ingest_staged_runs").run();
   await database.prepare("DELETE FROM visonaut_runs").run();
   for (const table of ["session", "account", "user", "auth_audit", "github_webhook_delivery"])
@@ -1848,16 +1849,97 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(1);
   });
 
-  it("keeps a closed PR rerun retryable without a verified prior association", async () => {
+  it("acknowledges a terminal no-PR receipt only when it owns no Visonaut work", async () => {
     const fixture = preRunFixture();
-    fixture.state.run.run_attempt = 4;
     fixture.state.run.pull_requests = [];
-    fixture.state.pullState = "closed";
-    await expect(
-      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
-    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = "in_progress";
+    object(webhook.payload.workflow_run).status = "in_progress";
+    object(webhook.payload.workflow_run).conclusion = null;
+    expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
+      "historical",
+    );
     expect(fixture.state.posts).toBe(0);
+    expect(fixture.state.checks.size).toBe(0);
+    expect(await database.prepare("SELECT count(*) AS count FROM pre_run_checks").first()).toEqual({
+      count: 0,
+    });
   });
+
+  it.each(["unbound-check", "stage", "run", "head-link", "head-intent"])(
+    "keeps a terminal no-PR receipt retryable when a %s owns its work",
+    async (owner) => {
+      const fixture = preRunFixture();
+      fixture.state.run.pull_requests = [];
+      if (owner === "unbound-check") {
+        await database
+          .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,
+          source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,created_at,updated_at)
+          VALUES(?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,'legacy','1','ambiguous',1,1)`)
+          .bind(mergeSha, sourceSha, baseSha)
+          .run();
+      } else if (owner === "stage") {
+        await database
+          .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
+          workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+          capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at)
+          VALUES('stage','100','77',1,?,'digest','path','ref','capture','submit','{}',1,1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (owner === "run") {
+        await database
+          .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
+          kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
+          VALUES('owned','project','77',1,'pull_request',?,'pr:7','plan','{}','failed',1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (owner === "head-link") {
+        await database
+          .prepare(`INSERT INTO operations_review_links(repository_id,pull_request_number,
+          source_sha,external_id,check_id,request_started) VALUES('100',7,?,'head-link','1',1)`)
+          .bind(sourceSha)
+          .run();
+      } else {
+        // The PR-head publisher uses a native workflow ID in this outbox;
+        // service-run intents use the UUID checked by the run-owner guard.
+        await database
+          .prepare(
+            "INSERT INTO work_checks(id,desired_revision,ambiguous,request_started) VALUES('1',1,1,1)",
+          )
+          .run();
+        await database
+          .prepare(`INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,
+          source_revision,comparison_revision,conclusion,details_url,state,max_attempts,available_at)
+          VALUES('1',1,'77',1,0,0,'pending','https://preview.example','dead',5,1)`)
+          .run();
+      }
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
+
+  it.each(["nonterminal", "identity-drift"])(
+    "keeps a no-PR receipt retryable after %s",
+    async (condition) => {
+      const fixture = preRunFixture();
+      fixture.state.run.pull_requests = [];
+      const webhook = fixture.workflowWebhook();
+      if (condition === "nonterminal") {
+        fixture.state.run.status = "in_progress";
+        webhook.payload.action = "in_progress";
+      } else {
+        fixture.state.run.head_sha = "f".repeat(40);
+      }
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook),
+      ).rejects.toMatchObject({
+        code: condition === "nonterminal" ? "workflow_candidate" : "workflow_identity",
+      });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
 
   it("retires a completed workflow when the PR target branch changes", async () => {
     const fixture = preRunFixture();

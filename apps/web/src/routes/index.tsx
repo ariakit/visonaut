@@ -113,6 +113,7 @@ function kindLabel(kind: string) {
 }
 
 function stateLabel(state: string) {
+  if (state === "needs-recompare") return "needs fresh Submit";
   return state.replaceAll("_", " ").replaceAll("-", " ");
 }
 

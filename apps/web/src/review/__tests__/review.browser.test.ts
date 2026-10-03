@@ -930,6 +930,13 @@ test("stale pull request captures explain how to get a new comparison", async ({
   await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  await expect(page.getByText("Comparison needs fresh Submit", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(
+      "This comparison is out of date. Run the trusted workflow again to submit a fresh comparison.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });
 
 test("a dimension mismatch cannot be fixed with image retry", async ({ page }) => {

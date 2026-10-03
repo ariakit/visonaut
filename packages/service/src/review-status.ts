@@ -1,5 +1,26 @@
 import type { ComparisonRow, RunRow } from "./types.ts";
 
+/** Only a verified accepted descendant can replace an invalidated main review. */
+export function replacedMainRunSql(run: string) {
+  return `(${run}.kind='main' AND ${run}.active=1 AND ${run}.state='reviewing'
+    AND ${run}.closed_at IS NULL AND ${run}.sealed_at IS NOT NULL AND EXISTS(
+    SELECT 1 FROM visonaut_projects project
+    JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id
+    JOIN visonaut_runs replacement ON replacement.id=snapshot.run_id
+    JOIN visonaut_comparisons comparison ON comparison.id=${run}.comparison_id
+    WHERE project.id=${run}.project_id AND snapshot.project_id=project.id
+      AND replacement.project_id=project.id AND replacement.kind='main'
+      AND replacement.id!=${run}.id AND replacement.state='accepted'
+      AND replacement.sealed_at IS NOT NULL AND replacement.created_at>=${run}.created_at
+      AND snapshot.state='accepted' AND snapshot.reference_eligible=1
+      AND comparison.run_id=${run}.id AND comparison.purpose='review' AND comparison.state='invalidated'
+      AND comparison.baseline_revision<project.baseline_revision
+      AND (EXISTS(SELECT 1 FROM visonaut_lineage lineage
+        WHERE lineage.source_run_id=${run}.id AND lineage.target_run_id=replacement.id)
+        OR EXISTS(SELECT 1 FROM visonaut_ancestry ancestry
+          WHERE ancestry.run_id=replacement.id AND ancestry.ancestor_sha=${run}.tested_sha))))`;
+}
+
 /** Only active reviews and the current baseline can publish external check updates. */
 export const statusRunEligibleSql = `(run.active=1 OR (run.state='accepted' AND EXISTS(
   SELECT 1 FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id

@@ -109,7 +109,7 @@ function terminalEvidenceMessage(model: ReviewModel) {
     case "superseded":
       return "A newer attempt replaced this comparison. Its evidence cannot be reviewed.";
     case "needs-recompare":
-      return "The baseline changed. This comparison is out of date and cannot be reviewed.";
+      return "This comparison is out of date. Run the trusted workflow again to submit a fresh comparison.";
     case "failed":
       return "This capture or comparison failed. Its evidence cannot be reviewed.";
     default:
@@ -690,7 +690,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                               ? model.run.status === "superseded"
                                 ? "Comparison superseded"
                                 : model.run.status === "needs-recompare"
-                                  ? "Comparison needs to be rerun"
+                                  ? "Comparison needs fresh Submit"
                                   : "Comparison failed"
                               : retryImages
                                 ? "Image evidence unavailable"

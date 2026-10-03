@@ -155,7 +155,7 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
   await expect(page.getByRole("table", { name: "Review work" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("needs recompare");
+  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("needs fresh Submit");
   const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
   await expect(alerts).toBeVisible();
   await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);

@@ -3,6 +3,7 @@ import {
   IncompleteError,
   pendingReviewCountSql,
   rejectedReviewCountSql,
+  replacedMainRunSql,
   reviewStatus,
   type Database,
 } from "@visonaut/service";
@@ -68,6 +69,7 @@ export async function dashboard(context: DashboardContext) {
     readRuns("ORDER BY created_at DESC LIMIT 100"),
     readRuns(`AND active=1 AND closed_at IS NULL
       AND state NOT IN ('failed','superseded','accepted')
+      AND NOT ${replacedMainRunSql("visonaut_runs")}
       AND NOT EXISTS(SELECT 1 FROM visonaut_promotions promotion
         JOIN visonaut_comparisons promoted ON promoted.id=promotion.comparison_id
         WHERE promoted.run_id=visonaut_runs.id)`),

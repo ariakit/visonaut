@@ -48,7 +48,8 @@ describe("protected object operations", () => {
     expect(
       database.connection.prepare("SELECT * FROM work_tasks WHERE kind='compare'").all(),
     ).toEqual(tasks);
-    expect(Object.keys(result.reports)).toEqual(["finalization"]);
+    expect(Object.keys(result.reports)).toEqual(["main-retirement", "finalization"]);
+    expect(result.reports["main-retirement"]?.completed).toEqual([]);
   });
   it("delivers a passed main check before verifying source originals in bounded pages", async () => {
     using database = new TestDatabase();
