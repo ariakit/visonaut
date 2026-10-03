@@ -11,7 +11,7 @@ const environment = await measureEnvironment({
   appPackageFile: new URL("./package.json", import.meta.url).pathname,
   applicationFontPackage: "@fontsource-variable/inter",
 });
-// Set project.metadata.visonaut.profile = environment.profile.
+// Set project.metadata.visonaut = { profile: environment.profile, comparisonDefaults: {} }.
 await visual(page, {
   item: "dialog/open",
   variant: { key: "react-light", browser: "chromium" },
@@ -41,7 +41,7 @@ export default defineConfig({
 });
 ```
 
-Project metadata supplies the defaults for `visual` and `visualBatch`. For project-specific Playwright settings, put that project's shared object in both places. An explicit `{}` selects the built-in policy and does not inherit Playwright's screenshot defaults. An explicit defaults value must be an object with valid numeric comparison fields, or capture fails with a setup error. Only own comparison fields count, including non-enumerable fields. Override each setting on a capture:
+Project metadata must have its own `visonaut` object with its own `comparisonDefaults` object for `visual` and `visualBatch`. Missing defaults cause a setup error, even when a capture supplies all comparison settings. For project-specific Playwright settings, put that project's shared object in both places. An explicit `{}` selects the built-in policy and does not inherit Playwright's screenshot defaults. The defaults must be an object with valid numeric comparison fields, or capture fails with a setup error. Only own comparison fields count, including non-enumerable fields. Override each setting on a capture:
 
 ```ts
 await visual(page, {
@@ -53,9 +53,9 @@ await visual(page, {
 
 `visualBatch` accepts these settings for the batch and for each item. The order is project defaults, then batch settings, then image settings. An omitted field inherits its value. An explicit `undefined` clears its inherited value. Playwright uses the smaller limit when both pixel limits are set. The threshold defaults to `0.2`; with no pixel limit, the allowed count is zero. These settings do not change the requirement for two consecutive identical capture images.
 
-This is the compatibility stage of D07/W05. If `comparisonDefaults` is absent, the adapter still reads resolved defaults from the tested Playwright `1.63.0` private worker bridge. It fails if that bridge is unavailable. Explicit defaults take precedence and do not read the private field. The exact Playwright peer pin remains `1.63.0`; a later version requires actual capture verification. Published adapter `0.4.0` predates the explicit API, so consumers must first install the compatible release.
+This source requires public comparison defaults and no longer reads private Playwright screenshot configuration. To migrate from the compatible adapter `0.4.1`, share your existing effective screenshot settings with `comparisonDefaults` before installing the breaking release. Use `{}` only when you intend the built-in policy. The exact Playwright peer pin remains `1.63.0`; a later version requires actual capture verification.
 
-Final D07 retirement is held for verified adoption by all supported consumers and a declared breaking release. That release must require an explicit defaults object, including `{}`, fail clearly when it is missing, and remove the private bridge. This compatibility stage does not complete private-field retirement. See the [prepared Ariakit adoption patch and release holds](../../docs/operations/adapter-comparison-defaults.md).
+Starting with adapter `0.5.0`, this public configuration is required. See the [comparison-default migration record](../../docs/operations/strict-adapter-comparison-defaults.md) for the coordinated release sequence.
 
 Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 
