@@ -329,11 +329,11 @@ async function retireUnboundTerminalPullRequestAttempt(
     !bound &&
     previous.results.length === 0 &&
     Array.isArray(run.pull_requests) &&
-    run.pull_requests.length === 0
+    run.pull_requests.length <= 1
   ) {
     // A terminal notification has no work to settle when neither signed
     // ingest nor a legacy check owns the attempt or its PR source head.
-    const owner = await context.database
+    const ownerQuery = context.database
       .prepare(`SELECT 1 AS found WHERE
         EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
         OR EXISTS(SELECT 1 FROM pre_run_checks WHERE kind='pull_request' AND source_sha=? AND repository_id=?)
@@ -358,9 +358,42 @@ async function retireUnboundTerminalPullRequestAttempt(
         sourceSha,
         runId,
         attempt,
-      )
-      .first();
-    return owner === null;
+      );
+    if (await ownerQuery.first()) return false;
+    if (run.pull_requests.length === 0) return true;
+    const association = object(run.pull_requests[0]);
+    const number = association.number;
+    if (
+      typeof number !== "number" ||
+      !Number.isSafeInteger(number) ||
+      number < 1 ||
+      numericId(object(object(association.head).repo).id) !== github.repositoryId ||
+      numericId(object(object(association.base).repo).id) !== github.repositoryId
+    ) {
+      return false;
+    }
+    const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
+    const head = object(pull.head);
+    const base = object(pull.base);
+    const currentSourceSha = sha(head.sha);
+    const baseRef = base.ref;
+    if (
+      !currentSourceSha ||
+      typeof baseRef !== "string" ||
+      !baseRef ||
+      /\s/u.test(baseRef) ||
+      numericId(object(head.repo).id) !== github.repositoryId ||
+      numericId(object(base.repo).id) !== github.repositoryId
+    ) {
+      return false;
+    }
+    if (pull.state !== "closed") {
+      if (pull.state !== "open") return false;
+      // GitHub retains associations for replaced heads and non-main targets.
+      if (currentSourceSha === sourceSha && baseRef === "main") return false;
+    }
+    // Signed work can acquire ownership while the current PR is read.
+    return (await ownerQuery.first()) === null;
   }
   const checkId = bound?.check_id;
   const number = bound?.pull_request_number;
@@ -411,6 +444,111 @@ async function retireUnboundTerminalPullRequestAttempt(
     !(await mergeBaseForHead(github, currentMergeSha, bound.source_sha)) ||
     (await mergeBaseForHead(github, bound.tested_sha, bound.source_sha)) !== bound.base_sha
   );
+}
+
+async function uncreatedClosedPullRequestAttemptIsHistorical(
+  context: ApiContext,
+  github: GitHubClient,
+  run: Record<string, unknown>,
+) {
+  if (run.event !== "pull_request" || run.status !== "completed") return false;
+  const sourceSha = sha(run.head_sha);
+  const attempt = run.run_attempt;
+  if (!sourceSha || typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  if (!Array.isArray(run.pull_requests) || run.pull_requests.length > 1) return false;
+  const rows = await context.database
+    .prepare(
+      `SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request'
+        AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")} LIMIT 2`,
+    )
+    .bind(github.repositoryId, sourceSha)
+    .all<PreRunCheck>();
+  const row = rows.results[0];
+  if (rows.results.length !== 1 || !row) return false;
+  const number = row.pull_request_number;
+  if (
+    !number ||
+    !Number.isSafeInteger(number) ||
+    number < 1 ||
+    row.ref !== `refs/pull/${number}/merge` ||
+    row.state !== "pending" ||
+    row.check_id !== null ||
+    row.request_started !== 0 ||
+    row.lease_until !== null ||
+    row.workflow_run_id !== null ||
+    row.workflow_attempt !== null ||
+    row.plan_visual_required !== null ||
+    row.plan_reported_at !== null ||
+    row.plan_job_id !== null ||
+    row.plan_workflow_sha !== null
+  ) {
+    return false;
+  }
+  if (run.pull_requests.length === 1) {
+    const association = object(run.pull_requests[0]);
+    if (
+      association.number !== number ||
+      numericId(object(object(association.head).repo).id) !== github.repositoryId ||
+      numericId(object(object(association.base).repo).id) !== github.repositoryId
+    ) {
+      return false;
+    }
+  }
+  const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
+  if (
+    pull.state !== "closed" ||
+    !sha(object(pull.head).sha) ||
+    numericId(object(object(pull.head).repo).id) !== github.repositoryId ||
+    numericId(object(object(pull.base).repo).id) !== github.repositoryId
+  ) {
+    return false;
+  }
+  const runId = numericId(run.id);
+  // Retain passive provenance so a reopened PR can still create its check.
+  const historical = await context.database
+    .prepare(`SELECT external_id FROM pre_run_checks candidate
+      WHERE candidate.external_id=? AND candidate.tested_sha=? AND candidate.generation=?
+        AND candidate.repository_id=? AND candidate.kind='pull_request' AND candidate.source_sha=?
+        AND candidate.pull_request_number=? AND candidate.ref=? AND candidate.state='pending'
+        AND candidate.check_id IS NULL AND candidate.request_started=0 AND candidate.lease_until IS NULL
+        AND candidate.workflow_run_id IS NULL AND candidate.workflow_attempt IS NULL
+        AND candidate.plan_visual_required IS NULL AND candidate.plan_reported_at IS NULL
+        AND candidate.plan_job_id IS NULL AND candidate.plan_workflow_sha IS NULL
+        AND ${afterRestoreSql("candidate.created_at")}
+        AND NOT EXISTS(SELECT 1 FROM pre_run_checks other
+          WHERE other.repository_id=candidate.repository_id AND other.kind='pull_request'
+            AND other.source_sha=candidate.source_sha AND other.external_id!=candidate.external_id)
+        AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+        AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+        AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)
+        AND NOT EXISTS(SELECT 1 FROM operations_review_links WHERE repository_id=? AND source_sha=?)
+        AND NOT EXISTS(SELECT 1 FROM work_status_outbox WHERE run_id=? AND attempt=?)`)
+    .bind(
+      row.external_id,
+      row.tested_sha,
+      row.generation,
+      github.repositoryId,
+      sourceSha,
+      number,
+      row.ref,
+      github.repositoryId,
+      runId,
+      attempt,
+      github.repositoryId,
+      runId,
+      attempt,
+      context.configuration.projectId,
+      runId,
+      attempt,
+      github.repositoryId,
+      sourceSha,
+      runId,
+      attempt,
+    )
+    .first();
+  return historical !== null;
 }
 
 async function bindWorkflowCheck(
@@ -816,7 +954,8 @@ export async function settlePreRunWorkflow(
       error.code !== "workflow_candidate" ||
       (!(await retireSupersededMainAttempt(historical)) &&
         !(await retireSupersededPullRequestAttempt(historical)) &&
-        !(await retireUnboundTerminalPullRequestAttempt(context, github, run)))
+        !(await retireUnboundTerminalPullRequestAttempt(context, github, run)) &&
+        !(await uncreatedClosedPullRequestAttemptIsHistorical(context, github, run)))
     ) {
       throw error;
     }
