@@ -1,5 +1,11 @@
 # @visonaut/web
 
+## 0.2.1
+
+### Patch Changes
+
+- 426080e: Fixed repeated retries of historical terminal pull-request workflow receipts, including closed pull requests with an unstarted candidate.
+
 ## 0.2.0
 
 ### Minor Changes
