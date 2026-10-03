@@ -84,7 +84,7 @@ function profileStatements(database: Database, profiles: readonly ProfileRow[]) 
   return profiles.flatMap(({ digest, profile_json, rendering_digest }) => [
     database
       .prepare(
-        "INSERT INTO visonaut_capture_profiles(digest,profile_json,rendering_digest) VALUES(?,?,?) ON CONFLICT(digest) DO UPDATE SET rendering_digest=excluded.rendering_digest WHERE visonaut_capture_profiles.profile_json=excluded.profile_json",
+        "INSERT INTO visonaut_capture_profiles(digest,profile_json,rendering_digest) VALUES(?,?,?) ON CONFLICT(digest) DO UPDATE SET rendering_digest=excluded.rendering_digest WHERE visonaut_capture_profiles.profile_json=excluded.profile_json AND visonaut_capture_profiles.rendering_digest IS NOT excluded.rendering_digest",
       )
       .bind(digest, profile_json, rendering_digest ?? null),
     assertion(
@@ -131,7 +131,7 @@ export async function pruneCaptureProfiles(database: Database, limit: number) {
       .bind(JSON.stringify(digests)),
     database
       .prepare(
-        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
       )
       .bind(cursorId, hasMore ? (digests.at(-1) ?? "") : ""),
   ]);

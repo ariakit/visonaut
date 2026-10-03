@@ -1,0 +1,294 @@
+{
+  "scope": "Small ephemeral Miniflare D1 functional fixtures with committed migrations. Counts are native meta.rows_read and meta.rows_written, including index writes. No hosted queries or writes, scale tests, capacity tests, schema/index changes, or full lifecycle cost model.",
+  "before_base": "31b111127df7501a64e6f4eae4ee54e4ef04c780",
+  "after_sql_blobs": {
+    "apps/web/src/operations/checks.ts": "4c2b3f08798d1a1fe1d57e231fc6fa9c96cd40e7",
+    "apps/web/src/operations/closed-summary.ts": "d5a007207c94f922d8431552a1ab225d5a66267f",
+    "apps/web/src/operations/github-deliveries.ts": "1b2bcf84a5ecc5abfc8762699312a6221ec68f67",
+    "apps/web/src/operations/promotions.ts": "721a7eda2aa56f3086b37c6e3d47ae98916ea651",
+    "apps/web/src/operations/review-links.ts": "f5876662c33b7048519631c729d2b3ae2d25fc75",
+    "apps/web/src/operations/snapshot-retention.ts": "a65740ec965aa0a97e59960f5cb51aaef05e4dd3",
+    "apps/web/src/profiles.ts": "642efe94a2965f5abec9719444f1ccf36c422427",
+    "packages/service/src/database.ts": "11f91326b4b2bfc0605668c02a5710c633a81a75",
+    "packages/service/src/run-status.ts": "19211166e63321145c7fb6abf925fa4cf0fc0277"
+  },
+  "runtime": {
+    "node": "24.18.0",
+    "miniflare": "5.20260921.0-alpha",
+    "compatibility_date": "2026-09-22"
+  },
+  "command": "VISONAUT_D1_COST_REPORT=<private JSONL file> node_modules/.bin/vitest run apps/web/src/sql-writes.test.ts apps/web/src/api/workflow-owned.test.ts -t 'native D1 no-op writes|accepts a zero-pixel profile change|retains a changed local original and review mask'",
+  "method": [
+    "The same native fixtures ran against the base SQL and the changed SQL. Setup, validation reads after each measurement, reference acquisition, and accepted-baseline setup are excluded. Failed batches are checked for rollback but omitted from cost totals because D1 returns no successful per-statement metadata.",
+    "The baseline run temporarily used soft assertions in the new test suite to collect all cost observations despite expected failures. False/NULL rollback and profile conflicts remained enforced. The complete task patch was restored byte-for-byte afterward.",
+    "For first() reads, the measurement wrapper executes the same SQL through all() to retain native metadata. This wrapper is enabled for Submit fixtures only when VISONAUT_D1_COST_REPORT is set.",
+    "Each Submit fixture has one capture. The unchanged fixture borrows an accepted baseline image and adds one new profile. The zero-pixel changed fixture uploads one original and is normalized to unchanged. The changed-with-mask fixture stores one original and one mask with one new profile.",
+    "Staging covers declareStaged, uploads, finalizeStaged, and terminalGitHub. Materialization covers materializeWorkflowRun. Admission, baseline seed/promotion, provider network latency, later retention, and cleanup are excluded. Random fixture identities and accumulated fixture state can affect reads; these counts are not guaranteed production savings.",
+    "The status fixture has two previously delivered rows, one eligible pending row, and one later-revision pending row. Acknowledgement-only counts isolate the UPDATE; operation totals also include current-check and status-intent work. Existing delivered timestamps remain unchanged.",
+    "The SQL-only step leaves broader issue #226 metadata, migration, index and manifest-storage work open."
+  ],
+  "operations": [
+    {
+      "operation": "assertion-1",
+      "before": {
+        "rows_read": 0,
+        "rows_written": 2
+      },
+      "after": {
+        "rows_read": 0,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "assertion-2",
+      "before": {
+        "rows_read": 0,
+        "rows_written": 2
+      },
+      "after": {
+        "rows_read": 0,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "assertion--1",
+      "before": {
+        "rows_read": 0,
+        "rows_written": 2
+      },
+      "after": {
+        "rows_read": 0,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "two-new-profiles",
+      "before": {
+        "rows_read": 2,
+        "rows_written": 8
+      },
+      "after": {
+        "rows_read": 2,
+        "rows_written": 4
+      }
+    },
+    {
+      "operation": "two-identical-profiles",
+      "before": {
+        "rows_read": 4,
+        "rows_written": 6
+      },
+      "after": {
+        "rows_read": 4,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "two-profiles-one-null-mapping",
+      "before": {
+        "rows_read": 4,
+        "rows_written": 6
+      },
+      "after": {
+        "rows_read": 4,
+        "rows_written": 1
+      }
+    },
+    {
+      "operation": "empty-checks-cursors",
+      "before": {
+        "rows_read": 20,
+        "rows_written": 2
+      },
+      "after": {
+        "rows_read": 20,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "empty-promotions-cursors",
+      "before": {
+        "rows_read": 6,
+        "rows_written": 2
+      },
+      "after": {
+        "rows_read": 6,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "empty-review links-cursors",
+      "before": {
+        "rows_read": 5,
+        "rows_written": 1
+      },
+      "after": {
+        "rows_read": 5,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "empty-comparison reference retention-cursors",
+      "before": {
+        "rows_read": 3,
+        "rows_written": 1
+      },
+      "after": {
+        "rows_read": 3,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "empty-snapshot byte retention-cursors",
+      "before": {
+        "rows_read": 3,
+        "rows_written": 1
+      },
+      "after": {
+        "rows_read": 3,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "empty-source baseline retention-cursors",
+      "before": {
+        "rows_read": 3,
+        "rows_written": 1
+      },
+      "after": {
+        "rows_read": 3,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "cursor-insert-advance-reset",
+      "before": {
+        "rows_read": 2,
+        "rows_written": 4
+      },
+      "after": {
+        "rows_read": 2,
+        "rows_written": 4
+      }
+    },
+    {
+      "operation": "cursor-identical-null",
+      "before": {
+        "rows_read": 1,
+        "rows_written": 1
+      },
+      "after": {
+        "rows_read": 1,
+        "rows_written": 0
+      }
+    },
+    {
+      "operation": "status-first-acknowledgement",
+      "before": {
+        "rows_read": 13,
+        "rows_written": 16
+      },
+      "after": {
+        "rows_read": 13,
+        "rows_written": 8
+      },
+      "acknowledgement_only": {
+        "before": {
+          "rows_read": 4,
+          "rows_written": 3
+        },
+        "after": {
+          "rows_read": 4,
+          "rows_written": 1
+        }
+      }
+    },
+    {
+      "operation": "status-repeated-acknowledgement",
+      "before": {
+        "rows_read": 17,
+        "rows_written": 10
+      },
+      "after": {
+        "rows_read": 17,
+        "rows_written": 1
+      },
+      "acknowledgement_only": {
+        "before": {
+          "rows_read": 4,
+          "rows_written": 3
+        },
+        "after": {
+          "rows_read": 4,
+          "rows_written": 0
+        }
+      }
+    },
+    {
+      "operation": "local-stage-unchanged",
+      "before": {
+        "rows_read": 24,
+        "rows_written": 10
+      },
+      "after": {
+        "rows_read": 24,
+        "rows_written": 4
+      }
+    },
+    {
+      "operation": "local-materialize-zero-pixel-unchanged",
+      "before": {
+        "rows_read": 206,
+        "rows_written": 136
+      },
+      "after": {
+        "rows_read": 198,
+        "rows_written": 72
+      }
+    },
+    {
+      "operation": "local-stage-changed",
+      "before": {
+        "rows_read": 40,
+        "rows_written": 19
+      },
+      "after": {
+        "rows_read": 37,
+        "rows_written": 11
+      }
+    },
+    {
+      "operation": "local-materialize-zero-pixel-changed",
+      "before": {
+        "rows_read": 243,
+        "rows_written": 146
+      },
+      "after": {
+        "rows_read": 233,
+        "rows_written": 73
+      }
+    },
+    {
+      "operation": "local-stage-changed",
+      "before": {
+        "rows_read": 50,
+        "rows_written": 26
+      },
+      "after": {
+        "rows_read": 50,
+        "rows_written": 18
+      }
+    },
+    {
+      "operation": "local-materialize-changed-with-mask",
+      "before": {
+        "rows_read": 258,
+        "rows_written": 151
+      },
+      "after": {
+        "rows_read": 252,
+        "rows_written": 78
+      }
+    }
+  ]
+}

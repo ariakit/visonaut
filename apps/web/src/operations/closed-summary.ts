@@ -155,7 +155,7 @@ async function convertLegacySummary(
     }
     await context.database
       .prepare(
-        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
       )
       .bind(
         cursorId,
@@ -430,7 +430,7 @@ export async function summarizeClosedRuns(context: OperationsContext): Promise<O
     }
     await context.database
       .prepare(
-        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
       )
       .bind(cursorId, run.id)
       .run();

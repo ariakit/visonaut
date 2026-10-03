@@ -91,7 +91,7 @@ async function savePromotionCursor(
       });
   await context.database
     .prepare(
-      "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+      "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
     )
     .bind(page.cursorId, value)
     .run();
