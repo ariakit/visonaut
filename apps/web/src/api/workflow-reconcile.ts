@@ -1,8 +1,6 @@
 import {
-  uploadImages,
   captureJobNames,
   digestJson,
-  parseManifest,
   validateManifestProfiles,
   workflowSourceDigest,
   type Manifest,
@@ -23,6 +21,11 @@ import {
   verifyCarriedExecution,
   workflowAttempt,
 } from "./jobs.js";
+import {
+  exactEvidenceImages,
+  readManifestEvidence,
+  stagedManifestEvidence,
+} from "./workflow-evidence.ts";
 import { discoveryEvidence } from "./receipts.js";
 
 interface StagedRun {
@@ -65,6 +68,8 @@ export interface ReconciledBundle {
   jobId: string;
   manifestDigest: string;
   manifest: Manifest;
+  evidenceVersion: number;
+  manifestObjectKey: string;
   evidence: VerifiedDiscoveryEvidence;
 }
 
@@ -135,13 +140,8 @@ async function stagedBundle(
   ) {
     throw new IncompleteError("The staged bundle lost its signed job or source identity.");
   }
-  const stored = await context.quarantine.get(bundle.manifest_object_key);
-  if (!stored || stored.size > context.configuration.limits.maximumManifestBytes) {
-    throw new IncompleteError("The staged manifest is unavailable.");
-  }
-  const manifest = parseManifest(
-    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await stored.arrayBuffer())),
-  );
+  const stored = await stagedManifestEvidence(context, bundle.run_id, bundle.job_id);
+  const manifest = await readManifestEvidence(context, stored);
   const executorDigest = manifest.discovery?.executorDigest;
   if (
     !isTrustedWorkflowExecutor(context.configuration, executorDigest) ||
@@ -161,17 +161,7 @@ async function stagedBundle(
     throw new IncompleteError("The staged manifest no longer matches trusted job evidence.");
   }
   await validateManifestProfiles(manifest);
-  const images = await context.database
-    .prepare("SELECT digest, complete FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
-    .bind(bundle.run_id, bundle.job_id)
-    .all<{ digest: string; complete: number }>();
-  const expected = new Set(uploadImages(manifest).keys());
-  if (
-    images.results.length !== expected.size ||
-    images.results.some((image) => image.complete !== 1 || !expected.has(image.digest))
-  ) {
-    throw new IncompleteError("Every staged image must be validated before reconciliation.");
-  }
+  await exactEvidenceImages(context, stored, manifest, true);
   const evidence = await discoveryEvidence(
     github,
     manifest,
@@ -188,6 +178,8 @@ async function stagedBundle(
     jobId: bundle.job_id,
     manifestDigest: bundle.manifest_digest,
     manifest,
+    evidenceVersion: stored.evidence_version,
+    manifestObjectKey: stored.manifest_object_key,
     evidence,
   };
 }

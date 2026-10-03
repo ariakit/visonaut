@@ -1,0 +1,36 @@
+{
+  "recorded_date": "2026-10-03",
+  "measurement_source_revision": "bababaa942c44501123829e18d88fb4bb8ec6747",
+  "measurement_scope": "Recorded SQL/index baseline and upload evidence snapshot before result-storage PR 240 integration; not combined-result cost measurements.",
+  "base_sha": "2d97f1a9620cec6555966dee63d677dbb24e2e18",
+  "base_sources": {
+    "apps/web/src/api/workflow-owned.ts": "229a091da94fadac546cb4539311969f8f7946249b55a315d20d7900c5594962",
+    "apps/web/src/api/workflow-reconcile.ts": "833f563642fc039d9c5deb02f92938650c272229249ab8c2b4acc5e2648cdd70",
+    "apps/web/src/api/workflow-materialize.ts": "be24981478ae148a8883835215b3ca34777aa7cd6a92b9aafca3743ba856e96e",
+    "apps/web/src/api/workflow-retention.ts": "90aea863dd2642723f5f71fefc8d34d9331f3cf9bcfe974f3b6bc26dd7d304d3",
+    "apps/web/src/operations/history.ts": "b799878503abbf8296d355c4a7fa32b09119446d0d0ec09fbe9c376bb5432402"
+  },
+  "after_sources": {
+    "apps/web/migrations/0033_d1_upload_evidence.sql": "316a76599649ede5ef311deb2d0a9976f0bc86e0b99934ff4beff1ef4352f35a",
+    "apps/web/src/api/workflow-evidence.ts": "42f9d1092130d2ad04e3bb7db8c15835b867519e425f1fe9949135862eafe470",
+    "apps/web/src/api/workflow-owned.ts": "12df0a230aceb1648af3c960727c33b75cb74101dfb7fc00d0f7d5a87be53fc9",
+    "apps/web/src/api/workflow-reconcile.ts": "e98c505d1076aef7c0a6879951f8844f890c6cde011270be1f62c8b5cd59d230",
+    "apps/web/src/api/workflow-materialize.ts": "6578e98fa7f582c1b6f2260aedefb816c9cbd276f8c00f957c4ab5555c360b5f",
+    "apps/web/src/api/workflow-retention.ts": "fb47c8c5cdc83b94bc2b50559a9969ebf07e3bc9b391b2c3b932858e60a1fb4b",
+    "apps/web/src/operations/history.ts": "c723422ea9bfb8edaeffedd4629f2cc0c719e6921eb48705a31919e474c06988",
+    "apps/web/src/api/test-upload-costs.ts": "c3cc57db2c4aceff6ca0b72a7a81c08a9659df2664631dbb0c31844f3957bda3",
+    "apps/web/src/api/workflow-owned.test.ts": "cdf5d0ecd270baf2821c217205851b4b24897aa457635e9af40fd492036ec2d9",
+    "apps/web/src/operations/history.test.ts": "a46043808a41fa43c71ff9405e5706c8cf3aaa503bc0fe2df08430ba27aa06ca"
+  },
+  "participant_audit": {
+    "issue": "https://github.com/ariakit/visonaut/issues/226",
+    "author": "diegohaz",
+    "comments": [],
+    "qualifying_contributors_excluding_owner_and_bots": []
+  },
+  "regression_proof": {
+    "unicode": "Old main source fails with evidence_version 1 instead of 2. Current source passes.",
+    "sealed_retention": "Old main retention claims a sealed active run with comparison_id NULL, changing retention_state to deleting. Current source preserves live and its pages.",
+    "patch_restoration": "Exact saved patch comparison passed after both temporary red checks."
+  }
+}

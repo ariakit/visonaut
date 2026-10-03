@@ -498,7 +498,7 @@ async function sourcePage(
   if (section === "documents") {
     const documents = await context.database
       .prepare(
-        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?) SELECT plan_object_key AS object_key,run_id FROM ingest_run_provenance WHERE run_id IN(SELECT id FROM owners) UNION SELECT object_key,run_id FROM ingest_manifests WHERE run_id IN(SELECT id FROM owners) ORDER BY object_key,run_id LIMIT 1001`,
+        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?) SELECT plan_object_key AS object_key,run_id FROM ingest_run_provenance WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners) UNION SELECT object_key,run_id FROM ingest_manifests WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners) ORDER BY object_key,run_id LIMIT 1001`,
       )
       .bind(runId, runId)
       .all<{ object_key: string; run_id: string }>();

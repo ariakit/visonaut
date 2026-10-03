@@ -3,7 +3,11 @@ import { nativeTestStorage } from "../api/test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { closedRunRetentionMs, retentionPinStatement } from "@visonaut/service";
+import {
+  closedRunRetentionMs,
+  localResultReferenceJson,
+  retentionPinStatement,
+} from "@visonaut/service";
 import {
   captured,
   context,
@@ -519,6 +523,60 @@ describe("verified closed history with native D1 and R2", () => {
     const root = await readHistoryManifest(operations, "target");
     expect(root?.manifest.counts.documents).toBe(1);
   }, 30_000);
+
+  it("archives compact D1 provenance and manifests without synthetic R2 documents", async () => {
+    await closed();
+    await ingestRecords(operations, "run");
+    const localResult = { outcome: "changed", changedPixels: 1, ratio: 1, maskExpected: false };
+    await operations.database
+      .prepare(
+        "UPDATE visonaut_captures SET metadata_json=json_set(metadata_json,'$.localMode','local-v1','$.localResult',json(?)) WHERE id='capture-run'",
+      )
+      .bind(JSON.stringify(localResult))
+      .run();
+    await operations.database
+      .prepare(
+        "UPDATE visonaut_comparison_rows SET result_json=? WHERE comparison_id='comparison-run'",
+      )
+      .bind(localResultReferenceJson)
+      .run();
+    await operations.database
+      .prepare(
+        "UPDATE ingest_run_provenance SET storage_version=2,plan_object_key='d1:provenance/run/digest',verified_json=? WHERE run_id='run'",
+      )
+      .bind(
+        JSON.stringify({
+          jobSetDigest: "a".repeat(64),
+          workflowSourceDigest: "a".repeat(64),
+          callerWorkflowPath: ".github/workflows/ci.yml",
+          bundles: [{ key: "combined", manifestDigest: "a".repeat(64) }],
+        }),
+      )
+      .run();
+    await operations.database
+      .prepare(
+        "UPDATE ingest_manifests SET storage_version=2,object_key='d1:manifest/run/combined/digest' WHERE run_id='run'",
+      )
+      .run();
+    const read = vi.spyOn(operations.quarantine, "get");
+    await finish();
+    const history = await readRunHistory(operations, "run");
+    expect((await archivedRows("run", "provenance"))[0]).toMatchObject({
+      storage_version: 2,
+      plan_object_key: "d1:provenance/run/digest",
+    });
+    expect((await archivedRows("run", "manifests"))[0]).toMatchObject({
+      storage_version: 2,
+      object_key: "d1:manifest/run/combined/digest",
+      finalized: 1,
+    });
+    expect(history?.manifest.counts.documents ?? 0).toBe(0);
+    expect(read.mock.calls.some(([key]) => key.startsWith("d1:"))).toBe(false);
+    expect(JSON.parse(String(history?.sections.comparisonRows?.[0]?.result_json))).toEqual(
+      localResult,
+    );
+    expect(await detailCount()).toEqual({ count: 0 });
+  });
 
   it("archives in bounded steps and keeps exact capture/result history plus available original bytes", async () => {
     await closed();

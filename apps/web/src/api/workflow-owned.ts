@@ -44,6 +44,17 @@ import {
   recordRequiredVisualPlan,
   requireVisualPlan,
 } from "./pre-run.js";
+import {
+  encodeManifestEvidence,
+  evidenceFence,
+  evidenceImageAssertions,
+  exactEvidenceImages,
+  imageDescriptorPages,
+  readManifestEvidence,
+  stagedManifestEvidence,
+  writeEvidencePages,
+  type StagedManifestEvidence,
+} from "./workflow-evidence.ts";
 import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
 
 interface StagedRun {
@@ -73,14 +84,6 @@ interface StagedJob {
   shard_key: string;
   job_name: string;
   verified_json: string;
-}
-
-interface StagedManifest {
-  manifest_digest: string;
-  manifest_object_key: string;
-  declared_bytes: number;
-  capture_count: number;
-  complete: number;
 }
 
 interface StagedImage {
@@ -469,16 +472,6 @@ export async function reserveVerifiedStagedRun(
   return run;
 }
 
-async function privateManifest(context: ApiContext, key: string): Promise<Manifest> {
-  const stored = await context.quarantine.get(key);
-  if (!stored || stored.size > context.configuration.limits.maximumManifestBytes) {
-    throw new IncompleteError("The staged manifest is unavailable.");
-  }
-  return parseManifest(
-    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await stored.arrayBuffer())),
-  );
-}
-
 export async function declareStaged(
   request: Request,
   context: ApiContext,
@@ -574,18 +567,25 @@ export async function declareStaged(
   ) {
     throw new SecurityError("upload_limit", 413, "The shard exceeds its capture or byte limit.");
   }
-  const manifestDigest = await digestJson(manifest);
-  const manifestObjectKey = `manifests/${run.id}/${manifestDigest}.json`;
   const existingManifest = await context.database
     .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)
-    .first<StagedManifest>();
+    .first<StagedManifestEvidence>();
+  const encoded = await encodeManifestEvidence(
+    manifest,
+    context.configuration.limits.maximumManifestBytes,
+    existingManifest?.evidence_page_bytes ?? undefined,
+  );
+  const manifestDigest = encoded.digest;
+  const manifestObjectKey =
+    existingManifest?.manifest_object_key ??
+    `d1:evidence/${run.id}/${job.job_id}/${manifestDigest}`;
   if (!existingManifest) {
     try {
       await atomic(context.database, [
         statement(
           context.database,
-          "INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at) SELECT ?, ?, ?, ?, ?, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT(run_id, job_id) DO NOTHING",
+          "INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, evidence_page_count, evidence_page_bytes, capture_manifest_digest) SELECT ?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT(run_id, job_id) DO NOTHING",
           [
             run.id,
             job.job_id,
@@ -594,6 +594,10 @@ export async function declareStaged(
             declaredBytes,
             manifest.captures.length,
             Date.now(),
+            encoded.bytes.byteLength,
+            encoded.pages.length,
+            encoded.pageBytes,
+            encoded.captureDigest,
             run.id,
           ],
         ),
@@ -625,7 +629,7 @@ export async function declareStaged(
       const raced = await context.database
         .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
         .bind(run.id, job.job_id)
-        .first<StagedManifest>();
+        .first<StagedManifestEvidence>();
       if (!raced) {
         throw new SecurityError(
           "upload_limit",
@@ -638,69 +642,80 @@ export async function declareStaged(
   const storedManifest = await context.database
     .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)
-    .first<StagedManifest>();
+    .first<StagedManifestEvidence>();
   if (
     !storedManifest ||
     storedManifest.manifest_digest !== manifestDigest ||
     storedManifest.manifest_object_key !== manifestObjectKey ||
     storedManifest.declared_bytes !== declaredBytes ||
-    storedManifest.capture_count !== manifest.captures.length
+    storedManifest.capture_count !== manifest.captures.length ||
+    (storedManifest.evidence_version === 2 &&
+      (storedManifest.evidence_bytes !== encoded.bytes.byteLength ||
+        storedManifest.evidence_page_count !== encoded.pages.length ||
+        storedManifest.evidence_page_bytes !== encoded.pageBytes ||
+        storedManifest.capture_manifest_digest !== encoded.captureDigest))
   ) {
     throw new SecurityError("manifest_conflict", 409, "The staged manifest is immutable.");
   }
-  await context.quarantine.put(manifestObjectKey, JSON.stringify(manifest), {
-    httpMetadata: { contentType: "application/json" },
-  });
-  const entries = [...images.values()];
-  for (let offset = 0; offset < entries.length; offset += 50) {
-    const batch = entries.slice(offset, offset + 50);
+  if (storedManifest.evidence_version === 1) {
+    // An interrupted legacy declaration keeps its original storage version.
+    await context.quarantine.put(manifestObjectKey, JSON.stringify(manifest), {
+      httpMetadata: { contentType: "application/json" },
+    });
+  } else if (!storedManifest.declaration_complete) {
+    await writeEvidencePages({ database: context.database, stored: storedManifest, encoded });
+  }
+  await readManifestEvidence(context, storedManifest, true);
+  // One bounded JSON parameter carries descriptors; SQL and parameter counts
+  // stay constant even for the configured complete capture inventory.
+  const descriptorPages = storedManifest.declaration_complete
+    ? []
+    : imageDescriptorPages({ images: images.values(), runId: run.id, jobId: job.job_id });
+  for (const descriptors of descriptorPages) {
     await atomic(context.database, [
+      evidenceFence(context.database, storedManifest),
+      context.database
+        .prepare(`INSERT INTO ingest_staged_images
+        (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key)
+        SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.digest'),
+          json_extract(image.value, '$.mediaType'), json_extract(image.value, '$.bytes'),
+          json_extract(image.value, '$.width'), json_extract(image.value, '$.height'),
+          json_extract(image.value, '$.imageId'), json_extract(image.value, '$.objectKey'),
+          json_extract(image.value, '$.quarantineKey')
+        FROM ingest_staged_manifests manifest, json_each(?) image
+        WHERE manifest.run_id = ? AND manifest.job_id = ? AND manifest.declaration_complete = 0
+        ON CONFLICT(run_id, job_id, digest) DO NOTHING`)
+        .bind(descriptors, run.id, job.job_id),
       assertion(
         context.database,
-        "EXISTS (SELECT 1 FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live')",
-        [run.id],
+        `NOT EXISTS (SELECT 1 FROM json_each(?) expected
+        LEFT JOIN ingest_staged_images image ON image.run_id = ? AND image.job_id = ?
+          AND image.digest = json_extract(expected.value, '$.digest')
+        WHERE image.digest IS NULL OR image.media_type != json_extract(expected.value, '$.mediaType')
+          OR image.bytes != json_extract(expected.value, '$.bytes')
+          OR image.width != json_extract(expected.value, '$.width')
+          OR image.height != json_extract(expected.value, '$.height'))`,
+        [descriptors, run.id, job.job_id],
       ),
-      ...batch.map((image) => {
-        const imageId = crypto.randomUUID();
-        const quarantineKey = `quarantine/staged/${run.id}/${job.job_id}/${image.digest}`;
-        return statement(
-          context.database,
-          "INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(run_id, job_id, digest) DO NOTHING",
-          [
-            run.id,
-            job.job_id,
-            image.digest,
-            image.mediaType,
-            image.bytes,
-            image.width,
-            image.height,
-            imageId,
-            `runs/${run.id}/images/${imageId}`,
-            quarantineKey,
-          ],
-        );
-      }),
     ]);
   }
-  const stagedImages = await context.database
-    .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
-    .bind(run.id, job.job_id)
-    .all<StagedImage>();
-  if (stagedImages.results.length !== images.size) {
-    throw new SecurityError("image_conflict", 409, "The staged image set changed.");
-  }
-  for (const staged of stagedImages.results) {
-    const image = images.get(staged.digest);
-    if (
-      !image ||
-      staged.media_type !== image.mediaType ||
-      staged.bytes !== image.bytes ||
-      staged.width !== image.width ||
-      staged.height !== image.height
-    ) {
-      throw new SecurityError("image_conflict", 409, "The staged image metadata changed.");
-    }
-  }
+  const stagedImages = await exactEvidenceImages(context, storedManifest, manifest);
+  await atomic(context.database, [
+    evidenceFence(context.database, storedManifest),
+    ...evidenceImageAssertions(context.database, storedManifest, manifest),
+    context.database
+      .prepare(`UPDATE ingest_staged_manifests
+      SET declaration_complete = 1, local_receipt_validated = ?
+      WHERE run_id = ? AND job_id = ? AND declaration_complete = 0`)
+      .bind(manifest.localComparison ? 1 : 0, run.id, job.job_id),
+    assertion(
+      context.database,
+      `EXISTS (SELECT 1 FROM ingest_staged_manifests
+      WHERE run_id = ? AND job_id = ? AND declaration_complete = 1
+        AND local_receipt_validated = ?)`,
+      [run.id, job.job_id, manifest.localComparison ? 1 : 0],
+    ),
+  ]);
   const runBytes = await context.database
     .prepare(
       "SELECT COALESCE(SUM(declared_bytes), 0) AS bytes FROM ingest_staged_manifests WHERE run_id = ?",
@@ -723,7 +738,7 @@ export async function declareStaged(
       manifestDigest,
     }),
     uploads: await Promise.all(
-      stagedImages.results
+      stagedImages
         .filter((image) => !image.complete)
         .map(async (image) => ({
           imageDigest: image.digest,
@@ -739,6 +754,39 @@ export async function declareStaged(
         })),
     ),
   });
+}
+
+async function requireAdmittedManifest(
+  stored: StagedManifestEvidence,
+  capability: IngestCapability,
+  run: StagedRun,
+) {
+  if (stored.evidence_version === 1) return;
+  if (stored.declaration_complete !== 1) {
+    throw new IncompleteError("The staged declaration is incomplete.");
+  }
+  const local = capability.comparisonMode === LOCAL_COMPARISON_MODE;
+  if (stored.local_receipt_validated !== (local ? 1 : 0)) {
+    throw new SecurityError(
+      "comparison_mode",
+      403,
+      "The upload mode differs from its admitted receipt.",
+    );
+  }
+  if (!local) return;
+  const reference = object(JSON.parse(run.verified_json)).localReference;
+  if (
+    !reference ||
+    !capability.reference ||
+    stored.capture_manifest_digest !== capability.reference.manifestDigest ||
+    (await digestJson(reference)) !== (await digestJson(capability.reference))
+  ) {
+    throw new SecurityError(
+      "reference_conflict",
+      409,
+      "The upload reference differs from its admitted receipt.",
+    );
+  }
 }
 
 interface ReuseSource {
@@ -767,12 +815,13 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
     throw new SecurityError("wrong_shard", 403, "The reuse page belongs to another shard.");
   }
   const stored = await context.database
-    .prepare("SELECT manifest_digest FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
+    .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)
-    .first<StagedManifest>();
+    .first<StagedManifestEvidence>();
   if (!stored || stored.manifest_digest !== body.manifestDigest) {
     throw new SecurityError("manifest_conflict", 409, "The staged manifest changed.");
   }
+  await requireAdmittedManifest(stored, capability, run);
   const challenge = await verifyReuseChallenge(
     context.configuration.capability,
     string(body.challenge, 4096),
@@ -813,7 +862,19 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
   }
   const pending = targets.results.filter((image) => !image.complete);
   const reused = targets.results.filter((image) => image.complete).map((image) => image.digest);
-  if (!pending.length) return Response.json({ schemaVersion: SCHEMA_VERSION, reused });
+  if (!pending.length) {
+    await atomic(context.database, [
+      evidenceFence(context.database, stored),
+      assertion(
+        context.database,
+        `(SELECT COUNT(*) FROM ingest_staged_images
+        WHERE run_id = ? AND job_id = ? AND complete = 1
+          AND digest IN (SELECT value FROM json_each(?))) = ?`,
+        [run.id, job.job_id, JSON.stringify(reused), reused.length],
+      ),
+    ]);
+    return Response.json({ schemaVersion: SCHEMA_VERSION, reused });
+  }
   const sources = await context.database
     .prepare(
       `WITH candidates AS (
@@ -920,16 +981,21 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
     }
   }
   if (reused.length) {
-    await context.database
-      .prepare(
-        `UPDATE ingest_staged_images SET complete = 1
-          WHERE run_id = ? AND job_id = ?
-            AND digest IN (SELECT value FROM json_each(?))
-            AND EXISTS (SELECT 1 FROM ingest_staged_runs
-              WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live')`,
-      )
-      .bind(run.id, job.job_id, JSON.stringify(reused), run.id)
-      .run();
+    await atomic(context.database, [
+      evidenceFence(context.database, stored),
+      context.database
+        .prepare(`UPDATE ingest_staged_images SET complete = 1
+        WHERE run_id = ? AND job_id = ? AND complete = 0
+          AND digest IN (SELECT value FROM json_each(?))`)
+        .bind(run.id, job.job_id, JSON.stringify(reused)),
+      assertion(
+        context.database,
+        `(SELECT COUNT(*) FROM ingest_staged_images
+        WHERE run_id = ? AND job_id = ? AND complete = 1
+          AND digest IN (SELECT value FROM json_each(?))) = ?`,
+        [run.id, job.job_id, JSON.stringify(reused), reused.length],
+      ),
+    ]);
   }
   return Response.json({ schemaVersion: SCHEMA_VERSION, reused });
 }
@@ -962,6 +1028,8 @@ export async function uploadStagedImage(
   ) {
     throw new SecurityError("unknown_ticket", 403, "The image ticket is not declared.");
   }
+  const stored = await stagedManifestEvidence(context, run.id, job.job_id);
+  await requireAdmittedManifest(stored, capability, run);
   if (request.headers.get("content-type")?.split(";", 1)[0]?.trim() !== image.media_type) {
     throw new SecurityError("invalid_content_type", 415, "The image content type differs.");
   }
@@ -972,7 +1040,27 @@ export async function uploadStagedImage(
   if (bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest) {
     throw new SecurityError("image_mismatch", 422, "The image digest or size differs.");
   }
-  if (image.complete) return new Response(null, { status: 204 });
+  if (image.complete) {
+    await atomic(context.database, [
+      evidenceFence(context.database, stored),
+      assertion(
+        context.database,
+        `EXISTS (SELECT 1 FROM ingest_staged_images
+        WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 1
+          AND media_type = ? AND bytes = ? AND width = ? AND height = ?)`,
+        [
+          run.id,
+          job.job_id,
+          image.digest,
+          image.media_type,
+          image.bytes,
+          image.width,
+          image.height,
+        ],
+      ),
+    ]);
+    return new Response(null, { status: 204 });
+  }
   if (capability.comparisonMode !== LOCAL_COMPARISON_MODE) {
     const validation = await context.comparator.fetch("https://compare.internal/validate", {
       method: "POST",
@@ -998,29 +1086,35 @@ export async function uploadStagedImage(
       throw new SecurityError("image_mismatch", 422, "The decoded image metadata differs.");
     }
   } else {
-    const stored = await context.database
-      .prepare(
-        "SELECT manifest_object_key FROM ingest_staged_manifests WHERE run_id=? AND job_id=?",
-      )
-      .bind(run.id, job.job_id)
-      .first<{ manifest_object_key: string }>();
-    if (!stored || !(await privateManifest(context, stored.manifest_object_key)).localComparison)
+    if (
+      stored.evidence_version === 1 &&
+      !(await readManifestEvidence(context, stored)).localComparison
+    ) {
       throw new SecurityError(
         "local_comparison_required",
         403,
         "Local image upload requires an admitted signed Submit receipt.",
       );
+    }
   }
   await context.images.put(image.object_key, bytes, {
     httpMetadata: { contentType: image.media_type },
     sha256: image.digest,
   });
-  await context.database
-    .prepare(
-      "UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ?",
-    )
-    .bind(run.id, job.job_id, image.digest)
-    .run();
+  await atomic(context.database, [
+    evidenceFence(context.database, stored),
+    context.database
+      .prepare(`UPDATE ingest_staged_images SET complete = 1
+      WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0`)
+      .bind(run.id, job.job_id, image.digest),
+    assertion(
+      context.database,
+      `EXISTS (SELECT 1 FROM ingest_staged_images
+      WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 1
+        AND media_type = ? AND bytes = ? AND width = ? AND height = ?)`,
+      [run.id, job.job_id, image.digest, image.media_type, image.bytes, image.width, image.height],
+    ),
+  ]);
   return new Response(null, { status: 204 });
 }
 
@@ -1035,32 +1129,32 @@ export async function finalizeStaged(request: Request, context: ApiContext, runI
   const stored = await context.database
     .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)
-    .first<StagedManifest>();
+    .first<StagedManifestEvidence>();
   if (!stored || stored.manifest_digest !== body.manifestDigest) {
     throw new SecurityError("manifest_conflict", 409, "The staged manifest differs.");
   }
-  const manifest = await privateManifest(context, stored.manifest_object_key);
-  if ((await digestJson(manifest)) !== stored.manifest_digest) {
-    throw new SecurityError("manifest_conflict", 409, "The stored manifest digest differs.");
-  }
+  await requireAdmittedManifest(stored, capability, run);
+  const manifest = await readManifestEvidence(context, stored);
   await validateManifestProfiles(manifest);
-  const expectedImages = new Set(uploadImages(manifest).keys());
-  const images = await context.database
-    .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?")
-    .bind(run.id, job.job_id)
-    .all<StagedImage>();
-  if (
-    images.results.length !== expectedImages.size ||
-    images.results.some((image) => !image.complete || !expectedImages.has(image.digest))
-  ) {
-    throw new IncompleteError("Every declared image must pass validation before staging.");
+  if (manifest.localComparison) {
+    await validateLocalSubmission(context, run.id, manifest, capability.reference);
   }
-  await context.database
-    .prepare(
-      "UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND manifest_digest = ?",
-    )
-    .bind(run.id, job.job_id, stored.manifest_digest)
-    .run();
+  await exactEvidenceImages(context, stored, manifest, true);
+  await atomic(context.database, [
+    evidenceFence(context.database, stored),
+    ...evidenceImageAssertions(context.database, stored, manifest, true),
+    context.database
+      .prepare(`UPDATE ingest_staged_manifests SET complete = 1
+      WHERE run_id = ? AND job_id = ? AND complete = 0
+        AND (evidence_version = 1 OR declaration_complete = 1)`)
+      .bind(run.id, job.job_id),
+    assertion(
+      context.database,
+      `EXISTS (SELECT 1 FROM ingest_staged_manifests
+      WHERE run_id = ? AND job_id = ? AND complete = 1)`,
+      [run.id, job.job_id],
+    ),
+  ]);
   return Response.json(
     {
       schemaVersion: SCHEMA_VERSION,
