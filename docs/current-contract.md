@@ -60,6 +60,10 @@ W03 and W10 can collect evidence after W01. W04/W05 require W02. W06 needs W02 a
 
 The [W10 measurement record](evidence/issue-204-ci/README.md) retains dated D04/D11 observations and the prepared full-rerun trial. D11 removes only Browser's preceding full build after the source fixture passed with all app/package `dist` output absent. Keep every other build and setup step, required job name, dependency and fail-closed Gate. D04's paired trials remain on hold for separate consumer actions and verified matching inventory evidence. Partial-rerun support remains, and no measured CI improvement or acceptable cost threshold is claimed.
 
+## Server comparison admission
+
+The [W08 retirement guide](operations/retire-server-comparison.md) separates source preparation from live rollout. New `POST /v1/runs` reservations require `comparisonMode: "local-v1"`. An omitted mode receives an upgrade and complete-recapture instruction. Previously issued capabilities, legacy scheduling, queue consumers, retry, dead-letter handling, and recovery remain executable during drain. Supported-client coverage and an exact terminal legacy cohort are deployment gates, not claims established by this source change.
+
 ## Request failure references
 
 D13/W04 now passes the outer request UUID and start time to API failure handling. An unexpected API or outer HTTP failure returns HTTP 503 with `error.reference`, the existing private headers, and `Retry-After: 1`. The reference matches exactly one `operation-failed` log with fixed operation, code, correlation ID, and elapsed-time fields. No request body, token, URL, SQL, raw exception, or private label is added to that log.

@@ -1723,6 +1723,49 @@ it("reconciles a signed main submission after main advances", async () => {
 });
 
 describe("workflow-owned upload staging", () => {
+  it.each([undefined, null, "server"])(
+    "rejects new unsupported comparison admissions (%s) before staging or GitHub work",
+    async (comparisonMode) => {
+      const test = await fixture();
+      const github = vi.spyOn(test.context.configuration.github, "fetch");
+      const before = await database
+        .prepare("SELECT * FROM ingest_staged_runs WHERE id=?")
+        .bind(test.runId)
+        .first();
+      const response = await handleApi(
+        new Request("https://preview.example/v1/runs", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            schemaVersion: "1.0",
+            ...test.manifest.run,
+            shardKey: "combined",
+            comparisonMode,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(response?.status).toBe(comparisonMode === undefined ? 409 : 400);
+      expect(await response?.json()).toMatchObject({
+        error: {
+          code: comparisonMode === undefined ? "local_comparison_required" : "comparison_mode",
+          ...(comparisonMode === undefined
+            ? { message: expect.stringContaining("capture a new complete run") }
+            : {}),
+        },
+      });
+      expect(github).not.toHaveBeenCalled();
+      expect(
+        await database
+          .prepare("SELECT * FROM ingest_staged_runs WHERE id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual(before);
+      github.mockRestore();
+    },
+  );
+
   it("accepts only a pinned workflow in the configured repository", async () => {
     const test = await fixture();
     const configuration = test.context.configuration.workflowOwned;
@@ -2006,13 +2049,13 @@ describe("workflow-owned upload staging", () => {
       return Response.json({ keys: [jwk] });
     });
     try {
-      const signedToken = (checkRunId: string) =>
+      const signedToken = (checkRunId: string, attempt = 1) =>
         new SignJWT({
           repository: "ariakit/ariakit",
           repository_id: test.manifest.run.repositoryId,
           repository_owner_id: "5",
           run_id: workflowRunId,
-          run_attempt: "1",
+          run_attempt: String(attempt),
           sha: test.manifest.run.testedSha,
           check_run_id: checkRunId,
           event_name: "push",
@@ -2120,6 +2163,43 @@ describe("workflow-owned upload staging", () => {
         submit_job_id: submitJobId,
         submit_check_run_id: submitJobId,
         submitted_at: integer(receipt.submittedAt),
+      });
+      await test.registerPreRunCheck(2);
+      const nextRun = { ...run, run_attempt: 2 };
+      test.githubResponses.set(base, nextRun);
+      test.githubResponses.set(`${base}/attempts/2`, nextRun);
+      test.githubResponses.set(`${base}/attempts/2/jobs?per_page=100&page=1`, {
+        total_count: 1,
+        jobs: [{ ...job(submitJobId, workflowOwned.submitJobName), run_attempt: 2 }],
+      });
+      const localToken = await signedToken(submitJobId, 2);
+      const reserved = await handleApi(
+        new Request("https://preview.example/v1/runs", {
+          method: "POST",
+          headers: { authorization: `Bearer ${localToken}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            schemaVersion: "1.0",
+            ...test.manifest.run,
+            workflowAttempt: 2,
+            shardKey: "combined",
+            comparisonMode: LOCAL_COMPARISON_MODE,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(reserved?.status).toBe(201);
+      const reservation = object(await reserved?.json());
+      expect(reservation.comparisonMode).toBe(LOCAL_COMPARISON_MODE);
+      expect(
+        await verifyIngestCapability(
+          test.context.configuration.capability,
+          String(reservation.capability),
+        ),
+      ).toMatchObject({
+        comparisonMode: LOCAL_COMPARISON_MODE,
+        jobId: submitJobId,
+        workflowAttempt: 2,
       });
     } finally {
       vi.unstubAllGlobals();
