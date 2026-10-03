@@ -310,6 +310,8 @@ async function retireUnboundTerminalPullRequestAttempt(
   run: Record<string, unknown>,
 ) {
   if (run.event !== "pull_request" || run.status !== "completed") return false;
+  const sourceSha = sha(run.head_sha);
+  if (!sourceSha) return false;
   const runId = numericId(run.id);
   const attempt = run.run_attempt;
   if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
@@ -323,6 +325,43 @@ async function retireUnboundTerminalPullRequestAttempt(
     .bind(runId, attempt)
     .all<PreRunCheck>();
   const bound = previous.results.find((row) => row.check_id);
+  if (
+    !bound &&
+    previous.results.length === 0 &&
+    Array.isArray(run.pull_requests) &&
+    run.pull_requests.length === 0
+  ) {
+    // A terminal notification has no work to settle when neither signed
+    // ingest nor a legacy check owns the attempt or its PR source head.
+    const owner = await context.database
+      .prepare(`SELECT 1 AS found WHERE
+        EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+        OR EXISTS(SELECT 1 FROM pre_run_checks WHERE kind='pull_request' AND source_sha=? AND repository_id=?)
+        OR EXISTS(SELECT 1 FROM ingest_staged_runs
+          WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+        OR EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)
+        OR EXISTS(SELECT 1 FROM operations_review_links WHERE repository_id=? AND source_sha=?)
+        OR EXISTS(SELECT 1 FROM work_status_outbox WHERE run_id=? AND attempt=?)`)
+      .bind(
+        github.repositoryId,
+        runId,
+        attempt,
+        sourceSha,
+        github.repositoryId,
+        github.repositoryId,
+        runId,
+        attempt,
+        context.configuration.projectId,
+        runId,
+        attempt,
+        github.repositoryId,
+        sourceSha,
+        runId,
+        attempt,
+      )
+      .first();
+    return owner === null;
+  }
   const checkId = bound?.check_id;
   const number = bound?.pull_request_number;
   if (

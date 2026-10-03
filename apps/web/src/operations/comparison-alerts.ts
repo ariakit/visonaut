@@ -1,6 +1,7 @@
 import type { OperationsContext } from "./types.ts";
 import { reportComparisonPublication } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./common.ts";
+import { resolveSupersededStagedAlerts } from "./staged-alerts.ts";
 
 interface ComparisonPublication {
   published: string[];
@@ -15,6 +16,7 @@ export async function reportComparisonRecovery(
 ) {
   const database = context.database;
   const now = context.now();
+  await resolveSupersededStagedAlerts(context);
   const historicalRecovered = `EXISTS(SELECT 1 FROM visonaut_comparisons recovered
     WHERE recovered.run_id=comparison.run_id AND recovered.purpose='historical'
       AND recovered.ordinal>comparison.ordinal AND recovered.state='ready'

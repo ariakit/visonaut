@@ -1,5 +1,7 @@
 import { SecurityError } from "@visonaut/security";
 import type { Database } from "@visonaut/service";
+import { obsoleteCheckDeliverySql } from "../operations/check-state.ts";
+import { obsoleteStagedReconciliationSql } from "../operations/staged-alerts.ts";
 
 export async function operationsStatus({
   database,
@@ -27,7 +29,11 @@ export async function operationsStatus({
   }
   const rows = await database
     .prepare(`SELECT kind,code,subject_id AS subject,first_seen_at AS firstSeenAt,last_seen_at AS lastSeenAt
-      FROM operations_events WHERE resolved_at IS NULL ORDER BY last_seen_at DESC,id ASC LIMIT 51`)
+      FROM operations_events WHERE resolved_at IS NULL
+        AND NOT (kind='check-delivery' AND code='exhausted'
+          AND ${obsoleteCheckDeliverySql("subject_id")})
+        AND NOT (kind='staged-reconciliation' AND ${obsoleteStagedReconciliationSql("subject_id")})
+      ORDER BY last_seen_at DESC,id ASC LIMIT 51`)
     .all<{
       kind: string;
       code: string;

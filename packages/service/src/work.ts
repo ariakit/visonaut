@@ -617,6 +617,8 @@ export interface ReconcileStatusParams {
   now: number;
   limit: number;
   attentionAfterId?: string;
+  /** Trusted SQL for the checks/outbox aliases; reconcile leases before selection. */
+  eligibleCheckSql?: string;
 }
 
 export async function reconcileStatus(database: Database, params: ReconcileStatusParams) {
@@ -655,6 +657,7 @@ export async function reconcileStatus(database: Database, params: ReconcileStatu
     FROM work_checks AS checks JOIN work_status_outbox AS outbox
       ON outbox.check_id = checks.id AND outbox.revision = checks.desired_revision
     WHERE checks.lease_token IS NULL AND outbox.state = 'pending' AND outbox.available_at <= ?
+      AND (${params.eligibleCheckSql ?? "1"})
     ORDER BY outbox.available_at, checks.id LIMIT ?
   `)
     .bind(params.now, params.limit)
@@ -674,6 +677,7 @@ export async function reconcileStatus(database: Database, params: ReconcileStatu
     FROM work_checks AS checks JOIN work_status_outbox AS outbox
       ON outbox.check_id = checks.id AND outbox.revision = checks.desired_revision
     WHERE (checks.ambiguous = 1 OR outbox.state = 'dead') AND checks.id > ?
+      AND (${params.eligibleCheckSql ?? "1"})
     ORDER BY checks.id LIMIT ?
   `)
     .bind(params.attentionAfterId ?? "", params.limit)
