@@ -85,6 +85,39 @@ it("acknowledges committed work when the status wake fails", async () => {
   );
 });
 
+it.each(["dead", "superseded"] as const)(
+  "acknowledges repeated terminal legacy delivery (%s) without image processing",
+  async (state) => {
+    vi.spyOn(Service.prototype, "claimComparisonTask").mockResolvedValue(null);
+    vi.spyOn(Service.prototype, "getComparisonTaskState").mockResolvedValue({ state });
+    const finalize = vi.spyOn(Service.prototype, "finalizeComparison");
+    const first = {
+      ...comparisonMessage(),
+      id: "first",
+      timestamp: new Date(),
+      attempts: 1,
+    };
+    const duplicate = { ...first, ...comparisonMessage(), id: "duplicate", attempts: 2 };
+
+    await worker.queue(
+      {
+        queue: "comparisons",
+        messages: [first, duplicate],
+        ackAll() {},
+        retryAll() {},
+      },
+      env,
+    );
+
+    expect(first.ack).toHaveBeenCalledOnce();
+    expect(duplicate.ack).toHaveBeenCalledOnce();
+    expect(first.retry).not.toHaveBeenCalled();
+    expect(duplicate.retry).not.toHaveBeenCalled();
+    expect(processComparisonTask).not.toHaveBeenCalled();
+    expect(finalize).not.toHaveBeenCalled();
+  },
+);
+
 it("keeps codec ownership with the next task when an earlier commit finishes", async () => {
   vi.spyOn(Service.prototype, "claimComparisonTask").mockResolvedValue({
     comparisonId: "comparison",

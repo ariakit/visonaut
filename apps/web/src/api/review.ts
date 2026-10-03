@@ -18,7 +18,6 @@ import {
 import { readClosedSummary } from "../operations/closed-summary.ts";
 import type { HistoryRow } from "../operations/history-format.ts";
 import { type PrivateContext } from "./context.js";
-import { comparisonReference, startComparisonPublication } from "./ingest.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
 import { operationsStatus } from "./operations.js";
 
@@ -97,6 +96,8 @@ const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
 const historicalComparisonError =
   "Historical comparison failed. Required comparison evidence or its reference is unavailable. Capture a new complete run for a new result.";
+const serverRecompareDisabledReason =
+  "Server recomparison is retired. Capture a new complete run with trusted local Submit.";
 
 export async function reviewPollState(
   context: PrivateContext,
@@ -273,14 +274,7 @@ export async function reviewModel(
   const [metadata, project, status, comparison] = await Promise.all([
     context.database.batch([
       context.database
-        .prepare(
-          "SELECT byte_state,EXISTS(SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=work_retained_runs.id) AS promoted FROM work_retained_runs WHERE id = ?",
-        )
-        .bind(run.id),
-      context.database
-        .prepare(
-          "SELECT id FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' AND state = 'comparing' LIMIT 1",
-        )
+        .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
         .bind(run.id),
       context.database
         .prepare(
@@ -309,23 +303,13 @@ export async function reviewModel(
         ? context.service.comparison(comparisonId)
         : Promise.resolve(null),
   ]);
-  const retained = batchRows<{ byte_state: string; promoted: number }>(metadata[0])[0];
-  const pendingHistorical = batchRows<{ id: string }>(metadata[1])[0];
+  const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
   const historicalComparisons = batchRows<{
     id: string;
     ordinal: number;
     state: ComparisonState;
     createdAt: number;
-  }>(metadata[2]);
-  const recompareAllowed = Boolean(
-    run.active &&
-    run.sealed_at &&
-    retained?.byte_state === "live" &&
-    !pendingHistorical &&
-    !run.detail_archived &&
-    !retained.promoted &&
-    run.state !== "accepted",
-  );
+  }>(metadata[1]);
   const localRun = await context.database
     .prepare(
       "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
@@ -545,7 +529,7 @@ export async function reviewModel(
       kind: run.kind,
       ...(pullRequestNumber
         ? {
-            title: `#${pullRequestNumber} · ${batchRows<{ title: unknown }>(metadata[3])[0]?.title || "Pull request visual review"}`,
+            title: `#${pullRequestNumber} · ${batchRows<{ title: unknown }>(metadata[2])[0]?.title || "Pull request visual review"}`,
           }
         : {}),
       testedSha: run.tested_sha,
@@ -574,19 +558,13 @@ export async function reviewModel(
     ...(archive
       ? { evidenceState: "summary" as const, imagesExpired: retained?.byte_state !== "live" }
       : {}),
-    recompareAllowed: recompareAllowed && !localRun,
+    recompareAllowed: false,
     recompareDisabledReason:
       !run.active || run.detail_archived || run.state === "accepted"
         ? "This closed review is read-only. Capture a new complete run."
         : localRun
           ? "Run trusted Submit again from the complete CI bundle, or capture a new run. Unchanged candidate images were not uploaded."
-          : recompareAllowed
-            ? undefined
-            : !run.sealed_at
-              ? "This run has not sealed."
-              : pendingHistorical
-                ? "A historical comparison is still running."
-                : "The stored image bytes have expired.",
+          : serverRecompareDisabledReason,
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
@@ -972,16 +950,7 @@ export async function handleReview(
         409,
         "Closed history is read-only. Capture a new complete run.",
       );
-    const reference = await comparisonReference(context, run);
-    const comparison = await context.service.createComparison({
-      id: crypto.randomUUID(),
-      runId: run.id,
-      ...reference,
-      now: Date.now(),
-      maxAttempts: context.configuration.comparisonMaxAttempts,
-    });
-    await startComparisonPublication(context, comparison.id);
-    return Response.json(await reviewModel(context, run.id), { status: 202 });
+    throw new SecurityError("local_comparison_required", 409, serverRecompareDisabledReason);
   }
   const exportMatch = /^\/api\/runs\/([a-f0-9-]+)\/export$/.exec(path);
   if (exportMatch?.[1] && request.method === "POST") {
