@@ -19,7 +19,7 @@ import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
 import { scheduleComparison, verifyAncestry, startComparisonPublication } from "./ingest.js";
-import { validateLocalSubmission } from "./local-comparison.ts";
+import { validateAdmittedMainReference, validateLocalSubmission } from "./local-comparison.ts";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
@@ -420,8 +420,8 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     .prepare("SELECT id FROM visonaut_runs WHERE id = ?")
     .bind(stagedRunId)
     .first<{ id: string }>();
-  if (alreadyStored) {
-    const previous = await context.service.run(stagedRunId);
+  const previous = alreadyStored ? await context.service.run(stagedRunId) : null;
+  if (previous) {
     if (previous.sealed_at !== null) {
       if (previous.active && !previous.comparison_id) {
         const local = await context.database
@@ -482,6 +482,14 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     shardCommitMs: 0,
   };
   await leaseStagedSources(context, stagedRunId);
+  // Stored reference staleness survives a later workflow or executor rollout.
+  if (
+    previous?.kind === "main" &&
+    previous.state === "uploading" &&
+    previous.project_id === context.configuration.projectId
+  ) {
+    await validateAdmittedMainReference(context, previous.id);
+  }
   const {
     run: staged,
     submit,

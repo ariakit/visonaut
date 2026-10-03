@@ -123,6 +123,17 @@ async function currentReference(
   return project;
 }
 
+/** Reject a stored main reference after its baseline advanced. */
+export async function validateAdmittedMainReference(context: ApiContext, runId: string) {
+  const stored = await storedReference(context, runId);
+  if (!stored) return;
+  if (stored.pullRequest) return;
+  const project = await context.service.project(context.configuration.projectId);
+  if (project.baseline_revision > stored.reference.baselineRevision) {
+    await currentReference(context, stored.reference, false);
+  }
+}
+
 export async function referencePage(
   request: Request,
   context: ApiContext,
