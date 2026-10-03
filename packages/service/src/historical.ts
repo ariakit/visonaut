@@ -1,4 +1,4 @@
-import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
+import { assertion, atomic, IncompleteError, statement } from "./database.ts";
 import type { Database, Statement } from "./database.ts";
 
 export function historicalOwner(comparisonId: string) {
@@ -108,70 +108,6 @@ export async function finalizeHistoricalComparison(database: Database, compariso
       : []),
     // The verified supplement releases these roots after preserving the result.
   ]);
-}
-
-export async function beginHistoricalPreparation(
-  database: Database,
-  input: {
-    id: string;
-    runId: string;
-    referenceSnapshotId: string | null;
-    now: number;
-    leaseMs: number;
-  },
-) {
-  if (!Number.isSafeInteger(input.leaseMs) || input.leaseMs < 1 || input.leaseMs > 900_000) {
-    throw new Error("Invalid historical preparation lease.");
-  }
-  await expireHistoricalPreparations(database, input.now);
-  await atomic(database, [
-    assertion(
-      database,
-      `EXISTS (SELECT 1 FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id = run.id
-      WHERE run.id = ? AND run.active = 0 AND run.sealed_at IS NOT NULL AND retained.byte_state = 'live')`,
-      [input.runId],
-    ),
-    ...(input.referenceSnapshotId
-      ? [
-          assertion(
-            database,
-            `EXISTS (SELECT 1 FROM visonaut_snapshots snapshot
-        JOIN visonaut_runs run ON run.id = ? AND run.project_id = snapshot.project_id
-        JOIN visonaut_ancestry ancestry ON ancestry.run_id = run.id AND ancestry.ancestor_sha = snapshot.tested_sha
-        WHERE snapshot.id = ? AND snapshot.reference_eligible = 1
-          AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1))`,
-            [input.runId, input.referenceSnapshotId],
-          ),
-          statement(
-            database,
-            "INSERT INTO visonaut_pins(snapshot_id, reason, owner_id) VALUES (?, 'historical', ?)",
-            [input.referenceSnapshotId, input.id],
-          ),
-          statement(
-            database,
-            "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) SELECT run_id, ?, 'manual' FROM visonaut_snapshots WHERE id = ?",
-            [historicalOwner(input.id), input.referenceSnapshotId],
-          ),
-        ]
-      : []),
-    statement(
-      database,
-      "INSERT INTO visonaut_historical_preparations(id, run_id, lease_until) VALUES (?, ?, ?)",
-      [input.id, input.runId, input.now + input.leaseMs],
-    ),
-    statement(
-      database,
-      "INSERT OR IGNORE INTO work_retention_pins(run_id, owner, reason) VALUES (?, ?, 'manual')",
-      [input.runId, historicalOwner(input.id)],
-    ),
-  ]).catch((error) => {
-    if (error instanceof ConflictError) {
-      throw new IncompleteError(
-        "The stored captures are unavailable or their image bytes have expired.",
-      );
-    }
-    throw error;
-  });
 }
 
 export async function expireHistoricalPreparations(database: Database, now: number) {
@@ -334,16 +270,4 @@ export async function compactHistoricalComparison(
     ),
     ...releaseHistoricalPins(database, input.comparisonId),
   ]);
-}
-
-export async function cancelHistoricalPreparation(
-  database: Database,
-  comparisonId: string,
-  now: number,
-) {
-  await database
-    .prepare("UPDATE visonaut_historical_preparations SET lease_until = ? WHERE id = ?")
-    .bind(now, comparisonId)
-    .run();
-  await expireHistoricalPreparations(database, now);
 }

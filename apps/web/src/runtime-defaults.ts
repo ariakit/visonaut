@@ -2,9 +2,7 @@ import type { ApiConfiguration } from "./api/index.ts";
 import type { CapacityPolicy } from "./capacity.ts";
 import type { OperationsBudget } from "./operations/index.ts";
 
-export interface RuntimeApiLimits extends Required<ApiConfiguration["limits"]>, CapacityPolicy {
-  comparisonMaxAttempts: number;
-}
+export type RuntimeApiLimits = Required<ApiConfiguration["limits"]> & CapacityPolicy;
 
 export const apiLimitDefaults = Object.freeze({
   maximumImageBytes: 2 * 1024 * 1024,
@@ -14,7 +12,6 @@ export const apiLimitDefaults = Object.freeze({
   maximumManifestBytes: 16 * 1024 * 1024,
   maximumPlanBytes: 1_500_000,
   maximumCaptures: 40_000,
-  comparisonMaxAttempts: 5,
   databaseWarningBytes: 1536 * 1024 * 1024,
   databaseAdmissionBytes: 2 * 1024 * 1024 * 1024,
   maximumActiveRuns: 5,

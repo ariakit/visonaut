@@ -1,3 +1,4 @@
+import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { ArchivedCommandResultError, closedRunRetentionMs } from "@visonaut/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { summarizeClosedRuns, readClosedSummary } from "../operations/closed-summary.ts";
@@ -21,7 +22,7 @@ afterEach(() => vi.restoreAllMocks());
 async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "pull_request") {
   const operations = context(database);
   const service = await captured(operations.context, runId, kind);
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: comparisonId,
     runId,
     referenceSnapshotId: null,
@@ -71,7 +72,6 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
       projectId: "project",
       github: { repository: "ariakit/visonaut-diagnostics", repositoryId: "123" },
       limits: { maximumCaptures: 100 },
-      comparisonMaxAttempts: 2,
     },
     identity: { sessionId: "auth", githubUserId: "reviewer" },
   });
@@ -103,12 +103,11 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
     throw new Error("Closed summary conversion did not finish.");
   };
   const historical = async () => {
-    await service.createComparison({
+    await seedLegacyComparison(service, {
       id: historicalId,
       runId,
       referenceSnapshotId: null,
       purpose: "historical",
-      expectedCaptureCount: 1,
       now: Date.now(),
       maxAttempts: 2,
     });
@@ -385,12 +384,11 @@ describe("private permanent closed review", () => {
     const otherComparison = "66666666-6666-4666-8666-666666666666";
     await captured(test.operations.context, otherRun);
     await test.service.retireRun({ runId: otherRun, now: Date.now() });
-    await test.service.createComparison({
+    await seedLegacyComparison(test.service, {
       id: otherComparison,
       runId: otherRun,
       referenceSnapshotId: null,
       purpose: "historical",
-      expectedCaptureCount: 1,
       now: Date.now(),
       maxAttempts: 2,
     });
@@ -527,12 +525,11 @@ describe("private permanent closed review", () => {
     });
     const other = await captured(test.operations.context, "other-run");
     await other.retireRun({ runId: "other-run", now: Date.now() });
-    await other.createComparison({
+    await seedLegacyComparison(other, {
       id: historicalId,
       runId: "other-run",
       referenceSnapshotId: null,
       purpose: "historical",
-      expectedCaptureCount: 1,
       now: Date.now(),
       maxAttempts: 2,
     });

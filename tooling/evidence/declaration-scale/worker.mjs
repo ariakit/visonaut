@@ -150,7 +150,6 @@ function bindings(env, counts) {
       trustedPlanPath: ".ariviso/plan.json",
       reusableWorkflowRef: `ariakit/ariakit/.github/workflows/ariviso-capture.yml@${"f".repeat(40)}`,
       reusableWorkflowSha: "f".repeat(40),
-      comparisonMaxAttempts: 3,
       limits: {
         maximumImageBytes: 2097152,
         maximumShardBytes: 536870912,

@@ -738,7 +738,6 @@ describe("verified closed history with native D1 and R2", () => {
         webhookSecret: "unused",
         repositoryOwnerId: "1",
         workflowOwned,
-        comparisonMaxAttempts: 2,
         limits: {
           maximumImageBytes: 1024,
           maximumShardBytes: 1024,

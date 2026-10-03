@@ -44,7 +44,7 @@ beforeAll(async () => {
       },
       d1Databases: ["DB"],
       r2Buckets: ["IMAGES", "QUARANTINE"],
-      queueProducers: ["COMPARISONS", "OPERATIONS"],
+      queueProducers: ["OPERATIONS"],
       serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );

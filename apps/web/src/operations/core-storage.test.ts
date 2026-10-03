@@ -1,3 +1,7 @@
+import {
+  seedLegacyComparison,
+  seedLegacyResult,
+} from "../../../../tooling/legacy-comparison-fixture.ts";
 import { enqueueReview, reviewTaskId } from "./review-queue.ts";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closedRunRetentionMs, Service } from "@visonaut/service";
@@ -285,7 +289,7 @@ it("runs a status wakeup without scanning history, byte retention, or comparison
   ]);
 
   const ingest = await runOperations(fixture.context, { kind: "ingest" });
-  expect(Object.keys(ingest.reports)).toEqual(["comparisons", "finalization"]);
+  expect(Object.keys(ingest.reports)).toEqual(["finalization"]);
   const history = await runOperations(fixture.context, { kind: "maintenance", family: "history" });
   expect(Object.keys(history.reports)).toEqual(["history"]);
 });
@@ -458,7 +462,7 @@ it("keeps expired current-baseline originals while closing its review evidence",
     now: fixture.state.time,
   });
   await service.sealRun({ runId: "later", now: fixture.state.time });
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: "comparison-later",
     runId: "later",
     referenceSnapshotId: snapshotId,
@@ -466,15 +470,8 @@ it("keeps expired current-baseline originals while closing its review evidence",
     maxAttempts: 2,
   });
   const taskId = "comparison-later:capture-later";
-  await service.claimComparisonTask({
+  await seedLegacyResult(service, {
     taskId,
-    owner: "worker",
-    now: fixture.state.time,
-    leaseMilliseconds: 100,
-  });
-  await service.commitComparisonResult({
-    taskId,
-    leaseOwner: "worker",
     result: {
       outcome: "changed",
       changedPixels: 1,
@@ -482,7 +479,6 @@ it("keeps expired current-baseline originals while closing its review evidence",
       engineVersion: "engine",
       codecVersion: "codec",
     },
-    now: fixture.state.time,
   });
   await service.finalizeComparison({ comparisonId: "comparison-later", now: fixture.state.time });
   await expect(approve(service, "later")).resolves.toMatchObject({ commandId: "approve-later" });
@@ -562,12 +558,11 @@ it("keeps a completed native historical comparison readable before the retention
   const fixture = context(database);
   const service = await captured(fixture.context, "closed");
   await service.retireRun({ runId: "closed", now: fixture.state.time });
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: "native-history",
     runId: "closed",
     referenceSnapshotId: null,
     purpose: "historical",
-    expectedCaptureCount: 1,
     now: fixture.state.time + 1,
     maxAttempts: 2,
   });

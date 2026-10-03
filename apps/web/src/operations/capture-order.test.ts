@@ -1,3 +1,4 @@
+import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { summarizeClosedRuns, readClosedSummary } from "./closed-summary.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -168,7 +169,7 @@ async function captureOrder(runId: string) {
   ).results;
 }
 async function compare(runId: string, id = `comparison-${runId}`) {
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id,
     runId,
     referenceSnapshotId: null,
@@ -217,7 +218,7 @@ describe("full-run declared capture order with native D1", () => {
     );
   });
 
-  it("preserves capture order in the converted closed summary and refuses historical recomparison", async () => {
+  it("preserves capture order in the converted closed summary and requires local Submit", async () => {
     await reserve("run");
     for (const key of ["a-second", "z-first"]) await commit("run", key, await captures("run", key));
     await service.sealRun({ runId: "run", now: operations.now() });
@@ -249,12 +250,11 @@ describe("full-run declared capture order with native D1", () => {
         id: "historical",
         runId: "run",
         referenceSnapshotId: null,
-        purpose: "historical",
-        expectedCaptureCount: expected.length,
         now: operations.now(),
-        maxAttempts: 2,
+        // @ts-expect-error A verified receipt is required for new comparisons.
+        localComparison: undefined,
       }),
-    ).rejects.toThrow("read-only summary");
+    ).rejects.toThrow("local Submit receipt");
   });
 
   it("refuses duplicate local ordinals before staging ambiguous captures", async () => {

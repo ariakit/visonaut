@@ -22,13 +22,15 @@ Previously issued legacy capabilities can finish their declared uploads and sign
 
 ## Stage B: retire producers and handlers
 
-Before applying the final source patch, prove an exact legacy admission cutoff and terminal cohort. The proof must cover every source that can create or publish server comparison work: staged manifests, unsealed and sealed materialization recovery, historical writers, operations publication, existing publication reservations, Worker leases, retries, delayed delivery, comparison dead letters, manual replay, and any recovery tooling with live-target access. Include deployments or overlapping old versions that can still admit work.
+Before deploying the final source patch, prove an exact legacy admission cutoff and terminal cohort. Local source preparation, integration, and review can run while the live gates remain open. The live proof must cover every source that can create or publish server comparison work: staged manifests, unsealed and sealed materialization recovery, historical writers, operations publication, existing publication reservations, Worker leases, retries, delayed delivery, comparison dead letters, manual replay, and selected recovery tooling with live-target access. Include deployments or overlapping old versions that can still admit work.
 
 Bind each receipt to the target, deployed version, query time, cutoff, and cohort. Check the cohort's task states, publication tokens and attempts, lease deadlines, delayed and dead-letter messages, and replay closure. An empty global task count or queue chart is not this proof. Do not force retries, cancel work, reset terminal tasks, or acknowledge messages to produce a passing result.
 
 The recorded queue retention of four days is one conservative delivery proof method. Do not start a new four-day wait merely because a public adapter default changes. An earlier boundary can count when it covers all publication and replay sources. Keep the old handler if any required delivery can still arrive.
 
-Apply the final source patch only after the required legacy comparison and historical writers are gone. Remove server task creation, production publication, and the production comparison queue handler. Keep native signed Submit recovery, finalization, durable reviews, status, retention, history, and promotion in OPERATIONS. Keep required historical task and tuple readers. Do not restart terminal work for rollback.
+Deploy the final source patch only after the required legacy comparison and historical writers are gone. The service requires a verified local receipt and no longer creates server comparison tasks. Materialization rejects missing receipts before it reserves a new run. OPERATIONS finalizes imported results without publishing comparison work. The compare Worker keeps its private image validation handler and removes its comparison and dead-letter queue handler. Keep native signed Submit recovery, finalization, durable reviews, status, retention, history, and promotion in OPERATIONS. Keep required historical task and tuple readers. Do not restart terminal work for rollback.
+
+The unused server retry setting `comparisonMaxAttempts` is removed from `VISONAUT_API_LIMITS`. Require selected live overrides to omit this field before deployment; the updated runtime rejects it as unsupported. The committed preview and production overrides are `{}`. Remaining API bounds and `VISONAUT_OPERATIONS_BUDGET.maxAttempts` keep their existing values. Older deployed versions keep their recorded configuration contract until their selected update.
 
 ## Retained contracts
 
@@ -42,7 +44,26 @@ Keep every SQL migration and retained record unchanged. Keep ordinary history cr
 
 Resource changes need a separate approved action and a fresh exact-target readback. The source preparation does not authorize queue, Worker, bucket, namespace, database, schedule, or record deletion.
 
-After the terminal cohort and replay closure pass, prepare removal of the web `COMPARISONS` producer binding and the compare Worker's comparison producers and comparison/dead-letter consumers for each approved target. Recheck the deployment workflow's preview barrier before changing preview configuration. Preserve OPERATIONS, its dead-letter queue, schedules, D1, both buckets, and the web `COMPARATOR` service binding. Preserve the compare Worker used for validation.
+After the terminal cohort and replay closure pass, remove the web `COMPARISONS` producer binding and the compare Worker's comparison producer and comparison/dead-letter consumer configuration for each selected target. The source includes these configuration removals. They do not change live assignments until the parent completes the deployment steps. Preserve the deployment workflow's preview barrier. Preserve OPERATIONS, its dead-letter queue, schedules, D1, both buckets, and the web `COMPARATOR` service binding. Preserve the compare Worker used for validation.
+
+Deleting a consumer entry from Wrangler configuration does not detach the live consumer. [Cloudflare requires explicit consumer removal](https://developers.cloudflare.com/queues/reference/how-queues-works/#remove-a-consumer). The pinned Wrangler 4.136.1 deployment code updates only the consumers present in configuration. Its `deleteWorkerConsumer` command uses a separate consumer-assignment DELETE request. This is distinct from queue resource deletion.
+
+Use these steps for the final deployment. The parent owns all remote actions.
+
+1. Reuse the verified admission cutoff, exact terminal cohort, retained-reader evidence, and known replay ownership. Read the bounded post-fence delta for selected staged writers, tasks, reservations, and leases. An unresolved selected identity keeps its handler in place. Local test results do not clear this gate.
+2. Read the exact queue and consumer identities for the selected account and target. Save both comparison consumer assignments and queue metadata. Preserve the OPERATIONS assignments.
+3. Detach only the selected primary and comparison dead-letter consumer assignments while the compatible old comparator is still deployed. For production, the expected queues are `visonaut-production-comparisons` (`56f8f86170914a0492c0bbe93a42c553`) and `visonaut-production-comparison-dead-letter` (`54e58a2877004b2d8664509916e05a0d`). For preview, verify the accepted consumer-free fence and skip detachment when it is already absent. Do not pull, acknowledge, purge, or delete queues or messages.
+4. Read both exact queues again and require `consumers: []`. Require the same queue identities and retention settings. The read-only `deploy-comparison-retirement.mjs` guard checks the exact queue IDs, names, and absent consumers before the production or preview comparator deployment. It fails when metadata is missing or any consumer remains attached.
+5. Deploy the integrated source and configuration. The normal production workflow deploys the comparator before web, so consumer detachment and its readback must precede the workflow. Read back the deployed versions, removed comparison producer bindings, retained OPERATIONS consumer, schedule, D1, buckets, and `COMPARATOR` service binding. Verify private PNG/WebP validation and native Submit recovery, review, status, and promotion.
+
+For a selected production detachment, the pinned command is:
+
+```sh
+pnpm exec wrangler queues consumer remove visonaut-production-comparisons visonaut-compare
+pnpm exec wrangler queues consumer remove visonaut-production-comparison-dead-letter visonaut-compare
+```
+
+Run these commands only after the exact live gate and identity readback pass. They remove consumer assignments; they do not delete queue resources. Physical queue deletion remains outside this retirement patch. A rollback must preserve the admission fence and must not restart terminal legacy work.
 
 Record exact queue IDs and names from a fresh provider read, the intended configuration diff, deployed build identities, rollback limits, and readback predicates. After the binding and consumer change is approved and verified, queue resource deletion is another separate approved step. Never infer disposal of messages or retained data from an unused binding.
 

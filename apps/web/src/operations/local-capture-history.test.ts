@@ -1,10 +1,8 @@
 import { expect, it } from "vitest";
-import { cancelHistoricalPreparation } from "@visonaut/service";
 import { digestJson } from "@visonaut/protocol";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
 import { archiveClosedRuns, readArchivedSection } from "./history.ts";
-import { prepareHistoricalCaptures } from "./historical-captures.ts";
 import { inspectRecoveryImages, sanitizeRestoredDatabase } from "./recovery.ts";
 import { captured, context, profile, TestDatabase } from "./test-fixtures.ts";
 
@@ -84,14 +82,15 @@ it("keeps omission metadata in archived capture pages and refuses historical rep
     comparisonDigest: fixture.metadata.comparisonDigest,
   });
   await expect(
-    prepareHistoricalCaptures(fixture.context, {
+    fixture.service.createComparison({
+      id: "replay",
       runId: "run",
-      comparisonId: "replay",
       referenceSnapshotId: null,
-      maximumCaptures: 10,
+      now: fixture.context.now(),
+      // @ts-expect-error Stored representatives cannot supply a verified receipt.
+      localComparison: undefined,
     }),
-  ).rejects.toThrow("omitted candidate");
-  await cancelHistoricalPreparation(database, "replay", fixture.context.now());
+  ).rejects.toThrow("local Submit receipt");
   expect(
     database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
   ).toEqual([]);
@@ -115,8 +114,9 @@ it("preserves omission metadata during a restored database activation and checks
       id: "restored-replay",
       runId: "run",
       referenceSnapshotId: null,
-      maxAttempts: 2,
+      // @ts-expect-error The retired server call has no local receipt.
+      localComparison: undefined,
       now: fixture.context.now(),
     }),
-  ).rejects.toThrow("trusted Submit");
+  ).rejects.toThrow("verified local Submit receipt");
 });

@@ -1,8 +1,13 @@
+import {
+  seedLegacyComparison,
+  seedLegacyResult,
+} from "../../../../tooling/legacy-comparison-fixture.ts";
 import { nativeTestStorage } from "./test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { readFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
 import { validateImage } from "@visonaut/compare";
+import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
 import {
   discoveryArtifactPrefix,
   digestJson,
@@ -336,7 +341,6 @@ async function fixture(
     repositoryOwnerId: "5",
     workflowOwned,
     trustedExecutorDigest: executorDigest,
-    comparisonMaxAttempts: 3,
     limits: {
       maximumImageBytes: 2 * 1024 * 1024,
       maximumShardBytes: 16 * 1024 * 1024,
@@ -406,9 +410,12 @@ async function fixture(
   };
 }
 
-async function stage(test: Awaited<ReturnType<typeof fixture>>) {
+async function stage(test: Awaited<ReturnType<typeof fixture>>, local = false) {
+  const session = local ? await localSession(test) : null;
+  const post = session?.post ?? test.post;
+  const capability = session?.capability ?? test.capability;
   const declaration = await declareStaged(
-    test.post(test.manifest),
+    post(test.manifest),
     test.context,
     test.runId,
     test.shardKey,
@@ -424,7 +431,7 @@ async function stage(test: Awaited<ReturnType<typeof fixture>>) {
   const uploaded = await uploadStagedImage(
     new Request("https://preview.example", {
       method: "PUT",
-      headers: { authorization: `Bearer ${test.capability}`, "content-type": "image/png" },
+      headers: { authorization: `Bearer ${capability}`, "content-type": "image/png" },
       body: png,
     }),
     test.context,
@@ -432,7 +439,7 @@ async function stage(test: Awaited<ReturnType<typeof fixture>>) {
   );
   expect(uploaded.status).toBe(204);
   const final = await finalizeStaged(
-    test.post({
+    post({
       schemaVersion: "1.0",
       shardKey: test.shardKey,
       manifestDigest: body.manifestDigest,
@@ -523,9 +530,13 @@ async function retainedSource(
   return { sourceRunId, sourceObjectKey };
 }
 
-async function reuseProof(test: Awaited<ReturnType<typeof fixture>>, bytes = png) {
+async function reuseProof(
+  test: Awaited<ReturnType<typeof fixture>>,
+  bytes = png,
+  post = test.post,
+) {
   const declaration = await declareStaged(
-    test.post(test.manifest),
+    post(test.manifest),
     test.context,
     test.runId,
     test.shardKey,
@@ -537,7 +548,7 @@ async function reuseProof(test: Awaited<ReturnType<typeof fixture>>, bytes = png
   const proof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
     .update(bytes)
     .digest("hex");
-  const request = test.post({
+  const request = post({
     schemaVersion: "1.0",
     manifestDigest: body.manifestDigest,
     shardKey: test.shardKey,
@@ -577,12 +588,13 @@ it("reuses only a proved, retained original and copies it to the new run", async
 it("seals a reused target from its R2 checksum without reading its body again", async () => {
   const test = await fixture();
   await retainedSource(test);
-  const { body, request } = await reuseProof(test);
+  const session = await localSession(test);
+  const { body, request } = await reuseProof(test, png, session.post);
   expect(await (await reuseStagedImages(request, test.context, test.runId)).json()).toMatchObject({
     reused: [image.digest],
   });
   await finalizeStaged(
-    test.post({
+    session.post({
       schemaVersion: "1.0",
       shardKey: test.shardKey,
       manifestDigest: body.manifestDigest,
@@ -1067,13 +1079,27 @@ async function acceptedReference(
   });
   await test.context.service.sealRun({ runId, now: Date.now() });
   const comparisonId = crypto.randomUUID();
-  await test.context.service.createComparison({
+  await seedLegacyComparison(test.context.service, {
     id: comparisonId,
     runId,
     referenceSnapshotId: previous?.snapshotId ?? null,
     maxAttempts: 3,
     now: Date.now(),
   });
+  for (const row of await test.context.service.comparisonRows(comparisonId)) {
+    if (row.outcome !== "pending") continue;
+    await seedLegacyResult(test.context.service, {
+      taskId: row.id,
+      result: {
+        outcome: "unchanged",
+        changedPixels: 0,
+        ratio: 0,
+        engineVersion: "sha256-identical-1",
+        codecVersion: "not-decoded",
+        maskExpected: false,
+      },
+    });
+  }
   await test.context.service.finalizeComparison({ comparisonId, now: Date.now() });
   const copies = await test.context.service.preparePromotion({
     snapshotId,
@@ -1660,9 +1686,10 @@ describe("trusted local Submit", () => {
         runId: run.id,
         referenceSnapshotId: seed.snapshotId,
         now: Date.now(),
-        maxAttempts: 3,
+        // @ts-expect-error The retired server call has no local receipt.
+        localComparison: undefined,
       }),
-    ).rejects.toThrow("trusted Submit");
+    ).rejects.toThrow("verified local Submit receipt");
     const snapshotId = crypto.randomUUID();
     const copies = await test.context.service.preparePromotion({
       snapshotId,
@@ -1701,7 +1728,7 @@ describe("trusted local Submit", () => {
 
 it("reconciles a signed main submission after main advances", async () => {
   const test = await fixture();
-  const { manifestDigest } = await stage(test);
+  const { manifestDigest } = await stage(test, true);
   await terminalGitHub(test, manifestDigest);
   test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
     object: { sha: "e".repeat(40) },
@@ -1720,6 +1747,34 @@ it("reconciles a signed main submission after main advances", async () => {
       .bind(test.manifest.run.workflowRunId)
       .first(),
   ).toEqual({ state: "active" });
+});
+
+it("rejects a legacy signed stage before reserving or creating comparison work", async () => {
+  const test = await fixture();
+  const { manifestDigest } = await stage(test);
+  await terminalGitHub(test, manifestDigest);
+  const create = vi.spyOn(test.context.service, "createComparison");
+  const originalKey = await stagedImageKey(test.runId);
+  await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+    "A verified local Submit receipt is required",
+  );
+  expect(create).not.toHaveBeenCalled();
+  expect(
+    await database.prepare("SELECT id FROM visonaut_runs WHERE id=?").bind(test.runId).first(),
+  ).toBeNull();
+  expect(
+    await database
+      .prepare("SELECT id FROM visonaut_comparisons WHERE run_id=?")
+      .bind(test.runId)
+      .first(),
+  ).toBeNull();
+  expect(await images.get(originalKey)).not.toBeNull();
+  expect(
+    await database
+      .prepare("SELECT retention_state FROM ingest_staged_runs WHERE id=?")
+      .bind(test.runId)
+      .first(),
+  ).toEqual({ retention_state: "live" });
 });
 
 describe("workflow-owned upload staging", () => {
@@ -2347,7 +2402,7 @@ describe("workflow-owned upload staging", () => {
 
   it("materializes after signed jobs succeed while Gate is still pending", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     const jobs = await terminalGitHub(test, manifestDigest);
     const inProgress = {
       id: Number(test.manifest.run.workflowRunId),
@@ -2814,71 +2869,63 @@ describe("workflow-owned upload staging", () => {
     expect(fail).not.toHaveBeenCalled();
   });
 
-  it.each(["local", "server"])(
-    "reconciles a sealed %s run after comparison creation fails",
-    async (mode) => {
-      const test = await fixture();
-      if (mode === "local") {
-        await stageLocal(test, await localSession(test));
-      } else {
-        const { manifestDigest } = await stage(test);
-        await terminalGitHub(test, manifestDigest);
-      }
-      const createComparison = vi
-        .spyOn(test.context.service, "createComparison")
-        .mockRejectedValue(new Error("Comparison creation interrupted."));
+  it("reconciles a sealed local run after comparison creation fails", async () => {
+    const test = await fixture();
+    await stageLocal(test, await localSession(test));
+    const createComparison = vi
+      .spyOn(test.context.service, "createComparison")
+      .mockRejectedValue(new Error("Comparison creation interrupted."));
+    expect(await reconcileStagedWorkflows(test.context)).toEqual({
+      checked: 1,
+      progressed: 0,
+      errors: [{ runId: test.runId, code: "incomplete" }],
+    });
+    const interrupted = await test.context.service.run(test.runId);
+    expect(interrupted.sealed_at).not.toBeNull();
+    expect(interrupted).toMatchObject({ active: 1, state: "comparing", comparison_id: null });
+    for (let attempt = 1; attempt < 5; attempt += 1) {
       expect(await reconcileStagedWorkflows(test.context)).toEqual({
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "incomplete" }],
       });
-      const interrupted = await test.context.service.run(test.runId);
-      expect(interrupted.sealed_at).not.toBeNull();
-      expect(interrupted).toMatchObject({ active: 1, state: "comparing", comparison_id: null });
-      for (let attempt = 1; attempt < 5; attempt += 1) {
-        expect(await reconcileStagedWorkflows(test.context)).toEqual({
-          checked: 1,
-          progressed: 0,
-          errors: [{ runId: test.runId, code: "incomplete" }],
-        });
-      }
-      const alert = database
-        .prepare("SELECT resolved_at FROM operations_events WHERE kind=? AND subject_id=?")
-        .bind("staged-reconciliation", `${test.manifest.run.workflowRunId}:1`);
-      expect(await alert.first()).toEqual({ resolved_at: null });
-      expect(await reconcileStagedWorkflows(test.context)).toEqual({
-        checked: 0,
-        progressed: 0,
-        errors: [],
-      });
-      expect(await alert.first()).toEqual({ resolved_at: null });
-      expect(createComparison).toHaveBeenCalledTimes(5);
-      createComparison.mockRestore();
-      await database
-        .prepare("UPDATE ingest_staged_runs SET last_checked_at=? WHERE id=?")
-        .bind(Date.now() - 60 * 60 * 1000 - 1, test.runId)
-        .run();
+    }
+    const alert = database
+      .prepare("SELECT resolved_at FROM operations_events WHERE kind=? AND subject_id=?")
+      .bind("staged-reconciliation", `${test.manifest.run.workflowRunId}:1`);
+    expect(await alert.first()).toEqual({ resolved_at: null });
+    expect(await reconcileStagedWorkflows(test.context)).toEqual({
+      checked: 0,
+      progressed: 0,
+      errors: [],
+    });
+    expect(await alert.first()).toEqual({ resolved_at: null });
+    expect(createComparison).toHaveBeenCalledTimes(5);
+    createComparison.mockRestore();
+    await database
+      .prepare("UPDATE ingest_staged_runs SET last_checked_at=? WHERE id=?")
+      .bind(Date.now() - 60 * 60 * 1000 - 1, test.runId)
+      .run();
 
-      expect(await reconcileStagedWorkflows(test.context)).toEqual({
-        checked: 1,
-        progressed: 1,
-        errors: [],
-      });
-      const recovered = await test.context.service.run(test.runId);
-      expect(recovered.sealed_at).toBe(interrupted.sealed_at);
-      expect(recovered.comparison_id).not.toBeNull();
-      expect(await alert.first()).toEqual({ resolved_at: expect.any(Number) });
-      expect(await reconcileStagedWorkflows(test.context)).toEqual({
-        checked: 0,
-        progressed: 0,
-        errors: [],
-      });
-    },
-  );
+    expect(await reconcileStagedWorkflows(test.context)).toEqual({
+      checked: 1,
+      progressed: 1,
+      errors: [],
+    });
+    const recovered = await test.context.service.run(test.runId);
+    expect(recovered.sealed_at).toBe(interrupted.sealed_at);
+    expect(recovered.comparison_id).not.toBeNull();
+    expect(await alert.first()).toEqual({ resolved_at: expect.any(Number) });
+    expect(await reconcileStagedWorkflows(test.context)).toEqual({
+      checked: 0,
+      progressed: 0,
+      errors: [],
+    });
+  });
 
   it("seals a new upload from its R2 checksum without reading its body again", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     await terminalGitHub(test, manifestDigest);
     const objectKey = await stagedImageKey(test.runId);
     expect((await images.head(objectKey))?.checksums.toJSON().sha256).toBe(image.digest);
@@ -2906,7 +2953,7 @@ describe("workflow-owned upload staging", () => {
 
   it("reads and hashes a legacy staged object without a SHA-256 checksum", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     await terminalGitHub(test, manifestDigest);
     const objectKey = await stagedImageKey(test.runId);
     await images.put(objectKey, png, { httpMetadata: { contentType: "image/png" } });
@@ -2929,6 +2976,7 @@ describe("workflow-owned upload staging", () => {
 
   it("loads all R2 metadata pages before registering their images", async () => {
     const test = await fixture();
+    const codecs = await nodeCodecs();
     const extra = await Promise.all(
       [
         "../test/fixtures/rgba.webp",
@@ -2937,9 +2985,14 @@ describe("workflow-owned upload staging", () => {
         "../evidence/browser/firefox.png",
         "../evidence/browser/webkit.png",
       ].map(async (path) => {
-        const bytes = new Uint8Array(
+        let bytes = new Uint8Array(
           await readFile(new URL(path, import.meta.resolve("@visonaut/compare"))),
         );
+        if (path.endsWith(".webp")) {
+          const decoded = await codecs.decodeWebp(bytes.buffer);
+          decoded.data[0] = decoded.data[0]! ^ (path.includes("profiled") ? 16 : 32);
+          bytes = new Uint8Array(await codecs.encodePng(decoded));
+        }
         return { bytes, validated: await validateImage(bytes) };
       }),
     );
@@ -2979,8 +3032,9 @@ describe("workflow-owned upload staging", () => {
       },
     }));
     const byDigest = new Map(assets.map((asset) => [asset.validated.digest, asset]));
+    const session = await localSession(test);
     const declaration = await declareStaged(
-      test.post(test.manifest),
+      session.post(test.manifest),
       test.context,
       test.runId,
       test.shardKey,
@@ -2997,7 +3051,7 @@ describe("workflow-owned upload staging", () => {
         new Request("https://preview.example", {
           method: "PUT",
           headers: {
-            authorization: `Bearer ${test.capability}`,
+            authorization: `Bearer ${session.capability}`,
             "content-type": asset.validated.format === "png" ? "image/png" : "image/webp",
           },
           body: asset.bytes,
@@ -3008,7 +3062,7 @@ describe("workflow-owned upload staging", () => {
       expect(response.status).toBe(204);
     }
     await finalizeStaged(
-      test.post({
+      session.post({
         schemaVersion: "1.0",
         shardKey: test.shardKey,
         manifestDigest: declared.manifestDigest,
@@ -3108,7 +3162,7 @@ describe("workflow-owned upload staging", () => {
 
   it("recovers a transient corrupted original before the fifth retry", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     await terminalGitHub(test, manifestDigest);
     const stored = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -3145,7 +3199,7 @@ describe("workflow-owned upload staging", () => {
 
   it("does not fail after one missing original preceded by unrelated reconciliation errors", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     const { base } = await terminalGitHub(test, manifestDigest);
     const original = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -3198,7 +3252,7 @@ describe("workflow-owned upload staging", () => {
     const maximumActiveRuns = (baseline?.count ?? 0) + 2;
     const missing = [await fixture(), await fixture()];
     for (const test of missing) {
-      const { manifestDigest } = await stage(test);
+      const { manifestDigest } = await stage(test, true);
       await terminalGitHub(test, manifestDigest);
       const original = await database
         .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -3212,9 +3266,8 @@ describe("workflow-owned upload staging", () => {
     }
 
     const fresh = await fixture();
-    const { manifestDigest } = await stage(fresh);
-    await terminalGitHub(fresh, manifestDigest);
     fresh.context.admission = async () => ({ maximumActiveRuns });
+    await stageLocal(fresh, await localSession(fresh));
     await expect(materializeWorkflowRun(fresh.context, fresh.runId)).rejects.toThrow(
       "State changed",
     );
@@ -3351,7 +3404,7 @@ describe("workflow-owned upload staging", () => {
 
   it("expires an incomplete materialized attempt after its last writer lease", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { manifestDigest } = await stage(test, true);
     await terminalGitHub(test, manifestDigest);
     const original = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")

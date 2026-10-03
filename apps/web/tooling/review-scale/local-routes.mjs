@@ -62,7 +62,7 @@ const runtime = new Miniflare(
     },
     d1Databases: ["DB"],
     r2Buckets: ["IMAGES", "QUARANTINE"],
-    queueProducers: { COMPARISONS: "local-comparisons", OPERATIONS: "local-operations" },
+    queueProducers: { OPERATIONS: "local-operations" },
     serviceBindings: {
       COMPARATOR: async () =>
         new Response("Comparison is outside this route probe.", { status: 503 }),
@@ -119,16 +119,16 @@ try {
   await runtime.ready;
   const database = await runtime.getD1Database("DB");
   await applyTestMigrations(database);
-  // Bundle only the existing service to seed real D1 through its normal commands.
+  // Seed retained legacy rows through the local fixture bundle.
   const bundle = await rolldown({
-    input: resolve(sourceRoot, "packages/service/src/index.ts"),
+    input: resolve(sourceRoot, "tooling/legacy-comparison-fixture.ts"),
     platform: "node",
   });
   const output = await bundle.generate({ format: "es" });
   await bundle.close();
   const chunk = output.output.find((entry) => entry.type === "chunk");
   if (!chunk) throw new Error("The fixture service bundle is unavailable.");
-  const { Service } = await import(
+  const { Service, seedLegacyComparison } = await import(
     `data:text/javascript;base64,${Buffer.from(chunk.code).toString("base64")}`
   );
   const service = new Service(database);
@@ -222,7 +222,7 @@ try {
   });
   await service.sealRun({ runId, now: now + 2 });
   const comparisonId = crypto.randomUUID();
-  await service.createComparison({
+  await seedLegacyComparison(service, {
     id: comparisonId,
     runId,
     referenceSnapshotId: null,

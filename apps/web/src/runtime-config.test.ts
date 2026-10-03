@@ -13,7 +13,6 @@ const previousApiLimits = {
   maximumManifestBytes: 16777216,
   maximumPlanBytes: 1500000,
   maximumCaptures: 40000,
-  comparisonMaxAttempts: 5,
   databaseWarningBytes: 1610612736,
   databaseAdmissionBytes: 2147483648,
   maximumActiveRuns: 5,
@@ -46,7 +45,7 @@ beforeAll(async () => {
       },
       d1Databases: ["DB"],
       r2Buckets: ["IMAGES", "QUARANTINE"],
-      queueProducers: ["COMPARISONS", "OPERATIONS"],
+      queueProducers: ["OPERATIONS"],
       serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );
@@ -72,12 +71,22 @@ function resolvedApiLimits(env: Env) {
   const configuration = apiBindings(env).configuration;
   return {
     ...configuration.limits,
-    comparisonMaxAttempts: configuration.comparisonMaxAttempts,
     ...databaseCapacityPolicy(env),
   };
 }
 
 describe("runtime numeric configuration", () => {
+  it("rejects the retired server comparison retry override", () => {
+    const env = configurationEnv({
+      VISONAUT_API_LIMITS: JSON.stringify({ comparisonMaxAttempts: 8 }),
+    });
+    expect(() => apiBindings(env)).toThrow(
+      "VISONAUT_API_LIMITS.comparisonMaxAttempts is not a supported override.",
+    );
+    expect(() => databaseCapacityPolicy(env)).toThrow(
+      "VISONAUT_API_LIMITS.comparisonMaxAttempts is not a supported override.",
+    );
+  });
   it.each(["maximumExportEntries", "maximumMetadataBytes"])(
     "rejects the retired export budget %s",
     (name) => {
@@ -133,7 +142,6 @@ describe("runtime numeric configuration", () => {
       maximumManifestBytes: 500,
       maximumPlanBytes: 600,
       maximumCaptures: 700,
-      comparisonMaxAttempts: 8,
       databaseWarningBytes: 900,
       databaseAdmissionBytes: 1000,
       maximumActiveRuns: 11,

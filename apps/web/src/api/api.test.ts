@@ -1,3 +1,4 @@
+import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { processReviewQueue } from "../operations/review-queue.ts";
 import { nativeTestStorage } from "./test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
@@ -20,7 +21,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
-import { comparisonReference, startComparisonPublication, scheduleComparison } from "./ingest.js";
+import { finalizeSubmittedComparison } from "./ingest.js";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.js";
 import { handleApi, apiContext, type ApiBindings } from "./index.js";
 
@@ -272,7 +273,6 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
       },
       webhookSecret: "test-webhook-secret-with-32-characters-or-more",
       repositoryOwnerId: "5",
-      comparisonMaxAttempts: 3,
       limits: {
         maximumImageBytes: 2 * 1024 * 1024,
         maximumShardBytes: 16 * 1024 * 1024,
@@ -440,7 +440,14 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
   const complete = async () => {
     await upload();
     await service.sealRun({ runId, now: Date.now() });
-    await scheduleComparison(apiContext(bindings), runId);
+    const comparison = await seedLegacyComparison(service, {
+      id: crypto.randomUUID(),
+      runId,
+      referenceSnapshotId: (await service.project(bindings.configuration.projectId)).snapshot_id,
+      now: Date.now(),
+      maxAttempts: 3,
+    });
+    await finalizeSubmittedComparison(apiContext(bindings), comparison.id);
   };
   return {
     bindings,
@@ -901,7 +908,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(wake).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ kind: "status" }));
     const comparisonId = (await test.service.run(test.runId)).comparison_id;
     if (!comparisonId) throw new Error("Missing comparison");
-    await startComparisonPublication(apiContext(test.bindings), comparisonId);
+    await finalizeSubmittedComparison(apiContext(test.bindings), comparisonId);
     expect(wake).toHaveBeenCalledTimes(1);
     expect((await test.service.run(test.runId)).sealed_at).not.toBeNull();
     const capture = await database
@@ -1367,56 +1374,6 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       source: variant?.source,
     });
   });
-  it("refreshes newly accepted ancestor evidence and fences a later baseline change", async () => {
-    const test = await fixture();
-    await test.upload();
-    await test.complete();
-    const run = await test.service.run(test.runId);
-    const snapshotId = crypto.randomUUID();
-    const ancestorSha = "a".repeat(40);
-    await database
-      .prepare(
-        "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, storage_mode, prefix, created_at) VALUES (?, ?, ?, ?, ?, 'accepted', 1, 'source', ?, ?)",
-      )
-      .bind(
-        snapshotId,
-        run.project_id,
-        run.id,
-        run.comparison_id,
-        ancestorSha,
-        `baselines/${snapshotId}/`,
-        Date.now(),
-      )
-      .run();
-    await database
-      .prepare(
-        "UPDATE visonaut_projects SET snapshot_id = ?, baseline_revision = 1, fresh_setup = 0 WHERE id = ?",
-      )
-      .bind(snapshotId, run.project_id)
-      .run();
-    const original = test.bindings.configuration.github.fetch!;
-    test.bindings.configuration.github.fetch = async (input, init) => {
-      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-      if (url.pathname.includes("/compare/"))
-        return Response.json({ status: "ahead", commits: [] });
-      return original(input, init);
-    };
-    const reference = await comparisonReference(apiContext(test.bindings), run);
-    expect(reference).toEqual({ referenceSnapshotId: snapshotId, expectedBaselineRevision: 1 });
-    await database
-      .prepare("UPDATE visonaut_projects SET baseline_revision = 2 WHERE id = ?")
-      .bind(run.project_id)
-      .run();
-    await expect(
-      test.service.createComparison({
-        id: crypto.randomUUID(),
-        runId: run.id,
-        ...reference,
-        now: Date.now(),
-        maxAttempts: 3,
-      }),
-    ).rejects.toMatchObject({ name: "ConflictError" });
-  });
   it("keeps a review-owned approval after a related source is rejected", async () => {
     const test = await fixture();
     await test.upload();
@@ -1460,33 +1417,6 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const model = await reviewResponse(response);
     expect(model.run.status).toBe("passed");
     expect(model.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "automatic" });
-  });
-  it("refreshes a prior main attempt into the stored flat lineage before recomparison", async () => {
-    const test = await fixture();
-    const priorId = crypto.randomUUID();
-    await database
-      .prepare("UPDATE visonaut_runs SET attempt = 2 WHERE id = ?")
-      .bind(test.runId)
-      .run();
-    await database
-      .prepare(
-        "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, active, state, created_at) SELECT ?, project_id, external_run_id, 1, kind, tested_sha, lineage_key, plan_digest, plan_json, 0, 'failed', created_at FROM visonaut_runs WHERE id = ?",
-      )
-      .bind(priorId, test.runId)
-      .run();
-    await database
-      .prepare(
-        "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at) SELECT ?, verified_json, plan_object_key, created_at FROM ingest_run_provenance WHERE run_id = ?",
-      )
-      .bind(priorId, test.runId)
-      .run();
-    const run = await test.service.run(test.runId);
-    await comparisonReference(apiContext(test.bindings), run);
-    const edges = await database
-      .prepare("SELECT source_run_id FROM visonaut_lineage WHERE target_run_id = ?")
-      .bind(test.runId)
-      .all<{ source_run_id: string }>();
-    expect(edges.results.map((entry) => entry.source_run_id)).toEqual([priorId]);
   });
   it("refuses private access when the configured authorization repository differs from the project", async () => {
     const test = await fixture();

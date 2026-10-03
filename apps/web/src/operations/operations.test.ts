@@ -34,6 +34,22 @@ beforeAll(() => {
 afterAll(() => vi.unstubAllGlobals());
 
 describe("protected object operations", () => {
+  it("keeps retained comparison tasks unchanged during ingest finalization", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context, "legacy", "main");
+    database.connection.exec(
+      "UPDATE visonaut_comparisons SET state='comparing' WHERE id='comparison-legacy'; UPDATE visonaut_comparison_rows SET outcome='pending' WHERE comparison_id='comparison-legacy'; INSERT INTO work_tasks(id,kind,payload,max_attempts,available_at,created_at,updated_at) SELECT id,'compare',json_object('taskId',id),2,1,1,1 FROM visonaut_comparison_rows WHERE comparison_id='comparison-legacy'",
+    );
+    const tasks = database.connection
+      .prepare("SELECT * FROM work_tasks WHERE kind='compare'")
+      .all();
+    const result = await runOperations(fixture.context, { kind: "ingest" });
+    expect(
+      database.connection.prepare("SELECT * FROM work_tasks WHERE kind='compare'").all(),
+    ).toEqual(tasks);
+    expect(Object.keys(result.reports)).toEqual(["finalization"]);
+  });
   it("delivers a passed main check before verifying source originals in bounded pages", async () => {
     using database = new TestDatabase();
     const fixture = context(database);

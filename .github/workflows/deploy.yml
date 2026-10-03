@@ -118,6 +118,10 @@ jobs:
         run: node .github/workflows/scripts/deploy-infrastructure.mjs
         env:
           VISONAUT_CONTAINER_RETIREMENT_VERIFIED: ${{ vars.VISONAUT_CONTAINER_RETIREMENT_VERIFIED }}
+      - name: Require detached comparison consumers before handler retirement
+        run: node .github/workflows/scripts/deploy-comparison-retirement.mjs
+        env:
+          VISONAUT_COMPARISON_RETIREMENT_TARGET: production
       - name: Apply production schema migrations
         working-directory: apps/web
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
@@ -365,7 +369,6 @@ jobs:
             ? [{ pattern: 'preview.visonaut.com', custom_domain: true, zone_name: 'visonaut.com' }]
             : [{ pattern: 'visonaut.com', custom_domain: true }]);
           assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
-            { binding: 'COMPARISONS', queue: `${prefix}-comparisons` },
             { binding: 'OPERATIONS', queue: `${prefix}-operations` }
           ]);
           assert.equal(configuration.migrations?.length ?? 0, 0);
@@ -384,14 +387,7 @@ jobs:
           const original = 'apps/compare/wrangler.jsonc';
           const temporary = 'apps/compare/cutover-wrangler.jsonc';
           const originalConfiguration = unstable_readConfig({ config: original, env: '' });
-          assert.deepEqual(originalConfiguration.queues.consumers, [{
-            queue: 'visonaut-preview-comparisons', max_batch_size: 1,
-            max_batch_timeout: 1, max_concurrency: 1, max_retries: 10,
-            retry_delay: 60, dead_letter_queue: 'visonaut-preview-comparison-dead-letter'
-          }, {
-            queue: 'visonaut-preview-comparison-dead-letter', max_batch_size: 1,
-            max_batch_timeout: 1, max_concurrency: 1, max_retries: 10, retry_delay: 60
-          }]);
+          assert.deepEqual(originalConfiguration.queues.consumers, []);
           // Keep consumers removed for the cutover fence absent from this deployment.
           copyFileSync(original, temporary, constants.COPYFILE_EXCL);
           experimental_patchConfig(temporary, { queues: { consumers: [] } }, false);
@@ -404,7 +400,6 @@ jobs:
             binding: 'IMAGES', bucket_name: 'visonaut-preview-images'
           }]);
           assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
-            { binding: 'COMPARISONS', queue: 'visonaut-preview-comparisons' },
             { binding: 'OPERATIONS', queue: 'visonaut-preview-operations' }
           ]);
           assert.deepEqual(configuration.queues.consumers, []);
@@ -412,8 +407,6 @@ jobs:
             { tag: 'container-v1', new_sqlite_classes: ['ComparisonContainer'] },
             { tag: 'worker-only-v2', deleted_classes: ['ComparisonContainer'] }
           ]);
-          assert.equal(configuration.vars?.VISONAUT_COMPARISON_DEAD_LETTER_QUEUE,
-            'visonaut-preview-comparison-dead-letter');
           assert.equal(configuration.observability.enabled, true);
           assert.equal(configuration.observability.traces.enabled, true);
           assert.equal(configuration.workers_dev, false);
@@ -480,6 +473,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VISONAUT_RELEASE_SOURCE_ONLY: "true"
+      - name: Require detached preview comparison consumers before handler retirement
+        if: inputs.action == 'preview-comparator'
+        run: node .github/workflows/scripts/deploy-comparison-retirement.mjs
+        env:
+          VISONAUT_COMPARISON_RETIREMENT_TARGET: preview
       - name: Deploy only the selected Worker
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
