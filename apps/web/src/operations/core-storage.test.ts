@@ -5,7 +5,6 @@ import { captured, context, digest, reserve, TestDatabase } from "./test-fixture
 import { promoteBaselines } from "./promotions.ts";
 import { convertSourceBaselines } from "./source-baselines.ts";
 import { summarizeClosedRuns, readClosedSummary } from "./closed-summary.ts";
-import { createRunExport, streamRunExport } from "./exports.ts";
 import { expireComparisonReferences } from "./snapshot-retention.ts";
 import { expireRunImages } from "./retention.ts";
 import { archiveClosedRuns } from "./history.ts";
@@ -678,7 +677,7 @@ it("keeps live capture owners and complete source approval evidence for a later 
   expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
 });
 
-it("exports a completed native historical comparison before the retention boundary", async () => {
+it("keeps a completed native historical comparison readable before the retention boundary", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   const service = await captured(fixture.context, "closed");
@@ -693,14 +692,10 @@ it("exports a completed native historical comparison before the retention bounda
     maxAttempts: 2,
   });
   await service.finalizeComparison({ comparisonId: "native-history", now: fixture.state.time + 2 });
-  const exported = await createRunExport(fixture.context, {
-    runId: "closed",
-    actorId: "maintainer",
-  });
-  const response = await streamRunExport(fixture.context, exported.exportId);
-  const content = await response.text();
-  expect(content).toContain("native-history");
-  expect(content).toContain("complete.json");
+  expect(await service.comparisonRows("native-history")).toEqual([
+    expect.objectContaining({ candidate_capture_id: "capture-closed", outcome: "changed" }),
+  ]);
+  expect(await fixture.images.get("runs/closed/original")).toMatchObject({ size: 20 });
   expect(
     database.connection.prepare("SELECT comparison_id FROM operations_comparison_archives").all(),
   ).toEqual([]);

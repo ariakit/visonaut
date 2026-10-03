@@ -26,6 +26,4 @@ export const operationsBudgetDefaults = Object.freeze({
   leaseMilliseconds: 12 * 60 * 1000,
   maxAttempts: 5,
   maximumObjectBytes: 16 * 1024 * 1024,
-  maximumMetadataBytes: 2 * 1024 * 1024 * 1024,
-  maximumExportEntries: 200_000,
 } satisfies OperationsBudget);

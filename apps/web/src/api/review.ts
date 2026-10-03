@@ -952,21 +952,5 @@ export async function handleReview(
       );
     throw new SecurityError("local_comparison_required", 409, serverRecompareDisabledReason);
   }
-  const exportMatch = /^\/api\/runs\/([a-f0-9-]+)\/export$/.exec(path);
-  if (exportMatch?.[1] && request.method === "POST") {
-    await projectRun(context, uuid(exportMatch[1]));
-    throw new SecurityError(
-      "export_retired",
-      410,
-      "Product exports are retired. Review retained evidence in run history.",
-    );
-  }
-  const downloadMatch = /^\/api\/exports\/([a-f0-9-]+)$/.exec(path);
-  if (downloadMatch?.[1] && request.method === "GET") {
-    if (!context.exports) {
-      throw new SecurityError("export_unavailable", 503, "Export is temporarily unavailable.");
-    }
-    return context.exports.download(uuid(downloadMatch[1]));
-  }
   return null;
 }

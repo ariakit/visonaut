@@ -57,8 +57,6 @@ export interface OperationsBudget {
   leaseMilliseconds: number;
   maxAttempts: number;
   maximumObjectBytes: number;
-  maximumMetadataBytes: number;
-  maximumExportEntries: number;
 }
 
 export interface OperationsContext {

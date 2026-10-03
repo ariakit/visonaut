@@ -5,16 +5,11 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { sanitizeRestoredDatabase, inspectRecoveryImages, readRestoreCutoff } from "./recovery.ts";
 import { TestDatabase, captured, context } from "./test-fixtures.ts";
-import { archiveClosedRuns } from "./history.ts";
+import { archiveClosedRuns, readRunHistory } from "./history.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
 import { publishReviewLinks } from "./review-links.ts";
-import { createRunExport, streamRunExport } from "./exports.ts";
-import { readTar } from "./export-scale-reader.ts";
-import { profile, sha256 } from "./export-scale-fixture.ts";
-import { digestJson } from "@visonaut/protocol";
-import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 
 it("keeps an accepted restored PR read-only without preventing a fresh capture", async () => {
   using database = new TestDatabase();
@@ -66,7 +61,7 @@ it("keeps an accepted restored PR read-only without preventing a fresh capture",
   });
 });
 
-it("retains the latest cutoff and permits a fresh capture and complete manual export", async () => {
+it("retains the latest cutoff and permits a fresh capture with readable history and verified images", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context, "old");
@@ -85,24 +80,25 @@ it("retains the latest cutoff and permits a fresh capture and complete manual ex
   await sanitizeRestoredDatabase(database, fixture.state.time - 1);
   expect(await readRestoreCutoff(database)).toBe(fixture.state.time);
   fixture.state.time += 1;
-  await captured(fixture.context, "fresh");
-  const digest = await digestJson(profile);
-  await storeCaptureProfiles(database, [{ digest, profile }]);
-  await database
-    .prepare("UPDATE visonaut_captures SET profile_digest=?,metadata_json=? WHERE run_id='fresh'")
-    .bind(digest, JSON.stringify({ profile: captureProfileReference(digest) }))
-    .run();
-  const exported = await createRunExport(fixture.context, {
-    runId: "fresh",
-    actorId: "maintainer",
+  const fresh = await captured(fixture.context, "fresh");
+  await fresh.retireRun({ runId: "fresh", now: fixture.state.time });
+  for (let step = 0; step < 50; step++) {
+    const report = await archiveClosedRuns(fixture.context);
+    expect(report.attention).toEqual([]);
+    if (report.completed.includes("fresh")) break;
+  }
+  expect(await readRunHistory(fixture.context, "fresh")).toMatchObject({
+    sections: {
+      run: [expect.objectContaining({ id: "fresh" })],
+      captures: [expect.objectContaining({ id: "capture-fresh" })],
+      comparisonRows: [expect.objectContaining({ comparison_id: "comparison-fresh" })],
+    },
   });
-  const result = await readTar({
-    response: await streamRunExport(fixture.context, exported.exportId),
+  expect(await inspectRecoveryImages(fixture.context)).toMatchObject({
+    checked: 2,
+    missing: [],
+    corrupt: [],
   });
-  expect(result.entries.has("complete.json")).toBe(true);
-  expect([...result.entries.values()].filter((entry) => entry.name.startsWith("images/"))).toEqual([
-    expect.objectContaining({ digest: sha256("original-image-bytes"), bytes: 20 }),
-  ]);
   expect(fixture.images.objects.get("runs/old/original")).toEqual(oldBytes);
   expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
 });

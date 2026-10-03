@@ -1743,7 +1743,7 @@ describe("private recomparison API", () => {
     expect(model.comparisonId).toBe(before.comparison_id);
   });
 
-  it("reports export retirement behind the existing private write checks", async () => {
+  it("returns private not-found responses for removed export endpoints", async () => {
     const test = await fixture();
     await test.complete();
     const path = `/api/runs/${test.runId}/export`;
@@ -1758,19 +1758,31 @@ describe("private recomparison API", () => {
       ).status,
     ).toBe(403);
     const response = await test.send(path, { method: "POST", headers });
-    expect(response.status).toBe(410);
+    expect(response.status).toBe(404);
     expect(await objectResponse(response)).toMatchObject({
       error: {
-        code: "export_retired",
-        message: "Product exports are retired. Review retained evidence in run history.",
+        code: "not_found",
+        message: "The endpoint was not found.",
       },
     });
     const missing = await test.send(`/api/runs/${crypto.randomUUID()}/export`, {
       method: "POST",
       headers,
     });
-    expect(missing.status).toBe(409);
-    expect(await objectResponse(missing)).toMatchObject({ error: { code: "incomplete" } });
+    expect(missing.status).toBe(404);
+    expect(await objectResponse(missing)).toMatchObject({ error: { code: "not_found" } });
+    const downloadPath = `/api/exports/${crypto.randomUUID()}`;
+    expect((await test.send(downloadPath)).status).toBe(401);
+    const download = await test.send(downloadPath, { headers });
+    expect(download.status).toBe(404);
+    expect(download.headers.get("cache-control")).toContain("no-store");
+    expect(await objectResponse(download)).toMatchObject({ error: { code: "not_found" } });
+    expect(
+      await database
+        .prepare("SELECT id FROM operations_exports WHERE run_id=?")
+        .bind(test.runId)
+        .all(),
+    ).toEqual(expect.objectContaining({ results: [] }));
   });
 
   it("keeps an expired closed run immutable when the active policy changes", async () => {

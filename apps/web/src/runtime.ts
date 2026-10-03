@@ -23,9 +23,7 @@ import {
   type ApiConfiguration,
 } from "./api/index.ts";
 import {
-  createRunExport,
   runOperations,
-  streamRunExport,
   type OperationsBudget,
   type OperationsContext,
 } from "./operations/index.ts";
@@ -187,26 +185,6 @@ export async function assertOperationsProject(env: Env) {
   }
 }
 
-async function assertExportRunProject(env: Env, runId: string) {
-  const projectId = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
-  const run = await env.DB.prepare(
-    `SELECT run.id FROM visonaut_runs run
-    JOIN visonaut_projects project ON project.id=run.project_id
-    WHERE run.id=? AND project.id=? AND project.repository_id=?`,
-  )
-    .bind(runId, projectId, env.GITHUB_REPOSITORY_ID)
-    .first();
-  if (!run) throw new SecurityError("not_found", 404, "The run was not found.");
-}
-
-async function assertExportProject(env: Env, exportId: string) {
-  const exported = await env.DB.prepare("SELECT run_id FROM operations_exports WHERE id=?")
-    .bind(exportId)
-    .first<{ run_id: string }>();
-  if (!exported) throw new SecurityError("not_found", 404, "The export was not found.");
-  await assertExportRunProject(env, exported.run_id);
-}
-
 export function apiBindings(env: Env): ApiBindings {
   const limits = runtimeApiLimits(env);
   const auth = authConfiguration(env);
@@ -308,16 +286,6 @@ export function apiBindings(env: Env): ApiBindings {
           409,
           "Closed command replay has ended. The decision summary remains available.",
         );
-      },
-    },
-    exports: {
-      async create(runId, actorId) {
-        await assertExportRunProject(env, runId);
-        return createRunExport(operationsContext(env), { runId, actorId });
-      },
-      async download(exportId) {
-        await assertExportProject(env, exportId);
-        return streamRunExport(operationsContext(env), exportId);
       },
     },
   };

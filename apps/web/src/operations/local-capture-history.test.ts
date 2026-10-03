@@ -3,13 +3,10 @@ import { cancelHistoricalPreparation } from "@visonaut/service";
 import { digestJson } from "@visonaut/protocol";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
-import { createRunExport, streamRunExport } from "./exports.ts";
-import { readTar } from "./export-scale-reader.ts";
-import { profile } from "./export-scale-fixture.ts";
 import { archiveClosedRuns, readArchivedSection } from "./history.ts";
 import { prepareHistoricalCaptures } from "./historical-captures.ts";
 import { inspectRecoveryImages, sanitizeRestoredDatabase } from "./recovery.ts";
-import { captured, context, TestDatabase } from "./test-fixtures.ts";
+import { captured, context, profile, TestDatabase } from "./test-fixtures.ts";
 
 const observedDigest = "b".repeat(64);
 async function localFixture(database: TestDatabase) {
@@ -46,40 +43,6 @@ async function localFixture(database: TestDatabase) {
     .run();
   return { ...fixture, service, metadata };
 }
-
-it("exports the stored representative while identifying the unavailable actual candidate", async () => {
-  using database = new TestDatabase();
-  const fixture = await localFixture(database);
-  const exported = await createRunExport(fixture.context, { runId: "run", actorId: "maintainer" });
-  const root = JSON.parse(
-    await new Response(
-      (await fixture.images.get(`exports/${exported.exportId}.json`))!.body,
-    ).text(),
-  );
-  expect(root.metadata).toMatchObject({ omittedCandidateImages: 1 });
-  expect(root.metadata.imageStorage).toContain("omitted candidate bytes are unavailable");
-  const captures: Record<string, unknown>[] = [];
-  const result = await readTar({
-    response: await streamRunExport(fixture.context, exported.exportId),
-    onJson(entry, value) {
-      if (
-        entry.name.startsWith("metadata/") &&
-        (value as { section?: string }).section === "captures"
-      )
-        captures.push(...(value as { rows: Record<string, unknown>[] }).rows);
-    },
-  });
-  expect(
-    [...result.entries.values()].filter((entry) => entry.name.startsWith("images/")),
-  ).toHaveLength(1);
-  expect(JSON.parse(String(captures[0]?.metadata_json))).toMatchObject({
-    localMode: "local-v1",
-    candidateStored: false,
-    observedImage: fixture.metadata.observedImage,
-    comparison: fixture.metadata.comparison,
-    comparisonDigest: fixture.metadata.comparisonDigest,
-  });
-});
 
 it("keeps actual candidate identity and consumer settings in the permanent closed summary", async () => {
   using database = new TestDatabase();
@@ -132,13 +95,6 @@ it("keeps omission metadata in archived capture pages and refuses historical rep
   expect(
     database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
   ).toEqual([]);
-  const exported = await createRunExport(fixture.context, { runId: "run", actorId: "maintainer" });
-  const root = JSON.parse(
-    await new Response(
-      (await fixture.images.get(`exports/${exported.exportId}.json`))!.body,
-    ).text(),
-  );
-  expect(root.metadata.imageBytes).toContain("candidates omitted by local Submit are unavailable");
 });
 
 it("preserves omission metadata during a restored database activation and checks only stored bytes", async () => {

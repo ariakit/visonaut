@@ -2,7 +2,7 @@
 
 This is the W03 public summary for [issue #204](https://github.com/ariakit/visonaut/issues/204). Source was checked at the reviewed W01 commit [`4a4cefc`](https://github.com/ariakit/visonaut/commit/4a4cefcb23ad502c5534bc047b94630744e56b26), after current main [`3d575bd`](https://github.com/ariakit/visonaut/commit/3d575bd652ae29b12cb18155310cd8437a8ef826). Production and preview D1 reads ran on 2026-10-02, from approximately 19:37 through 20:07:44 UTC. Each result below has its own evidence time. The reads are not one atomic snapshot.
 
-W03 is complete as an inventory with explicit holds. W06 can prepare stage A once W02 is ready. W06 stage B, W07, and W08 have not passed their removal gates. D14 remains a proposal. No conversion, cleanup, migration, restore, cloud-resource change, deployment, package release, or consumer edit was performed.
+W03 is complete as a dated inventory with explicit holds. At this inventory's source and evidence time, W06 could prepare stage A once W02 was ready; W06 stage B, W07, and W08 had not passed their removal gates. D14 remained a proposal. No conversion, cleanup, migration, restore, cloud-resource change, deployment, package release, or consumer edit was performed by W03. The later [export endpoint selection](../current-contract.md#product-export-endpoint-retirement) supersedes the D06 availability wait below; it does not change the dated counts or prove a later cleanup.
 
 The existing authenticated Cloudflare dashboard supplied SELECT-only D1 reads and queue/deployment metadata. Both database UUIDs matched the [checked target inventory](simplification-inventory.json) and [web configuration](../../apps/web/wrangler.jsonc). The cutover runner was not used because it creates a provider proxy even for inspection. Raw target identifiers, queue IDs, exact SELECTs, dated results, query errors, and local logs are in the private W03 handoff receipt outside Git. This summary contains no object keys, actor IDs, account contact data, or private record payloads.
 
@@ -90,6 +90,8 @@ W08 remains held by the supported-client census, complete delayed/replayable wor
 
 ## D06: export drain and W06 readiness
 
+The counts, source predicate, and stage A/B hold below record the 2026-10-02 inventory. On 2026-10-03, the user selected retirement without honoring existing export links through promised expiry. That selection supersedes the endpoint availability and pre-deployment drain/cleanup wait recorded here. Classification of any actual unfinished producer work, required private evidence, correct export pin ownership, and custom override compatibility still apply. Retained export rows alone do not prove an actual producer dependency. Retained pages and pins can remain until the unchanged ordinary cleanup is eligible; no forced expiry or deletion is required. Use the [current contract](../current-contract.md#product-export-endpoint-retirement) for rollout requirements.
+
 | Export check                                   | Production | Preview | SQL evidence time, UTC |
 | ---------------------------------------------- | ---------- | ------- | ---------------------- |
 | Building / ready and unexpired                 | 0 / 1      | 0 / 0   | 19:40:49 / 19:59:28    |
@@ -101,7 +103,7 @@ W08 remains held by the supported-client census, complete delayed/replayable wor
 
 The private receipt contains exact latest expiry and lease times. Eight creation records prove observed use; download frequency is unknown. No product download was requested: a successful GET renews `active_until` and would change live state. No private pages or objects were copied in this inventory, and preservation of required private export evidence remains unverified.
 
-W06 stage A can prepare rejection of all new closed-run comparisons and new exports after W02. It must keep active local review, explicit terminal history, and existing export downloads. Retain [batched page reads](../../apps/web/src/operations/export-pages.ts), checksum and original verification, completion/truncation rules, the 24-hour export expiry, one-hour download lease, renewal, bounded private-page cleanup, and owner-specific pin release in [exports](../../apps/web/src/operations/exports.ts). Do not add a replacement report feature.
+At the inventory date, W06 stage A could prepare rejection of all new closed-run comparisons and new exports after W02. Its selected scope kept active local review, explicit terminal history, and existing export downloads. It retained [batched page reads at the inventory source](https://github.com/ariakit/visonaut/blob/7715b742da7d0970fe005e04995e3e049aeabf50/apps/web/src/operations/export-pages.ts), checksum and original verification, completion/truncation rules, the 24-hour export expiry, one-hour download lease, renewal, bounded private-page cleanup, and owner-specific pin release in [exports at the inventory source](https://github.com/ariakit/visonaut/blob/7715b742da7d0970fe005e04995e3e049aeabf50/apps/web/src/operations/exports.ts). No replacement report was selected.
 
 The exact source cleanup condition, with `now` bound in milliseconds, is:
 
@@ -116,7 +118,7 @@ AND (
 )
 ```
 
-Stage B remains held by the unexpired production export, its owned pins, required private-evidence preservation, and a later drain readback after stage A reaches its target. A zero lease count at one instant is not sufficient. Existing cleanup must finish bounded deletion of its private pages before releasing only its own pins. Keep download and cleanup code until these gates pass in both environments.
+At the inventory date, stage B was held by the unexpired production export, its owned pins, required private-evidence preservation, and a later drain readback after stage A reached its target. A zero lease count at one instant was not sufficient. Download availability and completion of cleanup before endpoint retirement are now superseded as stated above. Existing cleanup still must finish bounded deletion of private pages before releasing only its own pins; keep that cleanup while retained records need it.
 
 ## D14: retired-table proposal
 
@@ -146,13 +148,23 @@ A future proposal targets only the nine exact tables above in the verified previ
 
 A locked install used Node `24.18.0` and pnpm `12.5.1`. Eight existing test files passed, with 64 tests: all-numbered-migration parity in SQLite and native D1, isolated SQLite snapshot rewind and recovery fencing, history, history formats, exports, local capture history, native streams, and snapshot retention. A separate fresh SQLite read applied all 29 migrations at 20:02:37 UTC, created 73 tables, found the nine retired tables and six FK edges, returned no foreign-key violations, and returned `integrity_check='ok'`. No new tests or runtime code were added.
 
-Representative repeatable local checks are:
+The recorded 64-test result belongs to source snapshot [`4a4cefc`](https://github.com/ariakit/visonaut/commit/4a4cefcb23ad502c5534bc047b94630744e56b26). To repeat those historical checks, use an isolated checkout of that snapshot with its pinned runtime and lockfile. The [export history test](https://github.com/ariakit/visonaut/blob/4a4cefcb23ad502c5534bc047b94630744e56b26/apps/web/src/operations/export-history.test.ts) is retained there. Run these commands in that historical checkout:
 
 ```sh
 pnpm test apps/web/src/operations/test-migrations.test.ts apps/web/src/operations/recovery.test.ts
 pnpm test apps/web/src/operations/history.test.ts apps/web/src/operations/history-format.test.ts apps/web/src/operations/export-history.test.ts apps/web/src/operations/local-capture-history.test.ts
 pnpm test apps/web/src/operations/native-stream.test.ts apps/web/src/operations/snapshot-retention.test.ts
 ```
+
+For the current checkout, omit the retired export history test and include the retained export cleanup checks:
+
+```sh
+pnpm test apps/web/src/operations/test-migrations.test.ts apps/web/src/operations/recovery.test.ts
+pnpm test apps/web/src/operations/history.test.ts apps/web/src/operations/history-format.test.ts apps/web/src/operations/local-capture-history.test.ts apps/web/src/operations/operations.test.ts
+pnpm test apps/web/src/operations/native-stream.test.ts apps/web/src/operations/snapshot-retention.test.ts
+```
+
+These current commands do not reproduce the recorded export tests or change the historical 64-test result.
 
 The private receipt records exact SELECT statements and errors. The initial oversized UNION failed with `SQLITE_ERROR`; successful bounded scalar queries replaced it. The initial event subset omitted finalization/task kinds; the complete later query above supersedes it. No failed query or absent result became zero. Required original-byte/hash and full profile validation remain open. Hosted Time Travel is optional and **UNVERIFIED** under the existing O19 decision; these local checks do not add a hosted rehearsal gate or reopen waived cutover probes.
 

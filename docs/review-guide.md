@@ -85,9 +85,9 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 ## Recompare and export
 
-**Recompare stored run** is available only for eligible active legacy runs. Every closed run is read-only, including retained legacy detail. A new comparison needs a fresh complete capture. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
+**Recompare stored run** is retired. Every closed run is read-only, including retained legacy detail. A new comparison requires a fresh complete capture through trusted local Submit. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
 
-New product exports are retired, and the **Export run** control is removed. Existing private export links remain usable until their current expiry. Access is checked again when a download starts. The reader verifies checksum pages and every listed file, including the final `complete.json` integrity marker; a filename alone does not prove a complete archive. Export links expire after 24 hours, and an active download keeps its one-hour lease. Expired exports cannot be recreated. Review retained evidence in run history, or capture a new complete run for new evidence.
+New product exports are retired, and the **Export run** control is removed. The final retirement release removes export endpoints and links, including existing links whose promised expiry has not passed. Requests then return `404 not_found`; a download lease does not preserve endpoint availability. Retained export pages and pins remain subject to ordinary expiry and cleanup. Review retained evidence in run history, or capture a new complete run for new evidence. Product exports cannot be recreated.
 
 Use **All runs** to return to the dashboard and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 

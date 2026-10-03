@@ -1,11 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  captureProfilesDigest,
-  closedRunRetentionMs,
-  retentionPinStatement,
-} from "@visonaut/service";
+import { closedRunRetentionMs, retentionPinStatement } from "@visonaut/service";
 import { TestDatabase, MemoryStore, context, reserve, captured, digest } from "./test-fixtures.ts";
-import { createRunExport, streamRunExport, expireExports } from "./exports.ts";
+import { expireExports } from "./exports.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
@@ -377,7 +373,122 @@ describe("GitHub checks", () => {
   });
 });
 
-describe("private streaming exports", () => {
+describe("retained export cleanup", () => {
+  it.each(["unexpired", "leased"])("keeps %s export pages and ownership", async (hold) => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await reserve(fixture.context);
+    database.connection
+      .prepare(
+        "INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,active_until,created_at) VALUES('held','run','maintainer','ready',?,?,0)",
+      )
+      .run(
+        fixture.state.time + (hold === "unexpired" ? 1 : -1),
+        hold === "leased" ? fixture.state.time + 1 : null,
+      );
+    await retentionPinStatement(database, {
+      runId: "run",
+      owner: "export:held",
+      reason: "recovery",
+    }).run();
+    await fixture.images.put("exports/held.json", "private root");
+    const remove = vi.spyOn(fixture.images, "delete");
+    expect(await expireExports(fixture.context)).toBe(0);
+    expect(remove).not.toHaveBeenCalled();
+    expect(database.connection.prepare("SELECT state FROM operations_exports").get()).toEqual({
+      state: "ready",
+    });
+    expect(
+      database.connection.prepare("SELECT owner FROM work_retention_pins ORDER BY owner").all(),
+    ).toEqual([{ owner: "export:held" }, { owner: "review:run" }]);
+  });
+
+  it("finishes bounded private-page cleanup before releasing only its own pins", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context, "run", "main");
+    fixture.context.budget.objectsPerStep = 1;
+    database.connection.exec(`
+      INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,created_at)
+        VALUES('expired','run','maintainer','ready',0,0);
+      INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
+        VALUES('snapshot','project','run','comparison-run','sha','accepted',1,'baselines/snapshot',0);
+      INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES
+        ('snapshot','export','export:expired'),
+        ('snapshot','baseline','baseline'),
+        ('snapshot','review','review'),
+        ('snapshot','manual','manual'),
+        ('snapshot','export','export:unrelated');
+      INSERT INTO work_retention_pins(run_id,owner,reason) VALUES
+        ('run','export:expired','recovery'),
+        ('run','baseline','baseline'),
+        ('run','review','review'),
+        ('run','manual','manual'),
+        ('run','export:unrelated','recovery');
+    `);
+    for (const key of [
+      "exports/expired.json",
+      "exports/expired/1.json",
+      "exports/expired/2.json",
+      "exports/unrelated.json",
+      "history/run/manifest.json",
+      "baselines/snapshot/original",
+    ]) {
+      await fixture.images.put(key, "retained bytes");
+    }
+    const originals = new Map(fixture.images.objects);
+    expect(await expireExports(fixture.context)).toBe(1);
+    expect(fixture.images.objects.has("exports/expired/1.json")).toBe(false);
+    expect(fixture.images.objects.has("exports/expired/2.json")).toBe(true);
+    expect(fixture.images.objects.has("exports/expired.json")).toBe(true);
+    expect(
+      database.connection
+        .prepare("SELECT owner FROM work_retention_pins WHERE owner='export:expired'")
+        .get(),
+    ).toEqual({ owner: "export:expired" });
+    const remove = vi
+      .spyOn(fixture.images, "delete")
+      .mockRejectedValueOnce(new Error("R2 unavailable"));
+    await expect(expireExports(fixture.context)).rejects.toThrow("R2 unavailable");
+    remove.mockRestore();
+    expect(fixture.images.objects.has("exports/expired.json")).toBe(true);
+    expect(
+      database.connection
+        .prepare("SELECT owner FROM work_retention_pins WHERE owner='export:expired'")
+        .get(),
+    ).toEqual({ owner: "export:expired" });
+    expect(await expireExports(fixture.context)).toBe(1);
+    expect(await expireExports(fixture.context)).toBe(0);
+    expect(database.connection.prepare("SELECT id,state FROM operations_exports").all()).toEqual([
+      { id: "expired", state: "expired" },
+    ]);
+    expect(
+      database.connection.prepare("SELECT owner FROM work_retention_pins ORDER BY owner").all(),
+    ).toEqual([
+      { owner: "baseline" },
+      { owner: "export:unrelated" },
+      { owner: "manual" },
+      { owner: "review" },
+      { owner: "review:run" },
+    ]);
+    expect(
+      database.connection.prepare("SELECT owner_id FROM visonaut_pins ORDER BY owner_id").all(),
+    ).toEqual([
+      { owner_id: "baseline" },
+      { owner_id: "export:unrelated" },
+      { owner_id: "manual" },
+      { owner_id: "review" },
+    ]);
+    for (const [key, value] of originals) {
+      if (key.startsWith("exports/expired")) {
+        expect(fixture.images.objects.has(key)).toBe(false);
+      } else {
+        expect(fixture.images.objects.get(key)).toEqual(value);
+      }
+    }
+    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
   it("logs the operations pass when export cleanup fails", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
@@ -435,184 +546,6 @@ describe("private streaming exports", () => {
         .first(),
     ).toEqual({ state: "expired" });
     expect(fixture.images.objects.has(`exports/${exportId}.json`)).toBe(false);
-  });
-
-  it("streams exact original bytes with private metadata and a final integrity marker", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await captured(fixture.context);
-    const result = await createRunExport(fixture.context, { runId: "run", actorId: "maintainer" });
-    const response = await streamRunExport(fixture.context, result.exportId);
-    expect(response.headers.get("cache-control")).toBe("private, no-store");
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    const text = new TextDecoder().decode(bytes);
-    expect(text).toContain("private.test.ts");
-    expect(text).toContain("original-image-bytes");
-    expect(text).toContain("complete.json");
-    expect(bytes.length % 512).toBe(0);
-    fixture.state.time += 24 * 60 * 60 * 1000 + 1;
-    for (let step = 0; step < 100; step++) {
-      if (!(await expireExports(fixture.context))) break;
-    }
-    await expect(streamRunExport(fixture.context, result.exportId)).rejects.toThrow(
-      "This export expired or is not ready. Review retained evidence in run history, or capture a new complete run.",
-    );
-    expect(
-      await database
-        .prepare("SELECT * FROM work_retention_pins WHERE owner=?")
-        .bind(`export:${result.exportId}`)
-        .first(),
-    ).toBeNull();
-  });
-  it("exports inherited originals and pins their owners after the inherited run is retired", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const service = await captured(fixture.context, "first");
-    const first = await service.run("first");
-    await service.reserveRun({
-      id: "inherited",
-      projectId: "project",
-      externalRunId: "first",
-      attempt: 2,
-      kind: "pull_request",
-      testedSha: first.tested_sha,
-      lineageKey: first.lineage_key,
-      plan: {
-        digest: "plan",
-        shards: [
-          {
-            key: "chromium",
-            profileDigest: "profile",
-            tests: ["test"],
-            captures: [{ itemKey: "dialog", variantKey: "light", testId: "test" }],
-          },
-        ],
-      },
-      verifiedRelatedRunIds: ["first"],
-      verifiedAncestorShas: [],
-      verificationDigest: "proof",
-      inheritFromRunId: "first",
-      verifiedInheritedShards: [
-        {
-          key: "chromium",
-          manifestDigest: "manifest",
-          captureProfileDigest: await captureProfilesDigest([
-            { itemKey: "dialog", variantKey: "light", profileDigest: "profile" },
-          ]),
-        },
-      ],
-      rerunShardKeys: [],
-      now: fixture.state.time,
-    });
-    await service.sealRun({ runId: "inherited", now: fixture.state.time });
-    await service.createComparison({
-      id: "comparison-inherited",
-      runId: "inherited",
-      referenceSnapshotId: null,
-      now: fixture.state.time,
-      maxAttempts: 2,
-    });
-    await service.finalizeComparison({
-      comparisonId: "comparison-inherited",
-      now: fixture.state.time,
-    });
-    const result = await createRunExport(fixture.context, {
-      runId: "inherited",
-      actorId: "maintainer",
-    });
-    await service.retireRun({ runId: "inherited", now: fixture.state.time });
-    expect(
-      await database
-        .prepare("SELECT run_id FROM work_retention_pins WHERE owner=? ORDER BY run_id")
-        .bind(`export:${result.exportId}`)
-        .all(),
-    ).toEqual({ results: [{ run_id: "first" }, { run_id: "inherited" }] });
-    expect(await (await streamRunExport(fixture.context, result.exportId)).text()).toContain(
-      "original-image-bytes",
-    );
-    fixture.state.time += 24 * 60 * 60 * 1000 + 1;
-    for (let step = 0; step < 100; step++) {
-      if (!(await expireExports(fixture.context))) break;
-    }
-    expect(
-      await database
-        .prepare("SELECT * FROM work_retention_pins WHERE owner=?")
-        .bind(`export:${result.exportId}`)
-        .first(),
-    ).toBeNull();
-  });
-  it("enforces the measured entry bound before making an export downloadable", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await captured(fixture.context);
-    fixture.context.budget.maximumExportEntries = 0;
-    await expect(
-      createRunExport(fixture.context, { runId: "run", actorId: "maintainer" }),
-    ).rejects.toThrow("entry limit");
-    expect(
-      await database
-        .prepare("SELECT * FROM work_retention_pins WHERE owner LIKE 'export:%'")
-        .first(),
-    ).toBeNull();
-  });
-  it("cancels the current reader and bounded prefetch when the download disconnects", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await captured(fixture.context);
-    for (let index = 0; index < 4; index++) {
-      const key = `derived/run/${index}`;
-      await fixture.images.put(key, "original-image-bytes");
-      await database
-        .prepare(
-          "INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role) VALUES(?,'run',?,?,'image/png',20,1,1,'thumbnail')",
-        )
-        .bind(`derived-${index}`, digest(new TextEncoder().encode("original-image-bytes")), key)
-        .run();
-    }
-    const exported = await createRunExport(fixture.context, {
-      runId: "run",
-      actorId: "maintainer",
-    });
-    const original = fixture.images.get.bind(fixture.images);
-    let calls = 0;
-    let cancellations = 0;
-    fixture.images.get = async (key) => {
-      if (key.startsWith("exports/")) return original(key);
-      calls++;
-      const object = await original(key);
-      if (!object) return null;
-      await object.body.cancel();
-      return {
-        ...object,
-        body: new ReadableStream<Uint8Array>({
-          pull(controller) {
-            controller.enqueue(new Uint8Array(20));
-          },
-          cancel() {
-            cancellations++;
-          },
-        }),
-      };
-    };
-    const response = await streamRunExport(fixture.context, exported.exportId);
-    if (!response.body) throw new Error("No archive");
-    const reader = response.body.getReader();
-    for (let count = 0; count < 1000 && !calls; count++) {
-      await reader.read();
-    }
-    await reader.cancel();
-    reader.releaseLock();
-    expect(calls).toBe(4);
-    expect(cancellations).toBe(4);
-  });
-  it("fails a changed source instead of emitting a successful archive", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await captured(fixture.context);
-    const result = await createRunExport(fixture.context, { runId: "run", actorId: "maintainer" });
-    await fixture.images.put("runs/run/original", "xxxxxxxxxxxxxxxxxxxx");
-    const response = await streamRunExport(fixture.context, result.exportId);
-    await expect(response.arrayBuffer()).rejects.toThrow();
   });
 });
 

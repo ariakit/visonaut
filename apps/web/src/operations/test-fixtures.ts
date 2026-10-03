@@ -1,3 +1,4 @@
+import type { CaptureProfile } from "@visonaut/protocol";
 import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
@@ -177,8 +178,6 @@ export function context(database: TestDatabase) {
       leaseMilliseconds: 60_000,
       maxAttempts: 2,
       maximumObjectBytes: 1024 * 1024,
-      maximumMetadataBytes: 8 * 1024 * 1024,
-      maximumExportEntries: 100,
     },
     now: () => state.time,
     github: {
@@ -368,3 +367,22 @@ export async function ingestRecords(context: OperationsContext, runId: string) {
       .first(),
   };
 }
+
+export const profile = {
+  browser: "chromium",
+  browserVersion: "154.0.8037.44",
+  locale: "en-US",
+  timezone: "UTC",
+  comparisonEngineVersion: "rgba-visible-1",
+  osImageDigest: "a".repeat(64),
+  fontsDigest: "b".repeat(64),
+  comparisonPolicyDigest: "c".repeat(64),
+  viewport: { width: 1280, height: 720 },
+  deviceScaleFactor: 1,
+  reducedMotion: "reduce",
+  colorScheme: "light",
+  contrast: "no-preference",
+  forcedColors: "none",
+  animationPolicy: "disabled",
+  captureOptions: { animations: "disabled", caret: "hide", scale: "css" },
+} satisfies CaptureProfile;
