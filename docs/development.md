@@ -9,7 +9,7 @@ Use the [current system guide](current-contract.md) for requirements, selected t
 | `pnpm check`                 | Lint, types, build, unit tests, and the existing review browser fixture | Google Chrome and local Worker test runtime                            |
 | `pnpm test`                  | Unit, SQLite, and native D1/R2 fixture tests                            | Local loopback access for Miniflare                                    |
 | `pnpm test:browser`          | Review interactions and client route fixtures                           | Google Chrome                                                          |
-| `pnpm test:release-guards`   | Publication and deployment guard tests                                  | Node only; no cloud login                                              |
+| `pnpm test:release-guards`   | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                                              |
 | `pnpm check:packages`        | Built public package contents and installation smoke checks             | Run `pnpm build` first                                                 |
 | `pnpm test:container`        | On-demand diagnostic comparison Container tests                         | Install `apps/compare/container` dependencies for the current platform |
 | `pnpm check:container-image` | On-demand pinned diagnostic Container image build                       | Docker with Linux amd64 support                                        |
