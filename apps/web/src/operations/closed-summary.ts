@@ -3,6 +3,7 @@ import {
   assertion,
   atomic,
   closedRunRetentionMs,
+  comparisonResultSql,
   commandRequestDigest,
   pruneArchivedImageMetadataStatements,
   type Database,
@@ -362,7 +363,7 @@ async function summarizeLiveClosedRun(
     context.database
       .prepare(`INSERT INTO visonaut_closed_summary_rows(id,run_id,comparison_id,ordinal,item_key,variant_key,tuple_json,outcome,decision_revision,decision_id,source_decision_id,accepted,verdict,kind,actor_id,revoked,reference_capture_id,candidate_capture_id,metadata_json,result_json)
       SELECT row.id,?,row.comparison_id,row.ordinal,row.item_key,row.variant_key,row.tuple_json,row.outcome,row.decision_revision,row.decision_id,row.source_decision_id,COALESCE(${historicalAcceptance},0),decision.verdict,decision.kind,decision.actor_id,decision.revoked,row.reference_capture_id,row.candidate_capture_id,
-      CASE WHEN json_extract(capture.metadata_json,'$.localMode')='local-v1' THEN json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant'),'localMode',json_extract(capture.metadata_json,'$.localMode'),'observedImage',json_extract(capture.metadata_json,'$.observedImage'),'candidateStored',json_extract(capture.metadata_json,'$.candidateStored'),'comparison',json_extract(capture.metadata_json,'$.comparison'),'comparisonDigest',json_extract(capture.metadata_json,'$.comparisonDigest')) ELSE json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant')) END,row.result_json
+      CASE WHEN json_extract(capture.metadata_json,'$.localMode')='local-v1' THEN json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant'),'localMode',json_extract(capture.metadata_json,'$.localMode'),'observedImage',json_extract(capture.metadata_json,'$.observedImage'),'candidateStored',json_extract(capture.metadata_json,'$.candidateStored'),'comparison',json_extract(capture.metadata_json,'$.comparison'),'comparisonDigest',json_extract(capture.metadata_json,'$.comparisonDigest')) ELSE json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant')) END,${comparisonResultSql("row")}
       FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id LEFT JOIN visonaut_decisions decision ON decision.id=COALESCE(row.source_decision_id,row.decision_id)
       LEFT JOIN visonaut_captures capture ON capture.id=COALESCE(row.candidate_capture_id,row.reference_capture_id) WHERE comparison.run_id=?`)
       .bind(run.id, run.id),
