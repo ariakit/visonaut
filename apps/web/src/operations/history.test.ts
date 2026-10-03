@@ -26,7 +26,6 @@ import {
   type HistorySection,
   type HistoryRow,
 } from "./history-format.ts";
-import { createRunExport, streamRunExport } from "./exports.ts";
 import { expireRunImages } from "./retention.ts";
 import {
   archiveHistoricalComparisons,
@@ -329,19 +328,17 @@ describe("verified closed history with native D1 and R2", () => {
     await finishHistorical();
     expect(await readHistoryManifest(operations, "run")).toBeNull();
     expect(await detailCount()).toEqual({ count: 1 });
-    const exported = await createRunExport(operations, { runId: "run", actorId: "maintainer" });
-    const body = await (await streamRunExport(operations, exported.exportId)).text();
-    expect(body).toContain("history-comparisons/");
-    expect(body).toContain("historical-row");
-    expect(body).toContain("original-image-bytes");
+    const history = await readArchivedComparison(operations, {
+      runId: "run",
+      comparisonId: "historical",
+    });
+    expect(history?.sections.comparisonRows?.[0]).toMatchObject({ id: "historical-row" });
+    expect(await operations.images.get("runs/run/original")).toMatchObject({ size: 20 });
   });
 
   it("adds a verified comparison supplement without changing the original archive", async () => {
     await historical();
     const original = await readHistoryManifest(operations, "run");
-    await expect(
-      createRunExport(operations, { runId: "run", actorId: "maintainer" }),
-    ).rejects.toThrow("finish saving");
     await finishHistorical();
     const after = await readHistoryManifest(operations, "run");
     expect(after?.pointer.digest).toBe(original?.pointer.digest);
@@ -366,10 +363,6 @@ describe("verified closed history with native D1 and R2", () => {
       result_json: '{"changedPixels":2}',
     });
     expect(history?.sections.run?.[0]).toMatchObject({ id: "run" });
-    const exported = await createRunExport(operations, { runId: "run", actorId: "maintainer" });
-    const body = await (await streamRunExport(operations, exported.exportId)).text();
-    expect(body).toContain("history-comparisons/");
-    expect(body).toContain("historical-row");
   });
   it("keeps historical detail and byte pins when a supplement object is corrupt", async () => {
     await historical();
@@ -419,35 +412,6 @@ describe("verified closed history with native D1 and R2", () => {
         root.pointer.object_key,
       ),
     ).rejects.toThrow();
-  });
-  it("exports a still-protected snapshot original after its run original expires", async () => {
-    await closed();
-    await operations.database
-      .prepare(
-        "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES('snapshot','project','run','comparison-run',?,'accepted',0,'baselines/snapshot/',?)",
-      )
-      .bind("a".repeat(40), operations.now())
-      .run();
-    await operations.database
-      .prepare(
-        "INSERT INTO visonaut_snapshot_images(snapshot_id,capture_id,image_id,object_key,digest,copied) SELECT 'snapshot','capture-run',id,'baselines/snapshot/original',digest,1 FROM visonaut_images WHERE id='image-run'",
-      )
-      .run();
-    await operations.images.put("baselines/snapshot/original", "original-image-bytes");
-    await operations.database
-      .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id='image-run'")
-      .run();
-    await operations.images.delete("runs/run/original");
-    await finish();
-    const exported = await createRunExport(operations, { runId: "run", actorId: "maintainer" });
-    const body = await (await streamRunExport(operations, exported.exportId)).text();
-    expect(body).toContain("references/");
-    expect(body).toContain("original-image-bytes");
-    expect(
-      await operations.database
-        .prepare("SELECT reason FROM visonaut_pins WHERE snapshot_id='snapshot'")
-        .first(),
-    ).toEqual({ reason: "export" });
   });
   it("continues newer archives while an older corrupt candidate waits for retry", async () => {
     await closed("bad");
@@ -533,13 +497,6 @@ describe("verified closed history with native D1 and R2", () => {
     expect(history?.sections.comparisonRows).toHaveLength(1);
     expect(history?.sections.decisions).toHaveLength(1);
     expect((await operations.images.get("runs/run/original"))?.size).toBeGreaterThan(0);
-    const exported = await createRunExport(operations, { runId: "run", actorId: "maintainer" });
-    const response = await streamRunExport(operations, exported.exportId);
-    const body = await response.text();
-    expect(body).toContain("history/manifest.json");
-    expect(body).toContain(JSON.stringify(records.upload));
-    expect(body).toContain("original-image-bytes");
-    expect(body).toContain("complete.json");
   });
   it("does not prune when saved upload archive bytes are corrupt", async () => {
     await closed();
@@ -854,10 +811,6 @@ describe("verified closed history with native D1 and R2", () => {
     expect(await operations.images.get("runs/run/original")).toBeNull();
     const history = await readHistoryManifest(operations, "run");
     expect(history?.manifest.counts.documents).toBe(1);
-    const exported = await createRunExport(operations, { runId: "run", actorId: "maintainer" });
-    const body = await (await streamRunExport(operations, exported.exportId)).text();
-    expect(body).toContain("history/manifest.json");
-    expect(body).not.toContain("original-image-bytes");
   });
   it("fails closed on missing or corrupt archived pages", async () => {
     await closed();

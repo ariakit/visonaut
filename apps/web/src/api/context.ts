@@ -95,10 +95,6 @@ export interface ApiBindings {
       maximumCaptures: number;
     }): Promise<number>;
   };
-  exports?: {
-    create(runId: string, actorId: string): Promise<{ exportId: string; downloadPath: string }>;
-    download(exportId: string): Promise<Response>;
-  };
 }
 
 export interface ApiContext extends ApiBindings {

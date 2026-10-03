@@ -563,56 +563,6 @@ describe("private permanent closed review", () => {
     await expect(test.model()).rejects.toThrow("Archived comparison outcome is invalid");
   });
 
-  it("rejects new exports while keeping the permanent summary readable", async () => {
-    using database = new TestDatabase();
-    const test = await fixture(database);
-    await test.close();
-    test.expire();
-    await test.summary();
-    const create = vi.fn(async () => ({ exportId: "export", downloadPath: "/api/exports/export" }));
-    test.api.exports = { create, download: vi.fn() };
-    await expect(
-      handleReview(
-        new Request(`https://example.com/api/runs/${runId}/export`, { method: "POST" }),
-        test.api,
-      ),
-    ).rejects.toMatchObject({ code: "export_retired", status: 410 });
-    expect(create).not.toHaveBeenCalled();
-    expect(await test.model()).toMatchObject({ evidenceState: "summary", archived: true });
-  });
-
-  it.each([true, false])("rejects active-run exports with export binding %s", async (binding) => {
-    using database = new TestDatabase();
-    const test = await fixture(database);
-    const create = vi.fn(async () => ({
-      exportId: historicalId,
-      downloadPath: `/api/exports/${historicalId}`,
-    }));
-    if (binding) {
-      test.api.exports = { create, download: vi.fn() };
-    }
-    await expect(
-      handleReview(
-        new Request(`https://example.com/api/runs/${runId}/export`, { method: "POST" }),
-        test.api,
-      ),
-    ).rejects.toMatchObject({ code: "export_retired", status: 410 });
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("keeps existing private export downloads available through drain", async () => {
-    using database = new TestDatabase();
-    const test = await fixture(database);
-    const download = vi.fn(async () => new Response("retained private export"));
-    test.api.exports = { create: vi.fn(), download };
-    const response = await handleReview(
-      new Request(`https://example.com/api/exports/${historicalId}`),
-      test.api,
-    );
-    expect(await response?.text()).toBe("retained private export");
-    expect(download).toHaveBeenCalledWith(historicalId);
-  });
-
   it("validates receipt identity but refuses replay after the permanent summary", async () => {
     using database = new TestDatabase();
     const test = await fixture(database);

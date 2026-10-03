@@ -24,8 +24,6 @@ const previousOperationsBudget = {
   leaseMilliseconds: 720000,
   maxAttempts: 5,
   maximumObjectBytes: 16777216,
-  maximumMetadataBytes: 2147483648,
-  maximumExportEntries: 200000,
 };
 
 let runtime: Miniflare;
@@ -80,8 +78,15 @@ function resolvedApiLimits(env: Env) {
 }
 
 describe("runtime numeric configuration", () => {
+  it.each(["maximumExportEntries", "maximumMetadataBytes"])(
+    "rejects the retired export budget %s",
+    (name) => {
+      const env = configurationEnv({ VISONAUT_OPERATIONS_BUDGET: JSON.stringify({ [name]: 100 }) });
+      expect(() => operationsBudget(env)).toThrow(name);
+    },
+  );
   it.each([undefined, "production"])(
-    "preserves every previous numeric bound in Wrangler environment %s",
+    "preserves remaining numeric bounds in Wrangler environment %s",
     (environment) => {
       const configuration = unstable_readConfig({ config: configurationPath, env: environment });
       const env = configurationEnv({
@@ -119,7 +124,7 @@ describe("runtime numeric configuration", () => {
     });
   });
 
-  it("preserves complete existing JSON overrides, including decimal strings in every field", () => {
+  it("preserves complete overrides for remaining fields, including decimal strings", () => {
     const apiLimits = {
       maximumImageBytes: 100,
       maximumShardBytes: 200,
@@ -139,8 +144,6 @@ describe("runtime numeric configuration", () => {
       leaseMilliseconds: 1400,
       maxAttempts: 15,
       maximumObjectBytes: 1600,
-      maximumMetadataBytes: 1700,
-      maximumExportEntries: 1800,
     };
     const env = configurationEnv({
       VISONAUT_API_LIMITS: JSON.stringify(
@@ -154,7 +157,7 @@ describe("runtime numeric configuration", () => {
     expect(operationsBudget(env)).toEqual(budget);
   });
 
-  it("keeps the original complete preview and production override strings compatible", () => {
+  it("keeps complete overrides for the remaining preview and production fields compatible", () => {
     const env = configurationEnv({
       VISONAUT_API_LIMITS: JSON.stringify(previousApiLimits),
       VISONAUT_OPERATIONS_BUDGET: JSON.stringify(previousOperationsBudget),

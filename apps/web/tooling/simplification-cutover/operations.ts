@@ -28,8 +28,6 @@ export const budget = {
   leaseMilliseconds: 720_000,
   maxAttempts: 5,
   maximumObjectBytes: 16_777_216,
-  maximumMetadataBytes: 2_147_483_648,
-  maximumExportEntries: 200_000,
 };
 
 export interface CutoverBindings {
