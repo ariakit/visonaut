@@ -135,7 +135,7 @@ export async function prepareStatusIntent(
     }),
     statement(
       service.database,
-      "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ?",
+      "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL",
       [input.now, run.id, run.revision],
     ),
   ]);

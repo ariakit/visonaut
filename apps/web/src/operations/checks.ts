@@ -77,7 +77,7 @@ async function createChecks(context: OperationsContext, report: OperationReport)
     .all<CheckCreation>();
   await database
     .prepare(
-      "INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+      "INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
     )
     .bind(
       attention.results?.length === budget.tasksPerStep
@@ -228,7 +228,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   const attention = deliveries.filter((item) => item.ambiguous || item.state === "dead");
   await database
     .prepare(
-      "INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+      "INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
     )
     .bind(attention.length === budget.tasksPerStep ? (attention.at(-1)?.id ?? null) : null)
     .run();

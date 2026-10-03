@@ -406,7 +406,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
   report.hasMore = rows.length === context.budget.tasksPerStep;
   await context.database
     .prepare(
-      "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+      "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
     )
     .bind(report.hasMore ? String(rows.at(-1)?.pullRequestNumber) : null)
     .run();

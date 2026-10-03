@@ -42,9 +42,10 @@ export function statement(database: Database, sql: string, values: SqlValue[] = 
 
 // D1 rolls a batch back on CHECK failure, but not on a zero-row UPDATE.
 export function assertion(database: Database, predicate: string, values: SqlValue[] = []) {
+  // CASE also rejects NULL without writing a row for a passing predicate.
   return statement(
     database,
-    `INSERT INTO visonaut_assertions (valid) VALUES (CASE WHEN (${predicate}) THEN 1 ELSE 0 END)`,
+    `INSERT INTO visonaut_assertions (valid) SELECT 0 WHERE CASE WHEN (${predicate}) THEN 0 ELSE 1 END`,
     values,
   );
 }
@@ -53,6 +54,7 @@ export async function atomic(database: Database, statements: Statement[]) {
   try {
     return await database.batch([
       ...statements,
+      // Retention still inserts passing assertions directly.
       statement(database, "DELETE FROM visonaut_assertions"),
     ]);
   } catch (error) {

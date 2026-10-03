@@ -3,6 +3,7 @@ import {
   seedLegacyResult,
 } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { nativeTestStorage } from "./test-storage.ts";
+import { measureD1 } from "./test-d1-costs.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { readFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
@@ -61,7 +62,9 @@ const runtime = new Miniflare(
     r2Buckets: ["IMAGES", "QUARANTINE"],
   }),
 );
-const database = await runtime.getD1Database("DB");
+const nativeDatabase = await runtime.getD1Database("DB");
+const measured = measureD1(nativeDatabase);
+const database = process.env.VISONAUT_D1_COST_REPORT ? measured.database : nativeDatabase;
 const images = await runtime.getR2Bucket("IMAGES");
 const quarantine = await runtime.getR2Bucket("QUARANTINE");
 const png = new Uint8Array(
@@ -976,6 +979,7 @@ async function stageLocal(
   test: Awaited<ReturnType<typeof fixture>>,
   session: Awaited<ReturnType<typeof localSession>>,
 ) {
+  measured.reset();
   const body = (await (
     await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
   ).json()) as { manifestDigest: string; uploads: Array<{ ticket: string; imageDigest: string }> };
@@ -1001,6 +1005,7 @@ async function stageLocal(
     test.runId,
   );
   await terminalGitHub(test, body.manifestDigest);
+  measured.report(`local-stage-${test.manifest.localComparison?.captures[0]?.outcome}`);
   return body;
 }
 
@@ -1146,7 +1151,9 @@ describe("trusted local Submit", () => {
       result.outcome = outcome;
       const body = await stageLocal(test, session);
       expect(body.uploads).toHaveLength(outcome === "changed" ? 1 : 0);
+      measured.reset();
       const run = await materializeWorkflowRun(test.context, test.runId);
+      measured.report(`local-materialize-zero-pixel-${outcome}`);
       if (!run.comparison_id) throw new Error("Expected the local comparison.");
       const row = (await test.context.service.comparisonRows(run.comparison_id))[0];
       expect(row?.outcome).toBe("unchanged");
@@ -1480,7 +1487,9 @@ describe("trusted local Submit", () => {
     };
     const body = await stageLocal(test, session);
     expect(body.uploads).toHaveLength(2);
+    measured.reset();
     const run = await materializeWorkflowRun(test.context, test.runId);
+    measured.report("local-materialize-changed-with-mask");
     const row = (await test.context.service.comparisonRows(run.comparison_id!))[0]!;
     const stored = JSON.parse(row.result_json!);
     expect(stored).toMatchObject({ outcome: "changed", changedPixels: 1, maskExpected: true });
