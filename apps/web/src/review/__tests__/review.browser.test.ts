@@ -550,6 +550,112 @@ test("save confirmation does not replace a selection made while saving", async (
   await expect(selected(page)).toHaveAccessibleName(/Menu/);
 });
 
+for (const verdict of ["approved", "rejected"] as const) {
+  test(`a newer supplied ${verdict} verdict survives a pending decision and an older receipt`, async ({
+    page,
+  }) => {
+    const original = await page.evaluate(() => window.reviewFixture.model());
+    await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+    await page.keyboard.press("a");
+    await callCount(page, 1);
+    const command = await page.evaluate(() => window.reviewFixture.calls[0]);
+    await page.evaluate((verdict) => {
+      const model = window.reviewFixture.model();
+      model.comparisonRevision += 10;
+      const approved = model.items[0]?.variants[0];
+      const concurrent = model.items[0]?.variants[2];
+      if (!approved || !concurrent) {
+        throw new Error("Missing review variants.");
+      }
+      Object.assign(approved, {
+        verdict,
+        source: "human",
+        revision: verdict === "approved" ? 1 : 2,
+        reviewer: "maintainer-1",
+      });
+      Object.assign(concurrent, {
+        verdict: "rejected",
+        source: "human",
+        revision: 1,
+        reviewer: "concurrent-reviewer",
+      });
+      window.reviewFixture.update(model);
+    }, verdict);
+    await expect(
+      page.getByRole("link", {
+        name: new RegExp(`React.*${verdict === "approved" ? "Approved" : "Rejected"}`),
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+    await expect(selected(page)).toHaveAccessibleName(/Solid/);
+    // Return older fixture state so the delayed transport yields an older receipt.
+    await page.evaluate((model) => {
+      window.reviewFixture.update(model);
+      window.reviewFixture.setBehavior("normal");
+      window.reviewFixture.resolve();
+    }, original);
+    await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+    await expect(
+      page.getByRole("link", {
+        name: new RegExp(`React.*${verdict === "approved" ? "Approved" : "Rejected"}`),
+      }),
+    ).toBeVisible();
+    await expect(selected(page)).toHaveAccessibleName(/Solid/);
+    expect(await page.evaluate(() => window.reviewFixture.calls[0])).toEqual(command);
+  });
+}
+test("a failed decision keeps newer supplied evidence and retries its frozen command", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+  await page.keyboard.press("a");
+  await expect(page.getByRole("alert")).toContainText("Not saved.");
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.comparisonRevision += 2;
+    const concurrent = model.items[0]?.variants[2];
+    if (!concurrent) {
+      throw new Error("Missing concurrent review variant.");
+    }
+    Object.assign(concurrent, { verdict: "rejected", source: "human", revision: 1 });
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Not saved.");
+  await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
+  await page.getByRole("button", { name: "Retry same command" }).click();
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  const calls = await page.evaluate(() => window.reviewFixture.calls);
+  expect(calls[1]).toEqual(calls[0]);
+});
+
+test("a replacement comparison does not inherit a pending decision or its Undo", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await callCount(page, 1);
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.comparisonId = "replacement-comparison";
+    window.reviewFixture.update(model);
+  });
+  await expect(selected(page)).toHaveAccessibleName(/Solid.*Needs review/);
+  await expect(page.getByRole("link", { name: /React.*Needs review/ })).toBeVisible();
+  await expect(page.locator(".review-metadata")).toContainText("replacement-comparison");
+  await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
+  await page.evaluate(async () => {
+    window.reviewFixture.setBehavior("offline");
+    window.reviewFixture.resolve();
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+  });
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(selected(page)).toHaveAccessibleName(/Solid.*Needs review/);
+});
+
 test("long item and variant names keep the navigation and main header compact", async ({
   page,
 }) => {

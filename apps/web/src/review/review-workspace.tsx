@@ -30,30 +30,17 @@ import {
 import { Nav, NavLink } from "../components/ariakit/components/nav.ariakit.react.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import { ItemList } from "./item-list.tsx";
-import { ReviewCommandError } from "./model.ts";
 import type {
-  ReviewCommand,
   ReviewCommands,
   ReviewModel,
   ReviewMode,
-  ReviewPollState,
   ReviewSelection,
   ReviewVerdict,
-  ReviewSaveResult,
   ReviewZoom,
-  UndoCommand,
 } from "./model.ts";
-import {
-  applyPendingReviews,
-  applySavedReview,
-  latestReviewModel,
-  needsReview,
-  nextPending,
-  partitionItems,
-  reviewTargets,
-  verdictLabel,
-} from "./navigation.ts";
+import { needsReview, partitionItems, reviewTargets, verdictLabel } from "./navigation.ts";
 import { useEvidence } from "./use-evidence.ts";
+import { useReviewSession } from "./use-review-session.ts";
 import { VariantSummary } from "./variant-summary.tsx";
 import "../review.css";
 
@@ -69,27 +56,6 @@ export interface ReviewRoute {
   comparisonId?: string;
   selection?: ReviewSelection;
   onSelect(selection: ReviewSelection): void;
-}
-
-interface SavedCommand {
-  id: string;
-  selection: ReviewSelection;
-}
-
-interface QueuedReview {
-  command: ReviewCommand;
-  controller?: AbortController;
-  response?: Promise<
-    { result: ReviewSaveResult; error?: never } | { error: unknown; result?: never }
-  >;
-}
-
-interface SaveState {
-  status: "idle" | "saving" | "error" | "conflict";
-  message: string;
-  failed?: ReviewCommand;
-  failedUndo?: UndoCommand;
-  durable?: boolean;
 }
 
 function excludesShortcuts(event: globalThis.KeyboardEvent) {
@@ -136,46 +102,6 @@ function initialSelection(model: ReviewModel): ReviewSelection {
     }
   }
   return { itemKey: "", variantKey: "" };
-}
-
-function runStatusLabel(status: string) {
-  switch (status) {
-    case "compared":
-      return "Comparison complete";
-    case "needs-review":
-      return "Changes need review";
-    case "passed":
-      return "Check passed";
-    case "rejected":
-      return "Rejected changes";
-    case "incomplete":
-      return "Waiting for the complete capture";
-    case "comparing":
-      return "Comparing stored captures";
-    case "needs-recompare":
-      return "A new comparison is required";
-    case "superseded":
-      return "A newer attempt is active";
-    case "failed":
-      return "Capture or comparison failed";
-    default:
-      return status;
-  }
-}
-
-function runStopped(status: string) {
-  return ["failed", "superseded", "needs-recompare"].includes(status);
-}
-
-function comparisonReady(state: ReviewPollState | ReviewModel) {
-  return (
-    !runStopped(state.run.status) &&
-    (state.reviewReady || (state.archived && state.comparisonState === "ready"))
-  );
-}
-
-function comparisonFailed(state: ReviewPollState | ReviewModel) {
-  return state.comparisonState === "invalidated" || runStopped(state.run.status);
 }
 
 function terminalEvidenceMessage(model: ReviewModel) {
@@ -234,32 +160,49 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
 }
 
 function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: ReviewWorkspaceProps) {
-  const [previousModel, setPreviousModel] = useState(suppliedModel);
-  const [savedModel, setModel] = useState(suppliedModel);
-  const [pendingReviews, setPendingReviews] = useState<ReviewCommand[]>([]);
-  const [queuedCommands, setQueuedCommands] = useState(new Set<string>());
-  const model = useMemo(
-    () => applyPendingReviews(savedModel, pendingReviews),
-    [savedModel, pendingReviews],
-  );
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const [mode, setMode] = useState<ReviewMode>("side");
   const [zoom, setZoom] = useState<ReviewZoom>("fit");
   const [shortcuts, setShortcuts] = useState(true);
   const [retry, setRetry] = useState(0);
   const [announcement, setAnnouncement] = useState("");
-  const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
-  const [history, setHistory] = useState<SavedCommand[]>([]);
-  const [pendingComparison, setPendingComparison] = useState(false);
   const remembered = useRef(
     new Map<string, string>(
       route?.selection ? [[route.selection.itemKey, route.selection.variantKey]] : [],
     ),
   );
   const workspace = useRef<HTMLDivElement>(null);
-  const saving = useRef(false);
-  const reviewQueue = useRef<QueuedReview[]>([]);
-  const durableCommands = useRef(new Set<string>());
+  const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
+  const select = (next: ReviewSelection) => {
+    if (route) route.onSelect(next);
+    else setLocalSelection(next);
+  };
+  const session = useReviewSession({
+    model: suppliedModel,
+    commands,
+    onSelect: select,
+    onFocus: focusWorkspace,
+    onAnnounce: setAnnouncement,
+    onRefresh: () => setRetry((value) => value + 1),
+  });
+  const {
+    model,
+    pendingReviews,
+    saveState,
+    busy,
+    reviewBlocked,
+    sendingCount,
+    queuedCount,
+    canUndo,
+    pendingComparison,
+    awaitingComparison,
+    terminalComparison,
+    runStatus,
+    save,
+    undo,
+    refresh,
+    recompare,
+  } = session;
   const routedSelection = route?.selection;
   const onRouteSelect = route?.onSelect;
   const routedItem = model.items.find((entry) => entry.key === routedSelection?.itemKey);
@@ -283,19 +226,12 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     mode: effectiveMode,
     retry,
   });
-  const terminalComparison = comparisonFailed(model);
   const ready =
     !model.archived &&
     !pendingComparison &&
     !terminalComparison &&
     model.reviewReady &&
     evidence.status === "ready";
-  const busy = saveState.status === "saving";
-  const reviewBlocked = busy && !pendingReviews.length;
-  const sendingCount = pendingReviews.filter(
-    (command) => !queuedCommands.has(command.commandId),
-  ).length;
-  const queuedCount = pendingReviews.length - sendingCount;
   const targets = item ? reviewTargets(item) : [];
   const counts = useMemo(
     () => ({
@@ -308,12 +244,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     [model.items],
   );
   const { pending, total } = counts;
-  const awaitingComparison =
-    pendingComparison ||
-    model.comparisonState === "comparing" ||
-    (!model.comparisonState &&
-      !model.reviewReady &&
-      ["incomplete", "comparing"].includes(model.run.status));
   const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
   const recompareDisabledReason =
     model.recompareDisabledReason ??
@@ -326,12 +256,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     evidence.failure === "missing" ||
     evidence.failure === "dimensions";
 
-  if (previousModel !== suppliedModel) {
-    setPreviousModel(suppliedModel);
-    if (!pendingReviews.length && !saveState.failed) {
-      setModel(suppliedModel);
-    }
-  }
   if (
     !route &&
     item &&
@@ -346,96 +270,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
   }, [item, variant, routedSelection, onRouteSelect]);
-  useEffect(() => {
-    return () => {
-      for (const entry of reviewQueue.current) {
-        entry.controller?.abort();
-      }
-      reviewQueue.current = [];
-    };
-  }, []);
-  useEffect(() => {
-    if (saveState.status !== "saving" && saveState.status !== "error") return;
-    if (pendingReviews.length && !sendingCount) return;
-    if (saveState.durable) return;
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [saveState.status, saveState.durable, pendingReviews.length, sendingCount]);
-  useEffect(() => {
-    if (!awaitingComparison) return;
-    let cancelled = false;
-    let finished = false;
-    let inFlight = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const schedule = (delay: number) => {
-      if (cancelled || finished || inFlight || document.visibilityState !== "visible") return;
-      clearTimeout(timeout);
-      timeout = setTimeout(() => void poll(), delay);
-    };
-    const poll = async () => {
-      if (cancelled || finished || inFlight || document.visibilityState !== "visible") return;
-      inFlight = true;
-      try {
-        const state = await commands.pollStatus();
-        if (cancelled || document.visibilityState !== "visible") return;
-        if (comparisonReady(state) || comparisonFailed(state)) {
-          const current = await commands.refresh();
-          if (cancelled || document.visibilityState !== "visible") return;
-          if (comparisonReady(current) || comparisonFailed(current)) {
-            finished = true;
-            setModel(current);
-            setPendingComparison(false);
-            setSaveState({
-              status: "idle",
-              message: comparisonReady(current)
-                ? "The new comparison is ready."
-                : (current.run.error ?? runStatusLabel(current.run.status)),
-            });
-            return;
-          }
-        }
-        setSaveState({
-          status: "idle",
-          message: `${runStatusLabel(state.run.status)}. Review actions are unavailable until it is ready.`,
-        });
-      } catch (error) {
-        if (cancelled) return;
-        setSaveState({
-          status: "idle",
-          message:
-            error instanceof Error
-              ? `Waiting for the new comparison. ${error.message}`
-              : "Waiting for the new comparison. The service is unavailable.",
-        });
-      } finally {
-        inFlight = false;
-        schedule(2000);
-      }
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        schedule(0);
-      } else {
-        clearTimeout(timeout);
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    schedule(2000);
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [awaitingComparison, commands]);
 
-  const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
-  const select = (next: ReviewSelection) => {
-    if (route) route.onSelect(next);
-    else setLocalSelection(next);
-  };
   const selectItem = (index: number) => {
     const next = model.items[index];
     if (!next) return;
@@ -466,266 +301,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     }
     setMode(next);
   };
-  const reportError = (error: unknown, failed?: ReviewCommand, failedUndo?: UndoCommand) => {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "The command could not be saved. Check your connection.";
-    if (error instanceof ReviewCommandError && error.model) {
-      const currentModel = error.model;
-      setModel((model) => latestReviewModel(model, currentModel));
-    }
-    const conflict = error instanceof ReviewCommandError && error.conflict;
-    const reviewer =
-      error instanceof ReviewCommandError && error.reviewer ? ` Updated by ${error.reviewer}.` : "";
-    setSaveState({
-      status: conflict ? "conflict" : "error",
-      message: `${conflict ? "Conflict. " : "Not saved. "}${message}${reviewer}`,
-      failed: conflict ? undefined : failed,
-      failedUndo: conflict ? undefined : failedUndo,
-    });
-  };
-  const save = async (command: ReviewCommand) => {
-    if (model.archived) return;
-    if (saving.current && !reviewQueue.current.length) return;
-    if (!reviewQueue.current.some((entry) => entry.command.commandId === command.commandId)) {
-      reviewQueue.current.push({ command });
-    }
-    reviewQueue.current = reviewQueue.current.map((entry) => {
-      if (entry.response) return entry;
-      const controller = new AbortController();
-      const response = commands
-        .save(entry.command, {
-          signal: controller.signal,
-          onQueued: () => {
-            durableCommands.current.add(entry.command.commandId);
-            setQueuedCommands((previous) => new Set([...previous, entry.command.commandId]));
-          },
-        })
-        .then(
-          (result) => ({ result }),
-          (error) => ({ error }),
-        );
-      return { ...entry, controller, response };
-    });
-    const queued = reviewQueue.current.map((entry) => entry.command);
-    setPendingReviews(queued);
-    setSaveState({
-      status: "saving",
-      message: `Saving ${queued.length} decision${queued.length === 1 ? "" : "s"}…`,
-    });
-    const optimisticModel = applyPendingReviews(savedModel, queued);
-    const next = nextPending(optimisticModel.items, queued.at(-1)?.selection ?? command.selection);
-    if (next) {
-      select(next);
-    }
-    focusWorkspace();
-    if (saving.current) return;
-    saving.current = true;
-    let currentModel = savedModel;
-    try {
-      while (reviewQueue.current.length) {
-        const entry = reviewQueue.current[0];
-        if (!entry) break;
-        const currentCommand = entry.command;
-        try {
-          const response = await entry.response;
-          if (!response) throw new Error("The decision has not been submitted.");
-          if ("error" in response) throw response.error;
-          const result = response.result;
-          if (reviewQueue.current[0] !== entry) return;
-          currentModel = applySavedReview(currentModel, currentCommand, result);
-          setModel(currentModel);
-          reviewQueue.current.shift();
-          if (result.noop) {
-            const discarded = reviewQueue.current.length;
-            for (const pending of reviewQueue.current) {
-              pending.controller?.abort();
-            }
-            reviewQueue.current = [];
-            setPendingReviews([]);
-            setSaveState({
-              status: "idle",
-              message: `This acceptance is already saved.${discarded ? " Later queued decisions were not saved. Review them again." : ""}`,
-            });
-            select(currentCommand.selection);
-            return;
-          }
-          setHistory((entries) => [
-            ...entries,
-            { id: result.commandId, selection: currentCommand.selection },
-          ]);
-          const remaining = reviewQueue.current.map((entry) => entry.command);
-          setPendingReviews(remaining);
-          setSaveState({
-            status: remaining.length ? "saving" : "idle",
-            message: remaining.length
-              ? `Saving ${remaining.length} decision${remaining.length === 1 ? "" : "s"}…`
-              : `${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}. Saved.`,
-          });
-          if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
-            setAnnouncement("Review complete. No variants need review.");
-          }
-        } catch (error) {
-          if (reviewQueue.current[0] !== entry) return;
-          setPendingReviews([]);
-          select(currentCommand.selection);
-          const conflict = error instanceof ReviewCommandError && error.conflict;
-          const discarded = conflict && reviewQueue.current.length > 1;
-          for (const pending of reviewQueue.current) {
-            pending.controller?.abort();
-          }
-          reviewQueue.current = conflict
-            ? []
-            : reviewQueue.current.map(({ command }) => ({ command }));
-          reportError(error, currentCommand);
-          if (durableCommands.current.has(currentCommand.commandId) && !conflict) {
-            setSaveState((state) => ({
-              ...state,
-              durable: reviewQueue.current.every((entry) =>
-                durableCommands.current.has(entry.command.commandId),
-              ),
-              message: `Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.${error instanceof ReviewCommandError && error.reference ? ` Reference: ${error.reference}.` : ""}`,
-            }));
-          }
-          if (discarded) {
-            setSaveState((state) => ({
-              ...state,
-              message: `${state.message} Later queued decisions were not saved. Review them again.`,
-            }));
-          }
-          return;
-        }
-      }
-    } finally {
-      saving.current = false;
-    }
-  };
   const review = (verdict: ReviewVerdict, wholeItem = false) => {
-    if (!item || !variant) return;
-    if (!ready || reviewBlocked) return;
-    if (saveState.status === "error") {
-      setAnnouncement("Resolve the unsaved command before saving another review.");
-      return;
-    }
-    const selectedTargets = wholeItem
-      ? targets
-      : targets.filter((entry) => entry.id === variant.id);
-    if (!selectedTargets.length) return;
-    const protectedTarget = selectedTargets.find((entry) =>
-      verdict === "approved" ? entry.approveDisabledReason : entry.rejectDisabledReason,
-    );
-    if (protectedTarget) {
-      const reason =
-        verdict === "approved"
-          ? protectedTarget.approveDisabledReason
-          : protectedTarget.rejectDisabledReason;
-      setAnnouncement(
-        `${reason} No variants were changed.${wholeItem ? " Select an eligible variant and review it individually." : ""}`,
-      );
-      return;
-    }
-    void save({
-      commandId: crypto.randomUUID(),
-      previousCommandId: reviewQueue.current.at(-1)?.command.commandId,
-      comparisonId: model.comparisonId,
-      verdict,
-      targets: selectedTargets.map((entry) => ({ id: entry.id, expectedRevision: entry.revision })),
-      wholeItemKey: wholeItem ? item.key : undefined,
-      expectedPromotionId: model.promotionId ?? undefined,
-      expectedBaselineRevision: model.baselineRevision,
-      expectedRunRevision: model.comparisonRevision,
-      selection: { itemKey: item.key, variantKey: variant.key },
-    });
-  };
-  const undo = async (retryCommand?: UndoCommand) => {
-    if (model.archived) return;
-    const latest = history.at(-1);
-    if (!latest || saving.current) return;
-    if (saveState.status === "error" && !retryCommand) return;
-    const command = retryCommand ?? {
-      commandId: latest.id,
-      undoCommandId: crypto.randomUUID(),
-      expectedBaselineRevision: model.baselineRevision,
-    };
-    saving.current = true;
-    setSaveState({ status: "saving", message: "Saving Undo…" });
-    try {
-      const result = await commands.undo(command);
-      setModel(result.model);
-      setHistory((entries) => entries.slice(0, -1));
-      select(result.selection);
-      setSaveState({
-        status: "idle",
-        message: "Undo saved. The original selection and verdicts were restored.",
-      });
-      focusWorkspace();
-    } catch (error) {
-      if (error instanceof ReviewCommandError && error.conflict) {
-        setHistory((entries) => entries.filter((entry) => entry.id !== command.commandId));
-      }
-      reportError(error, undefined, command);
-    } finally {
-      saving.current = false;
-    }
-  };
-  const refresh = async () => {
-    if (saving.current) return;
-    for (const pending of reviewQueue.current) {
-      pending.controller?.abort();
-    }
-    reviewQueue.current = [];
-    setPendingReviews([]);
-    saving.current = true;
-    setSaveState({ status: "saving", message: "Refreshing the current comparison…" });
-    try {
-      setModel(await commands.refresh());
-      setRetry((value) => value + 1);
-      setSaveState({
-        status: "idle",
-        message: "Current state loaded. Check the evidence before saving a new command.",
-      });
-    } catch (error) {
-      reportError(error);
-    } finally {
-      saving.current = false;
-    }
-  };
-  const recompare = async () => {
-    if (!recompareAllowed || awaitingComparison) return;
-    if (!commands.recompare || saving.current) return;
-    if (saveState.status === "error") return;
-    saving.current = true;
-    setSaveState({ status: "saving", message: "Creating a new comparison from stored captures…" });
-    try {
-      const next = await commands.recompare();
-      if (next.reviewReady || (next.archived && next.comparisonState === "ready")) {
-        setModel(next);
-      } else if (next.comparisonState === "invalidated") {
-        setModel(next);
-      } else {
-        if (next.archived) {
-          setModel((previous) => ({
-            ...previous,
-            archived: true,
-            reviewReady: false,
-            readOnlyReason: next.readOnlyReason,
-          }));
-        }
-        setPendingComparison(true);
-      }
-      setSaveState({
-        status: "idle",
-        message:
-          next.comparisonState === "invalidated"
-            ? (next.run.error ?? "The new comparison failed.")
-            : "New comparison requested. Results will open when comparison completes.",
-      });
-    } catch (error) {
-      reportError(error);
-    } finally {
-      saving.current = false;
-    }
+    if (!ready) return;
+    if (reviewBlocked) return;
+    session.review(verdict, selection, wholeItem);
   };
   const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || !shortcuts) return;
@@ -873,7 +452,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 Reject <ButtonSlot $kind="shortcut">X</ButtonSlot>
               </Button>
               <Button
-                disabled={model.archived || !history.length || busy || saveState.status === "error"}
+                disabled={model.archived || !canUndo || busy || saveState.status === "error"}
                 onClick={() => void undo()}
               >
                 Undo <ButtonSlot $kind="shortcut">⌘/Ctrl Z</ButtonSlot>
@@ -1189,7 +768,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                     {variant.label} · {verdictLabel(variant)}
                     {variant.reviewer ? ` · ${variant.reviewer}` : ""}
                   </p>
-                  <p className="text-xs">{runStatusLabel(model.run.status)}</p>
+                  <p className="text-xs">{runStatus}</p>
                   <p className="review-run-identity text-xs">
                     Run {model.run.id} · Attempt {model.run.attempt} · Commit{" "}
                     <code>{model.run.testedSha.slice(0, 12)}</code> ·{" "}
