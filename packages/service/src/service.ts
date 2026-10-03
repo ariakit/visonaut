@@ -4,6 +4,7 @@ import {
   type ComparisonPolicy,
 } from "@visonaut/protocol";
 import { assertion, atomic, IncompleteError, statement } from "./database.ts";
+import { comparisonResultSql } from "./comparison-result.ts";
 import type { StatusDelivery } from "./work.ts";
 import type { Database, SqlValue } from "./database.ts";
 import type {
@@ -111,7 +112,10 @@ export class Service {
 
   async comparisonRows(id: string) {
     return this.rows<ReviewRow>(
-      "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? ORDER BY ordinal, id",
+      `SELECT row.id,row.comparison_id,row.item_key,row.variant_key,row.ordinal,
+      row.reference_capture_id,row.candidate_capture_id,row.tuple_json,row.outcome,
+      ${comparisonResultSql("row")} AS result_json,row.decision_revision,row.decision_id,row.source_decision_id
+      FROM visonaut_comparison_rows row WHERE row.comparison_id = ? ORDER BY row.ordinal,row.id`,
       [id],
     );
   }
