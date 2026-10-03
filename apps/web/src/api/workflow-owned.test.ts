@@ -16,8 +16,8 @@ import {
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
-import { issueIngestCapability, verifyIngestCapability } from "@visonaut/security";
-import { retireSnapshot } from "@visonaut/service";
+import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
+import { ConflictError, retireSnapshot } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -1723,6 +1723,49 @@ it("reconciles a signed main submission after main advances", async () => {
 });
 
 describe("workflow-owned upload staging", () => {
+  it.each([undefined, null, "server"])(
+    "rejects new unsupported comparison admissions (%s) before staging or GitHub work",
+    async (comparisonMode) => {
+      const test = await fixture();
+      const github = vi.spyOn(test.context.configuration.github, "fetch");
+      const before = await database
+        .prepare("SELECT * FROM ingest_staged_runs WHERE id=?")
+        .bind(test.runId)
+        .first();
+      const response = await handleApi(
+        new Request("https://preview.example/v1/runs", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            schemaVersion: "1.0",
+            ...test.manifest.run,
+            shardKey: "combined",
+            comparisonMode,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(response?.status).toBe(comparisonMode === undefined ? 409 : 400);
+      expect(await response?.json()).toMatchObject({
+        error: {
+          code: comparisonMode === undefined ? "local_comparison_required" : "comparison_mode",
+          ...(comparisonMode === undefined
+            ? { message: expect.stringContaining("capture a new complete run") }
+            : {}),
+        },
+      });
+      expect(github).not.toHaveBeenCalled();
+      expect(
+        await database
+          .prepare("SELECT * FROM ingest_staged_runs WHERE id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual(before);
+      github.mockRestore();
+    },
+  );
+
   it("accepts only a pinned workflow in the configured repository", async () => {
     const test = await fixture();
     const configuration = test.context.configuration.workflowOwned;
@@ -2006,13 +2049,13 @@ describe("workflow-owned upload staging", () => {
       return Response.json({ keys: [jwk] });
     });
     try {
-      const signedToken = (checkRunId: string) =>
+      const signedToken = (checkRunId: string, attempt = 1) =>
         new SignJWT({
           repository: "ariakit/ariakit",
           repository_id: test.manifest.run.repositoryId,
           repository_owner_id: "5",
           run_id: workflowRunId,
-          run_attempt: "1",
+          run_attempt: String(attempt),
           sha: test.manifest.run.testedSha,
           check_run_id: checkRunId,
           event_name: "push",
@@ -2120,6 +2163,43 @@ describe("workflow-owned upload staging", () => {
         submit_job_id: submitJobId,
         submit_check_run_id: submitJobId,
         submitted_at: integer(receipt.submittedAt),
+      });
+      await test.registerPreRunCheck(2);
+      const nextRun = { ...run, run_attempt: 2 };
+      test.githubResponses.set(base, nextRun);
+      test.githubResponses.set(`${base}/attempts/2`, nextRun);
+      test.githubResponses.set(`${base}/attempts/2/jobs?per_page=100&page=1`, {
+        total_count: 1,
+        jobs: [{ ...job(submitJobId, workflowOwned.submitJobName), run_attempt: 2 }],
+      });
+      const localToken = await signedToken(submitJobId, 2);
+      const reserved = await handleApi(
+        new Request("https://preview.example/v1/runs", {
+          method: "POST",
+          headers: { authorization: `Bearer ${localToken}`, "content-type": "application/json" },
+          body: JSON.stringify({
+            schemaVersion: "1.0",
+            ...test.manifest.run,
+            workflowAttempt: 2,
+            shardKey: "combined",
+            comparisonMode: LOCAL_COMPARISON_MODE,
+          }),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      expect(reserved?.status).toBe(201);
+      const reservation = object(await reserved?.json());
+      expect(reservation.comparisonMode).toBe(LOCAL_COMPARISON_MODE);
+      expect(
+        await verifyIngestCapability(
+          test.context.configuration.capability,
+          String(reservation.capability),
+        ),
+      ).toMatchObject({
+        comparisonMode: LOCAL_COMPARISON_MODE,
+        jobId: submitJobId,
+        workflowAttempt: 2,
       });
     } finally {
       vi.unstubAllGlobals();
@@ -2326,6 +2406,412 @@ describe("workflow-owned upload staging", () => {
       check_id: String(Number(test.manifest.run.workflowRunId) + 20_000),
       state: "complete",
     });
+  });
+
+  describe("admitted main references before source reconciliation", () => {
+    const admitLocal = async () => {
+      const test = await fixture();
+      const reference = await acceptedReference(test);
+      const declaration = await stageLocal(test, await localSession(test));
+      const inventory = vi
+        .spyOn(test.context.images, "list")
+        .mockRejectedValueOnce(new Error("Materialization interrupted after admission."));
+      await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+        "Materialization interrupted after admission.",
+      );
+      inventory.mockRestore();
+      expect(await test.context.service.run(test.runId)).toMatchObject({
+        state: "uploading",
+        active: 1,
+        sealed_at: null,
+      });
+      return { test, reference, declaration };
+    };
+    const rollSource = (test: Awaited<ReturnType<typeof fixture>>, source: string) => {
+      if (source !== "executor") {
+        const workflow = test.context.configuration.workflowOwned;
+        if (!workflow) throw new Error("Expected a trusted workflow.");
+        workflow.reusableWorkflowSha = "a".repeat(40);
+        workflow.reusableWorkflowRef = workflow.reusableWorkflowRef.replace(pin, "a".repeat(40));
+      }
+      if (source !== "workflow") {
+        test.context.configuration.trustedExecutorDigest = "0".repeat(64);
+      }
+    };
+    it.each(["workflow", "executor", "workflow and executor"])(
+      "fails an admitted stale receipt after a %s rollout without upstream access",
+      async (source) => {
+        const { test, reference, declaration } = await admitLocal();
+        const before = await database
+          .prepare("SELECT verified_json FROM ingest_staged_runs WHERE id=?")
+          .bind(test.runId)
+          .first();
+        await database
+          .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+          .bind(test.context.configuration.projectId)
+          .run();
+        rollSource(test, source);
+        const fetch = vi
+          .spyOn(test.context.configuration.github, "fetch")
+          .mockRejectedValue(new Error("Upstream unavailable after the rollout."));
+        expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+          checked: 1,
+          progressed: 0,
+          errors: [{ runId: test.runId, code: "stale_reference" }],
+        });
+        expect(await test.context.service.run(test.runId)).toMatchObject({
+          state: "failed",
+          active: 1,
+          sealed_at: null,
+          comparison_id: null,
+        });
+        expect(fetch).not.toHaveBeenCalled();
+        expect(
+          await database
+            .prepare("SELECT verified_json FROM ingest_staged_runs WHERE id=?")
+            .bind(test.runId)
+            .first(),
+        ).toEqual(before);
+        expect(
+          await database
+            .prepare("SELECT retention_state FROM ingest_staged_runs WHERE id=?")
+            .bind(test.runId)
+            .first(),
+        ).toEqual({ retention_state: "live" });
+        expect(
+          await quarantine.get(`manifests/${test.runId}/${declaration.manifestDigest}.json`),
+        ).not.toBeNull();
+        expect(
+          await database
+            .prepare(
+              "SELECT snapshot_id FROM visonaut_pins WHERE reason='local-submit' AND owner_id=?",
+            )
+            .bind(`submit:${test.runId}`)
+            .first(),
+        ).toEqual({ snapshot_id: reference.snapshotId });
+        expect(
+          await database
+            .prepare("SELECT action FROM visonaut_audit WHERE run_id=? AND action='capture-failed'")
+            .bind(test.runId)
+            .first(),
+        ).toEqual({ action: "capture-failed" });
+        const check = await database
+          .prepare(
+            "SELECT check_id FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt=1",
+          )
+          .bind(test.manifest.run.workflowRunId)
+          .first<{ check_id: string }>();
+        if (!check) throw new Error("Expected the admitted App check.");
+        expect(
+          await test.context.service.prepareStatusIntent({
+            runId: test.runId,
+            checkId: check.check_id,
+            detailsUrl: `https://preview.example/runs/${test.runId}`,
+            maxAttempts: 5,
+            now: Date.now(),
+          }),
+        ).toMatchObject({ conclusion: "failure" });
+      },
+    );
+    it.each(["workflow", "executor", "workflow and executor"])(
+      "keeps a non-stale receipt retryable after a %s rollout",
+      async (source) => {
+        const { test } = await admitLocal();
+        rollSource(test, source);
+        await database
+          .prepare("UPDATE ingest_staged_runs SET reconcile_failures=4 WHERE id=?")
+          .bind(test.runId)
+          .run();
+        const fail = vi.spyOn(test.context.service, "failRun");
+        expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+          checked: 1,
+          progressed: 0,
+          errors: [{ runId: test.runId, code: "incomplete" }],
+        });
+        expect(await test.context.service.run(test.runId)).toMatchObject({
+          state: "uploading",
+          active: 1,
+          sealed_at: null,
+        });
+        expect(fail).not.toHaveBeenCalled();
+      },
+    );
+    it.each(["unsubmitted", "expired", "deleting"])(
+      "keeps an %s stage outside the early stale-reference check",
+      async (state) => {
+        const { test } = await admitLocal();
+        await database
+          .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+          .bind(test.context.configuration.projectId)
+          .run();
+        rollSource(test, "workflow and executor");
+        const update =
+          state === "unsubmitted"
+            ? "submitted_at=NULL"
+            : state === "expired"
+              ? "created_at=1"
+              : "retention_state='deleting'";
+        await database
+          .prepare(`UPDATE ingest_staged_runs SET ${update} WHERE id=?`)
+          .bind(test.runId)
+          .run();
+        const fail = vi.spyOn(test.context.service, "failRun");
+        expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+          checked: 0,
+          progressed: 0,
+          errors: [],
+        });
+        await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+          state === "expired"
+            ? "expired before conversion"
+            : "submitted workflow stage is unavailable",
+        );
+        expect(await test.context.service.run(test.runId)).toMatchObject({
+          state: "uploading",
+          active: 1,
+          sealed_at: null,
+        });
+        expect(fail).not.toHaveBeenCalled();
+      },
+    );
+    it("keeps an admitted receipt retryable after a transient GitHub error", async () => {
+      const { test } = await admitLocal();
+      const fetch = vi
+        .spyOn(test.context.configuration.github, "fetch")
+        .mockRejectedValueOnce(new Error("Temporary GitHub failure."));
+      const fail = vi.spyOn(test.context.service, "failRun");
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 0,
+        errors: [{ runId: test.runId, code: "github_unavailable" }],
+      });
+      expect(fail).not.toHaveBeenCalled();
+      fetch.mockRestore();
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+    });
+    it("retries a stale admitted receipt when promotion conflicts with the failure write", async () => {
+      const { test } = await admitLocal();
+      await database
+        .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+        .bind(test.context.configuration.projectId)
+        .run();
+      rollSource(test, "workflow and executor");
+      const project = test.context.service.project.bind(test.context.service);
+      let promoteBeforeFailure = false;
+      vi.spyOn(test.context.service, "project").mockImplementation(async (id) => {
+        const current = await project(id);
+        if (promoteBeforeFailure) {
+          promoteBeforeFailure = false;
+          await database
+            .prepare(
+              "UPDATE visonaut_projects SET baseline_revision=baseline_revision+1,revision=revision+1 WHERE id=?",
+            )
+            .bind(id)
+            .run();
+        }
+        return current;
+      });
+      const failRun = test.context.service.failRun.bind(test.context.service);
+      const fail = vi
+        .spyOn(test.context.service, "failRun")
+        .mockImplementationOnce(async (input) => {
+          promoteBeforeFailure = true;
+          const failure = failRun(input);
+          await expect(failure).rejects.toBeInstanceOf(ConflictError);
+          return failure;
+        });
+      expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+        { runId: test.runId, code: "stale_reference" },
+      ]);
+      expect(await test.context.service.run(test.runId)).toMatchObject({
+        state: "uploading",
+        active: 1,
+        sealed_at: null,
+      });
+      expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+        { runId: test.runId, code: "stale_reference" },
+      ]);
+      expect((await test.context.service.run(test.runId)).state).toBe("failed");
+      expect(fail).toHaveBeenCalledTimes(2);
+    });
+    it("does not classify a lower baseline revision as an early terminal failure", async () => {
+      const { test } = await admitLocal();
+      await database
+        .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision-1 WHERE id=?")
+        .bind(test.context.configuration.projectId)
+        .run();
+      rollSource(test, "workflow");
+      const fail = vi.spyOn(test.context.service, "failRun");
+      expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+        { runId: test.runId, code: "incomplete" },
+      ]);
+      expect((await test.context.service.run(test.runId)).state).toBe("uploading");
+      expect(fail).not.toHaveBeenCalled();
+    });
+  });
+
+  it("fails an unsealed stale local receipt without releasing evidence or the terminal check", async () => {
+    const test = await fixture();
+    const reference = await acceptedReference(test);
+    const session = await localSession(test);
+    const declaration = await stageLocal(test, session);
+    expect(declaration.uploads).toEqual([]);
+    const subject = `${test.manifest.run.workflowRunId}:1`;
+    await recordEvent(database, {
+      kind: "staged-reconciliation",
+      subject,
+      code: "retry-delayed",
+      now: Date.now(),
+    });
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 1,
+      progressed: 0,
+      errors: [{ runId: test.runId, code: "stale_reference" }],
+    });
+    expect(await test.context.service.run(test.runId)).toMatchObject({
+      active: 1,
+      state: "failed",
+      sealed_at: null,
+      comparison_id: null,
+    });
+    expect(await test.context.service.status(test.runId)).toMatchObject({ status: "failed" });
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 0,
+      progressed: 0,
+      errors: [],
+    });
+    expect(
+      await database
+        .prepare(
+          "SELECT code,resolved_at FROM operations_events WHERE kind=? AND subject_id=? ORDER BY code",
+        )
+        .bind("staged-reconciliation", subject)
+        .all(),
+    ).toMatchObject({
+      results: [
+        { code: "retry-delayed", resolved_at: expect.any(Number) },
+        { code: "stale-reference", resolved_at: null },
+      ],
+    });
+    const staged = await database
+      .prepare("SELECT retention_state,verified_json FROM ingest_staged_runs WHERE id=?")
+      .bind(test.runId)
+      .first<{ retention_state: string; verified_json: string }>();
+    expect(staged?.retention_state).toBe("live");
+    expect(JSON.parse(staged?.verified_json ?? "{}").localReference).toEqual(
+      session.page.reference,
+    );
+    expect(
+      await quarantine.get(`manifests/${test.runId}/${declaration.manifestDigest}.json`),
+    ).not.toBeNull();
+    expect(
+      await database
+        .prepare("SELECT snapshot_id FROM visonaut_pins WHERE reason='local-submit' AND owner_id=?")
+        .bind(`submit:${test.runId}`)
+        .first(),
+    ).toEqual({ snapshot_id: reference.snapshotId });
+    const check = await database
+      .prepare(
+        "SELECT check_id,state FROM pre_run_checks WHERE workflow_run_id=? AND workflow_attempt=1",
+      )
+      .bind(test.manifest.run.workflowRunId)
+      .first<{ check_id: string; state: string }>();
+    if (!check) throw new Error("Expected the terminal App check.");
+    expect(check.state).toBe("active");
+    expect(await isCurrentPreRunCheck(database, check.check_id)).toBe(true);
+    expect(
+      await test.context.service.prepareStatusIntent({
+        runId: test.runId,
+        checkId: check.check_id,
+        detailsUrl: `https://preview.example/runs/${test.runId}`,
+        maxAttempts: 5,
+        now: Date.now(),
+      }),
+    ).toMatchObject({ conclusion: "failure" });
+  });
+
+  it.each([
+    new Error("Temporary image inventory failure."),
+    new SecurityError("storage_unavailable", 503, "Temporary image inventory failure."),
+  ])(
+    "retries an unsealed local receipt after $name without treating other errors as terminal",
+    async (error) => {
+      const test = await fixture();
+      await stageLocal(test, await localSession(test));
+      const list = vi.spyOn(test.context.images, "list").mockRejectedValueOnce(error);
+      const fail = vi.spyOn(test.context.service, "failRun");
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 0,
+        errors: [
+          { runId: test.runId, code: error instanceof SecurityError ? error.code : "incomplete" },
+        ],
+      });
+      expect(await test.context.service.run(test.runId)).toMatchObject({
+        active: 1,
+        state: "uploading",
+        sealed_at: null,
+      });
+      expect(fail).not.toHaveBeenCalled();
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+      expect(list).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("keeps a sealed stale local receipt on the comparison recovery path", async () => {
+    const test = await fixture();
+    await stageLocal(test, await localSession(test));
+    vi.spyOn(test.context.service, "createComparison").mockRejectedValueOnce(
+      new Error("Comparison creation interrupted."),
+    );
+    const fail = vi.spyOn(test.context.service, "failRun");
+    expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+      { runId: test.runId, code: "incomplete" },
+    ]);
+    const sealed = await test.context.service.run(test.runId);
+    expect(sealed.sealed_at).not.toBeNull();
+    expect(sealed).toMatchObject({ state: "comparing", comparison_id: null });
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
+      { runId: test.runId, code: "stale_reference" },
+    ]);
+    expect(await test.context.service.run(test.runId)).toMatchObject({
+      state: "comparing",
+      sealed_at: sealed.sealed_at,
+      comparison_id: null,
+    });
+    expect(fail).not.toHaveBeenCalled();
+    // Restore only this synthetic baseline to exercise the same sealed receipt's retry.
+    await database
+      .prepare("UPDATE visonaut_projects SET baseline_revision=0 WHERE id=?")
+      .bind(test.context.configuration.projectId)
+      .run();
+    expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+      checked: 1,
+      progressed: 1,
+      errors: [],
+    });
+    expect((await test.context.service.run(test.runId)).sealed_at).toBe(sealed.sealed_at);
+    expect((await test.context.service.run(test.runId)).comparison_id).not.toBeNull();
+    expect(fail).not.toHaveBeenCalled();
   });
 
   it.each(["local", "server"])(

@@ -85,7 +85,7 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 ## Recompare and export
 
-**Recompare stored run** is available only for eligible active legacy runs. Every closed run is read-only, including retained legacy detail. A new comparison needs a fresh complete capture. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
+**Recompare stored run** is retired. Every closed run is read-only, including retained legacy detail. A new comparison requires a fresh complete capture through trusted local Submit. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
 
 New product exports are retired, and the **Export run** control is removed. The prepared final retirement patch removes export links after verified drain. Until that release, deployed stage A keeps existing private downloads with checksum verification, expiry, and active download leases. After final retirement, export endpoints return `404 not_found`. Review retained evidence in run history, or capture a new complete run for new evidence. Expired exports cannot be recreated.
 

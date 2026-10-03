@@ -174,6 +174,13 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
       400,
       "The requested comparison mode is unsupported.",
     );
+  // Close new admissions without blocking previously issued upload capabilities.
+  if (body.comparisonMode !== LOCAL_COMPARISON_MODE)
+    throw new SecurityError(
+      "local_comparison_required",
+      409,
+      "Server comparison no longer accepts new submissions. Upgrade the Visonaut CLI and capture a new complete run with trusted local Submit.",
+    );
   return {
     schemaVersion: body.schemaVersion,
     repository: string(body.repository),
@@ -183,9 +190,7 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
     testedSha,
     planDigest: body.planDigest,
     shardKey: body.shardKey,
-    ...(body.comparisonMode === LOCAL_COMPARISON_MODE
-      ? { comparisonMode: LOCAL_COMPARISON_MODE }
-      : {}),
+    comparisonMode: LOCAL_COMPARISON_MODE,
   };
 }
 
@@ -371,7 +376,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     jobId: verified.jobId,
     maximumBytes: context.configuration.limits.maximumShardBytes,
     maximumImages: context.configuration.limits.maximumCaptures,
-    ...(body.comparisonMode ? { comparisonMode: body.comparisonMode } : {}),
+    comparisonMode: LOCAL_COMPARISON_MODE,
   };
   return Response.json(
     {
@@ -379,7 +384,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
       runId: run.id,
       capability: await issueIngestCapability(context.configuration.capability, capability),
       expiresAt: new Date(Date.now() + 600_000).toISOString(),
-      ...(body.comparisonMode ? { comparisonMode: body.comparisonMode } : {}),
+      comparisonMode: LOCAL_COMPARISON_MODE,
     },
     { status: 201 },
   );

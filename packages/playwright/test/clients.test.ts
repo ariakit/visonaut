@@ -18,6 +18,7 @@ const adapter = "@visonaut/playwright";
 const reporter = "@visonaut/playwright/reporter";
 const metadata = {
   visonaut: {
+    comparisonDefaults: {},
     profile: {
       osImageDigest: "a".repeat(64),
       fontsDigest: "b".repeat(64),
@@ -228,30 +229,32 @@ describe("public project comparison defaults", () => {
     ).toEqual([{ threshold: 0.2, maxDiffPixels: 0 }]);
   });
 
-  it("keeps the pinned fallback when explicit configuration is absent or inherited", async () => {
+  it.each([
+    ["missing defaults", "delete settings.comparisonDefaults;"],
+    [
+      "inherited defaults",
+      "delete settings.comparisonDefaults; info.project.metadata.visonaut = Object.assign(Object.create({ comparisonDefaults: {} }), settings);",
+    ],
+    ["inherited metadata", "info.project.metadata = Object.create({ visonaut: settings });"],
+  ])("requires own public configuration with %s", async (_name, setup) => {
     await using fixture = await runFixture(
       `
-      test('compatibility defaults', async ({ page }, info) => {
+      test('required defaults', async ({ page }, info) => {
         await page.setContent('<style>body { margin:0; background:white }</style>');
-        const variant = { key: 'bridge', browser: 'chromium' };
-        await visual(page, { item: 'missing', variant });
+        const variant = { key: 'required', browser: 'chromium' };
         const settings = info.project.metadata.visonaut;
-        info.project.metadata.visonaut = Object.assign(Object.create({ comparisonDefaults: {} }), settings);
-        await visual(page, { item: 'inherited-defaults', variant });
-        info.project.metadata = Object.create({ visonaut: { ...settings, comparisonDefaults: {} } });
-        await visual(page, { item: 'inherited-metadata', variant });
+        ${setup}
+        await expect(visual(page, { item: 'required', variant })).rejects.toThrow('project.metadata.visonaut.comparisonDefaults is required');
       });
     `,
       { screenshotDefaults: { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 } },
     );
-    expect(fixture.code, fixture.output).toBe(0);
-    expect(
-      (await manifestAt(fixture.directory)).captures.map((capture) => capture.comparison),
-    ).toEqual([
-      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
-      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
-      { threshold: 0.15, maxDiffPixels: 5, maxDiffPixelRatio: 0.1 },
-    ]);
+    expect(fixture.code, fixture.output).toBe(1);
+    expect(fixture.output).toContain("1 passed");
+    expect(fixture.output).toContain("required capture started but did not complete");
+    await expect(
+      readFile(path.join(fixture.directory, "evidence/manifest.json")),
+    ).rejects.toThrow();
   });
 
   it("uses non-enumerable own defaults and ignores inherited comparison fields", async () => {
