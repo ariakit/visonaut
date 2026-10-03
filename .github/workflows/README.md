@@ -4,7 +4,7 @@ Pull requests and manual CI use `checks.yml`. `deploy.yml` owns normal main veri
 
 Browser serves the tracked Vite fixture source and does not need a preceding production build. Keep the Build job's full build and installed package smoke check, and the test-shard builds required by adapter and binary coverage. The [D04/D11 measurement record](../../docs/evidence/issue-204-ci/README.md) contains the dated setup evidence, prepared full-rerun trial, and remaining external holds. No before/after CI improvement is claimed.
 
-The web build selects its Cloudflare environment before deployment. Its generated configuration must name `visonaut` and production. Runtime authentication and GitHub App secrets stay in Cloudflare. The runner loads only the two deployment keys. Deployment runs are serialized and cannot cancel an update. Worker rollback does not undo D1 migrations or resource changes.
+The web build selects its Cloudflare environment before deployment. Its generated configuration must name `visonaut` and production. Runtime authentication and GitHub App secrets stay in Cloudflare. The runner loads only the two deployment keys. Deployment runs are serialized and cannot cancel an update. Worker rollback does not undo D1 migrations or resource changes. Manual `migrate` still applies the selected existing D1 migrations with independent credentials and fence acknowledgments. The temporary `inspect` and `convert` actions are removed; their [historical instructions](../../docs/operations/simplification-cutover.md#one-time-conversion-runner) remain available.
 
 ## Flat deployment credentials
 

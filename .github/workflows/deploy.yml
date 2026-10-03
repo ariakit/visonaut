@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: Temporary cutover action
+        description: Deployment or schema migration action
         type: choice
-        options: [inspect, convert, migrate, preview-web, preview-comparator, production-fence]
-        default: inspect
+        options: [migrate, preview-web, preview-comparator, production-fence]
+        default: migrate
         required: true
       target:
         description: Existing exact database and images bucket
@@ -41,7 +41,7 @@ jobs:
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       !(github.event_name == 'workflow_dispatch' &&
-        contains(fromJSON('["inspect","convert","migrate"]'), inputs.action))
+        inputs.action == 'migrate')
     uses: ./.github/workflows/checks.yml
     permissions:
       contents: read
@@ -127,7 +127,7 @@ jobs:
         run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
         run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
-  cutover:
+  schema-migration:
     needs: verify
     if: >-
       !cancelled() &&
@@ -135,7 +135,7 @@ jobs:
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' &&
-      contains(fromJSON('["inspect","convert","migrate"]'), inputs.action)
+      inputs.action == 'migrate'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -145,10 +145,9 @@ jobs:
       CI: true
       WRANGLER_SEND_METRICS: false
       CLOUDFLARE_ACCOUNT_ID: b04f3af3f0f10a6b9481bc23ba974eca
-      VISONAUT_CUTOVER_ACTION: ${{ inputs.action }}
-      VISONAUT_CUTOVER_TARGET: ${{ inputs.target }}
-      VISONAUT_CUTOVER_WRITE_FENCE: ${{ inputs.write_fence }}
-      VISONAUT_CUTOVER_CONSUMERS_FENCED: ${{ inputs.consumers_fenced }}
+      VISONAUT_MIGRATION_TARGET: ${{ inputs.target }}
+      VISONAUT_MIGRATION_WRITE_FENCE: ${{ inputs.write_fence }}
+      VISONAUT_MIGRATION_CONSUMERS_FENCED: ${{ inputs.consumers_fenced }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -172,26 +171,21 @@ jobs:
           INFISICAL_ENVIRONMENT: ${{ vars.INFISICAL_ENVIRONMENT }}
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
           INFISICAL_DEPLOY_IDENTITY_ID: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
-      - name: Check the fixed action, target and fence acknowledgement
+      - name: Check the exact target and fence acknowledgments
         run: |
           node --input-type=module <<'JS'
-          const { VISONAUT_CUTOVER_ACTION: action, VISONAUT_CUTOVER_TARGET: target,
-            VISONAUT_CUTOVER_WRITE_FENCE: fence } = process.env;
-          if (!['inspect', 'convert', 'migrate'].includes(action) ||
-              !['production', 'preview'].includes(target) ||
+          const { VISONAUT_MIGRATION_TARGET: target,
+            VISONAUT_MIGRATION_WRITE_FENCE: fence } = process.env;
+          if (!['production', 'preview'].includes(target) ||
               process.env.CLOUDFLARE_ACCOUNT_ID !== 'b04f3af3f0f10a6b9481bc23ba974eca') {
-            throw new Error('Invalid cutover action or exact target.');
+            throw new Error('Invalid migration target.');
           }
-          if (action === 'convert' && fence !== 'true') {
-            throw new Error('The existing external writer fence must be acknowledged.');
-          }
-          if (action === 'migrate' && (fence !== 'true' ||
-              process.env.VISONAUT_CUTOVER_CONSUMERS_FENCED !== 'true')) {
+          if (fence !== 'true' ||
+              process.env.VISONAUT_MIGRATION_CONSUMERS_FENCED !== 'true') {
             throw new Error('Migration requires writer and consumer fence acknowledgments; these inputs are not proof.');
           }
           JS
       - name: Check the exact migration target before loading secrets
-        if: inputs.action == 'migrate'
         run: |
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
@@ -199,7 +193,7 @@ jobs:
           import { unstable_readConfig } from 'wrangler';
           assert.equal(existsSync('apps/web/.wrangler/deploy/config.json'), false,
             'Migrations must not use a redirected application build.');
-          const production = process.env.VISONAUT_CUTOVER_TARGET === 'production';
+          const production = process.env.VISONAUT_MIGRATION_TARGET === 'production';
           const configuration = unstable_readConfig({ config: 'apps/web/wrangler.jsonc',
             ...(production ? { env: 'production' } : {}) });
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
@@ -207,9 +201,6 @@ jobs:
               ? '15fcd402-dccb-4359-a1ce-280ff67ca596' : '395b539c-c423-4ce4-887c-a5792792a63b'
           }]);
           JS
-      - name: Verify the runner launcher before loading the credential
-        if: inputs.action == 'inspect' || inputs.action == 'convert'
-        run: pnpm exec node apps/web/tooling/simplification-cutover/run.mjs --help >/dev/null
       - name: Load only the existing deployment key at its reviewed root path
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
@@ -225,7 +216,6 @@ jobs:
           recursive: "false"
           export-type: env
       - name: Load only the existing independent migration key at its reviewed root path
-        if: inputs.action == 'migrate'
         uses: Infisical/secrets-action@d2e351f16c6ca20d17c85e6c992e04bdeb64e87d # v1.0.18
         with:
           method: oidc
@@ -240,17 +230,8 @@ jobs:
           recursive: "false"
           export-type: env
       - name: Require the existing independent migration credential
-        if: inputs.action == 'migrate'
         run: node .github/workflows/scripts/deploy-credentials.mjs
-      - name: Require the selected existing credential
-        run: |
-          node --input-type=module <<'JS'
-          if (!process.env.CLOUDFLARE_API_TOKEN) {
-            throw new Error('The existing cutover credential is missing.');
-          }
-          JS
       - name: Apply only the selected existing D1 migrations
-        if: inputs.action == 'migrate'
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
@@ -260,7 +241,7 @@ jobs:
           ulimit -f 8192
           migration_command=(pnpm exec wrangler d1 migrations apply DB --remote
             --config apps/web/wrangler.jsonc)
-          if [ "$VISONAUT_CUTOVER_TARGET" = production ]; then
+          if [ "$VISONAUT_MIGRATION_TARGET" = production ]; then
             migration_command+=(--env production)
           fi
           set +e
@@ -272,97 +253,12 @@ jobs:
           export VISONAUT_MIGRATION_EXIT="$migration_exit"
           node --input-type=module <<'JS'
           console.log(JSON.stringify({
-            action: 'migrate', target: process.env.VISONAUT_CUTOVER_TARGET,
+            action: 'migrate', target: process.env.VISONAUT_MIGRATION_TARGET,
             commandExit: Number(process.env.VISONAUT_MIGRATION_EXIT),
             state: 'Unknown until exact-target UI ledger and schema readback; fence acknowledgments are not proof. No automatic retry.'
           }));
           JS
           if [ "$migration_exit" -ne 0 ]; then
-            exit 1
-          fi
-      - name: Run only the existing bounded cutover runner
-        if: inputs.action == 'inspect' || inputs.action == 'convert'
-        shell: bash
-        run: |
-          set -euo pipefail
-          umask 077
-          ulimit -f 8192
-          if [ "$VISONAUT_CUTOVER_TARGET" = production ]; then
-            cutover_database=15fcd402-dccb-4359-a1ce-280ff67ca596
-            cutover_bucket=visonaut-production-images
-          else
-            cutover_database=395b539c-c423-4ce4-887c-a5792792a63b
-            cutover_bucket=visonaut-preview-images
-          fi
-          cutover_command=(pnpm exec node apps/web/tooling/simplification-cutover/run.mjs
-            "$VISONAUT_CUTOVER_ACTION" --remote --environment "$VISONAUT_CUTOVER_TARGET"
-            --database-id "$cutover_database" --images-bucket "$cutover_bucket")
-          if [ "$VISONAUT_CUTOVER_ACTION" = convert ]; then
-            cutover_command+=(--max-turns 1 --acknowledge-write-fence)
-          fi
-          set +e
-          timeout --signal=TERM --kill-after=15s 300s "${cutover_command[@]}" \
-            >"$RUNNER_TEMP/visonaut-cutover-report.log" \
-            2>"$RUNNER_TEMP/visonaut-cutover-stderr.log"
-          cutover_exit=$?
-          set -e
-          export VISONAUT_CUTOVER_EXIT="$cutover_exit"
-          node --input-type=module <<'JS'
-          import { createHash } from 'node:crypto';
-          import { readFileSync, statSync } from 'node:fs';
-          import { join } from 'node:path';
-          const invalid = () => {
-            const stderrPath = join(process.env.RUNNER_TEMP, 'visonaut-cutover-stderr.log');
-            const markers = statSync(stderrPath).size <= 1048576
-              ? [...readFileSync(stderrPath, 'utf8').matchAll(/^\{"code":"cutover-runner-failed","stage":"(before-bindings|binding-setup|after-bindings)","knownApiAuthorizationError":(true|false),"bindingFailureSource":"(local-proxy|remote-preview|unclassified)","knownApiFailure":(true|false)\}$/gm)] : [];
-            console.log(JSON.stringify({
-              commandExit: Number(process.env.VISONAUT_CUTOVER_EXIT),
-              stdoutBytes: statSync(join(process.env.RUNNER_TEMP, 'visonaut-cutover-report.log')).size,
-              failureStage: markers.length === 1 ? markers[0][1] : 'unclassified',
-              knownApiAuthorizationError: markers.length === 1 && markers[0][2] === 'true',
-              bindingFailureSource: markers.length === 1 ? markers[0][3] : 'unclassified',
-              knownApiFailure: markers.length === 1 && markers[0][4] === 'true',
-              reportStatus: 'missing-or-invalid'
-            }));
-            throw new Error('Cutover report is missing or invalid. State and remote cleanup are unknown; inspect before retry.');
-          };
-          const path = join(process.env.RUNNER_TEMP, 'visonaut-cutover-report.log');
-          if (statSync(path).size > 1048576) invalid();
-          const bytes = readFileSync(path);
-          const text = bytes.toString('utf8');
-          const start = text.lastIndexOf('\n{\n  "action": ');
-          let report;
-          try { report = JSON.parse(start < 0 ? text : text.slice(start + 1)); } catch { invalid(); }
-          const target = process.env.VISONAUT_CUTOVER_TARGET;
-          const expected = target === 'production'
-            ? ['15fcd402-dccb-4359-a1ce-280ff67ca596', 'visonaut-production-images']
-            : ['395b539c-c423-4ce4-887c-a5792792a63b', 'visonaut-preview-images'];
-          const state = report?.readback;
-          const count = value => value === null || (Number.isSafeInteger(value) && value >= 0);
-          if (report?.action !== process.env.VISONAUT_CUTOVER_ACTION || report.mode !== 'remote' ||
-              report.environment !== target || report.target?.accountId !== 'b04f3af3f0f10a6b9481bc23ba974eca' ||
-              report.target?.databaseId !== expected[0] || report.target?.imagesBucket !== expected[1] ||
-              !Array.isArray(report.turns) || report.turns.length > (report.action === 'convert' ? 1 : 0) ||
-              !['ready', 'not-ready', 'attention', 'no-progress', 'turn-limit'].includes(report.stop) ||
-              typeof state?.schemaReady !== 'boolean' || typeof state?.gatesReady !== 'boolean' ||
-              !count(state.requiredProtectedSnapshots) || !count(state.unconvertedClosedRecords) ||
-              !(state.unresolvedEvents === null || Array.isArray(state.unresolvedEvents)) ||
-              !(state.foreignKeyViolations === null || Array.isArray(state.foreignKeyViolations))) invalid();
-          console.log(JSON.stringify({
-            sourceSha: process.env.GITHUB_SHA, action: report.action, environment: target,
-            target: { accountId: report.target.accountId, databaseId: expected[0], imagesBucket: expected[1] },
-            commandExit: Number(process.env.VISONAUT_CUTOVER_EXIT), stop: report.stop,
-            turns: report.turns.length, schemaReady: state.schemaReady, gatesReady: state.gatesReady,
-            requiredProtectedSnapshots: state.requiredProtectedSnapshots,
-            unconvertedClosedRecords: state.unconvertedClosedRecords,
-            unresolvedEventCount: state.unresolvedEvents === null ? null : state.unresolvedEvents.length,
-            foreignKeyViolationCount: state.foreignKeyViolations === null ? null : state.foreignKeyViolations.length,
-            privateReportSha256: createHash('sha256').update(bytes).digest('hex'),
-            claim: 'Selected conversion counts only; no all-object, writer-fence, hosted recovery or cleanup proof.'
-          }));
-          JS
-          if [ "$cutover_exit" -ne 0 ]; then
-            printf '%s\n' 'Cutover stopped; inspect the saved D1 state before another explicit dispatch. No automatic retry.'
             exit 1
           fi
 

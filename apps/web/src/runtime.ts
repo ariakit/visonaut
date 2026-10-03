@@ -425,7 +425,6 @@ export async function runScheduledOperations(
       history: ["history"],
       retention: ["reference-retention", "source-retention", "snapshot-retention", "retention"],
       profiles: ["profile-retention"],
-      "baseline-conversion": ["baseline-conversion"],
     } as const;
     for (const family of Object.keys(families) as (keyof typeof families)[]) {
       if (families[family].some((name) => result.reports[name]?.hasMore))

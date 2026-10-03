@@ -11,7 +11,6 @@ import { deliverGitHubStatuses } from "./checks.ts";
 import { publishReviewLinks } from "./review-links.ts";
 import { recordEvent, resolveEvents, validateBudget } from "./common.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
-import { convertSourceBaselines } from "./source-baselines.ts";
 import type { OperationsMessage } from "@visonaut/service";
 import { expireExports } from "./exports.ts";
 import { promoteBaselines } from "./promotions.ts";
@@ -63,7 +62,6 @@ export async function runOperations(
     ["checks", () => deliverGitHubStatuses(context)],
     ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
-    ["baseline-conversion", () => convertSourceBaselines(context)],
     ["history", () => summarizeClosedRuns(context)],
     ["reference-retention", () => expireComparisonReferences(context)],
     ["source-retention", () => retireSourceBaselines(context)],
@@ -84,7 +82,6 @@ export async function runOperations(
       "retention",
     ]),
     profiles: new Set(["profile-retention"]),
-    "baseline-conversion": new Set(["baseline-conversion"]),
   };
   for (const [name, operation] of steps) {
     if (message.kind === "status" && !statusNames.has(name)) continue;

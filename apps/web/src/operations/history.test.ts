@@ -1,9 +1,9 @@
-import { summarizeClosedRuns } from "./closed-summary.ts";
+import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
 import { nativeTestStorage } from "../api/test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { retentionPinStatement } from "@visonaut/service";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { closedRunRetentionMs, retentionPinStatement } from "@visonaut/service";
 import {
   captured,
   context,
@@ -299,6 +299,61 @@ describe.each(["run", "comparison"] as const)("native D1 %s archive progress bou
 });
 
 describe("verified closed history with native D1 and R2", () => {
+  it("converts a native archive and keeps exact decisions, tuples and original R2 bytes", async () => {
+    const service = await captured(operations, "run");
+    const row = (await service.comparisonRows("comparison-run"))[0];
+    if (!row) throw new Error("Missing native fixture row.");
+    await service.review({
+      commandId: "approval",
+      actorId: "reviewer",
+      sessionId: "fixture",
+      comparisonId: "comparison-run",
+      verdict: "approved",
+      targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+      selection: { itemKey: "dialog", variantKey: "light" },
+      now: operations.now(),
+    });
+    await service.retireRun({ runId: "run", now: operations.now() });
+    await finish();
+    fixture.state.time += closedRunRetentionMs + 1;
+    const images = operations.images;
+    const forbidden = vi.fn(() => {
+      throw new Error("Summary conversion must only read R2.");
+    });
+    operations.images = {
+      get: (key) => images.get(key),
+      put: forbidden,
+      delete: forbidden,
+      list: forbidden,
+      createMultipartUpload: forbidden,
+    };
+    let completed = false;
+    for (let turn = 0; turn < 50; turn++) {
+      const report = await summarizeClosedRuns(operations);
+      expect(report.attention).toEqual([]);
+      if (report.completed.includes("run")) {
+        completed = true;
+        break;
+      }
+    }
+    expect(completed).toBe(true);
+    const summary = await readClosedSummary(operations.database, "run");
+    expect(summary?.sections.decisions).toContainEqual(
+      expect.objectContaining({
+        actor_id: "reviewer",
+        verdict: "approved",
+        tuple_json: row.tuple_json,
+      }),
+    );
+    expect(await new Response((await images.get("runs/run/original"))?.body).text()).toBe(
+      "original-image-bytes",
+    );
+    expect(forbidden).not.toHaveBeenCalled();
+    expect((await operations.database.prepare("PRAGMA foreign_key_check").all()).results).toEqual(
+      [],
+    );
+  });
+
   it("rechecks a previously saved page before it removes database detail", async () => {
     await closed();
     await archiveClosedRuns(operations);
