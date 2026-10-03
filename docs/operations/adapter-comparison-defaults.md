@@ -1,5 +1,7 @@
 # Public adapter comparison defaults
 
+This record describes the earlier compatibility preparation. The [strict adapter preparation](strict-adapter-comparison-defaults.md) records the later breaking source and its release hold.
+
 This is the compatibility stage of issue #204 D07/W05. The adapter source accepts `project.metadata.visonaut.comparisonDefaults` beside `profile`. Explicit defaults, including `{}`, bypass private screenshot inheritance. Missing defaults retain the tested Playwright `1.63.0` fallback for unchanged consumers. The compatible changeset is prepared; no package publication, consumer change, deployment, or final private-field retirement is proved by this record.
 
 ```ts

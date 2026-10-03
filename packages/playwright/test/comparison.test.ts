@@ -22,19 +22,26 @@ function image(color: number) {
 
 async function runFixture(source: string) {
   const directory = await mkdtemp(path.join(packageDirectory, ".comparison-fixture-"));
+  const profile = { osImageDigest: "a".repeat(64), fontsDigest: "b".repeat(64) };
+  const comparisonDefaults = { threshold: 0.35, maxDiffPixels: 11, maxDiffPixelRatio: 0.1 };
+  const projectDefaults = { threshold: 0.15, maxDiffPixels: 5 };
   const config = {
     testDir: directory,
     testMatch: "capture.spec.mjs",
     snapshotPathTemplate: path.join(directory, "{arg}{ext}"),
     workers: 1,
     metadata: {
-      visonaut: { profile: { osImageDigest: "a".repeat(64), fontsDigest: "b".repeat(64) } },
+      visonaut: { profile, comparisonDefaults },
     },
-    expect: { toHaveScreenshot: { threshold: 0.35, maxDiffPixels: 11, maxDiffPixelRatio: 0.1 } },
+    expect: { toHaveScreenshot: comparisonDefaults },
     projects: [
       { name: "inherited" },
-      { name: "project", expect: { toHaveScreenshot: { threshold: 0.15, maxDiffPixels: 5 } } },
-      { name: "empty", expect: {} },
+      {
+        name: "project",
+        metadata: { visonaut: { profile, comparisonDefaults: projectDefaults } },
+        expect: { toHaveScreenshot: projectDefaults },
+      },
+      { name: "empty", metadata: { visonaut: { profile, comparisonDefaults: {} } }, expect: {} },
     ],
     reporter: [
       [
@@ -106,7 +113,7 @@ async function runFixture(source: string) {
 }
 
 describe("consumer screenshot settings", () => {
-  it("serializes resolved project defaults and per-image overrides after Playwright exits", async () => {
+  it("serializes explicit project defaults and per-image overrides after Playwright exits", async () => {
     await using fixture = await runFixture(`
       test('settings', async ({}, info) => {
         const variant = { key: info.project.name, browser: 'chromium' };
@@ -192,25 +199,27 @@ describe("consumer screenshot settings", () => {
     expect(fixture.code, fixture.output).toBe(0);
   });
 
-  it("fails clearly if the pinned resolved configuration bridge is unavailable", async () => {
-    await using fixture = await runFixture(`
-      test('missing bridge', async ({}, info) => {
-        const project = info._projectInternal;
-        try {
-          delete info._projectInternal;
-          await expect(visual(page, { item: 'bridge', variant: { key: info.project.name, browser: 'chromium' }, maxDiffPixels: 5 })).rejects.toThrow('Cannot read resolved screenshot defaults');
-        } finally {
-          info._projectInternal = project;
-        }
+  it.each(["visual", "visualBatch"])(
+    "requires public defaults for %s even when overridden",
+    async (capture) => {
+      await using fixture = await runFixture(`
+      test('missing defaults', async ({}, info) => {
+        delete info.project.metadata.visonaut.comparisonDefaults;
+        await expect(${capture}(page, {
+          item: 'missing', variant: { key: info.project.name, browser: 'chromium' },
+          threshold: 0, maxDiffPixels: 5, maxDiffPixelRatio: 1,
+          items: [{ item: 'missing', clip: { x: 0, y: 0, width: 2, height: 2 } }],
+        })).rejects.toThrow('project.metadata.visonaut.comparisonDefaults is required');
       });
     `);
-    // Catching an incomplete capture still causes the reporter to reject the run.
-    expect(fixture.code).toBe(1);
-    expect(fixture.output).toContain(
-      "A required capture started but did not complete successfully",
-    );
-    await expect(
-      readFile(path.join(fixture.directory, "evidence/manifest.json")),
-    ).rejects.toThrow();
-  });
+      // Catching an incomplete capture still causes the reporter to reject the run.
+      expect(fixture.code).toBe(1);
+      expect(fixture.output).toContain(
+        "A required capture started but did not complete successfully",
+      );
+      await expect(
+        readFile(path.join(fixture.directory, "evidence/manifest.json")),
+      ).rejects.toThrow();
+    },
+  );
 });
