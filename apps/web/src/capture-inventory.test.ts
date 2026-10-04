@@ -57,7 +57,7 @@ function objectStore() {
   return { objects, put, get };
 }
 
-async function fixture(withManifest = false): Promise<CaptureInventory> {
+async function fixture(withManifest = false, testId = "test-1"): Promise<CaptureInventory> {
   const profileDigest = await digestJson(profile);
   const representative = {
     id: "image-seed",
@@ -95,7 +95,7 @@ async function fixture(withManifest = false): Promise<CaptureInventory> {
         profileDigest,
         renderingProfileDigest: await digestRenderingProfile(profile),
         environmentProfileDigest: await digestEnvironmentProfile(profile),
-        testId: "test-1",
+        testId,
         testRetry: 0,
         metadata: {
           name: "Dialog",
@@ -141,7 +141,7 @@ async function fixture(withManifest = false): Promise<CaptureInventory> {
     profiles: inventory.profiles,
     tests: [
       {
-        id: "test-1",
+        id: testId,
         file: "dialog.test.ts",
         titlePath: ["Dialog", "Open"],
         retry: 0,
@@ -153,7 +153,7 @@ async function fixture(withManifest = false): Promise<CaptureInventory> {
         itemKey: "dialog/open",
         variant: { key: "light", browser: "chromium" },
         ordinal: 0,
-        testId: "test-1",
+        testId,
         testRetry: 0,
         profileDigest,
         image: observed,
@@ -201,6 +201,64 @@ async function rawInventory(
 }
 
 describe("complete immutable capture inventory", () => {
+  it.each([
+    ["CLI shard prefix", "linux/08636fa1c499c43994f3-ac12060dba0c4211590c"],
+    ["spaces and Unicode", "chromium/Dialog opens 🧪"],
+    ["maximum length", "t".repeat(1_024)],
+  ])("preserves manifest test IDs with %s through storage", async (_label, testId) => {
+    const store = objectStore();
+    const inventory = await fixture(true, testId);
+    const pointer = await writeCaptureInventory(store, inventory);
+    const loaded = await readCaptureInventory(store, pointer);
+    expect(loaded).toEqual(inventory);
+    expect(loaded.captures[0]?.testId).toBe(testId);
+    expect(loaded.manifest?.tests[0]?.id).toBe(testId);
+    expect(loaded.manifest?.captures[0]?.testId).toBe(testId);
+  });
+
+  it.each(["", "t".repeat(1_025), "test\u0000", "test\u001f", "test\u007f"])(
+    "rejects invalid protocol test ID %j at write and read boundaries",
+    async (testId) => {
+      const store = objectStore();
+      const inventory = await fixture(false, testId);
+      await expect(writeCaptureInventory(store, inventory)).rejects.toThrow();
+      expect(store.put).not.toHaveBeenCalled();
+      const pointer = await rawInventory(store, inventory);
+      await expect(readCaptureInventory(store, pointer)).rejects.toThrow();
+    },
+  );
+
+  it.each(["projectId", "runId", "referenceSnapshotId"] as const)(
+    "retains strict %s validation",
+    async (key) => {
+      const store = objectStore();
+      const inventory = await fixture();
+      inventory[key] = "invalid/id";
+      await expect(writeCaptureInventory(store, inventory)).rejects.toThrow("identity is invalid");
+      expect(store.put).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["id", "imageId"] as const)("retains strict capture %s validation", async (key) => {
+    const store = objectStore();
+    const inventory = await fixture();
+    const capture = inventory.captures[0];
+    if (!capture) throw new Error("Missing capture.");
+    capture[key] = "invalid/id";
+    await expect(writeCaptureInventory(store, inventory)).rejects.toThrow("identity is invalid");
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it.each(["id", "runId"] as const)("retains strict image %s validation", async (key) => {
+    const store = objectStore();
+    const inventory = await fixture();
+    const capture = inventory.captures[0];
+    if (!capture) throw new Error("Missing capture.");
+    capture.image[key] = "invalid/id";
+    await expect(writeCaptureInventory(store, inventory)).rejects.toThrow("identity is invalid");
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
   it("enforces the hard document cap before storage, including caller overrides", async () => {
     const store = objectStore();
     const inventory = await fixture();

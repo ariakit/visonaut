@@ -11,4 +11,6 @@ Complete capture inventories now stay in R2, while D1 stores changed items. Unch
 
 Reference-image downloads reuse verified image membership. In the native 4,000-capture/profile fixture, five sequential image requests now read the full inventory once instead of five times (80% fewer inventory reads), while authorization stays live on every request.
 
+Capture inventories and baseline imports preserve the test IDs used by existing submissions, including IDs qualified by shard.
+
 Existing deployments must import their accepted baseline into a fresh database before switching to this storage model. Keep the old database and images until complete Submit, review, and main promotion pass against the replacement.

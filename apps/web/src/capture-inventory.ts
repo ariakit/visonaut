@@ -83,6 +83,20 @@ function identifier(value: unknown): asserts value is string {
   }
 }
 
+// Test IDs follow the manifest string contract, including CLI shard prefixes.
+function assertTestId(value: unknown): asserts value is string {
+  if (
+    typeof value !== "string" ||
+    !value.length ||
+    value.length > 1024 ||
+    Array.from(value).some(
+      (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
+  ) {
+    throw new Error("Capture inventory test ID is invalid.");
+  }
+}
+
 function integer(
   value: unknown,
   maximum = Number.MAX_SAFE_INTEGER,
@@ -138,7 +152,7 @@ function assertCapture(value: unknown): asserts value is InventoryCapture {
   for (const key of ["profileDigest", "environmentProfileDigest", "renderingProfileDigest"]) {
     validateDigest(field(value, key));
   }
-  identifier(field(value, "testId"));
+  assertTestId(field(value, "testId"));
   integer(field(value, "testRetry"));
   record(field(value, "metadata"));
   const image = field(value, "image");

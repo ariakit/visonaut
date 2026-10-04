@@ -376,6 +376,27 @@ it("requires review when a removed imported identity returns with a different im
   ]);
 });
 
+it("preserves CLI shard-prefixed source test IDs through baseline import and readback", async () => {
+  using state = await fixture();
+  const testIds = [
+    "linux/08636fa1c499c43994f3-ac12060dba0c4211590c",
+    "linux/08636fa1c499c43994f3-4305d4b5792be7897f14",
+  ];
+  for (const [index, testId] of testIds.entries()) {
+    state.source.connection
+      .prepare("UPDATE visonaut_captures SET test_id=? WHERE id=?")
+      .run(testId, `old-capture-${index}`);
+  }
+  const prepared = await prepareReset(state.context, state.expected);
+  await copyResetPage(state.context, { importId: prepared.importId, page: 0 });
+  await activateReset(state.context, prepared.importId);
+  const inventory = await readCaptureInventory(state.images, prepared.inventory);
+  expect(inventory.captures.map((capture) => capture.testId)).toEqual(testIds);
+  expect(
+    state.source.connection.prepare("SELECT test_id FROM visonaut_captures ORDER BY ordinal").all(),
+  ).toEqual(testIds.map((testId) => ({ test_id: testId })));
+});
+
 it("imports only project policy, baseline headers, and verified protected originals", async () => {
   using state = await fixture();
   state.source.connection.exec(
