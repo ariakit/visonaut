@@ -408,6 +408,30 @@ export async function registerImages(service: Service, images: readonly Validate
 
 export async function commitShard(service: Service, input: CommitShardParams) {
   const run = await service.run(input.runId);
+  if (input.inventory) {
+    const inventory = input.inventory;
+    if (
+      !inventory.objectKey.startsWith(`runs/${run.id}/inventory/`) ||
+      !/^[a-f0-9]{64}$/u.test(inventory.digest) ||
+      !Number.isSafeInteger(inventory.bytes) ||
+      inventory.bytes <= 0 ||
+      !Number.isSafeInteger(inventory.captureCount) ||
+      inventory.captureCount !== input.captures.length ||
+      inventory.captureCount <= 0 ||
+      !input.imageRunIds
+    ) {
+      throw new IncompleteError("The complete immutable capture inventory is invalid.");
+    }
+    if (
+      run.inventory_key &&
+      (run.inventory_key !== inventory.objectKey ||
+        run.inventory_digest !== inventory.digest ||
+        run.inventory_bytes !== inventory.bytes ||
+        run.capture_count !== inventory.captureCount)
+    ) {
+      throw new ConflictError("The run already owns another capture inventory.");
+    }
+  }
   const shard = await readOne<{
     state: string;
     manifest_digest: string | null;
@@ -496,11 +520,54 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     }
     previousOrdinal = capture.ordinal;
   }
+  // Verify the full signed inventory above before discarding unchanged rows.
+  const storedCaptures = input.inventory
+    ? input.captures.filter((capture) => {
+        const result = capture.metadata.localResult;
+        if (!result || typeof result !== "object" || Array.isArray(result)) {
+          throw new IncompleteError("Sparse captures require complete local comparison results.");
+        }
+        const fields: Record<string, unknown> = Object.fromEntries(Object.entries(result));
+        if (fields.outcome !== "changed" && fields.outcome !== "unchanged") {
+          throw new IncompleteError("Sparse captures require complete local comparison results.");
+        }
+        return fields.outcome === "changed";
+      })
+    : input.captures;
+  if (input.inventory) {
+    if (storedCaptures.length !== input.captures.length && !input.localReferenceSnapshotId) {
+      throw new IncompleteError("Unchanged captures require a pinned accepted reference.");
+    }
+    const changedIds = new Set(storedCaptures.map((capture) => capture.id));
+    for (let offset = 0; offset < input.captures.length; offset += 100) {
+      const images = JSON.stringify(
+        input.captures.slice(offset, offset + 100).map((capture) => ({
+          imageId: capture.imageId,
+          outcome: changedIds.has(capture.id) ? "changed" : "unchanged",
+        })),
+      );
+      await atomic(service.database, [
+        activeGuard(service.database, run),
+        assertion(
+          service.database,
+          "NOT EXISTS(SELECT 1 FROM json_each(?) capture WHERE NOT EXISTS(SELECT 1 FROM visonaut_images image WHERE image.id=json_extract(capture.value,'$.imageId') AND image.bytes_present=1 AND image.validated=1 AND (image.run_id=? OR (json_extract(capture.value,'$.outcome')='unchanged' AND image.run_id IN(SELECT value FROM json_each(?)) AND EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN visonaut_ancestry ancestry ON ancestry.ancestor_sha=snapshot.tested_sha AND ancestry.run_id=? WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR(snapshot.inventory_key IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images member WHERE member.snapshot_id=snapshot.id AND member.copied!=1))))))))",
+          [
+            images,
+            run.id,
+            JSON.stringify([...new Set(input.imageRunIds)]),
+            run.id,
+            input.localReferenceSnapshotId ?? null,
+            run.project_id,
+          ],
+        ),
+      ]);
+    }
+  }
   // Staged rows stay private until the shard and full run are sealed. Separate
   // batches bound SQL size while a crash can safely replay the same manifest.
-  for (let offset = 0; offset < input.captures.length; offset += 100) {
+  for (let offset = 0; offset < storedCaptures.length; offset += 100) {
     const captures = JSON.stringify(
-      input.captures
+      storedCaptures
         .slice(offset, offset + 100)
         .map((capture) => ({ ...capture, metadataJson: JSON.stringify(capture.metadata) })),
     );
@@ -544,7 +611,7 @@ export async function commitShard(service: Service, input: CommitShardParams) {
       ),
     ]);
   }
-  if (input.localReferenceSnapshotId)
+  if (input.localReferenceSnapshotId && !input.inventory)
     await atomic(service.database, [
       activeGuard(service.database, run),
       statement(
@@ -554,12 +621,56 @@ export async function commitShard(service: Service, input: CommitShardParams) {
       ),
     ]);
   const profileDigest = await captureProfilesDigest(input.captures);
+  const inventoryStatements = input.inventory
+    ? [
+        assertion(service.database, "(SELECT COUNT(*) FROM visonaut_shards WHERE run_id=?)=1", [
+          run.id,
+        ]),
+        assertion(
+          service.database,
+          "NOT EXISTS(SELECT 1 FROM json_each(?) owner WHERE NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE id=owner.value AND byte_state='live'))",
+          [JSON.stringify([...new Set(input.imageRunIds)])],
+        ),
+        statement(
+          service.database,
+          "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)",
+          [
+            `inherited-by:${run.id}`,
+            JSON.stringify([...new Set(input.imageRunIds)].filter((id) => id !== run.id)),
+          ],
+        ),
+        statement(
+          service.database,
+          "UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NULL",
+          [
+            input.inventory.objectKey,
+            input.inventory.digest,
+            input.inventory.bytes,
+            input.inventory.captureCount,
+            JSON.stringify([{ ...expected, tests: [], captures: [] }]),
+            run.id,
+          ],
+        ),
+        assertion(
+          service.database,
+          "EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND inventory_key=? AND inventory_digest=? AND inventory_bytes=? AND capture_count=?)",
+          [
+            run.id,
+            input.inventory.objectKey,
+            input.inventory.digest,
+            input.inventory.bytes,
+            input.inventory.captureCount,
+          ],
+        ),
+      ]
+    : [];
   await atomic(service.database, [
     activeGuard(service.database, run),
+    ...inventoryStatements,
     assertion(
       service.database,
       "(SELECT count(*) FROM visonaut_captures WHERE run_id = ? AND shard_key = ?) = ?",
-      [run.id, input.key, input.captures.length],
+      [run.id, input.key, storedCaptures.length],
     ),
     statement(
       service.database,
@@ -567,8 +678,14 @@ export async function commitShard(service: Service, input: CommitShardParams) {
       [
         input.manifestDigest,
         profileDigest,
-        JSON.stringify(expected),
-        input.verifiedDiscovery ? JSON.stringify(input.verifiedDiscovery) : null,
+        JSON.stringify(input.inventory ? { ...expected, tests: [], captures: [] } : expected),
+        input.verifiedDiscovery
+          ? JSON.stringify(
+              input.inventory
+                ? { ...input.verifiedDiscovery, tests: [], captures: [] }
+                : input.verifiedDiscovery,
+            )
+          : null,
         run.id,
         expected.sourceAttempt ?? run.attempt,
         run.id,
@@ -631,7 +748,9 @@ export async function sealRun(service: Service, input: { runId: string; now: num
     ),
     assertion(
       service.database,
-      "NOT EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND state != 'complete') AND EXISTS (SELECT 1 FROM visonaut_captures WHERE run_id = ?)",
+      run.inventory_key
+        ? "NOT EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND state != 'complete') AND EXISTS (SELECT 1 FROM visonaut_runs WHERE id=? AND inventory_key IS NOT NULL AND capture_count>0)"
+        : "NOT EXISTS (SELECT 1 FROM visonaut_shards WHERE run_id = ? AND state != 'complete') AND EXISTS (SELECT 1 FROM visonaut_captures WHERE run_id = ?)",
       [run.id, run.id],
     ),
     assertion(
@@ -642,9 +761,12 @@ export async function sealRun(service: Service, input: { runId: string; now: num
     // Shards arrive independently and keep manifest-local ordinals while staging.
     // Freeze one run order at seal; inherited captures retain their relative shard
     // order even when an earlier discovered shard has a different capture count.
-    statement(
-      service.database,
-      `WITH shard_order AS MATERIALIZED (
+    ...(run.inventory_key
+      ? []
+      : [
+          statement(
+            service.database,
+            `WITH shard_order AS MATERIALIZED (
           SELECT json_extract(value, '$.key') AS shard_key, CAST(key AS INTEGER) AS ordinal
           FROM json_each((SELECT plan_json FROM visonaut_runs WHERE id = ?), '$.shards')
         ), ranked AS MATERIALIZED (
@@ -654,8 +776,9 @@ export async function sealRun(service: Service, input: { runId: string; now: num
         )
         UPDATE visonaut_captures SET ordinal = ranked.ordinal FROM ranked
         WHERE visonaut_captures.id = ranked.id AND visonaut_captures.ordinal != ranked.ordinal`,
-      [run.id, run.id],
-    ),
+            [run.id, run.id],
+          ),
+        ]),
     statement(
       service.database,
       "UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?",

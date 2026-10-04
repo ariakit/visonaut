@@ -28,6 +28,7 @@ export async function commandRequestDigest(request: string) {
 export function archiveEligibilitySql(runAlias: string) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(runAlias)) throw new Error("Invalid SQL alias");
   return `${runAlias}.active = 0 AND ${runAlias}.closed_at IS NOT NULL
+    AND ${runAlias}.inventory_key IS NULL
     AND ${runAlias}.detail_archived = 0
     AND NOT EXISTS (SELECT 1 FROM work_retained_runs retained
       WHERE retained.id=${runAlias}.id AND retained.byte_state='deleting')
@@ -121,6 +122,13 @@ export async function prepareArchivedCommandReplay(
 
 /** The caller has written and read-back verified the immutable root and every page. */
 export async function compactRunHistory(database: Database, input: CompactRunHistoryInput) {
+  const run = await database
+    .prepare("SELECT * FROM visonaut_runs WHERE id=?")
+    .bind(input.runId)
+    .first<{ inventory_key?: string | null }>();
+  if (run?.inventory_key) {
+    throw new ConflictError("Immutable capture inventories do not use dense history compaction.");
+  }
   if (
     !/^[A-Za-z0-9_-]+$/.test(input.runId) ||
     !/^[A-Za-z0-9_-]+$/.test(input.generation) ||

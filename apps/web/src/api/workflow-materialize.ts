@@ -1,6 +1,7 @@
 import {
   digestEnvironmentProfile,
   digestJson,
+  digestRenderingProfile,
   identityKey,
   SCHEMA_VERSION,
   sha256,
@@ -18,7 +19,14 @@ import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
-import { validateAdmittedMainReference, validateLocalSubmission } from "./local-comparison.ts";
+import {
+  validateAdmittedMainReference,
+  validateLocalSubmission,
+  referenceCaptureInputs,
+  currentReference,
+} from "./local-comparison.ts";
+import { writeCaptureInventory, type InventoryCapture } from "../capture-inventory.ts";
+import { readRunInventory } from "../inventory-records.ts";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
@@ -170,7 +178,7 @@ async function materializeImages({
   if (images.length !== expected.size) {
     throw new IncompleteError("The validated staged image set changed.");
   }
-  const ids = new Map<string, string>();
+  const imageRecords = new Map<string, ValidatedImage>();
   const pending: ValidatedImage[] = [];
   const registerPending = async () => {
     if (!pending.length) return;
@@ -180,7 +188,7 @@ async function materializeImages({
     measurements.registrationMs += performance.now() - started;
     measurements.registrationBatches += 1;
     for (const image of batch) {
-      ids.set(image.digest, image.id);
+      imageRecords.set(image.digest, image);
     }
     pending.length = 0;
   };
@@ -244,7 +252,7 @@ async function materializeImages({
     offset = end;
   }
   await registerPending();
-  return ids;
+  return imageRecords;
 }
 
 async function materializeBundle({
@@ -256,14 +264,18 @@ async function materializeBundle({
   measurements,
 }: MaterializeBundleParams) {
   const manifest = bundle.manifest;
-  const referenceCaptures = manifest.localComparison
-    ? await validateLocalSubmission(context, run.id, manifest)
-    : [];
-  const references = new Map(referenceCaptures.map((capture) => [identityKey(capture), capture]));
+  if (manifest.localComparison) {
+    await validateLocalSubmission(context, run.id, manifest);
+  }
+  const referenceInputs = await referenceCaptureInputs(
+    context,
+    manifest.localComparison?.reference.snapshotId ?? null,
+  );
+  const references = new Map(referenceInputs.map((capture) => [identityKey(capture), capture]));
   const results = new Map(
     manifest.localComparison?.captures.map((result) => [identityKey(result), result]),
   );
-  const imageIds = await materializeImages({
+  const imageRecords = await materializeImages({
     context,
     runId: run.id,
     bundle,
@@ -271,11 +283,6 @@ async function materializeBundle({
     measurements,
   });
   const shardCommitStarted = performance.now();
-  const capturedProfiles = new Set(manifest.captures.map((capture) => capture.profileDigest));
-  await storeCaptureProfiles(
-    context.database,
-    manifest.profiles.filter((profile) => capturedProfiles.has(profile.digest)),
-  );
   const previous = await context.database
     .prepare(
       "SELECT id, json_extract(metadata_json, '$.profile') AS profile_json FROM visonaut_captures WHERE run_id = ? AND shard_key = ?",
@@ -283,27 +290,38 @@ async function materializeBundle({
     .bind(run.id, bundle.key)
     .all<{ id: string; profile_json: string }>();
   const previousProfiles = new Map(previous.results.map((row) => [row.id, row.profile_json]));
-  const captures = await Promise.all(
+  const captures: InventoryCapture[] = await Promise.all(
     manifest.captures.map(async (capture) => {
       const key = identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key });
       const result = results.get(key);
       const candidateStored = result?.outcome !== "unchanged";
-      const imageId =
+      const representative =
         result?.outcome === "unchanged"
-          ? references.get(key)?.imageId
-          : imageIds.get(capture.image.digest);
+          ? references.get(key)?.image
+          : imageRecords.get(capture.image.digest);
       const profile = manifest.profiles.find((entry) => entry.digest === capture.profileDigest);
-      if (!imageId || !profile) {
+      if (!representative || !profile) {
         throw new IncompleteError("A capture lost its measured profile or validated image.");
       }
       const id = `${run.id}:${await digestJson([capture.itemKey, capture.variant.key])}`;
+      const reference = references.get(key);
+      const zeroPixelChange =
+        !!reference &&
+        result?.outcome === "changed" &&
+        reference.image.width === capture.image.width &&
+        reference.image.height === capture.image.height &&
+        result.changedPixels === 0 &&
+        result.ratio === 0 &&
+        !result.mask;
       return {
         id,
         itemKey: capture.itemKey,
         variantKey: capture.variant.key,
         ordinal: capture.ordinal,
-        imageId,
+        imageId: representative.id,
+        image: representative,
         profileDigest: capture.profileDigest,
+        renderingProfileDigest: await digestRenderingProfile(profile.profile),
         environmentProfileDigest: await digestEnvironmentProfile(profile.profile),
         testId: capture.testId,
         testRetry: capture.testRetry,
@@ -320,13 +338,13 @@ async function materializeBundle({
                 comparison: capture.comparison,
                 comparisonDigest: await digestJson(capture.comparison),
                 localResult: {
-                  outcome: result.outcome,
+                  outcome: zeroPixelChange ? "unchanged" : result.outcome,
                   changedPixels: result.changedPixels,
                   ratio: result.ratio,
                   engineVersion: manifest.localComparison.engineVersion,
                   codecVersion: manifest.localComparison.codecVersion,
                   maskExpected: !!result.mask,
-                  ...(result.mask ? { maskImageId: imageIds.get(result.mask.digest) } : {}),
+                  ...(result.mask ? { maskImageId: imageRecords.get(result.mask.digest)?.id } : {}),
                 },
               }
             : {}),
@@ -334,6 +352,33 @@ async function materializeBundle({
       };
     }),
   );
+  const changedProfiles = new Set(
+    captures
+      .filter((capture) => {
+        const localResult = capture.metadata.localResult;
+        return (
+          localResult !== null &&
+          typeof localResult === "object" &&
+          Object.hasOwn(localResult, "outcome") &&
+          Reflect.get(localResult, "outcome") === "changed"
+        );
+      })
+      .map((capture) => capture.profileDigest),
+  );
+  await storeCaptureProfiles(
+    context.database,
+    manifest.profiles.filter((profile) => changedProfiles.has(profile.digest)),
+  );
+  const inventory = await writeCaptureInventory(context.images, {
+    schemaVersion: "baseline-delta-v1",
+    projectId: run.project_id,
+    runId: run.id,
+    testedSha: run.tested_sha,
+    referenceSnapshotId: manifest.localComparison?.reference.snapshotId ?? null,
+    captures,
+    profiles: manifest.profiles,
+    manifest,
+  });
   const discovery = manifest.discovery;
   if (!discovery) {
     throw new IncompleteError("The trusted upload has no discovery evidence.");
@@ -343,6 +388,8 @@ async function materializeBundle({
     key: bundle.key,
     manifestDigest: bundle.manifestDigest,
     captures,
+    inventory,
+    imageRunIds: [...new Set(captures.map((capture) => capture.image.runId))],
     ...(manifest.localComparison
       ? { localReferenceSnapshotId: manifest.localComparison.reference.snapshotId }
       : {}),
@@ -443,40 +490,66 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   if (previous) {
     if (previous.sealed_at !== null) {
       if (previous.active && !previous.comparison_id) {
-        const local = await context.database
-          .prepare(
-            "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-          )
-          .bind(previous.id)
-          .first();
-        if (local) {
-          const staged = await context.database
-            .prepare("SELECT job_id FROM ingest_staged_manifests WHERE run_id = ? AND complete = 1")
-            .bind(previous.id)
-            .first<{ job_id: string }>();
-          if (!staged) {
-            throw new IncompleteError("The local Submit receipt is unavailable.");
+        if (previous.inventory_key) {
+          const inventory = await readRunInventory(context, previous.id);
+          const receipt = inventory?.manifest?.localComparison;
+          if (
+            !inventory ||
+            !receipt ||
+            inventory.runId !== previous.id ||
+            inventory.projectId !== previous.project_id
+          ) {
+            throw new IncompleteError("The durable local Submit receipt is unavailable.");
           }
-          const manifest = await readManifestEvidence(
-            context,
-            await stagedManifestEvidence(context, previous.id, staged.job_id),
-          );
-          await validateLocalSubmission(context, previous.id, manifest);
-          const receipt = manifest.localComparison;
-          if (!receipt) throw new IncompleteError("The local Submit receipt is unavailable.");
+          await currentReference(context, receipt.reference, previous.kind === "pull_request");
           const comparison = await context.service.createComparison({
             id: crypto.randomUUID(),
             runId: previous.id,
             referenceSnapshotId: receipt.reference.snapshotId,
             expectedBaselineRevision: receipt.reference.baselineRevision,
             localComparison: receipt,
+            referenceCaptures: await referenceCaptureInputs(context, receipt.reference.snapshotId),
             now: Date.now(),
           });
           await finalizeSubmittedComparison(context, comparison.id);
-        } else
-          throw new IncompleteError(
-            "A verified local Submit receipt is required. Capture and submit a new complete run.",
-          );
+        } else {
+          const local = await context.database
+            .prepare(
+              "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+            )
+            .bind(previous.id)
+            .first();
+          if (local) {
+            const staged = await context.database
+              .prepare(
+                "SELECT job_id FROM ingest_staged_manifests WHERE run_id = ? AND complete = 1",
+              )
+              .bind(previous.id)
+              .first<{ job_id: string }>();
+            if (!staged) {
+              throw new IncompleteError("The local Submit receipt is unavailable.");
+            }
+            const manifest = await readManifestEvidence(
+              context,
+              await stagedManifestEvidence(context, previous.id, staged.job_id),
+            );
+            await validateLocalSubmission(context, previous.id, manifest);
+            const receipt = manifest.localComparison;
+            if (!receipt) throw new IncompleteError("The local Submit receipt is unavailable.");
+            const comparison = await context.service.createComparison({
+              id: crypto.randomUUID(),
+              runId: previous.id,
+              referenceSnapshotId: receipt.reference.snapshotId,
+              expectedBaselineRevision: receipt.reference.baselineRevision,
+              localComparison: receipt,
+              now: Date.now(),
+            });
+            await finalizeSubmittedComparison(context, comparison.id);
+          } else
+            throw new IncompleteError(
+              "A verified local Submit receipt is required. Capture and submit a new complete run.",
+            );
+        }
       }
       if (previous.active && previous.comparison_id)
         await finalizeSubmittedComparison(context, previous.comparison_id);
@@ -486,7 +559,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
         `${previous.external_run_id}:${previous.attempt}`,
         Date.now(),
       );
-      return previous;
+      return context.service.run(previous.id);
     }
     if (!previous.active || previous.state === "failed") {
       throw new IncompleteError("The incomplete workflow run can no longer be converted.");
@@ -710,6 +783,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
         referenceSnapshotId: local.reference.snapshotId,
         expectedBaselineRevision: local.reference.baselineRevision,
         localComparison: local,
+        referenceCaptures: await referenceCaptureInputs(context, local.reference.snapshotId),
         now: Date.now(),
       });
   await finalizeSubmittedComparison(context, comparison.id);

@@ -6,6 +6,8 @@ import {
   releasePromotionLeaseStatement,
   Service,
 } from "@visonaut/service";
+import { readCaptureInventory, type CaptureInventory } from "../capture-inventory.ts";
+import { inventoryPointer } from "../inventory-records.ts";
 import { digestStream, mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
@@ -17,6 +19,96 @@ interface PromotionPosition {
 // Keep each pass within the queue consumer's wall time and the promotion lease.
 const maximumPromotionObjectsPerStep = 50;
 const maximumConcurrentPromotionObjects = 5;
+
+interface InventoryOriginal {
+  id: string;
+  object_key: string;
+  digest: string;
+  bytes: number;
+  width: number;
+  height: number;
+  content_type: string;
+  bytes_present: number;
+}
+
+interface VerifyInventoryOriginalsParams {
+  snapshotId: string;
+  inventory: CaptureInventory;
+  limit: number;
+  chargeObjects: (count: number) => void;
+}
+
+async function verifyInventoryOriginals(
+  context: OperationsContext,
+  { snapshotId, inventory, limit, chargeObjects }: VerifyInventoryOriginalsParams,
+) {
+  const cursorId = `promotion-originals:${snapshotId}`;
+  const cursor = await context.database
+    .prepare("SELECT value FROM operations_cursors WHERE id=?")
+    .bind(cursorId)
+    .first<{ value: string | null }>();
+  const after = cursor?.value ?? "";
+  const images = new Map(
+    inventory.captures
+      .filter((capture) => capture.image.runId === inventory.runId)
+      .map((capture) => [capture.image.id, capture.image]),
+  );
+  const pendingImages = [...images.values()]
+    .filter((image) => image.id > after)
+    .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  const page = pendingImages.slice(0, limit);
+  chargeObjects(page.length);
+  const originals = await context.database
+    .prepare(`SELECT image.id,image.object_key,image.digest,image.bytes,image.width,image.height,image.content_type,image.bytes_present
+      FROM json_each(?) wanted JOIN visonaut_images image ON image.id=wanted.value
+      WHERE image.run_id=? AND image.role='original' ORDER BY image.id`)
+    .bind(JSON.stringify(page.map((image) => image.id)), inventory.runId)
+    .all<InventoryOriginal>();
+  let verifiedBytes = 0;
+  const rows = originals.results ?? [];
+  if (rows.length !== page.length) {
+    throw new Error("Baseline inventory lost a candidate original registry record.");
+  }
+  await mapConcurrent(rows, maximumConcurrentPromotionObjects, async (original) => {
+    const image = images.get(original.id);
+    if (
+      !image ||
+      original.bytes_present !== 1 ||
+      image.runId !== inventory.runId ||
+      image.objectKey !== original.object_key ||
+      image.digest !== original.digest ||
+      image.bytes !== original.bytes ||
+      image.width !== original.width ||
+      image.height !== original.height ||
+      image.contentType !== original.content_type
+    ) {
+      throw new Error("Baseline inventory differs from its candidate original.");
+    }
+    const object = await context.images.get(original.object_key);
+    if (!object) throw new Error("A required baseline candidate original is missing.");
+    const verified = await digestStream(object.body, context.budget.maximumObjectBytes);
+    if (verified.digest !== original.digest || verified.bytes !== original.bytes) {
+      throw new Error("Baseline candidate original failed verification.");
+    }
+    verifiedBytes += verified.bytes;
+  });
+  const nextAfter = rows.at(-1)?.id ?? after;
+  if (rows.length) {
+    // A whole page settles before its cursor, so failed reads are retried.
+    await context.database
+      .prepare(
+        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
+      )
+      .bind(cursorId, nextAfter)
+      .run();
+  }
+  return {
+    pending: pendingImages.length > page.length,
+    verifiedRows: rows.length,
+    verifiedBytes,
+    cursorId,
+  };
+}
 
 interface PromotionPage<Row extends PromotionPosition> {
   cursorId: string;
@@ -137,6 +229,10 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     if (!(await claimPromotionLease(database, lease))) continue;
     try {
       await service.cancelPreparedPromotion({ snapshotId: snapshot.id, now: context.now() });
+      await database
+        .prepare("DELETE FROM operations_cursors WHERE id=?")
+        .bind(`promotion-originals:${snapshot.id}`)
+        .run();
       cancelled += 1;
     } finally {
       await releasePromotionLeaseStatement(database, { ...lease, now: context.now() }).run();
@@ -189,6 +285,75 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     let outcome = "deferred";
     try {
       const comparison = await service.comparison(candidate.comparison_id);
+      const run = await database
+        .prepare(
+          "SELECT project_id,tested_sha,inventory_key,inventory_digest,inventory_bytes,capture_count FROM visonaut_runs WHERE id=?",
+        )
+        .bind(candidate.id)
+        .first<{
+          project_id: string;
+          tested_sha: string;
+          inventory_key: string | null;
+          inventory_digest: string | null;
+          inventory_bytes: number | null;
+          capture_count: number | null;
+        }>();
+      if (!run) throw new Error("Baseline candidate run is missing.");
+      const pointer = inventoryPointer(run);
+      if (pointer) {
+        const inventory = await readCaptureInventory(context.images, pointer);
+        if (
+          inventory.runId !== candidate.id ||
+          inventory.projectId !== run.project_id ||
+          inventory.testedSha !== run.tested_sha ||
+          inventory.referenceSnapshotId !== comparison.reference_snapshot_id
+        ) {
+          throw new Error("Baseline inventory belongs to another capture run.");
+        }
+        await service.preparePromotion({
+          snapshotId,
+          comparisonId: candidate.comparison_id,
+          prefix: existing?.prefix ?? `baselines/${digest}`,
+          now: context.now(),
+          inventory: pointer,
+          imageRunIds: [...new Set(inventory.captures.map((capture) => capture.image.runId))],
+        });
+        const verification = await verifyInventoryOriginals(context, {
+          snapshotId,
+          inventory,
+          limit: remainingObjects,
+          chargeObjects: (count) => {
+            remainingObjects -= count;
+          },
+        });
+        verifyRows += verification.verifiedRows;
+        verifyBytes += verification.verifiedBytes;
+        if (verification.pending) {
+          report.deferred.push(candidate.id);
+          report.hasMore = true;
+          continue;
+        }
+        await service.recordInventoryVerification({
+          snapshotId,
+          objectKey: pointer.objectKey,
+          digest: pointer.digest,
+        });
+        await service.promote({
+          snapshotId,
+          promotionId,
+          expectedBaselineRevision: comparison.baseline_revision,
+          now: context.now(),
+        });
+        await database
+          .prepare("DELETE FROM operations_cursors WHERE id=?")
+          .bind(verification.cursorId)
+          .run();
+        await resolveEvents(database, "promotion", candidate.id, context.now());
+        report.completed.push(candidate.id);
+        outcome = "completed";
+        report.hasMore = true;
+        continue;
+      }
       const copies = await service.preparePromotion({
         snapshotId,
         comparisonId: candidate.comparison_id,

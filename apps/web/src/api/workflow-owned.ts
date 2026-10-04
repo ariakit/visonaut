@@ -53,6 +53,7 @@ import {
   readManifestEvidence,
   stagedManifestEvidence,
   writeEvidencePages,
+  writeManifestEvidence,
   type StagedManifestEvidence,
 } from "./workflow-evidence.ts";
 import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
@@ -579,13 +580,13 @@ export async function declareStaged(
   const manifestDigest = encoded.digest;
   const manifestObjectKey =
     existingManifest?.manifest_object_key ??
-    `d1:evidence/${run.id}/${job.job_id}/${manifestDigest}`;
+    `quarantine/staged/${run.id}/${job.job_id}/manifests/${manifestDigest}.json`;
   if (!existingManifest) {
     try {
       await atomic(context.database, [
         statement(
           context.database,
-          "INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, evidence_page_count, evidence_page_bytes, capture_manifest_digest) SELECT ?, ?, ?, ?, ?, ?, ?, 2, ?, ?, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT(run_id, job_id) DO NOTHING",
+          "INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT ?, ?, ?, ?, ?, ?, ?, 1, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT(run_id, job_id) DO NOTHING",
           [
             run.id,
             job.job_id,
@@ -595,8 +596,6 @@ export async function declareStaged(
             manifest.captures.length,
             Date.now(),
             encoded.bytes.byteLength,
-            encoded.pages.length,
-            encoded.pageBytes,
             encoded.captureDigest,
             run.id,
           ],
@@ -649,18 +648,21 @@ export async function declareStaged(
     storedManifest.manifest_object_key !== manifestObjectKey ||
     storedManifest.declared_bytes !== declaredBytes ||
     storedManifest.capture_count !== manifest.captures.length ||
-    (storedManifest.evidence_version === 2 &&
+    (storedManifest.evidence_bytes !== null &&
       (storedManifest.evidence_bytes !== encoded.bytes.byteLength ||
-        storedManifest.evidence_page_count !== encoded.pages.length ||
-        storedManifest.evidence_page_bytes !== encoded.pageBytes ||
-        storedManifest.capture_manifest_digest !== encoded.captureDigest))
+        storedManifest.capture_manifest_digest !== encoded.captureDigest)) ||
+    (storedManifest.evidence_version === 2 &&
+      (storedManifest.evidence_page_count !== encoded.pages.length ||
+        storedManifest.evidence_page_bytes !== encoded.pageBytes))
   ) {
     throw new SecurityError("manifest_conflict", 409, "The staged manifest is immutable.");
   }
   if (storedManifest.evidence_version === 1) {
-    // An interrupted legacy declaration keeps its original storage version.
-    await context.quarantine.put(manifestObjectKey, JSON.stringify(manifest), {
-      httpMetadata: { contentType: "application/json" },
+    await writeManifestEvidence({
+      context,
+      database: context.database,
+      stored: storedManifest,
+      encoded,
     });
   } else if (!storedManifest.declaration_complete) {
     await writeEvidencePages({ database: context.database, stored: storedManifest, encoded });
@@ -761,7 +763,7 @@ async function requireAdmittedManifest(
   capability: IngestCapability,
   run: StagedRun,
 ) {
-  if (stored.evidence_version === 1) return;
+  if (stored.evidence_version === 1 && stored.evidence_bytes === null) return;
   if (stored.declaration_complete !== 1) {
     throw new IncompleteError("The staged declaration is incomplete.");
   }
@@ -1088,6 +1090,7 @@ export async function uploadStagedImage(
   } else {
     if (
       stored.evidence_version === 1 &&
+      stored.evidence_bytes === null &&
       !(await readManifestEvidence(context, stored)).localComparison
     ) {
       throw new SecurityError(

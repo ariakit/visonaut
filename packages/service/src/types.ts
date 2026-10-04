@@ -80,6 +80,20 @@ export interface ValidatedImage {
   role?: "original" | "thumbnail" | "mask";
 }
 
+export interface CaptureInventoryPointer {
+  objectKey: string;
+  digest: string;
+  bytes: number;
+  captureCount: number;
+}
+
+export interface ReferenceCaptureInput extends CaptureIdentity {
+  id: string;
+  profileDigest: string;
+  renderingProfileDigest: string;
+  image: ValidatedImage;
+}
+
 export interface CaptureInput extends CaptureIdentity {
   id: string;
   /** Strictly increasing within the submitted shard; sealing assigns run order. */
@@ -116,6 +130,9 @@ export interface CommitShardParams {
   key: string;
   manifestDigest: string;
   captures: CaptureInput[];
+  /** Complete immutable R2 evidence, verified before this service call. */
+  inventory?: CaptureInventoryPointer;
+  imageRunIds?: string[];
   /** Only a verified local Submit can reuse this pinned accepted representative. */
   localReferenceSnapshotId?: string | null;
   finalTestOutcomes: TestOutcome[];
@@ -180,6 +197,10 @@ export interface ProjectRow {
 }
 
 export interface RunRow {
+  inventory_key?: string | null;
+  inventory_digest?: string | null;
+  inventory_bytes?: number | null;
+  capture_count?: number | null;
   detail_archived?: number;
   closed_at: number | null;
   id: string;
@@ -238,6 +259,11 @@ export interface DecisionRow {
 }
 
 export interface SnapshotRow {
+  inventory_key?: string | null;
+  inventory_digest?: string | null;
+  inventory_bytes?: number | null;
+  capture_count?: number | null;
+  inventory_verified?: number;
   id: string;
   project_id: string;
   run_id: string;

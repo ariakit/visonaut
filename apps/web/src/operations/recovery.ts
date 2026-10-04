@@ -1,4 +1,5 @@
 import { digestStream } from "./common.ts";
+import { readCaptureInventory } from "../capture-inventory.ts";
 import type { OperationsContext } from "./types.ts";
 import type { Database } from "@visonaut/service";
 
@@ -113,4 +114,122 @@ export async function inspectRecoveryImages(context: OperationsContext, afterId 
     nextAfterId: rows.results?.at(-1)?.id ?? afterId,
     hasMore: (rows.results?.length ?? 0) === context.budget.objectsPerStep,
   };
+}
+
+export interface RecoveryInventoryCursor {
+  afterId: string;
+  imageIndex: number;
+}
+
+interface RecoveryInventory {
+  id: string;
+  run_id: string;
+  project_id: string;
+  tested_sha: string;
+  inventory_key: string;
+  inventory_digest: string;
+  inventory_bytes: number;
+  capture_count: number;
+  verify_images: number;
+}
+
+const recoveryInventoriesSql = `SELECT 'run:'||run.id AS id,run.id AS run_id,run.project_id,run.tested_sha,
+  run.inventory_key,run.inventory_digest,run.inventory_bytes,run.capture_count,
+  run.active=1 AND EXISTS(SELECT 1 FROM work_retained_runs retained WHERE retained.id=run.id AND retained.byte_state='live') AS verify_images
+  FROM visonaut_runs run WHERE run.inventory_key IS NOT NULL
+  UNION ALL SELECT 'snapshot:'||snapshot.id,snapshot.run_id,snapshot.project_id,snapshot.tested_sha,
+  snapshot.inventory_key,snapshot.inventory_digest,snapshot.inventory_bytes,snapshot.capture_count,
+  snapshot.reference_eligible=1 OR EXISTS(SELECT 1 FROM visonaut_projects project WHERE project.snapshot_id=snapshot.id)
+    OR EXISTS(SELECT 1 FROM visonaut_pins pin WHERE pin.snapshot_id=snapshot.id)
+  FROM visonaut_snapshots snapshot WHERE snapshot.inventory_key IS NOT NULL`;
+
+/** Inventories can reference baseline originals that have no D1 image row. */
+export async function inspectRecoveryInventories(
+  context: OperationsContext,
+  cursor: RecoveryInventoryCursor = { afterId: "", imageIndex: 0 },
+) {
+  if (!Number.isSafeInteger(cursor.imageIndex) || cursor.imageIndex < 0) {
+    throw new Error("Recovery inventory cursor is invalid.");
+  }
+  const row = await context.database
+    .prepare(`SELECT * FROM (${recoveryInventoriesSql}) WHERE id>? ORDER BY id LIMIT 1`)
+    .bind(cursor.afterId)
+    .first<RecoveryInventory>();
+  const missing: string[] = [];
+  const corrupt: string[] = [];
+  if (!row) {
+    return {
+      checkedInventories: 0,
+      checkedImages: 0,
+      missing,
+      corrupt,
+      nextCursor: cursor,
+      hasMore: false,
+    };
+  }
+  let checkedImages = 0;
+  let nextCursor: RecoveryInventoryCursor = { afterId: row.id, imageIndex: 0 };
+  try {
+    const inventory = await readCaptureInventory(context.images, {
+      objectKey: row.inventory_key,
+      digest: row.inventory_digest,
+      bytes: row.inventory_bytes,
+      captureCount: row.capture_count,
+    });
+    if (
+      inventory.runId !== row.run_id ||
+      inventory.projectId !== row.project_id ||
+      inventory.testedSha !== row.tested_sha
+    ) {
+      throw new Error("Recovery inventory belongs to another run.");
+    }
+    if (row.verify_images) {
+      const images = [
+        ...new Map(
+          inventory.captures.map((capture) => [capture.image.objectKey, capture.image]),
+        ).values(),
+      ].sort((left, right) =>
+        left.objectKey < right.objectKey ? -1 : left.objectKey > right.objectKey ? 1 : 0,
+      );
+      if (cursor.imageIndex > images.length) {
+        throw new Error("Recovery inventory cursor exceeds its image count.");
+      }
+      const maximum = Math.max(1, Math.min(context.budget.objectsPerStep, 50));
+      for (const image of images.slice(cursor.imageIndex, cursor.imageIndex + maximum)) {
+        checkedImages += 1;
+        const object = await context.images.get(image.objectKey);
+        if (!object) {
+          missing.push(image.objectKey);
+          continue;
+        }
+        try {
+          const checked = await digestStream(object.body, context.budget.maximumObjectBytes);
+          if (checked.digest !== image.digest || checked.bytes !== image.bytes) {
+            corrupt.push(image.objectKey);
+          }
+        } catch {
+          corrupt.push(image.objectKey);
+        }
+      }
+      const imageIndex = cursor.imageIndex + checkedImages;
+      if (imageIndex < images.length) {
+        nextCursor = { afterId: cursor.afterId, imageIndex };
+      }
+    }
+  } catch {
+    const object = await context.images.get(row.inventory_key);
+    if (object) {
+      await object.body.cancel();
+      corrupt.push(row.inventory_key);
+    } else {
+      missing.push(row.inventory_key);
+    }
+  }
+  const hasMore =
+    nextCursor.imageIndex > 0 ||
+    !!(await context.database
+      .prepare(`SELECT 1 FROM (${recoveryInventoriesSql}) WHERE id>? LIMIT 1`)
+      .bind(nextCursor.afterId)
+      .first());
+  return { checkedInventories: 1, checkedImages, missing, corrupt, nextCursor, hasMore };
 }

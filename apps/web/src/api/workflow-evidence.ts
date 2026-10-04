@@ -106,18 +106,24 @@ export function* imageDescriptorPages({
 export async function encodeManifestEvidence(
   manifest: Manifest,
   maximumBytes: number,
-  pageBytes = maximumPageBytes,
+  pageBytes?: number,
 ): Promise<EncodedEvidence> {
   const bytes = new TextEncoder().encode(canonicalJson(manifest));
   if (bytes.byteLength > maximumBytes) {
     throw new SecurityError("upload_limit", 413, "The canonical manifest exceeds its byte limit.");
   }
-  if (!Number.isSafeInteger(pageBytes) || pageBytes < 1 || pageBytes > maximumPageBytes) {
+  if (
+    pageBytes !== undefined &&
+    (!Number.isSafeInteger(pageBytes) || pageBytes < 1 || pageBytes > maximumPageBytes)
+  ) {
     throw new TypeError("Invalid evidence page size.");
   }
   const pages: ArrayBuffer[] = [];
-  for (let offset = 0; offset < bytes.length; offset += pageBytes) {
-    pages.push(bytes.slice(offset, offset + pageBytes).buffer);
+  // Only existing D1 page receipts need duplicate page buffers.
+  if (pageBytes !== undefined) {
+    for (let offset = 0; offset < bytes.length; offset += pageBytes) {
+      pages.push(bytes.slice(offset, offset + pageBytes).buffer);
+    }
   }
   if (pages.length > maximumPageCount) {
     throw new SecurityError("upload_limit", 413, "The evidence page count exceeds its limit.");
@@ -126,7 +132,7 @@ export async function encodeManifestEvidence(
     bytes,
     digest: await sha256(bytes),
     captureDigest: await captureManifestDigest(manifest),
-    pageBytes,
+    pageBytes: pageBytes ?? maximumPageBytes,
     pages,
   };
 }
@@ -162,6 +168,44 @@ interface WriteEvidencePagesParams {
   database: Database;
   stored: StagedManifestEvidence;
   encoded: EncodedEvidence;
+}
+
+interface WriteManifestEvidenceParams extends WriteEvidencePagesParams {
+  context: ApiContext;
+}
+
+/** A digest key and header fence keep retrying declarations on one receipt. */
+export async function writeManifestEvidence({
+  context,
+  database,
+  stored,
+  encoded,
+}: WriteManifestEvidenceParams) {
+  await atomic(database, [evidenceFence(database, stored)]);
+  const existing = await context.quarantine.get(stored.manifest_object_key);
+  if (existing) {
+    if (stored.evidence_bytes === null) {
+      const manifest = parseManifest(
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await existing.arrayBuffer())),
+      );
+      if ((await digestJson(manifest)) !== encoded.digest) {
+        throw new IncompleteError("The immutable staged manifest differs.");
+      }
+    } else {
+      if (
+        existing.size !== encoded.bytes.byteLength ||
+        (await sha256(new Uint8Array(await existing.arrayBuffer()))) !== encoded.digest
+      ) {
+        throw new IncompleteError("The immutable staged manifest differs.");
+      }
+    }
+  } else {
+    await context.quarantine.put(stored.manifest_object_key, encoded.bytes, {
+      httpMetadata: { contentType: "application/json" },
+      sha256: encoded.digest,
+    });
+  }
+  await atomic(database, [evidenceFence(database, stored)]);
 }
 
 export async function writeEvidencePages({ database, stored, encoded }: WriteEvidencePagesParams) {
@@ -208,14 +252,29 @@ export async function readManifestEvidence(
 ): Promise<Manifest> {
   const maximumBytes = context.configuration.limits.maximumManifestBytes;
   if (stored.evidence_version === 1) {
+    if (!allowIncomplete && stored.evidence_bytes !== null && stored.declaration_complete !== 1) {
+      throw new IncompleteError("The staged declaration is incomplete.");
+    }
     const object = await context.quarantine.get(stored.manifest_object_key);
-    if (!object || object.size > maximumBytes) {
+    if (
+      !object ||
+      object.size > maximumBytes ||
+      (stored.evidence_bytes !== null && object.size !== stored.evidence_bytes)
+    ) {
       throw new IncompleteError("The staged manifest is unavailable.");
     }
+    const bytes = new Uint8Array(await object.arrayBuffer());
+    if (stored.evidence_bytes !== null && (await sha256(bytes)) !== stored.manifest_digest) {
+      throw new IncompleteError("The staged manifest bytes differ from their immutable digest.");
+    }
     const manifest = parseManifest(
-      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await object.arrayBuffer())),
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
     );
-    if ((await digestJson(manifest)) !== stored.manifest_digest) {
+    if (
+      (await digestJson(manifest)) !== stored.manifest_digest ||
+      (stored.capture_manifest_digest !== null &&
+        (await captureManifestDigest(manifest)) !== stored.capture_manifest_digest)
+    ) {
       throw new IncompleteError("The staged manifest digest differs.");
     }
     return manifest;

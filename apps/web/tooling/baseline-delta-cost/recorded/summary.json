@@ -1,0 +1,426 @@
+{
+  "environment": {
+    "node": "v24.18.0",
+    "miniflare": "5.20260921.0-alpha",
+    "workerd": "1.20260921.1",
+    "vitest": "5.0.1",
+    "compatibilityDate": "2026-09-22",
+    "sqliteVersion": "Unavailable: native D1 rejects sqlite_version()."
+  },
+  "hashes": {
+    "apps/web/migrations/0001_service.sql": "b73bbc00f554fb09b52a978ebe6668726b172282f2a07ca704dd6b649acd6096",
+    "apps/web/migrations/0002_work.sql": "5366c884fe41f0135c0ce0b0d1834f26367f3284b4b109d5c3f4cf61e204e8e6",
+    "apps/web/migrations/0003_auth.sql": "11955b0f6efc3f8d83608172aa9c4e96d63db8ba7048320fb706467524edb82c",
+    "apps/web/migrations/0004_ingest.sql": "c6953700b16d2bde2db745588d4c871402e4c5e1d0c334e0947c64ba1abdd527",
+    "apps/web/migrations/0005_operations.sql": "f44270a4453bcc121565feb9609442e3e4faf218bca6286e093687d700061db7",
+    "apps/web/migrations/0006_acceptance.sql": "7ccebfb1004b4b1c073c85a252a64d7eb6b61f051cbc9102e2c381c0c544e7ec",
+    "apps/web/migrations/0007_backup_inventory.sql": "fe28f1602a1708dde4c644c12fee7a49796536fd3fb01980804257533e4012b9",
+    "apps/web/migrations/0008_capture_profiles.sql": "930a72f8c18a6e4506218c0e9c16a4fe46bebe7530914980020038b2e36df75c",
+    "apps/web/migrations/0009_retention_history.sql": "a573ff14f758e093797508de71f469d980edce9886c0a49f5425a0673c85849f",
+    "apps/web/migrations/0010_run_history.sql": "2d59b8ad67746dbce3654ef36ef88d10c634908c56034cd872ea7a97c39e8405",
+    "apps/web/migrations/0011_backup_groups.sql": "96d5ec38c8196c8497ebd2f3276494b089fa90e31aa12b22bf4d1f1b870e707e",
+    "apps/web/migrations/0012_historical_comparisons.sql": "53abe2d8ba1869c377ee6217e12351e8a4a9f43086b95442cce9e31ad4eb9859",
+    "apps/web/migrations/0013_promotion_scans.sql": "643d6d7c728ffb01535f7a1b15c2fbd6bfc42e4cfae2a93aff4909f77c63b71d",
+    "apps/web/migrations/0014_visonaut_brand.sql": "e1c786fe145cf19b5de97a888f30d277e44fbc8a71708bbb2a6b92023ed1774e",
+    "apps/web/migrations/0015_run_original_bytes.sql": "f97d982b7aa6db303426bd81552802b4edc7441a0f0cd74d59c59b6172f72140",
+    "apps/web/migrations/0016_comparison_publication.sql": "02f9e76951aea002f9fe6e0645a9631ca19d2267491512effcfc1cb98b99a5e1",
+    "apps/web/migrations/0018_transfer_key_redemptions.sql": "9ae2d13c235a2a0d4bf8572f74c00d4aeabfa06fb4758ee71e29fd09e9599c79",
+    "apps/web/migrations/0019_staged_workflows.sql": "aa29cee14055a47e4a0afbcead6bba7ecd4ebf89a9fb1895f65f399e1dc3107e",
+    "apps/web/migrations/0020_pre_run_checks.sql": "e613cadd323df054a389dfed26471616c46bc0f73e61f02d81b94695e8ed911e",
+    "apps/web/migrations/0021_staged_image_reuse.sql": "7516705a1f1380631223e5f2b5f05b68bf08d9be7735ef29da910a7936f629ae",
+    "apps/web/migrations/0022_review_links.sql": "4ba9cb4e7f849984cbef29cee5a8fe420e26e77c49ee0002f3e6e9405164283a",
+    "apps/web/migrations/0023_pending_webhook_index.sql": "9d2c39ba17f43c5bb5770c377ca1826f98bbbaab6746bda129a869ecb1655798",
+    "apps/web/migrations/0024_core_simplification.sql": "f50e27d23b4739e10f3d75d11c574c74fb322fbbc052d2e06a3121123129e6d0",
+    "apps/web/migrations/0026_plan_reports.sql": "45417764f2e0696b2f7663b56eb34ff0609e725561dde8920f7fe8f4d346c222",
+    "apps/web/migrations/0027_webhook_recovery.sql": "6324431bdd1e30d0bc1d6bb1506c3bc96a35f7f17676fee0dbfcc0b7cb01ad0f",
+    "apps/web/migrations/0028_pr_title_index.sql": "cd4a9d470619db5aa78ddb6b8d6d5bcf6bce2589b2cbf59562ec7b7b5ddad2cb",
+    "apps/web/migrations/0029_zero_pixel_reviews.sql": "133d80f607d0e168e412808e971dc6392c2d41b8848b7946441f2c41f4e25cca",
+    "apps/web/migrations/0030_local_zero_pixel_reviews.sql": "67f6ea3602427d1a0e69c9ea31a6f3e95c3ae3f203010fd650b857523eb66376",
+    "apps/web/migrations/0030_review_queue_index.sql": "2d192dc87199d166c93c6d56d6e38bc7ba40926b9149a141c211e0c59fcdd782",
+    "apps/web/migrations/0031_check_heads.sql": "3841849cf8132c699f97bc16895e38d31f74cbfc316a76b877c85e812bcee48c",
+    "apps/web/migrations/0032_upload_indexes.sql": "d154b7136d33a7dbdd2210b1dbd481ce1ab807c30ffeab8962de7a7ce73791ba",
+    "apps/web/migrations/0033_d1_upload_evidence.sql": "316a76599649ede5ef311deb2d0a9976f0bc86e0b99934ff4beff1ef4352f35a",
+    "apps/web/migrations/0034_sparse_inventories.sql": "431c344206e33cc44564eaa65c8582f90a6fb743f15d4a54a58da3a375f20d68",
+    "apps/web/package.json": "ef29d930ebc2527b8ca3218c0ffd7b0c50dae9af8981b4bd5d11a6e0d9630881",
+    "apps/web/src/api/test-d1-costs.ts": "9b501c05dd5e3a17f643f0aaf641c09ba51efe456fdd753f62824c711bb2df01",
+    "apps/web/tooling/baseline-delta-cost/probe.cost.ts": "a41e2288e0295d9e63a808944b5650f0fe916d80a5105853c40e6b89677857dd",
+    "apps/web/tooling/baseline-delta-cost/vitest.config.ts": "2a0cbe716e6a0cebb65d906c4d13e9840dc7daa35db425a748e9bf5b9b2b564b",
+    "package.json": "5a68dba29ff967cdf1111dea1a730082fc01635ca30d84f4b15deb915675c583",
+    "packages/protocol/src/hash.ts": "6df59424e3dc67d8bafb2aa7b429c15808239bff71e79859b564763f8f111998",
+    "packages/protocol/src/index.ts": "ef76f153f5e22f9b8a05675c4a9be45da766ddebd5796273356eab78be665ea2",
+    "packages/protocol/src/types.ts": "ba65385e305c6ced88f99055fe62eefbacc463f74f0b67a417fead1bacc2a255",
+    "packages/protocol/src/validate.ts": "5fb556cb465393c9be14a93be25050ebc659f51073a356999d5583a9a2be6c77",
+    "packages/protocol/src/workflow-jobs.ts": "67077c0746f3584a162b589b82ddc2d5507428ee9acc71977e506c6a063ec556",
+    "packages/service/src/baseline-promotion.ts": "d396c0ca55acfc447a637d2b0ad1ff64503588eda9c74654d56ba2bd3c3c1b3d",
+    "packages/service/src/comparison-publication.ts": "e1112375a87751d8820e11846a25b3fc864c93ae2e43f53afd0ff61cf57fec04",
+    "packages/service/src/comparison-result.ts": "f5b3138f6b68cb71bc85d1b96e21ab77e58314fab3ea86a66a44d897a56e73fa",
+    "packages/service/src/database.ts": "8e6d396c55989e104317c02bb67db2ebb461d4b01b1d929b8e276c154de9b9ed",
+    "packages/service/src/historical.ts": "391e8198d7ff6a81ddaffef9234a95773e7f2979ec8add5f61275c28851d95be",
+    "packages/service/src/history.ts": "9675f47ded23b979dd36199130729726a5e98752c757b88c56adafc03e680bc3",
+    "packages/service/src/index.ts": "948ac812de71f82b0b2497e035bbf88be3d86db6f679af07ccedf4f64fb17aee",
+    "packages/service/src/lineage.ts": "8e8b20d95d70c5b91df91b8f7f5cbd03713a5a7fb5e00d2c8073bc7ac57c362d",
+    "packages/service/src/local-comparison.ts": "e9dbf2e24f47a8d61ba24e2a7b76d95c82806462d7c3f2134b1fd65efc75e6f8",
+    "packages/service/src/prune.ts": "a24612a804beb97ce0f1b425f0775f1be0dafd012f918ea5beee9554c54d7409",
+    "packages/service/src/rendering-profile-conversion.ts": "be61ec61b86a7fc9bbef2a424f66229fd5abd4ef8402dcf9717f920dbfd279c0",
+    "packages/service/src/retention.ts": "afc4c19787cb0128863d6deabad7d00c487d0cfe26e76ff7a33e7b97e493931f",
+    "packages/service/src/review-commands.ts": "bef6f702aa28c134f8a10837d6569fe14abfc83ffe393d6804493aa462e2f3ad",
+    "packages/service/src/review-status.ts": "fbd97514436db5ca3d14a1062919752f76466f8b5a9f483f9c751076a2eeefd1",
+    "packages/service/src/run-admission.ts": "77a1802632fd20895b96c424c2aae26b9fc8a50cfcb3cc565c316a8a313e1241",
+    "packages/service/src/run-guards.ts": "49fb3b55eec69474055be518c5a1f75accf5de535b802493969aa8932779d72c",
+    "packages/service/src/run-retirement.ts": "f762252fcba8cf3af456ac8fe216f753e1aea15af41c736f6cc2a1f639f85495",
+    "packages/service/src/run-status.ts": "e917d479bb528d3da7a96d975f26151fe1cb7c0b774b6016fd806d4cb6118251",
+    "packages/service/src/service-audit.ts": "c878c5c39f0635f4f344886a741bd92e0f34c165ea5f5440871451d33b3a2b63",
+    "packages/service/src/service.ts": "2ddd800148be036b82fe13d61624063bc1b7f78e27f8e083ccf04fa4855adb0a",
+    "packages/service/src/status-touch.ts": "6e430817dd0dfe7f8938dc218a880d69130178cceaa4311954d23f30cf9812a6",
+    "packages/service/src/types.ts": "2b86b011ec57efb8d9b6c6ec8c8a78bb1b3e09d5fdd9fed031f14e216d4b19b9",
+    "packages/service/src/work.ts": "349cf09500b9ab6988a583bf4abcf7583bddda8391385dff4ac75916ba05cea5",
+    "pnpm-lock.yaml": "d8e491ad3f964557020df443fb5fb9fb1eed0c9a96f9c48372cd6c9b29dcf264",
+    "tooling/legacy-comparison-fixture.ts": "8764e27c1b2f5f35ff6e8bbba339e0791fa482820711101269b72eab9cf85067",
+    "tooling/test-migrations.ts": "3eb30dee0bf2dbadce7926ae96ec0b27a4c978a092cb1171e4052207f8b8bc3c"
+  },
+  "excluded": [
+    "migration and baseline setup",
+    "run reservation",
+    "image registration",
+    "R2 reads and writes",
+    "review target lookup"
+  ],
+  "results": [
+    {
+      "mode": "dense",
+      "captureCount": 1,
+      "changedCount": 0,
+      "imageOwnerCount": 1,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 26,
+          "rows_written": 9,
+          "statementCount": 17
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 30,
+          "rows_written": 8,
+          "statementCount": 14
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 49,
+          "rows_written": 21,
+          "statementCount": 24
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 44,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 29,
+          "rows_written": 17,
+          "statementCount": 15
+        },
+        {
+          "name": "recordSnapshotCopies",
+          "rows_read": 3,
+          "rows_written": 1,
+          "statementCount": 4
+        },
+        {
+          "name": "promote",
+          "rows_read": 92,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 273,
+        "rows_written": 84
+      }
+    },
+    {
+      "mode": "dense",
+      "captureCount": 100,
+      "changedCount": 0,
+      "imageOwnerCount": 1,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 6362,
+          "rows_written": 603,
+          "statementCount": 17
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 921,
+          "rows_written": 8,
+          "statementCount": 14
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 2128,
+          "rows_written": 615,
+          "statementCount": 24
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 935,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 820,
+          "rows_written": 512,
+          "statementCount": 15
+        },
+        {
+          "name": "recordSnapshotCopies",
+          "rows_read": 300,
+          "rows_written": 100,
+          "statementCount": 400
+        },
+        {
+          "name": "promote",
+          "rows_read": 587,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 12053,
+        "rows_written": 1866
+      }
+    },
+    {
+      "mode": "sparse",
+      "captureCount": 1,
+      "changedCount": 0,
+      "imageOwnerCount": 1,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 23,
+          "rows_written": 4,
+          "statementCount": 15
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 15,
+          "rows_written": 8,
+          "statementCount": 13
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 42,
+          "rows_written": 15,
+          "statementCount": 34
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 26,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 25,
+          "rows_written": 10,
+          "statementCount": 16
+        },
+        {
+          "name": "recordInventoryVerification",
+          "rows_read": 6,
+          "rows_written": 1,
+          "statementCount": 6
+        },
+        {
+          "name": "promote",
+          "rows_read": 84,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 221,
+        "rows_written": 66
+      }
+    },
+    {
+      "mode": "sparse",
+      "captureCount": 100,
+      "changedCount": 0,
+      "imageOwnerCount": 1,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 320,
+          "rows_written": 4,
+          "statementCount": 15
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 15,
+          "rows_written": 8,
+          "statementCount": 13
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 240,
+          "rows_written": 15,
+          "statementCount": 34
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 26,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 25,
+          "rows_written": 10,
+          "statementCount": 16
+        },
+        {
+          "name": "recordInventoryVerification",
+          "rows_read": 6,
+          "rows_written": 1,
+          "statementCount": 6
+        },
+        {
+          "name": "promote",
+          "rows_read": 84,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 716,
+        "rows_written": 66
+      }
+    },
+    {
+      "mode": "sparse",
+      "captureCount": 2,
+      "changedCount": 1,
+      "imageOwnerCount": 2,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 40,
+          "rows_written": 10,
+          "statementCount": 22
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 18,
+          "rows_written": 8,
+          "statementCount": 13
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 56,
+          "rows_written": 20,
+          "statementCount": 39
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 47,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "review",
+          "rows_read": 29,
+          "rows_written": 13,
+          "statementCount": 20
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 35,
+          "rows_written": 10,
+          "statementCount": 16
+        },
+        {
+          "name": "recordInventoryVerification",
+          "rows_read": 6,
+          "rows_written": 1,
+          "statementCount": 6
+        },
+        {
+          "name": "promote",
+          "rows_read": 91,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 322,
+        "rows_written": 90
+      }
+    },
+    {
+      "mode": "sparse",
+      "captureCount": 100,
+      "changedCount": 1,
+      "imageOwnerCount": 2,
+      "phases": [
+        {
+          "name": "commitShard",
+          "rows_read": 334,
+          "rows_written": 10,
+          "statementCount": 22
+        },
+        {
+          "name": "sealRun",
+          "rows_read": 18,
+          "rows_written": 8,
+          "statementCount": 13
+        },
+        {
+          "name": "createComparison",
+          "rows_read": 252,
+          "rows_written": 20,
+          "statementCount": 39
+        },
+        {
+          "name": "finalizeComparison",
+          "rows_read": 47,
+          "rows_written": 9,
+          "statementCount": 29
+        },
+        {
+          "name": "review",
+          "rows_read": 225,
+          "rows_written": 13,
+          "statementCount": 20
+        },
+        {
+          "name": "preparePromotion",
+          "rows_read": 35,
+          "rows_written": 10,
+          "statementCount": 16
+        },
+        {
+          "name": "recordInventoryVerification",
+          "rows_read": 6,
+          "rows_written": 1,
+          "statementCount": 6
+        },
+        {
+          "name": "promote",
+          "rows_read": 91,
+          "rows_written": 19,
+          "statementCount": 36
+        }
+      ],
+      "total": {
+        "rows_read": 1008,
+        "rows_written": 90
+      }
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { assertion, atomic, ConflictError, IncompleteError, statement } from "./
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Database, SqlValue, Statement } from "./database.ts";
-import type { ProjectRow, SnapshotRow } from "./types.ts";
+import type { ProjectRow, SnapshotRow, CaptureInventoryPointer } from "./types.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
@@ -70,6 +70,8 @@ export async function preparePromotion(
     prefix: string;
     now: number;
     copyLimit?: number;
+    inventory?: CaptureInventoryPointer;
+    imageRunIds?: string[];
   },
 ) {
   const existing = await statement(
@@ -81,7 +83,12 @@ export async function preparePromotion(
     if (
       existing.comparison_id !== input.comparisonId ||
       existing.prefix !== input.prefix ||
-      existing.state === "revoked"
+      existing.state === "revoked" ||
+      (input.inventory &&
+        (existing.inventory_key !== input.inventory.objectKey ||
+          existing.inventory_digest !== input.inventory.digest ||
+          existing.inventory_bytes !== input.inventory.bytes ||
+          existing.capture_count !== input.inventory.captureCount))
     ) {
       throw new ConflictError("The snapshot ID belongs to another or revoked promotion.");
     }
@@ -90,6 +97,20 @@ export async function preparePromotion(
   const comparison = await service.comparison(input.comparisonId);
   const run = await service.run(comparison.run_id);
   const project = await service.project(run.project_id);
+  if (
+    run.inventory_key &&
+    (!input.inventory ||
+      !input.imageRunIds ||
+      input.inventory.objectKey !== run.inventory_key ||
+      input.inventory.digest !== run.inventory_digest ||
+      input.inventory.bytes !== run.inventory_bytes ||
+      input.inventory.captureCount !== run.capture_count)
+  ) {
+    throw new IncompleteError("Promotion requires the exact complete run inventory.");
+  }
+  if (!run.inventory_key && input.inventory) {
+    throw new IncompleteError("This run does not own a sparse capture inventory.");
+  }
   if (run.kind !== "main" || !input.prefix.startsWith("baselines/")) {
     throw new IncompleteError("Only a complete main run can use a protected baseline prefix.");
   }
@@ -107,9 +128,31 @@ export async function preparePromotion(
       "EXISTS (SELECT 1 FROM visonaut_runs WHERE id = ? AND comparison_id = ? AND sealed_at IS NOT NULL)",
       [run.id, comparison.id],
     ),
+    ...(input.inventory
+      ? [
+          assertion(
+            service.database,
+            "EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND inventory_key=? AND inventory_digest=? AND inventory_bytes=? AND capture_count=?)",
+            [
+              run.id,
+              input.inventory.objectKey,
+              input.inventory.digest,
+              input.inventory.bytes,
+              input.inventory.captureCount,
+            ],
+          ),
+          assertion(
+            service.database,
+            "NOT EXISTS(SELECT 1 FROM json_each(?) owner WHERE NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE id=owner.value AND byte_state='live'))",
+            [JSON.stringify([...new Set(input.imageRunIds)])],
+          ),
+        ]
+      : []),
     statement(
       service.database,
-      "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, prefix, created_at,storage_mode) VALUES (?, ?, ?, ?, ?, ?, ?,'source')",
+      input.inventory
+        ? "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, prefix, created_at,storage_mode,inventory_key,inventory_digest,inventory_bytes,capture_count) VALUES (?, ?, ?, ?, ?, ?, ?,'source',?,?,?,?)"
+        : "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, prefix, created_at,storage_mode) VALUES (?, ?, ?, ?, ?, ?, ?,'source')",
       [
         input.snapshotId,
         project.id,
@@ -118,18 +161,41 @@ export async function preparePromotion(
         run.tested_sha,
         input.prefix,
         input.now,
+        ...(input.inventory
+          ? [
+              input.inventory.objectKey,
+              input.inventory.digest,
+              input.inventory.bytes,
+              input.inventory.captureCount,
+            ]
+          : []),
       ],
     ),
-    statement(
-      service.database,
-      "INSERT INTO visonaut_snapshot_images (snapshot_id, capture_id, image_id, object_key, digest,copied) SELECT ?, c.id, i.id, i.object_key, i.digest,0 FROM visonaut_captures c JOIN visonaut_images i ON i.id = c.image_id WHERE c.run_id = ?",
-      [input.snapshotId, run.id],
-    ),
-    statement(
-      service.database,
-      "INSERT INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, 'promotion', ?)",
-      [input.snapshotId, input.snapshotId],
-    ),
+    ...(input.inventory
+      ? []
+      : [
+          statement(
+            service.database,
+            "INSERT INTO visonaut_snapshot_images (snapshot_id, capture_id, image_id, object_key, digest,copied) SELECT ?, c.id, i.id, i.object_key, i.digest,0 FROM visonaut_captures c JOIN visonaut_images i ON i.id = c.image_id WHERE c.run_id = ?",
+            [input.snapshotId, run.id],
+          ),
+        ]),
+    input.inventory
+      ? statement(
+          service.database,
+          "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT ? ,?,'promotion' UNION SELECT value,?,'promotion' FROM json_each(?)",
+          [
+            run.id,
+            `promotion:${input.snapshotId}`,
+            `promotion:${input.snapshotId}`,
+            JSON.stringify([...new Set(input.imageRunIds)]),
+          ],
+        )
+      : statement(
+          service.database,
+          "INSERT INTO visonaut_pins (snapshot_id, reason, owner_id) VALUES (?, 'promotion', ?)",
+          [input.snapshotId, input.snapshotId],
+        ),
     statement(
       service.database,
       "INSERT OR IGNORE INTO work_retention_pins (run_id, owner, reason) SELECT ?, ?, 'promotion' UNION SELECT image.run_id, ?, 'promotion' FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id WHERE capture.run_id=?",
@@ -254,6 +320,31 @@ export async function recordSnapshotCopy(
   ]);
 }
 
+export async function recordInventoryVerification(
+  service: Service,
+  input: { snapshotId: string; objectKey: string; digest: string },
+) {
+  const snapshot = await readOne<SnapshotRow>(
+    service.database,
+    "SELECT * FROM visonaut_snapshots WHERE id=?",
+    [input.snapshotId],
+  );
+  const run = await service.run(snapshot.run_id);
+  await atomic(service.database, [
+    activeGuard(service.database, run),
+    assertion(
+      service.database,
+      "EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN visonaut_runs run ON run.id=snapshot.run_id WHERE snapshot.id=? AND snapshot.state='copying' AND snapshot.inventory_key=? AND snapshot.inventory_digest=? AND snapshot.inventory_key=run.inventory_key AND snapshot.inventory_digest=run.inventory_digest AND snapshot.inventory_bytes=run.inventory_bytes AND snapshot.capture_count=run.capture_count AND snapshot.comparison_id=run.comparison_id)",
+      [input.snapshotId, input.objectKey, input.digest],
+    ),
+    statement(
+      service.database,
+      "UPDATE visonaut_snapshots SET inventory_verified=1 WHERE id=? AND inventory_verified=0",
+      [input.snapshotId],
+    ),
+  ]);
+}
+
 export async function promote(
   service: Service,
   input: {
@@ -301,7 +392,9 @@ export async function promote(
     ),
     assertion(
       service.database,
-      "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id = ? AND copied != 1) AND (SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id = ?) = (SELECT count(*) FROM visonaut_captures WHERE run_id = ?)",
+      run.inventory_key
+        ? "EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN visonaut_runs run ON run.id=snapshot.run_id WHERE snapshot.id=? AND snapshot.inventory_verified=1 AND snapshot.inventory_key=run.inventory_key AND snapshot.inventory_digest=run.inventory_digest AND snapshot.inventory_bytes=run.inventory_bytes AND snapshot.capture_count=run.capture_count AND run.capture_count>0 AND ?=snapshot.id AND ?=run.id)"
+        : "NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id = ? AND copied != 1) AND (SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id = ?) = (SELECT count(*) FROM visonaut_captures WHERE run_id = ?)",
       [snapshot.id, snapshot.id, run.id],
     ),
   ];
@@ -386,8 +479,8 @@ export async function promote(
   statements.push(
     statement(
       service.database,
-      "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, 'main', item_key, variant_key FROM visonaut_captures WHERE run_id = ?",
-      [project.id, run.id],
+      "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, 'main', item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id=visonaut_captures.id AND row.comparison_id=? AND json_extract(row.tuple_json,'$.referenceDigest') IS NULL))",
+      [project.id, run.id, run.inventory_key ? 1 : 0, comparison.id],
     ),
   );
   statements.push(

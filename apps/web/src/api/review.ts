@@ -8,6 +8,8 @@ import { compactReviewModel } from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard } from "./dashboard.js";
 import { SecurityError } from "@visonaut/security";
+import { identityKey } from "@visonaut/protocol";
+import { completeReviewRows, readReviewInventory } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
   ConflictError,
@@ -310,13 +312,15 @@ export async function reviewModel(
     state: ComparisonState;
     createdAt: number;
   }>(metadata[1]);
-  const localRun = await context.database
-    .prepare(
-      "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-    )
-    .bind(run.id)
-    .first();
-  const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+  const localRun =
+    run.inventory_key ||
+    (await context.database
+      .prepare(
+        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+      )
+      .bind(run.id)
+      .first());
+  const [storedRows, liveMetadata, eligibleApprovalRowIds, inventory] = await Promise.all([
     archive
       ? (archive.sections.comparisonRows ?? [])
           .filter((row) => row.comparison_id === comparison?.id)
@@ -357,7 +361,17 @@ export async function reviewModel(
       : comparison
         ? context.service.eligibleApprovalRowIds(comparison.id)
         : [],
+    run.inventory_key ? readReviewInventory(context, run.id) : null,
   ]);
+  const importedBaseline = Boolean(
+    run.inventory_key?.startsWith("baselines/import/") &&
+    inventory &&
+    !inventory.inventory.manifest,
+  );
+  const rows =
+    inventory && comparison && !importedBaseline
+      ? completeReviewRows(inventory, storedRows, comparison.id)
+      : storedRows;
   const policyRow = archive
     ? (archive.sections.policies ?? []).find(
         (policy) => policy.digest === comparison?.policy_digest,
@@ -370,7 +384,9 @@ export async function reviewModel(
         results: [
           ...(archive.sections.captures ?? []),
           ...(archive.sections.referenceCaptures ?? []),
-        ].map(historyCapture),
+        ]
+          .filter((entry) => typeof entry.id === "string")
+          .map(historyCapture),
       }
     : { results: liveMetadata ? batchRows<CaptureRecord>(liveMetadata[1]) : [] };
   const images = archive
@@ -381,6 +397,10 @@ export async function reviewModel(
         ].map(historyImage),
       }
     : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
+  if (inventory) {
+    captures.results.push(...inventory.candidates, ...inventory.references);
+    images.results.push(...inventory.images);
+  }
   const decisions = archive
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
@@ -412,12 +432,21 @@ export async function reviewModel(
   const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
   for (const row of rows) {
     const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
-    const candidate = row.candidate_capture_id ? captureById.get(row.candidate_capture_id) : null;
-    const reference = row.reference_capture_id ? captureById.get(row.reference_capture_id) : null;
+    const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
+    const tuple = object(JSON.parse(row.tuple_json));
+    const candidate =
+      tuple.candidateDigest === null
+        ? null
+        : ((row.candidate_capture_id ? captureById.get(row.candidate_capture_id) : null) ??
+          inventory?.candidateByIdentity.get(identity));
+    const reference =
+      tuple.referenceDigest === null
+        ? null
+        : ((row.reference_capture_id ? captureById.get(row.reference_capture_id) : null) ??
+          inventory?.referenceByIdentity.get(identity));
     const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
     const variant =
       metadata.variant && typeof metadata.variant === "object" ? object(metadata.variant) : {};
-    const tuple = object(JSON.parse(row.tuple_json));
     const candidateOmitted =
       row.outcome === "unchanged" &&
       tuple.candidateDigest !== null &&
@@ -460,9 +489,9 @@ export async function reviewModel(
         ? "error"
         : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
           ? row.outcome
-          : (archive ? tuple.referenceDigest === null : !row.reference_capture_id)
+          : tuple.referenceDigest === null
             ? "added"
-            : (archive ? tuple.candidateDigest === null : !row.candidate_capture_id)
+            : tuple.candidateDigest === null
               ? "removed"
               : "changed",
       revision: row.decision_revision,
@@ -550,9 +579,11 @@ export async function reviewModel(
           archived: true,
           readOnlyReason: historical
             ? "This historical comparison is read-only. It does not affect the live review or required check."
-            : run.state === "accepted"
-              ? "This run is already in the baseline. Capture a correction in a new complete main run."
-              : readOnlyReason,
+            : importedBaseline
+              ? "This baseline was imported. Previous comparison details were discarded during the database cutover. Capture a new complete run for review."
+              : run.state === "accepted"
+                ? "This run is already in the baseline. Capture a correction in a new complete main run."
+                : readOnlyReason,
         }
       : {}),
     ...(archive
@@ -926,12 +957,14 @@ export async function handleReview(
         "Closed history is read-only. Capture a new complete run.",
       );
     }
-    const local = await context.database
-      .prepare(
-        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-      )
-      .bind(run.id)
-      .first();
+    const local =
+      run.inventory_key ||
+      (await context.database
+        .prepare(
+          "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+        )
+        .bind(run.id)
+        .first());
     if (local)
       throw new SecurityError(
         "local_resubmit_required",
