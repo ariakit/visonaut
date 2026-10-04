@@ -58,8 +58,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "visonaut-production",
-          "database_id": "15fcd402-dccb-4359-a1ce-280ff67ca596",
+          "database_name": "visonaut-production-delta-20261004",
+          "database_id": "f33b9393-cd04-4f7f-9213-428d1c3635b6",
         },
       ],
       "r2_buckets": [

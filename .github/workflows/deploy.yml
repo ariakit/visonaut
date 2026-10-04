@@ -202,7 +202,7 @@ jobs:
             ...(production ? { env: 'production' } : {}) });
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
             binding: 'DB', database_id: production
-              ? '15fcd402-dccb-4359-a1ce-280ff67ca596' : '395b539c-c423-4ce4-887c-a5792792a63b'
+              ? 'f33b9393-cd04-4f7f-9213-428d1c3635b6' : '395b539c-c423-4ce4-887c-a5792792a63b'
           }]);
           JS
       - name: Load only the existing deployment key at its reviewed root path
@@ -350,7 +350,7 @@ jobs:
           assert.equal(configuration.name, preview ? 'visonaut-preview' : 'visonaut');
           assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, preview ? 'preview' : 'production');
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
-            binding: 'DB', database_id: preview ? '395b539c-c423-4ce4-887c-a5792792a63b' : '15fcd402-dccb-4359-a1ce-280ff67ca596'
+            binding: 'DB', database_id: preview ? '395b539c-c423-4ce4-887c-a5792792a63b' : 'f33b9393-cd04-4f7f-9213-428d1c3635b6'
           }]);
           assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), [
             { binding: 'IMAGES', bucket_name: `${prefix}-images` },
