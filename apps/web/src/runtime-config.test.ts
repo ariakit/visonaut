@@ -2,7 +2,12 @@ import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_readConfig } from "wrangler";
-import { apiBindings, databaseCapacityPolicy, operationsBudget } from "./runtime.ts";
+import {
+  apiBindings,
+  type BackendEnv,
+  databaseCapacityPolicy,
+  operationsBudget,
+} from "./runtime.ts";
 
 const configurationPath = fileURLToPath(new URL("../wrangler.jsonc", import.meta.url));
 const previousApiLimits = {
@@ -26,7 +31,7 @@ const previousOperationsBudget = {
 };
 
 let runtime: Miniflare;
-let bindings: Env;
+let bindings: BackendEnv;
 
 beforeAll(async () => {
   const configuration = unstable_readConfig({ config: configurationPath, env: "production" });
@@ -49,14 +54,14 @@ beforeAll(async () => {
       serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );
-  bindings = await runtime.getBindings<Env>();
+  bindings = await runtime.getBindings<BackendEnv>();
 });
 
 afterAll(async () => {
   await runtime?.dispose();
 });
 
-function configurationEnv(overrides: Record<string, unknown> = {}): Env {
+function configurationEnv(overrides: Record<string, unknown> = {}): BackendEnv {
   const env = { ...bindings };
   Reflect.deleteProperty(env, "VISONAUT_API_LIMITS");
   Reflect.deleteProperty(env, "VISONAUT_OPERATIONS_BUDGET");
@@ -67,7 +72,7 @@ function configurationEnv(overrides: Record<string, unknown> = {}): Env {
   return env;
 }
 
-function resolvedApiLimits(env: Env) {
+function resolvedApiLimits(env: BackendEnv) {
   const configuration = apiBindings(env).configuration;
   return {
     ...configuration.limits,

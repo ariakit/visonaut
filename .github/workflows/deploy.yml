@@ -8,11 +8,11 @@ on:
       action:
         description: Deployment or schema migration action
         type: choice
-        options: [migrate, preview-web, preview-comparator, production-fence]
+        options: [migrate, preview-web, production-fence]
         default: migrate
         required: true
       target:
-        description: Existing exact database and images bucket
+        description: Production backend or public preview fixture demo
         type: choice
         options: [production, preview]
         default: production
@@ -180,7 +180,7 @@ jobs:
           node --input-type=module <<'JS'
           const { VISONAUT_MIGRATION_TARGET: target,
             VISONAUT_MIGRATION_WRITE_FENCE: fence } = process.env;
-          if (!['production', 'preview'].includes(target) ||
+          if (target !== 'production' ||
               process.env.CLOUDFLARE_ACCOUNT_ID !== 'b04f3af3f0f10a6b9481bc23ba974eca') {
             throw new Error('Invalid migration target.');
           }
@@ -197,12 +197,9 @@ jobs:
           import { unstable_readConfig } from 'wrangler';
           assert.equal(existsSync('apps/web/.wrangler/deploy/config.json'), false,
             'Migrations must not use a redirected application build.');
-          const production = process.env.VISONAUT_MIGRATION_TARGET === 'production';
-          const configuration = unstable_readConfig({ config: 'apps/web/wrangler.jsonc',
-            ...(production ? { env: 'production' } : {}) });
+          const configuration = unstable_readConfig({ config: 'apps/web/wrangler.jsonc', env: 'production' });
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
-            binding: 'DB', database_id: production
-              ? 'f33b9393-cd04-4f7f-9213-428d1c3635b6' : '395b539c-c423-4ce4-887c-a5792792a63b'
+            binding: 'DB', database_id: '441904d8-790b-44e3-9d83-a4c19e45c835'
           }]);
           JS
       - name: Load only the existing deployment key at its reviewed root path
@@ -244,10 +241,7 @@ jobs:
           umask 077
           ulimit -f 8192
           migration_command=(pnpm exec wrangler d1 migrations apply DB --remote
-            --config apps/web/wrangler.jsonc)
-          if [ "$VISONAUT_MIGRATION_TARGET" = production ]; then
-            migration_command+=(--env production)
-          fi
+            --config apps/web/wrangler.jsonc --env production)
           set +e
           timeout --signal=TERM --kill-after=15s 300s "${migration_command[@]}" \
             >"$RUNNER_TEMP/visonaut-migration-stdout.log" \
@@ -272,10 +266,8 @@ jobs:
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' &&
-      inputs.consumers_fenced == true &&
       ((inputs.action == 'preview-web' && inputs.target == 'preview') ||
-       (inputs.action == 'preview-comparator' && inputs.target == 'preview' && inputs.write_fence == true) ||
-       (inputs.action == 'production-fence' && inputs.target == 'production'))
+       (inputs.action == 'production-fence' && inputs.target == 'production' && inputs.consumers_fenced == true))
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -312,7 +304,6 @@ jobs:
           INFISICAL_PROJECT_ID: ${{ vars.INFISICAL_PROJECT_ID }}
           INFISICAL_DEPLOY_IDENTITY_ID: ${{ vars.INFISICAL_DEPLOY_IDENTITY_ID }}
       - name: Check the exact web target before loading secrets
-        if: inputs.action != 'preview-comparator'
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
         run: |
@@ -321,6 +312,7 @@ jobs:
           import { constants, copyFileSync, existsSync, readFileSync } from 'node:fs';
           import { experimental_patchConfig, unstable_readConfig } from 'wrangler';
           const preview = process.env.VISONAUT_WEB_ACTION === 'preview-web';
+          assert(preview || process.env.VISONAUT_WEB_ACTION === 'production-fence', 'Invalid web deployment action');
           if (!preview) {
             assert.equal(existsSync('apps/web/.wrangler/deploy/config.json'), false, 'The fence must not use a redirected application build');
           }
@@ -329,35 +321,36 @@ jobs:
           const originalConfiguration = preview
             ? JSON.parse(readFileSync(original, 'utf8'))
             : unstable_readConfig({ config: original, env: 'production' });
-          const prefix = preview ? 'visonaut-preview' : 'visonaut-production';
-          assert.deepEqual(originalConfiguration.queues.consumers, [{
-            queue: `${prefix}-operations`,
+          assert.deepEqual(originalConfiguration.queues.consumers, preview ? [] : [{
+            queue: 'visonaut-production-operations',
             max_batch_size: 1,
             max_batch_timeout: 1,
             max_concurrency: 1,
             max_retries: 5,
-            dead_letter_queue: `${prefix}-dead-letter`
+            dead_letter_queue: 'visonaut-production-dead-letter'
           }]);
-          // Deploy must not restore a consumer removed for the cutover fence.
           // Sibling copies preserve relative entrypoint, asset, and migration paths.
           copyFileSync(original, temporary, constants.COPYFILE_EXCL);
-          experimental_patchConfig(temporary, preview
-            ? { queues: { consumers: [] } }
-            : { env: { production: { queues: { consumers: [] } } } }, false);
+          if (!preview) {
+            // Deploy must not restore a consumer removed for the cutover fence.
+            experimental_patchConfig(temporary, { env: { production: { queues: { consumers: [] } } } }, false);
+          }
           const configuration = preview
             ? JSON.parse(readFileSync(temporary, 'utf8'))
             : unstable_readConfig({ config: temporary, env: 'production' });
           assert.equal(configuration.name, preview ? 'visonaut-preview' : 'visonaut');
           assert.equal(configuration.vars?.VISONAUT_ENVIRONMENT, preview ? 'preview' : 'production');
-          assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
-            binding: 'DB', database_id: preview ? '395b539c-c423-4ce4-887c-a5792792a63b' : 'f33b9393-cd04-4f7f-9213-428d1c3635b6'
+          assert.equal(configuration.vars?.VISONAUT_ORIGIN, preview ? 'https://preview.visonaut.com' : 'https://visonaut.com');
+          assert.equal(configuration.vars?.VISONAUT_LAUNCH_ENABLED, preview ? 'false' : 'true');
+          assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), preview ? [] : [{
+            binding: 'DB', database_id: '441904d8-790b-44e3-9d83-a4c19e45c835'
           }]);
-          assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), [
-            { binding: 'IMAGES', bucket_name: `${prefix}-images` },
-            { binding: 'QUARANTINE', bucket_name: `${prefix}-quarantine` }
+          assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), preview ? [] : [
+            { binding: 'IMAGES', bucket_name: 'visonaut-production-images' },
+            { binding: 'QUARANTINE', bucket_name: 'visonaut-production-quarantine' }
           ]);
-          assert.deepEqual(configuration.services.map(({ binding, service }) => ({ binding, service })), [
-            { binding: 'COMPARATOR', service: preview ? 'visonaut-preview-compare' : 'visonaut-compare' }
+          assert.deepEqual(configuration.services.map(({ binding, service }) => ({ binding, service })), preview ? [] : [
+            { binding: 'COMPARATOR', service: 'visonaut-compare' }
           ]);
           assert.deepEqual(configuration.queues.consumers, []);
           assert.deepEqual(configuration.triggers.crons, preview ? [] : ['*/5 * * * *']);
@@ -368,52 +361,10 @@ jobs:
           assert.deepEqual(configuration.routes, preview
             ? [{ pattern: 'preview.visonaut.com', custom_domain: true, zone_name: 'visonaut.com' }]
             : [{ pattern: 'visonaut.com', custom_domain: true }]);
-          assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
-            { binding: 'OPERATIONS', queue: `${prefix}-operations` }
+          assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), preview ? [] : [
+            { binding: 'OPERATIONS', queue: 'visonaut-production-operations' }
           ]);
           assert.equal(configuration.migrations?.length ?? 0, 0);
-          assert.equal(configuration.containers?.length ?? 0, 0);
-          assert.equal(configuration.durable_objects?.bindings?.length ?? 0, 0);
-          JS
-      - name: Check the exact preview comparator before loading secrets
-        if: inputs.action == 'preview-comparator'
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import { constants, copyFileSync, existsSync } from 'node:fs';
-          import { experimental_patchConfig, unstable_readConfig } from 'wrangler';
-          assert.equal(existsSync('apps/compare/.wrangler/deploy/config.json'), false,
-            'The comparator must not use a redirected application build');
-          const original = 'apps/compare/wrangler.jsonc';
-          const temporary = 'apps/compare/cutover-wrangler.jsonc';
-          const originalConfiguration = unstable_readConfig({ config: original, env: '' });
-          assert.deepEqual(originalConfiguration.queues.consumers, []);
-          // Keep consumers removed for the cutover fence absent from this deployment.
-          copyFileSync(original, temporary, constants.COPYFILE_EXCL);
-          experimental_patchConfig(temporary, { queues: { consumers: [] } }, false);
-          const configuration = unstable_readConfig({ config: temporary, env: '' });
-          assert.equal(configuration.name, 'visonaut-preview-compare');
-          assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
-            binding: 'DB', database_id: '395b539c-c423-4ce4-887c-a5792792a63b'
-          }]);
-          assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), [{
-            binding: 'IMAGES', bucket_name: 'visonaut-preview-images'
-          }]);
-          assert.deepEqual(configuration.queues.producers.map(({ binding, queue }) => ({ binding, queue })), [
-            { binding: 'OPERATIONS', queue: 'visonaut-preview-operations' }
-          ]);
-          assert.deepEqual(configuration.queues.consumers, []);
-          assert.deepEqual(configuration.migrations, [
-            { tag: 'container-v1', new_sqlite_classes: ['ComparisonContainer'] },
-            { tag: 'worker-only-v2', deleted_classes: ['ComparisonContainer'] }
-          ]);
-          assert.equal(configuration.observability.enabled, true);
-          assert.equal(configuration.observability.traces.enabled, true);
-          assert.equal(configuration.workers_dev, false);
-          assert.equal(configuration.preview_urls, false);
-          assert.deepEqual(configuration.triggers.crons ?? [], []);
-          assert.equal(configuration.routes?.length ?? 0, 0);
-          assert.equal(configuration.services?.length ?? 0, 0);
           assert.equal(configuration.containers?.length ?? 0, 0);
           assert.equal(configuration.durable_objects?.bindings?.length ?? 0, 0);
           JS
@@ -423,8 +374,6 @@ jobs:
         run: |
           if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
             pnpm exec wrangler deploy --config apps/web/dist/server/cutover-wrangler.json --dry-run
-          elif [ "$VISONAUT_WEB_ACTION" = preview-comparator ]; then
-            pnpm exec wrangler deploy --config apps/compare/cutover-wrangler.jsonc --env "" --dry-run
           else
             pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/cutover-wrangler.jsonc --env production --dry-run
           fi
@@ -442,42 +391,6 @@ jobs:
           include-imports: "false"
           recursive: "false"
           export-type: env
-      - name: Require current preview Container drain evidence before class retirement
-        if: inputs.action == 'preview-comparator'
-        env:
-          VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED: ${{ vars.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED }}
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          import { assertContainerRetirement } from './.github/workflows/scripts/deploy-infrastructure.mjs';
-          assert.equal(process.env.CLOUDFLARE_ACCOUNT_ID, 'b04f3af3f0f10a6b9481bc23ba974eca');
-          assert(process.env.CLOUDFLARE_API_TOKEN, 'The existing deployment credential is missing');
-          const response = await fetch(
-            'https://api.cloudflare.com/client/v4/accounts/b04f3af3f0f10a6b9481bc23ba974eca/workers/scripts/visonaut-preview-compare/settings', {
-              headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` },
-              redirect: 'error', signal: AbortSignal.timeout(15_000)
-            });
-          assert(response.ok, 'Cannot read the existing preview comparator bindings');
-          const metadata = await response.json();
-          assert(metadata.success && metadata.result, 'Preview comparator settings are unavailable');
-          const container = metadata.result.bindings?.find((binding) => binding.name === 'CODEC_CONTAINER');
-          assert.equal(container?.namespace_id, 'ce5039e5f4664419a341fcef053b4b78',
-            'The preview namespace is absent or changed; inspect before a new dispatch');
-          const receipt = process.env.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED
-            ? JSON.parse(process.env.VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED) : null;
-          assertContainerRetirement(metadata.result, receipt);
-          JS
-      - name: Require current main immediately before preview comparator deployment
-        if: inputs.action == 'preview-comparator'
-        run: node .github/workflows/scripts/deploy-source.mjs
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VISONAUT_RELEASE_SOURCE_ONLY: "true"
-      - name: Require detached preview comparison consumers before handler retirement
-        if: inputs.action == 'preview-comparator'
-        run: node .github/workflows/scripts/deploy-comparison-retirement.mjs
-        env:
-          VISONAUT_COMPARISON_RETIREMENT_TARGET: preview
       - name: Deploy only the selected Worker
         env:
           VISONAUT_WEB_ACTION: ${{ inputs.action }}
@@ -485,11 +398,9 @@ jobs:
           test -n "$CLOUDFLARE_API_TOKEN"
           if [ "$VISONAUT_WEB_ACTION" = preview-web ]; then
             pnpm exec wrangler deploy --config apps/web/dist/server/cutover-wrangler.json
-          elif [ "$VISONAUT_WEB_ACTION" = preview-comparator ]; then
-            pnpm exec wrangler deploy --config apps/compare/cutover-wrangler.jsonc --env ""
           else
             pnpm exec wrangler deploy apps/web/src/cutover-fence.ts --config apps/web/cutover-wrangler.jsonc --env production
           fi
       - name: Remove temporary consumer-free deployment configs
         if: always()
-        run: rm -f -- apps/web/dist/server/cutover-wrangler.json apps/web/cutover-wrangler.jsonc apps/compare/cutover-wrangler.jsonc
+        run: rm -f -- apps/web/dist/server/cutover-wrangler.json apps/web/cutover-wrangler.jsonc

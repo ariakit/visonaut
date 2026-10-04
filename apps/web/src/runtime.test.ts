@@ -13,6 +13,7 @@ import { recordEvent } from "./operations/common.ts";
 import {
   apiBindings,
   assertOperationsProject,
+  type BackendEnv,
   reportSchedulerFailure,
   runScheduledOperations,
 } from "./runtime.ts";
@@ -26,7 +27,7 @@ vi.mock("@tanstack/react-start/server", () => ({
 }));
 
 let runtime: Miniflare;
-let env: Env;
+let env: BackendEnv;
 const now = Date.UTC(2026, 8, 23);
 const queueResponse = { metadata: { metrics: { backlogCount: 0, backlogBytes: 0 } } };
 
@@ -60,7 +61,7 @@ beforeAll(async () => {
       serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );
-  env = await runtime.getBindings<Env>();
+  env = await runtime.getBindings<BackendEnv>();
   // This handler fixture needs only events and capacity rows, not run transitions.
   const schema = readTestMigrations().find(
     (migration) => migration.name === "0005_operations.sql",
@@ -107,6 +108,11 @@ it("keeps live workflow and authentication configuration only in production", ()
   expect(preview.vars?.GITHUB_CLIENT_ID).toBeUndefined();
   expect(preview.vars?.VISONAUT_WORKFLOW_OWNED).toBeUndefined();
   expect(preview.triggers.crons).toEqual([]);
+  expect(preview.d1_databases).toEqual([]);
+  expect(preview.r2_buckets).toEqual([]);
+  expect(preview.services).toEqual([]);
+  expect(preview.queues.producers).toEqual([]);
+  expect(preview.queues.consumers).toEqual([]);
   const workflow = apiBindings(env).configuration.workflowOwned;
   expect(workflow).toBeDefined();
   expect(workflow?.callerWorkflowPath).toBe(".github/workflows/ci.yml");
@@ -335,7 +341,15 @@ it.each([
 });
 
 it("keeps preview scheduling and recovery independent of live credentials or D1", async () => {
-  const preview = { ...env, VISONAUT_ENVIRONMENT: "preview", DB: undefined } as unknown as Env;
+  const preview: Env = {
+    ...env,
+    VISONAUT_ENVIRONMENT: "preview",
+    DB: undefined,
+    IMAGES: undefined,
+    QUARANTINE: undefined,
+    COMPARATOR: undefined,
+    OPERATIONS: undefined,
+  };
   await expect(runScheduledOperations(preview)).resolves.toMatchObject({ hasMore: false });
   await server.scheduled({ scheduledTime: now, cron: "*/5 * * * *", noRetry: vi.fn() }, preview);
   expect(env.OPERATIONS.send).not.toHaveBeenCalled();

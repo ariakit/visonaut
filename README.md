@@ -52,7 +52,7 @@ pnpm check
 
 Use the [development and verification guide](docs/development.md) for command scopes and the on-demand built-app check. For a focused check, run `pnpm test` or `pnpm test:browser`. The browser suite starts its own review fixture with controlled data and fails if the selected port is busy. Set `VISONAUT_TEST_PORT=4392 pnpm test:browser` to use a separate port for another checkout. The default port is `4179`. The fixture needs no GitHub session or deployed Worker.
 
-`pnpm dev` starts the web app. Complete the local Cloudflare bindings and authentication configuration before using its live API. Local, preview, and production must use separate data and credentials. See the [security configuration](packages/security/README.md), [Worker configuration](apps/web/wrangler.jsonc), and [deployment guide](.github/workflows/README.md).
+`pnpm dev` starts the public fixture demo. Preview uses synthetic review data and inline SVG images without backend bindings or credentials. Local tests create separate ephemeral storage when they need the live API. `pnpm --filter @visonaut/web db:local` applies the production schema to local D1 only. See the [security configuration](packages/security/README.md), [Worker configuration](apps/web/wrangler.jsonc), and [deployment guide](.github/workflows/README.md).
 
 | Path                  | Purpose                                                    |
 | --------------------- | ---------------------------------------------------------- |

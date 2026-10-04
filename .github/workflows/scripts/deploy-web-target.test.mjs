@@ -81,19 +81,21 @@ for (const action of ["preview-web", "production-fence"]) {
     assert.equal(configured.copies(), 1);
   });
 
-  test(`${action} rejects changed concurrency before copying the configuration`, async () => {
-    await using directory = await mkdtempDisposable(resolve(tmpdir(), "visonaut-web-target-"));
-    const configured = fixture(directory, preview, (configuration) => ({
-      queues: {
-        consumers: configuration.queues.consumers.map((consumer) => ({
-          ...consumer,
-          max_concurrency: 2,
-        })),
-      },
-    }));
-    assert.throws(configured.run, { code: "ERR_ASSERTION" });
-    assert.equal(configured.copies(), 0);
-  });
+  if (!preview) {
+    test(`${action} rejects changed concurrency before copying the configuration`, async () => {
+      await using directory = await mkdtempDisposable(resolve(tmpdir(), "visonaut-web-target-"));
+      const configured = fixture(directory, preview, (configuration) => ({
+        queues: {
+          consumers: configuration.queues.consumers.map((consumer) => ({
+            ...consumer,
+            max_concurrency: 2,
+          })),
+        },
+      }));
+      assert.throws(configured.run, { code: "ERR_ASSERTION" });
+      assert.equal(configured.copies(), 0);
+    });
+  }
 
   for (const field of ["enabled", "traces"]) {
     test(`${action} rejects disabled observability ${field}`, async () => {
@@ -109,4 +111,24 @@ for (const action of ["preview-web", "production-fence"]) {
       assert.throws(configured.run, { code: "ERR_ASSERTION" });
     });
   }
+}
+
+for (const [name, patch] of [
+  ["database", { d1_databases: [{ binding: "DB", database_id: "preview-database" }] }],
+  ["images bucket", { r2_buckets: [{ binding: "IMAGES", bucket_name: "preview-images" }] }],
+  ["comparator service", { services: [{ binding: "COMPARATOR", service: "preview-compare" }] }],
+  [
+    "queue producer",
+    { queues: { producers: [{ binding: "OPERATIONS", queue: "preview-operations" }] } },
+  ],
+  ["queue consumer", { queues: { consumers: [{ queue: "preview-operations" }] } }],
+  ["live environment", { vars: { VISONAUT_ENVIRONMENT: "production" } }],
+  ["live origin", { vars: { VISONAUT_ORIGIN: "https://visonaut.com" } }],
+  ["enabled launch", { vars: { VISONAUT_LAUNCH_ENABLED: "true" } }],
+]) {
+  test(`preview-web rejects ${name}`, async () => {
+    await using directory = await mkdtempDisposable(resolve(tmpdir(), "visonaut-web-target-"));
+    const configured = fixture(directory, true, () => patch);
+    assert.throws(configured.run, { code: "ERR_ASSERTION" });
+  });
 }

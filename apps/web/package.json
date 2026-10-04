@@ -9,8 +9,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "wrangler types && tsc6 --noEmit",
     "deploy": "pnpm build && wrangler deploy",
-    "db:local": "wrangler d1 migrations apply DB --local",
-    "db:remote": "wrangler d1 migrations apply DB --remote"
+    "db:local": "wrangler d1 migrations apply DB --local --env production",
+    "db:remote": "wrangler d1 migrations apply DB --remote --env production"
   },
   "dependencies": {
     "@ariakit/react": "0.4.40",

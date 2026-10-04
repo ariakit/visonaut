@@ -9,7 +9,11 @@ const migration = workflow.slice(
 );
 
 test("keeps normal and selected schema migrations after retiring one-time conversion", () => {
-  assert.match(workflow, /options: \[migrate, preview-web, preview-comparator, production-fence\]/);
+  assert.match(workflow, /options: \[migrate, preview-web, production-fence\]/);
+  assert.doesNotMatch(
+    workflow,
+    /preview-comparator|VISONAUT_PREVIEW_CONTAINER_RETIREMENT_VERIFIED/,
+  );
   assert.doesNotMatch(
     workflow,
     /simplification-cutover\/run\.mjs|VISONAUT_CUTOVER|inputs\.action == '(inspect|convert)'/,
@@ -21,9 +25,8 @@ test("keeps normal and selected schema migrations after retiring one-time conver
   assert.match(migration, /CLOUDFLARE_API_TOKEN: \$\{\{ env\.CLOUDFLARE_MIGRATIONS_API_TOKEN \}\}/);
   assert.match(
     migration,
-    /migration_command=\(pnpm exec wrangler d1 migrations apply DB --remote\s+--config apps\/web\/wrangler\.jsonc\)/,
+    /migration_command=\(pnpm exec wrangler d1 migrations apply DB --remote\s+--config apps\/web\/wrangler\.jsonc --env production\)/,
   );
-  assert.match(migration, /migration_command\+=\(--env production\)/);
   assert.match(migration, /timeout --signal=TERM --kill-after=15s 300s/);
   assert.match(migration, /No automatic retry/);
 });
@@ -42,7 +45,7 @@ test("requires the exact migration target and both fence acknowledgments before 
     VISONAUT_MIGRATION_WRITE_FENCE: "true",
     VISONAUT_MIGRATION_CONSUMERS_FENCED: "true",
   };
-  for (const target of ["production", "preview"]) {
+  for (const target of ["production"]) {
     const env = { ...approved, VISONAUT_MIGRATION_TARGET: target };
     assert.doesNotThrow(() => check({ env }));
     for (const field of ["VISONAUT_MIGRATION_WRITE_FENCE", "VISONAUT_MIGRATION_CONSUMERS_FENCED"]) {
@@ -53,8 +56,10 @@ test("requires the exact migration target and both fence acknowledgments before 
       /Invalid migration target/,
     );
   }
-  assert.throws(
-    () => check({ env: { ...approved, VISONAUT_MIGRATION_TARGET: "unknown" } }),
-    /Invalid migration target/,
-  );
+  for (const target of ["preview", "unknown"]) {
+    assert.throws(
+      () => check({ env: { ...approved, VISONAUT_MIGRATION_TARGET: target } }),
+      /Invalid migration target/,
+    );
+  }
 });

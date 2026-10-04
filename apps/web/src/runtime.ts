@@ -37,6 +37,22 @@ import { recordEvent, validateBudget } from "./operations/common.ts";
 import { expireStagedAttempts } from "./api/workflow-retention.ts";
 import { reconcileEquivalentPullRequestChecks, retireUnpinnedMainChecks } from "./api/pre-run.ts";
 
+export interface BackendEnv extends Env {
+  DB: D1Database;
+  IMAGES: R2Bucket;
+  QUARANTINE: R2Bucket;
+  OPERATIONS: Queue;
+  COMPARATOR: Fetcher;
+}
+
+export function requireBackendBindings(env: Env): asserts env is BackendEnv {
+  for (const binding of ["DB", "IMAGES", "QUARANTINE", "OPERATIONS", "COMPARATOR"] as const) {
+    if (!env[binding]) {
+      throw new Error(`${binding} is not configured.`);
+    }
+  }
+}
+
 function required(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim()) throw new Error(`${name} is not configured.`);
   return value;
@@ -98,7 +114,7 @@ function runtimeApiLimits(env: Env): RuntimeApiLimits {
   return limits;
 }
 
-export function authConfiguration(env: Env): AuthConfiguration {
+export function authConfiguration(env: BackendEnv): AuthConfiguration {
   return {
     database: env.DB,
     origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
@@ -142,7 +158,7 @@ export function databaseCapacityPolicy(env: Env): CapacityPolicy {
 }
 
 /** All clients and binding references belong to the current request or event. */
-export function operationsContext(env: Env): OperationsContext {
+export function operationsContext(env: BackendEnv): OperationsContext {
   const configuration = githubConfiguration(env);
   let client: Promise<GitHubClient> | undefined;
   const github: GitHubClient = {
@@ -165,7 +181,7 @@ export function operationsContext(env: Env): OperationsContext {
   };
 }
 
-export async function assertOperationsProject(env: Env) {
+export async function assertOperationsProject(env: BackendEnv) {
   const expected = required(env.VISONAUT_PROJECT_ID, "VISONAUT_PROJECT_ID");
   const projects = await env.DB.prepare(
     "SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2",
@@ -180,7 +196,7 @@ export async function assertOperationsProject(env: Env) {
   }
 }
 
-export function apiBindings(env: Env): ApiBindings {
+export function apiBindings(env: BackendEnv): ApiBindings {
   const limits = runtimeApiLimits(env);
   const auth = authConfiguration(env);
   const workflowOwned = configurationObject(env.VISONAUT_WORKFLOW_OWNED, "VISONAUT_WORKFLOW_OWNED");
@@ -294,6 +310,7 @@ export async function runScheduledOperations(
 ) {
   if (env.VISONAUT_ENVIRONMENT === "preview")
     return { completed: [], deferred: [], attention: [], hasMore: false };
+  requireBackendBindings(env);
   const startedAt = Date.now();
   const correlationId = crypto.randomUUID();
   await assertOperationsProject(env);
@@ -439,7 +456,7 @@ export async function runScheduledOperations(
   return result;
 }
 
-async function resolveSchedulerFailure(env: Env, kind: string, code: string) {
+async function resolveSchedulerFailure(env: BackendEnv, kind: string, code: string) {
   await env.DB.prepare(
     "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id='scheduler' AND code=? AND resolved_at IS NULL",
   )
@@ -449,6 +466,7 @@ async function resolveSchedulerFailure(env: Env, kind: string, code: string) {
 
 export async function reportSchedulerFailure(env: Env) {
   try {
+    requireBackendBindings(env);
     await recordEvent(env.DB, {
       kind: "runtime",
       subject: "scheduler",

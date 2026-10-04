@@ -29,7 +29,7 @@ function fixture(target, change = (value) => value) {
   };
 }
 
-for (const target of ["production", "preview"]) {
+for (const target of ["production"]) {
   test(`reads only the exact ${target} comparison queues and accepts detached consumers`, async () => {
     const selected = fixture(target);
     await requireDetachedComparisonConsumers(selected.input);
@@ -62,6 +62,9 @@ for (const target of ["production", "preview"]) {
 test("rejects an unknown target or account before any provider request", async () => {
   const selected = fixture("production");
   await assert.rejects(requireDetachedComparisonConsumers({ ...selected.input, target: "other" }));
+  await assert.rejects(
+    requireDetachedComparisonConsumers({ ...selected.input, target: "preview" }),
+  );
   await assert.rejects(requireDetachedComparisonConsumers({ ...selected.input, account: "other" }));
   assert.equal(selected.requests.length, 0);
 });
