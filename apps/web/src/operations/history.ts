@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { canonicalJson } from "@visonaut/protocol";
 import { hydrateCaptureMetadata } from "../profiles.ts";
-import { readCaptureInventory } from "../capture-inventory.ts";
+import { readCaptureInventoryDocument } from "../capture-inventory.ts";
 import {
   archiveEligibilitySql,
   assertion,
@@ -525,22 +525,22 @@ async function sourcePage(
     while (documentIndex < keys.length) {
       const document = keys[documentIndex];
       if (!document) throw new Error("History document is missing.");
-      const inventory =
+      const inventoryDocument =
         document.store === "images"
-          ? await readCaptureInventory(context.images, {
+          ? await readCaptureInventoryDocument(context.images, {
               objectKey: document.object_key,
               digest: document.digest ?? "",
               bytes: document.bytes ?? 0,
               captureCount: document.capture_count ?? -1,
             })
           : null;
-      const stored = inventory ? null : await context.quarantine.get(document.object_key);
+      const stored = inventoryDocument ? null : await context.quarantine.get(document.object_key);
       if (stored && stored.size > context.budget.maximumObjectBytes) {
         await stored.body.cancel();
         throw new Error("History source document exceeds its bound.");
       }
-      const content = inventory
-        ? new TextEncoder().encode(canonicalJson(inventory))
+      const content = inventoryDocument
+        ? new TextEncoder().encode(canonicalJson(inventoryDocument.document))
         : stored
           ? new Uint8Array(await new Response(stored.body).arrayBuffer())
           : await readArchivedDocument(context, document.run_id, document.object_key);

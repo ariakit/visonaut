@@ -1,4 +1,5 @@
 import {
+  canonicalJson,
   digestEnvironmentProfile,
   digestJson,
   digestRenderingProfile,
@@ -25,8 +26,12 @@ import {
   referenceCaptureInputs,
   currentReference,
 } from "./local-comparison.ts";
-import { writeCaptureInventory, type InventoryCapture } from "../capture-inventory.ts";
-import { readRunInventory } from "../inventory-records.ts";
+import {
+  writeCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "../capture-inventory.ts";
+import { inventoryPointer, readRunInventory } from "../inventory-records.ts";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
@@ -369,7 +374,7 @@ async function materializeBundle({
     context.database,
     manifest.profiles.filter((profile) => changedProfiles.has(profile.digest)),
   );
-  const inventory = await writeCaptureInventory(context.images, {
+  const facts: CaptureInventory = {
     schemaVersion: "baseline-delta-v1",
     projectId: run.project_id,
     runId: run.id,
@@ -378,7 +383,25 @@ async function materializeBundle({
     captures,
     profiles: manifest.profiles,
     manifest,
-  });
+  };
+  let inventory = inventoryPointer(run);
+  if (inventory) {
+    const previous = await readRunInventory(context, run.id);
+    if (
+      !previous?.manifest ||
+      previous.referenceSnapshotId !== facts.referenceSnapshotId ||
+      canonicalJson(previous.manifest) !== canonicalJson(manifest) ||
+      canonicalJson(previous.profiles) !== canonicalJson(facts.profiles) ||
+      previous.captures.length !== captures.length ||
+      previous.captures.some(
+        (capture, index) => canonicalJson(capture) !== canonicalJson(captures[index]),
+      )
+    ) {
+      throw new IncompleteError("The committed inventory differs from the verified submission.");
+    }
+  } else {
+    inventory = await writeCaptureInventory(context.images, facts);
+  }
   const discovery = manifest.discovery;
   if (!discovery) {
     throw new IncompleteError("The trusted upload has no discovery evidence.");

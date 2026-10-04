@@ -58,6 +58,7 @@ import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
 import { handleReview, reviewModel } from "./review.ts";
 import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
+import * as captureInventory from "../capture-inventory.ts";
 import { referenceCaptureInputs } from "./local-comparison.ts";
 import { parseReviewModel } from "../review/client.ts";
 
@@ -3380,6 +3381,151 @@ describe("workflow-owned upload staging", () => {
       expect(list).toHaveBeenCalledTimes(2);
     },
   );
+
+  describe("committed legacy inventory retries", () => {
+    const commitLegacyInventory = async (
+      test: Awaited<ReturnType<typeof fixture>>,
+      difference?: "capture metadata" | "manifest",
+    ) => {
+      await stageLocal(test, await localSession(test));
+      let encoded = "";
+      // Reproduce a v1 writer before deployment and an interruption after commit.
+      using writer = vi
+        .spyOn(captureInventory, "writeCaptureInventory")
+        .mockImplementationOnce(async (store, inventory) => {
+          if (difference === "capture metadata") {
+            inventory = {
+              ...inventory,
+              captures: inventory.captures.map((capture) => ({
+                ...capture,
+                metadata: { ...capture.metadata, name: "A different capture name" },
+              })),
+            };
+          } else if (difference === "manifest") {
+            if (!inventory.manifest) {
+              throw new Error("Expected a complete capture manifest.");
+            }
+            inventory = {
+              ...inventory,
+              manifest: {
+                ...inventory.manifest,
+                producer: { ...inventory.manifest.producer, version: "0.1.0" },
+              },
+            };
+          }
+          encoded = canonicalJson(inventory);
+          const bytes = new TextEncoder().encode(encoded);
+          const digest = await sha256(bytes);
+          const objectKey = `runs/${inventory.runId}/inventory/${digest}.json`;
+          await store.put(objectKey, encoded, {
+            httpMetadata: { contentType: "application/json" },
+            sha256: digest,
+          });
+          return {
+            objectKey,
+            digest,
+            bytes: bytes.byteLength,
+            captureCount: inventory.captures.length,
+          };
+        });
+      using seal = vi
+        .spyOn(test.context.service, "sealRun")
+        .mockRejectedValueOnce(new Error("Sealing interrupted after the legacy inventory commit."));
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 0,
+        errors: [{ runId: test.runId, code: "incomplete" }],
+      });
+      const run = await test.context.service.run(test.runId);
+      expect(run).toMatchObject({ state: "uploading", sealed_at: null, comparison_id: null });
+      expect(
+        await database
+          .prepare("SELECT state FROM visonaut_shards WHERE run_id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual({ state: "complete" });
+      expect(writer).toHaveBeenCalledTimes(1);
+      expect(seal).toHaveBeenCalledTimes(1);
+      if (
+        !run.inventory_key ||
+        !run.inventory_digest ||
+        run.inventory_bytes == null ||
+        run.capture_count == null
+      ) {
+        throw new Error("Expected the committed legacy inventory pointer.");
+      }
+      const pointer = {
+        objectKey: run.inventory_key,
+        digest: run.inventory_digest,
+        bytes: run.inventory_bytes,
+        captureCount: run.capture_count,
+      };
+      expect(JSON.parse(encoded).schemaVersion).toBe("baseline-delta-v1");
+      await readCaptureInventory(test.context.images, pointer);
+      return { pointer, encoded };
+    };
+
+    it("seals a committed v1 inventory after deployment without replacing its bytes or pointer", async () => {
+      const test = await fixture();
+      using put = vi.spyOn(test.context.images, "put");
+      const { pointer, encoded } = await commitLegacyInventory(test);
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      const run = await test.context.service.run(test.runId);
+      expect(run.sealed_at).not.toBeNull();
+      expect(run.comparison_id).not.toBeNull();
+      expect(run).toMatchObject({
+        inventory_key: pointer.objectKey,
+        inventory_digest: pointer.digest,
+        inventory_bytes: pointer.bytes,
+        capture_count: pointer.captureCount,
+      });
+      const stored = await images.get(pointer.objectKey);
+      if (!stored) {
+        throw new Error("Expected the original legacy inventory object.");
+      }
+      expect(new Uint8Array(await stored.arrayBuffer())).toEqual(new TextEncoder().encode(encoded));
+      expect(put.mock.calls.filter(([key]) => key.includes("/inventory/"))).toHaveLength(1);
+    });
+
+    it.each(["missing", "corrupt", "capture metadata", "manifest"] as const)(
+      "rejects the %s case before sealing a committed inventory retry",
+      async (difference) => {
+        const test = await fixture();
+        using put = vi.spyOn(test.context.images, "put");
+        const { pointer, encoded } = await commitLegacyInventory(
+          test,
+          difference === "capture metadata" || difference === "manifest" ? difference : undefined,
+        );
+        let expected = "The committed inventory differs from the verified submission.";
+        if (difference === "missing") {
+          await images.delete(pointer.objectKey);
+          expected = "Capture inventory is unavailable.";
+        } else if (difference === "corrupt") {
+          await images.put(
+            pointer.objectKey,
+            encoded.replace("baseline-delta-v1", "baseline-delta-v0"),
+          );
+          expected = "Capture inventory checksum differs.";
+        }
+        using seal = vi.spyOn(test.context.service, "sealRun");
+        await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(expected);
+        expect(await test.context.service.run(test.runId)).toMatchObject({
+          state: "uploading",
+          sealed_at: null,
+          comparison_id: null,
+          inventory_key: pointer.objectKey,
+          inventory_digest: pointer.digest,
+          inventory_bytes: pointer.bytes,
+        });
+        expect(seal).not.toHaveBeenCalled();
+        expect(put.mock.calls.filter(([key]) => key.includes("/inventory/"))).toHaveLength(1);
+      },
+    );
+  });
 
   it("keeps a sealed stale local receipt on the comparison recovery path", async () => {
     const test = await fixture();

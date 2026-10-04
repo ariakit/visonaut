@@ -282,6 +282,117 @@ function validateReceipt(inventory: CaptureInventory) {
   }
 }
 
+interface CompactCapture extends InventoryCapture {
+  metadataEncoding?: "manifest-v1";
+}
+
+interface CompactInventory extends Omit<CaptureInventory, "schemaVersion" | "profiles"> {
+  schemaVersion: "baseline-delta-v2";
+  profiles?: ProfileRecord[];
+  captures: CompactCapture[];
+  manifest: Manifest;
+}
+
+function receiptMetadata(manifest: Manifest) {
+  const receipt = manifest.localComparison;
+  if (!receipt) throw new Error("Capture inventory has no matching local receipt.");
+  const results = new Map(receipt.captures.map((result) => [identityKey(result), result]));
+  const tests = new Map(manifest.tests.map((test) => [test.id, test]));
+  return (index: number, saved: Record<string, unknown>) => {
+    const capture = manifest.captures[index];
+    if (!capture) throw new Error("Capture inventory observation differs from its receipt.");
+    const result = results.get(
+      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+    );
+    if (!result) throw new Error("Capture inventory observation differs from its receipt.");
+    return {
+      name: capture.name ?? capture.itemKey,
+      variant: capture.variant,
+      ...(tests.has(capture.testId) ? { source: tests.get(capture.testId) } : {}),
+      localMode: receipt.mode,
+      observedImage: capture.image,
+      candidateStored: result.outcome !== "unchanged",
+      ...(Object.hasOwn(capture, "comparison") ? { comparison: capture.comparison } : {}),
+      localResult: {
+        outcome: result.outcome,
+        changedPixels: result.changedPixels,
+        ratio: result.ratio,
+        engineVersion: receipt.engineVersion,
+        codecVersion: receipt.codecVersion,
+        maskExpected: !!result.mask,
+      },
+      ...saved,
+    };
+  };
+}
+
+/** Elide only facts that the retained receipt restores without any change. */
+function compactInventory(inventory: CaptureInventory): CaptureInventory | CompactInventory {
+  const manifest = inventory.manifest;
+  if (
+    !manifest ||
+    inventory.captures.some((capture) => Object.hasOwn(capture, "metadataEncoding"))
+  ) {
+    return inventory;
+  }
+  const restoreMetadata = receiptMetadata(manifest);
+  const { profiles, ...rest } = inventory;
+  return {
+    ...rest,
+    schemaVersion: "baseline-delta-v2",
+    manifest,
+    ...(canonicalJson(profiles) === canonicalJson(manifest.profiles) ? {} : { profiles }),
+    captures: inventory.captures.map((capture, index) => {
+      const metadata = capture.metadata;
+      const saved: Record<string, unknown> = { profile: metadata.profile };
+      if (Object.hasOwn(metadata, "comparisonDigest")) {
+        saved.comparisonDigest = metadata.comparisonDigest;
+      }
+      const restored = restoreMetadata(index, saved);
+      if (canonicalJson(restored.localResult) !== canonicalJson(metadata.localResult)) {
+        saved.localResult = metadata.localResult;
+      }
+      if (canonicalJson(restoreMetadata(index, saved)) !== canonicalJson(metadata)) {
+        return capture;
+      }
+      return { ...capture, metadata: saved, metadataEncoding: "manifest-v1" };
+    }),
+  };
+}
+
+function expandInventory(value: unknown): unknown {
+  record(value);
+  if (value.schemaVersion !== "baseline-delta-v2") return value;
+  const captures = field(value, "captures");
+  array(captures, 100_000);
+  if (Object.hasOwn(value, "profiles")) array(value.profiles, 10_000);
+  const manifest = parseManifest(field(value, "manifest"));
+  const restoreMetadata = receiptMetadata(manifest);
+  return {
+    ...value,
+    schemaVersion: "baseline-delta-v1",
+    profiles: Object.hasOwn(value, "profiles") ? value.profiles : manifest.profiles,
+    captures: captures.map((capture, index) => {
+      record(capture);
+      if (!Object.hasOwn(capture, "metadataEncoding")) return capture;
+      if (capture.metadataEncoding !== "manifest-v1") {
+        throw new Error("Capture inventory metadata encoding is unsupported.");
+      }
+      const metadata = field(capture, "metadata");
+      record(metadata);
+      if (
+        Object.keys(metadata).some(
+          (key) => !["profile", "comparisonDigest", "localResult"].includes(key),
+        )
+      ) {
+        throw new Error("Capture inventory compact metadata is invalid.");
+      }
+      const { metadataEncoding: _metadataEncoding, ...rest } = capture;
+      return { ...rest, metadata: restoreMetadata(index, metadata) };
+    }),
+  };
+}
+
 async function validatedInventory(value: unknown): Promise<CaptureInventory> {
   assertInventory(value);
   const profiles = new Map<
@@ -352,7 +463,7 @@ export async function writeCaptureInventory(
   const options = typeof maximum === "number" ? { maximumBytes: maximum } : maximum;
   const maximumBytes = maximumSize(options.maximumBytes ?? maximumCaptureInventoryBytes);
   await validatedInventory(inventory);
-  const encoded = canonicalJson(inventory);
+  const encoded = canonicalJson(compactInventory(inventory));
   const bytes = new TextEncoder().encode(encoded);
   if (bytes.byteLength > maximumBytes) {
     throw new Error("Capture inventory exceeds its size limit.");
@@ -406,12 +517,12 @@ async function readInventoryValue(
   return parsed;
 }
 
-/** Resolve one complete object, with no reads of predecessor inventories. */
-export async function readCaptureInventory(
+/** Verify the original wire document as well as its complete capture facts. */
+export async function readCaptureInventoryDocument(
   store: Pick<InventoryStore, "get">,
   pointer: CaptureInventoryPointer,
   maximumBytes = maximumCaptureInventoryBytes,
-): Promise<CaptureInventory> {
+): Promise<{ inventory: CaptureInventory; document: unknown }> {
   maximumSize(maximumBytes);
   record(pointer);
   validateDigest(field(pointer, "digest"));
@@ -438,7 +549,8 @@ export async function readCaptureInventory(
     throw new Error("Capture inventory stored size differs.");
   }
   // Release the encoded buffers before asynchronous profile validation.
-  const inventory = await validatedInventory(await readInventoryValue(object.body, pointer));
+  const document = await readInventoryValue(object.body, pointer);
+  const inventory = await validatedInventory(expandInventory(document));
   const runKey = `runs/${inventory.runId}/inventory/${pointer.digest}.json`;
   const importedKey =
     /^baselines\/import\/[a-zA-Z0-9][a-zA-Z0-9._-]*\/inventory\/[a-f0-9]{64}\.json$/.test(
@@ -450,6 +562,16 @@ export async function readCaptureInventory(
   ) {
     throw new Error("Capture inventory pointer content differs.");
   }
+  return { inventory, document };
+}
+
+/** Resolve one complete object, with no reads of predecessor inventories. */
+export async function readCaptureInventory(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+  maximumBytes = maximumCaptureInventoryBytes,
+): Promise<CaptureInventory> {
+  const { inventory } = await readCaptureInventoryDocument(store, pointer, maximumBytes);
   return inventory;
 }
 
