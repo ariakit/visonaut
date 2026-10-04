@@ -1141,8 +1141,11 @@ async function acceptedReference(
   return { runId, imageId, snapshotId, testedSha };
 }
 
-async function acceptedInventoryReference(test: Awaited<ReturnType<typeof fixture>>) {
-  const seed = await acceptedReference(test);
+async function acceptedInventoryReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  accepted?: Awaited<ReturnType<typeof acceptedReference>>,
+) {
+  const seed = accepted ?? (await acceptedReference(test));
   const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
   if (!descriptor) {
     throw new Error("Expected the accepted original.");
@@ -1194,10 +1197,203 @@ async function acceptedInventoryReference(test: Awaited<ReturnType<typeof fixtur
     .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
     .bind(seed.snapshotId)
     .run();
-  return seed;
+  return { ...seed, inventory: pointer };
+}
+
+function localReferenceImageReader(
+  test: Awaited<ReturnType<typeof fixture>>,
+  session: Awaited<ReturnType<typeof localSession>>,
+) {
+  return (imageId: string, context = test.context) =>
+    stagedReferenceImage(
+      new Request(`https://preview.example/v1/runs/${test.runId}/reference/images/${imageId}`, {
+        headers: { authorization: `Bearer ${session.capability}` },
+      }),
+      context,
+      test.runId,
+      imageId,
+    );
 }
 
 describe("trusted local Submit", () => {
+  it("reads a 4,000-profile inventory once across sequential reference image requests", async ({
+    annotate,
+  }) => {
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    const sourceProfile = test.manifest.profiles[0]?.profile;
+    if (!source || !sourceProfile) throw new Error("Expected the source capture and profile.");
+    const accepted = await acceptedReference(test);
+    test.context.configuration.limits.maximumCaptures = 4_000;
+    test.manifest.captures = [];
+    test.manifest.profiles = [];
+    for (let ordinal = 0; ordinal < 4_000; ordinal++) {
+      const profile = {
+        ...sourceProfile,
+        viewport: { width: 1280, height: 800 + ordinal },
+      };
+      const digest = await digestJson(profile);
+      test.manifest.profiles.push({ digest, profile });
+      test.manifest.captures.push({
+        ...source,
+        itemKey: `dialog/open/${ordinal}`,
+        ordinal,
+        profileDigest: digest,
+      });
+    }
+    // Shared baseline PNGs still receive separate GETs from compareLocally().
+    const seed = await acceptedInventoryReference(test, accepted);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      for (let index = 0; index < 5; index++) {
+        const response = await read(seed.imageId, apiContext(test.context));
+        expect(response.status).toBe(200);
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(png);
+      }
+      const inventoryReads = get.mock.calls.filter(([key]) => key === seed.inventory.objectKey);
+      const imageReads = get.mock.calls.filter(
+        ([key]) => key.startsWith("runs/") && !key.includes("/inventory/"),
+      );
+      expect(inventoryReads).toHaveLength(1);
+      expect(imageReads).toHaveLength(5);
+      await expect(read(crypto.randomUUID())).rejects.toThrow("not in this Submit reference");
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(1);
+      await annotate(
+        `${seed.inventory.bytes} inventory bytes; five image GETs; one inventory GET.`,
+      );
+    } finally {
+      get.mockRestore();
+    }
+  }, 60_000);
+
+  it.each([
+    "stored binding",
+    "baseline revision",
+    "snapshot eligibility",
+    "snapshot retention",
+    "inventory verification",
+    "capture limit",
+    "image availability",
+    "inventory owner",
+    "pointer bytes",
+    "pointer digest",
+    "pointer count",
+  ] as const)("rechecks %s after reference membership is cached", async (change) => {
+    const test = await fixture();
+    const seed = await acceptedInventoryReference(test);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    await (await read(seed.imageId)).arrayBuffer();
+    if (change === "stored binding") {
+      await database
+        .prepare(
+          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference.inventoryDigest',?) WHERE id=?",
+        )
+        .bind("a".repeat(64), test.runId)
+        .run();
+    } else if (change === "baseline revision") {
+      await database
+        .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+        .bind(test.context.configuration.projectId)
+        .run();
+    } else if (change === "snapshot eligibility") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET reference_eligible=0 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "snapshot retention") {
+      await database
+        .prepare("UPDATE visonaut_snapshot_retention SET byte_state='retiring' WHERE snapshot_id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "inventory verification") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_verified=0 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "capture limit") {
+      test.context.configuration.limits.maximumCaptures = 0;
+    } else if (change === "image availability") {
+      await database
+        .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id=?")
+        .bind(seed.imageId)
+        .run();
+      expect((await read(seed.imageId)).status).toBe(404);
+      return;
+    } else if (change === "inventory owner") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET tested_sha=? WHERE id=?")
+        .bind("b".repeat(40), seed.snapshotId)
+        .run();
+    } else if (change === "pointer bytes") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_bytes=inventory_bytes+1 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "pointer digest") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_digest=? WHERE id=?")
+        .bind("c".repeat(64), seed.snapshotId)
+        .run();
+    } else {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET capture_count=capture_count+1 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    }
+    await expect(read(seed.imageId)).rejects.toThrow();
+  });
+
+  it("isolates reference membership by storage and retries failed inventory reads", async () => {
+    const test = await fixture();
+    const seed = await acceptedInventoryReference(test);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      get.mockResolvedValueOnce(null);
+      await expect(read(seed.imageId)).rejects.toThrow("Capture inventory is unavailable");
+      await (await read(seed.imageId)).arrayBuffer();
+      await (await read(seed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
+      const otherStorage = { ...test.context.images, get: vi.fn(async () => null) };
+      await expect(
+        read(seed.imageId, apiContext({ ...test.context, images: otherStorage })),
+      ).rejects.toThrow("Capture inventory is unavailable");
+      expect(otherStorage.get).toHaveBeenCalledWith(seed.inventory.objectKey);
+      await (await read(seed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
+    } finally {
+      get.mockRestore();
+    }
+  });
+
+  it("retains only one reference membership set per storage binding", async () => {
+    const first = await fixture();
+    const firstSeed = await acceptedInventoryReference(first);
+    const firstRead = localReferenceImageReader(first, await localSession(first));
+    const second = await fixture();
+    second.context.images = first.context.images;
+    const secondSeed = await acceptedInventoryReference(second);
+    const secondRead = localReferenceImageReader(second, await localSession(second));
+    const get = vi.spyOn(first.context.images, "get");
+    try {
+      await (await firstRead(firstSeed.imageId)).arrayBuffer();
+      await (await secondRead(secondSeed.imageId)).arrayBuffer();
+      await (await firstRead(firstSeed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === firstSeed.inventory.objectKey)).toHaveLength(
+        2,
+      );
+      expect(get.mock.calls.filter(([key]) => key === secondSeed.inventory.objectKey)).toHaveLength(
+        1,
+      );
+    } finally {
+      get.mockRestore();
+    }
+  });
+
   it.each([false, true])(
     "keeps native D1 writes constant as unchanged captures grow with changed=%s",
     async (changed) => {

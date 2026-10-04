@@ -30,7 +30,11 @@ import { verifyAncestry } from "./ingest.ts";
 import { jsonBody, object, string } from "./input.js";
 import { publicImage } from "./images.ts";
 import type { CaptureInventory } from "../capture-inventory.ts";
-import { readSnapshotInventory } from "../inventory-records.ts";
+import {
+  readSnapshotInventory,
+  readSnapshotInventoryBody,
+  readSnapshotInventoryHeader,
+} from "../inventory-records.ts";
 
 interface StagedReferenceRun {
   id: string;
@@ -40,6 +44,37 @@ interface StagedReferenceRun {
 
 const pageSize = 200;
 const owner = (runId: string) => `submit:${runId}`;
+
+interface ReferenceImageMembership {
+  database: ApiContext["database"];
+  key: string;
+  imageIds: ReadonlySet<string>;
+}
+
+// Retain one verified ID set per bucket, bounded by the inventory's limits.
+// Receipts, decoded profiles and pending I/O stay within their request.
+// https://github.com/ariakit/visonaut/pull/247#discussion_r4178894713
+const referenceImageMemberships = new WeakMap<ApiContext["images"], ReferenceImageMembership>();
+
+async function referenceImageIds(context: ApiContext, snapshotId: string) {
+  const header = await readSnapshotInventoryHeader(context, snapshotId);
+  if (!header) return null;
+  if (
+    header.projectId !== context.configuration.projectId ||
+    header.captureCount > context.configuration.limits.maximumCaptures
+  ) {
+    throw new IncompleteError("The accepted reference inventory differs from this project.");
+  }
+  const key = JSON.stringify(header);
+  const cached = referenceImageMemberships.get(context.images);
+  if (cached?.database === context.database && cached.key === key) {
+    return cached.imageIds;
+  }
+  const inventory = await readSnapshotInventoryBody(context, header);
+  const imageIds = new Set(inventory.captures.map((capture) => capture.image.id));
+  referenceImageMemberships.set(context.images, { database: context.database, key, imageIds });
+  return imageIds;
+}
 
 /** Accepted inventories are complete; their images never require a parent read. */
 export async function referenceInventory(
@@ -432,9 +467,9 @@ export async function referenceImage(
   if (!stored || (await digestJson(stored.reference)) !== (await digestJson(reference)))
     throw new SecurityError("reference_scope", 403, "The reference binding differs.");
   await currentReference(context, reference, stored.pullRequest);
-  const inventory = await referenceInventory(context, reference.snapshotId);
-  if (inventory) {
-    if (!inventory.captures.some((capture) => capture.image.id === imageId)) {
+  const imageIds = await referenceImageIds(context, reference.snapshotId);
+  if (imageIds) {
+    if (!imageIds.has(imageId)) {
       throw new SecurityError("reference_scope", 404, "The image is not in this Submit reference.");
     }
     return publicImage(request, context, imageId);

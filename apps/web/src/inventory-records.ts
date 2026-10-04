@@ -13,6 +13,12 @@ interface InventoryContext {
   images: InventoryStore;
 }
 
+export interface SnapshotInventoryHeader extends CaptureInventoryPointer {
+  runId: string;
+  projectId: string;
+  testedSha: string;
+}
+
 export function inventoryPointer(record: InventoryRecord): CaptureInventoryPointer | null {
   if (record.inventory_key == null) return null;
   if (
@@ -57,11 +63,10 @@ export async function readRunInventory(
   return inventory;
 }
 
-export async function readSnapshotInventory(
+export async function readSnapshotInventoryHeader(
   context: InventoryContext,
   snapshotId: string,
-  maximumBytes?: number,
-) {
+): Promise<SnapshotInventoryHeader | null> {
   const snapshot = await context.database
     .prepare(`SELECT run_id,project_id,tested_sha,inventory_key,inventory_digest,inventory_bytes,
       capture_count,inventory_verified FROM visonaut_snapshots WHERE id=?`)
@@ -82,13 +87,36 @@ export async function readSnapshotInventory(
   if (snapshot.inventory_verified !== 1) {
     throw new IncompleteError("The baseline inventory has not been verified.");
   }
-  const inventory = await readCaptureInventory(context.images, pointer, maximumBytes);
+  return {
+    ...pointer,
+    runId: snapshot.run_id,
+    projectId: snapshot.project_id,
+    testedSha: snapshot.tested_sha,
+  };
+}
+
+export async function readSnapshotInventoryBody(
+  context: Pick<InventoryContext, "images">,
+  header: SnapshotInventoryHeader,
+  maximumBytes?: number,
+) {
+  const inventory = await readCaptureInventory(context.images, header, maximumBytes);
   if (
-    inventory.runId !== snapshot.run_id ||
-    inventory.projectId !== snapshot.project_id ||
-    inventory.testedSha !== snapshot.tested_sha
+    inventory.runId !== header.runId ||
+    inventory.projectId !== header.projectId ||
+    inventory.testedSha !== header.testedSha
   ) {
     throw new IncompleteError("The immutable inventory belongs to a different baseline.");
   }
   return inventory;
+}
+
+export async function readSnapshotInventory(
+  context: InventoryContext,
+  snapshotId: string,
+  maximumBytes?: number,
+) {
+  const header = await readSnapshotInventoryHeader(context, snapshotId);
+  if (!header) return null;
+  return readSnapshotInventoryBody(context, header, maximumBytes);
 }
