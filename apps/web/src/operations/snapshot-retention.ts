@@ -82,12 +82,12 @@ export async function expireComparisonReferences(
   return report;
 }
 
-/** Retire reference eligibility first; delete only the unique old prefix after the guarded grace. */
+/** Retire reference eligibility first; sparse snapshots keep their review inventory. */
 export async function expireSnapshotImages(context: OperationsContext): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const cursor = "snapshot-byte-retention";
   const rows = await context.database
-    .prepare(`SELECT snapshot.id,snapshot.prefix,retention.byte_state FROM visonaut_snapshots snapshot
+    .prepare(`SELECT snapshot.id,snapshot.prefix,retention.byte_state,snapshot.inventory_key IS NOT NULL AS has_inventory FROM visonaut_snapshots snapshot
     JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.storage_mode='protected' AND snapshot.id>? AND (
       (retention.byte_state='live' AND snapshot.state!='copying') OR (retention.byte_state='retiring' AND retention.delete_after<=?)
       OR (retention.byte_state='deleting' AND retention.lease_until<=?)) ORDER BY snapshot.id LIMIT ?`)
@@ -97,7 +97,7 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
       context.now(),
       context.budget.tasksPerStep,
     )
-    .all<{ id: string; prefix: string; byte_state: string }>();
+    .all<{ id: string; prefix: string; byte_state: string; has_inventory: number }>();
   const candidates = rows.results ?? [];
   let remaining = context.budget.objectsPerStep;
   let processed = "";
@@ -119,7 +119,7 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
       safeKey(row.prefix);
       if (!row.prefix.startsWith("baselines/") || row.prefix.endsWith("/"))
         throw new Error("Invalid protected snapshot prefix.");
-      const prefix = `${row.prefix}/`;
+      const prefix = row.has_inventory ? `${row.prefix}/images/` : `${row.prefix}/`;
       const token = crypto.randomUUID();
       const claim = await claimRetiredSnapshotDeletion(context.database, {
         snapshotId: row.id,

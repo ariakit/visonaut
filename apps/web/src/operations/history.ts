@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { canonicalJson } from "@visonaut/protocol";
 import { hydrateCaptureMetadata } from "../profiles.ts";
+import { readCaptureInventory } from "../capture-inventory.ts";
 import {
   archiveEligibilitySql,
   assertion,
@@ -498,10 +499,25 @@ async function sourcePage(
   if (section === "documents") {
     const documents = await context.database
       .prepare(
-        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?) SELECT plan_object_key AS object_key,run_id FROM ingest_run_provenance WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners) UNION SELECT object_key,run_id FROM ingest_manifests WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners) ORDER BY object_key,run_id LIMIT 1001`,
+        `WITH owners AS (SELECT ? AS id UNION SELECT image.run_id FROM visonaut_images image JOIN visonaut_captures capture ON capture.image_id=image.id WHERE capture.run_id=?)
+        SELECT plan_object_key AS object_key,run_id,'quarantine' AS store,NULL AS digest,NULL AS bytes,NULL AS capture_count
+          FROM ingest_run_provenance WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners)
+        UNION SELECT object_key,run_id,'quarantine',NULL,NULL,NULL FROM ingest_manifests WHERE storage_version = 1 AND run_id IN(SELECT id FROM owners)
+        UNION SELECT inventory_key,id,'images',inventory_digest,inventory_bytes,capture_count FROM visonaut_runs WHERE id=? AND inventory_key IS NOT NULL
+        UNION SELECT snapshot.inventory_key,snapshot.run_id,'images',snapshot.inventory_digest,snapshot.inventory_bytes,snapshot.capture_count
+          FROM visonaut_snapshots snapshot WHERE snapshot.inventory_key IS NOT NULL AND (snapshot.run_id=?
+          OR snapshot.id IN(SELECT reference_snapshot_id FROM visonaut_comparisons WHERE run_id=?))
+        ORDER BY object_key,run_id LIMIT 1001`,
       )
-      .bind(runId, runId)
-      .all<{ object_key: string; run_id: string }>();
+      .bind(runId, runId, runId, runId, runId)
+      .all<{
+        object_key: string;
+        run_id: string;
+        store: "quarantine" | "images";
+        digest: string | null;
+        bytes: number | null;
+        capture_count: number | null;
+      }>();
     const keys = documents.results ?? [];
     if (keys.length > 1000) throw new Error("History has too many source documents.");
     let documentIndex = Math.floor(Number(cursor || "0") / 1_000_000);
@@ -509,14 +525,25 @@ async function sourcePage(
     while (documentIndex < keys.length) {
       const document = keys[documentIndex];
       if (!document) throw new Error("History document is missing.");
-      const stored = await context.quarantine.get(document.object_key);
+      const inventory =
+        document.store === "images"
+          ? await readCaptureInventory(context.images, {
+              objectKey: document.object_key,
+              digest: document.digest ?? "",
+              bytes: document.bytes ?? 0,
+              captureCount: document.capture_count ?? -1,
+            })
+          : null;
+      const stored = inventory ? null : await context.quarantine.get(document.object_key);
       if (stored && stored.size > context.budget.maximumObjectBytes) {
         await stored.body.cancel();
         throw new Error("History source document exceeds its bound.");
       }
-      const content = stored
-        ? new Uint8Array(await new Response(stored.body).arrayBuffer())
-        : await readArchivedDocument(context, document.run_id, document.object_key);
+      const content = inventory
+        ? new TextEncoder().encode(canonicalJson(inventory))
+        : stored
+          ? new Uint8Array(await new Response(stored.body).arrayBuffer())
+          : await readArchivedDocument(context, document.run_id, document.object_key);
       if (stored && content.byteLength !== stored.size)
         throw new Error("History source document length changed.");
       const chunkBytes = Math.min(

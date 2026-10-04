@@ -6,13 +6,15 @@ import { nativeTestStorage } from "./test-storage.ts";
 import { measureUploadCosts } from "./test-upload-costs.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
 import { validateImage } from "@visonaut/compare";
 import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
 import {
   discoveryArtifactPrefix,
   digestJson,
+  digestEnvironmentProfile,
+  digestRenderingProfile,
   canonicalJson,
   captureManifestDigest,
   LOCAL_COMPARISON_MODE,
@@ -25,7 +27,7 @@ import {
   type Manifest,
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
-import { ConflictError, retireSnapshot } from "@visonaut/service";
+import { ConflictError, retireSnapshot, Service } from "@visonaut/service";
 import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -55,6 +57,9 @@ import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-reten
 import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
 import { handleReview, reviewModel } from "./review.ts";
+import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
+import { referenceCaptureInputs } from "./local-comparison.ts";
+import { parseReviewModel } from "../review/client.ts";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -1136,7 +1141,492 @@ async function acceptedReference(
   return { runId, imageId, snapshotId, testedSha };
 }
 
+async function acceptedInventoryReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  accepted?: Awaited<ReturnType<typeof acceptedReference>>,
+) {
+  const seed = accepted ?? (await acceptedReference(test));
+  const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
+  if (!descriptor) {
+    throw new Error("Expected the accepted original.");
+  }
+  const captures = await Promise.all(
+    test.manifest.captures.map(async (capture) => {
+      const profile = test.manifest.profiles.find(
+        (entry) => entry.digest === capture.profileDigest,
+      );
+      if (!profile) {
+        throw new Error("Expected a complete imported profile.");
+      }
+      return {
+        id: `${seed.runId}:${await digestJson([capture.itemKey, capture.variant.key])}`,
+        itemKey: capture.itemKey,
+        variantKey: capture.variant.key,
+        ordinal: capture.ordinal,
+        imageId: descriptor.image.id,
+        image: descriptor.image,
+        profileDigest: profile.digest,
+        renderingProfileDigest: await digestRenderingProfile(profile.profile),
+        environmentProfileDigest: await digestEnvironmentProfile(profile.profile),
+        testId: capture.testId,
+        testRetry: capture.testRetry,
+        metadata: {
+          name: "Imported baseline",
+          variant: capture.variant,
+          profile: { $visonautProfileDigest: profile.digest },
+        },
+      };
+    }),
+  );
+  const pointer = await writeCaptureInventory(test.context.images, {
+    schemaVersion: "baseline-delta-v1",
+    projectId: test.context.configuration.projectId,
+    runId: seed.runId,
+    testedSha: seed.testedSha,
+    referenceSnapshotId: null,
+    profiles: test.manifest.profiles,
+    captures,
+  });
+  await database
+    .prepare(
+      "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",
+    )
+    .bind(pointer.objectKey, pointer.digest, pointer.bytes, pointer.captureCount, seed.snapshotId)
+    .run();
+  await database
+    .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
+    .bind(seed.snapshotId)
+    .run();
+  return { ...seed, inventory: pointer };
+}
+
+function localReferenceImageReader(
+  test: Awaited<ReturnType<typeof fixture>>,
+  session: Awaited<ReturnType<typeof localSession>>,
+) {
+  return (imageId: string, context = test.context) =>
+    stagedReferenceImage(
+      new Request(`https://preview.example/v1/runs/${test.runId}/reference/images/${imageId}`, {
+        headers: { authorization: `Bearer ${session.capability}` },
+      }),
+      context,
+      test.runId,
+      imageId,
+    );
+}
+
 describe("trusted local Submit", () => {
+  it("reads a 4,000-profile inventory once across sequential reference image requests", async ({
+    annotate,
+  }) => {
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    const sourceProfile = test.manifest.profiles[0]?.profile;
+    if (!source || !sourceProfile) throw new Error("Expected the source capture and profile.");
+    const accepted = await acceptedReference(test);
+    test.context.configuration.limits.maximumCaptures = 4_000;
+    test.manifest.captures = [];
+    test.manifest.profiles = [];
+    for (let ordinal = 0; ordinal < 4_000; ordinal++) {
+      const profile = {
+        ...sourceProfile,
+        viewport: { width: 1280, height: 800 + ordinal },
+      };
+      const digest = await digestJson(profile);
+      test.manifest.profiles.push({ digest, profile });
+      test.manifest.captures.push({
+        ...source,
+        itemKey: `dialog/open/${ordinal}`,
+        ordinal,
+        profileDigest: digest,
+      });
+    }
+    // Shared baseline PNGs still receive separate GETs from compareLocally().
+    const seed = await acceptedInventoryReference(test, accepted);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      for (let index = 0; index < 5; index++) {
+        const response = await read(seed.imageId, apiContext(test.context));
+        expect(response.status).toBe(200);
+        expect(new Uint8Array(await response.arrayBuffer())).toEqual(png);
+      }
+      const inventoryReads = get.mock.calls.filter(([key]) => key === seed.inventory.objectKey);
+      const imageReads = get.mock.calls.filter(
+        ([key]) => key.startsWith("runs/") && !key.includes("/inventory/"),
+      );
+      expect(inventoryReads).toHaveLength(1);
+      expect(imageReads).toHaveLength(5);
+      await expect(read(crypto.randomUUID())).rejects.toThrow("not in this Submit reference");
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(1);
+      await annotate(
+        `${seed.inventory.bytes} inventory bytes; five image GETs; one inventory GET.`,
+      );
+    } finally {
+      get.mockRestore();
+    }
+  }, 60_000);
+
+  it.each([
+    "stored binding",
+    "baseline revision",
+    "snapshot eligibility",
+    "snapshot retention",
+    "inventory verification",
+    "capture limit",
+    "image availability",
+    "inventory owner",
+    "pointer bytes",
+    "pointer digest",
+    "pointer count",
+  ] as const)("rechecks %s after reference membership is cached", async (change) => {
+    const test = await fixture();
+    const seed = await acceptedInventoryReference(test);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    await (await read(seed.imageId)).arrayBuffer();
+    if (change === "stored binding") {
+      await database
+        .prepare(
+          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference.inventoryDigest',?) WHERE id=?",
+        )
+        .bind("a".repeat(64), test.runId)
+        .run();
+    } else if (change === "baseline revision") {
+      await database
+        .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
+        .bind(test.context.configuration.projectId)
+        .run();
+    } else if (change === "snapshot eligibility") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET reference_eligible=0 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "snapshot retention") {
+      await database
+        .prepare("UPDATE visonaut_snapshot_retention SET byte_state='retiring' WHERE snapshot_id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "inventory verification") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_verified=0 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "capture limit") {
+      test.context.configuration.limits.maximumCaptures = 0;
+    } else if (change === "image availability") {
+      await database
+        .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id=?")
+        .bind(seed.imageId)
+        .run();
+      expect((await read(seed.imageId)).status).toBe(404);
+      return;
+    } else if (change === "inventory owner") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET tested_sha=? WHERE id=?")
+        .bind("b".repeat(40), seed.snapshotId)
+        .run();
+    } else if (change === "pointer bytes") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_bytes=inventory_bytes+1 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    } else if (change === "pointer digest") {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET inventory_digest=? WHERE id=?")
+        .bind("c".repeat(64), seed.snapshotId)
+        .run();
+    } else {
+      await database
+        .prepare("UPDATE visonaut_snapshots SET capture_count=capture_count+1 WHERE id=?")
+        .bind(seed.snapshotId)
+        .run();
+    }
+    await expect(read(seed.imageId)).rejects.toThrow();
+  });
+
+  it("isolates reference membership by storage and retries failed inventory reads", async () => {
+    const test = await fixture();
+    const seed = await acceptedInventoryReference(test);
+    const session = await localSession(test);
+    const read = localReferenceImageReader(test, session);
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      get.mockResolvedValueOnce(null);
+      await expect(read(seed.imageId)).rejects.toThrow("Capture inventory is unavailable");
+      await (await read(seed.imageId)).arrayBuffer();
+      await (await read(seed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
+      const otherStorage = { ...test.context.images, get: vi.fn(async () => null) };
+      await expect(
+        read(seed.imageId, apiContext({ ...test.context, images: otherStorage })),
+      ).rejects.toThrow("Capture inventory is unavailable");
+      expect(otherStorage.get).toHaveBeenCalledWith(seed.inventory.objectKey);
+      await (await read(seed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
+    } finally {
+      get.mockRestore();
+    }
+  });
+
+  it("retains only one reference membership set per storage binding", async () => {
+    const first = await fixture();
+    const firstSeed = await acceptedInventoryReference(first);
+    const firstRead = localReferenceImageReader(first, await localSession(first));
+    const second = await fixture();
+    second.context.images = first.context.images;
+    const secondSeed = await acceptedInventoryReference(second);
+    const secondRead = localReferenceImageReader(second, await localSession(second));
+    const get = vi.spyOn(first.context.images, "get");
+    try {
+      await (await firstRead(firstSeed.imageId)).arrayBuffer();
+      await (await secondRead(secondSeed.imageId)).arrayBuffer();
+      await (await firstRead(firstSeed.imageId)).arrayBuffer();
+      expect(get.mock.calls.filter(([key]) => key === firstSeed.inventory.objectKey)).toHaveLength(
+        2,
+      );
+      expect(get.mock.calls.filter(([key]) => key === secondSeed.inventory.objectKey)).toHaveLength(
+        1,
+      );
+    } finally {
+      get.mockRestore();
+    }
+  });
+
+  it.each([false, true])(
+    "keeps native D1 writes constant as unchanged captures grow with changed=%s",
+    async (changed) => {
+      const writes: number[] = [];
+      // A changed run needs one unchanged item to keep the borrowed owner set fixed.
+      for (const captureCount of [changed ? 2 : 1, 100]) {
+        const test = await fixture();
+        const source = test.manifest.captures[0];
+        if (!source) {
+          throw new Error("Expected a source capture.");
+        }
+        test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+          ...structuredClone(source),
+          itemKey: `dialog/open/${ordinal}`,
+          name: `Current dialog ${ordinal}`,
+          variant: { ...source.variant, framework: "react", colorScheme: "light" },
+          ordinal,
+        }));
+        await acceptedInventoryReference(test);
+        for (const capture of test.manifest.captures) {
+          capture.image = {
+            ...capture.image,
+            digest: profiledImage.digest,
+            bytes: profiledPng.byteLength,
+          };
+        }
+        const candidate = test.manifest.captures[0];
+        if (!candidate) {
+          throw new Error("Expected the first candidate.");
+        }
+        if (changed) {
+          candidate.image = {
+            ...candidate.image,
+            digest: profiledImage.digest,
+            bytes: profiledPng.byteLength,
+          };
+        }
+        const session = await localSession(test);
+        if (changed) {
+          const result = test.manifest.localComparison?.captures[0];
+          if (!result) {
+            throw new Error("Expected the complete local receipt.");
+          }
+          result.outcome = "changed";
+          result.changedPixels = 1;
+          result.ratio = 1 / (image.width * image.height);
+          result.mask = {
+            digest: image.digest,
+            bytes: png.byteLength,
+            width: image.width,
+            height: image.height,
+            mediaType: "image/png",
+            path: "images/mask.png",
+          };
+        }
+        await stageLocal(test, session);
+        const costs = measureD1(nativeDatabase);
+        test.context.database = costs.database;
+        test.context.service = new Service(costs.database);
+        const run = await materializeWorkflowRun(test.context, test.runId);
+        writes.push(costs.totals().rows_written);
+        costs.report(`sparse-submit N=${captureCount} changed=${changed}`);
+        if (!run.comparison_id) {
+          throw new Error("Expected the completed comparison.");
+        }
+        expect(await test.context.service.comparisonRows(run.comparison_id)).toHaveLength(
+          changed ? 1 : 0,
+        );
+        expect(
+          await database
+            .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+            .bind(run.id)
+            .first(),
+        ).toEqual({ count: changed ? 1 : 0 });
+        const privateContext = {
+          ...test.context,
+          lifetime: { waitUntil: vi.fn() },
+          identity: {
+            githubUserId: "user",
+            login: "user",
+            role: "admin",
+            userId: "user",
+            sessionId: "session",
+            sessionHeaders: new Headers(),
+          },
+        };
+        const model = parseReviewModel(await reviewModel(privateContext, run.id));
+        expect(model.items).toHaveLength(captureCount);
+        const first = model.items.find((item) => item.key === "dialog/open/0");
+        expect(first).toMatchObject({ key: "dialog/open/0", name: "Current dialog 0" });
+        const profile = test.manifest.profiles[0];
+        if (!profile) throw new Error("Expected the measured profile.");
+        expect(first?.variants[0]).toMatchObject({
+          label: "react · chromium · light · react-light",
+          candidateProfile: await digestRenderingProfile(profile.profile),
+          kind: changed ? "changed" : "unchanged",
+          ...(changed ? {} : { candidate: null, candidateOmitted: true }),
+        });
+        if (!run.inventory_key || !run.inventory_digest || run.inventory_bytes == null) {
+          throw new Error("Expected the complete run inventory.");
+        }
+        const inventory = await readCaptureInventory(test.context.images, {
+          objectKey: run.inventory_key,
+          digest: run.inventory_digest,
+          bytes: run.inventory_bytes,
+          captureCount,
+        });
+        expect(inventory.captures[0]?.metadata).toMatchObject({
+          name: "Current dialog 0",
+          observedImage: { digest: profiledImage.digest },
+          candidateStored: changed,
+        });
+        const exportPath = process.env.VISONAUT_SPARSE_REVIEW_MODEL_PATH;
+        if (exportPath && !changed && captureCount === 100) {
+          await writeFile(exportPath, JSON.stringify(model));
+        }
+      }
+      expect(writes[0]).toBeGreaterThan(0);
+      expect(writes[1]).toBe(writes[0]);
+    },
+    60_000,
+  );
+
+  it("uses a flat R2 baseline for a complete unchanged run and recovers without staged evidence", async () => {
+    const test = await fixture();
+    const seed = await acceptedReference(test);
+    const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
+    const capture = test.manifest.captures[0];
+    const profile = test.manifest.profiles[0];
+    if (!descriptor || !capture || !profile) {
+      throw new Error("Expected a complete imported baseline.");
+    }
+    const pointer = await writeCaptureInventory(test.context.images, {
+      schemaVersion: "baseline-delta-v1",
+      projectId: test.context.configuration.projectId,
+      runId: seed.runId,
+      testedSha: seed.testedSha,
+      referenceSnapshotId: null,
+      profiles: test.manifest.profiles,
+      captures: [
+        {
+          id: descriptor.id,
+          itemKey: descriptor.itemKey,
+          variantKey: descriptor.variantKey,
+          ordinal: 0,
+          imageId: descriptor.image.id,
+          image: descriptor.image,
+          profileDigest: profile.digest,
+          renderingProfileDigest: await digestRenderingProfile(profile.profile),
+          environmentProfileDigest: await digestEnvironmentProfile(profile.profile),
+          testId: capture.testId,
+          testRetry: 0,
+          metadata: {
+            name: "Imported baseline",
+            variant: capture.variant,
+            profile: { $visonautProfileDigest: profile.digest },
+          },
+        },
+      ],
+    });
+    await database
+      .prepare(
+        "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",
+      )
+      .bind(pointer.objectKey, pointer.digest, pointer.bytes, pointer.captureCount, seed.snapshotId)
+      .run();
+    await database
+      .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
+      .bind(seed.snapshotId)
+      .run();
+    const session = await localSession(test);
+    expect(session.page.captures[0]?.imageId).toBe(seed.imageId);
+    const original = await stagedReferenceImage(
+      new Request("https://preview.example", {
+        headers: { authorization: `Bearer ${session.capability}` },
+      }),
+      test.context,
+      test.runId,
+      seed.imageId,
+    );
+    expect(original.status).toBe(200);
+    expect(await sha256(new Uint8Array(await original.arrayBuffer()))).toBe(image.digest);
+    await expect(
+      stagedReferenceImage(
+        new Request("https://preview.example", {
+          headers: { authorization: `Bearer ${session.capability}` },
+        }),
+        test.context,
+        test.runId,
+        crypto.randomUUID(),
+      ),
+    ).rejects.toThrow("not in this Submit reference");
+    const declaration = await stageLocal(test, session);
+    expect(declaration.uploads).toEqual([]);
+    const failure = vi
+      .spyOn(test.context.service, "createComparison")
+      .mockRejectedValueOnce(new Error("Interrupted comparison"));
+    try {
+      await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+        "Interrupted comparison",
+      );
+    } finally {
+      failure.mockRestore();
+    }
+    const stagedRead = vi
+      .spyOn(evidence, "readManifestEvidence")
+      .mockRejectedValue(new Error("Staged receipt unavailable"));
+    let run;
+    try {
+      run = await materializeWorkflowRun(test.context, test.runId);
+      expect(stagedRead).not.toHaveBeenCalled();
+    } finally {
+      stagedRead.mockRestore();
+    }
+    if (!run.comparison_id) {
+      throw new Error("Expected the recovered unchanged comparison.");
+    }
+    expect(await test.context.service.comparisonRows(run.comparison_id)).toEqual([]);
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+        .bind(run.id)
+        .first(),
+    ).toEqual({ count: 0 });
+    expect((await runStatus(test.context, run.id)).state).toBe("passed");
+    expect(
+      await database
+        .prepare("SELECT 1 AS found FROM work_retention_pins WHERE run_id=? AND owner=?")
+        .bind(seed.runId, `inherited-by:${run.id}`)
+        .first(),
+    ).toEqual({ found: 1 });
+  });
+
   it.each(["unchanged", "changed"] as const)(
     "accepts a zero-pixel profile change from a %s receipt without review",
     async (outcome) => {
@@ -1158,14 +1648,39 @@ describe("trusted local Submit", () => {
       const run = await materializeWorkflowRun(test.context, test.runId);
       measured.report(`local-materialize-zero-pixel-${outcome}`);
       if (!run.comparison_id) throw new Error("Expected the local comparison.");
-      const row = (await test.context.service.comparisonRows(run.comparison_id))[0];
-      expect(row?.outcome).toBe("unchanged");
-      expect(JSON.parse(row?.result_json ?? "{}")).toMatchObject({
+      expect(await test.context.service.comparisonRows(run.comparison_id)).toEqual([]);
+      if (
+        !run.inventory_key ||
+        !run.inventory_digest ||
+        run.inventory_bytes == null ||
+        run.capture_count == null
+      ) {
+        throw new Error("Expected the complete stored inventory.");
+      }
+      const inventory = await readCaptureInventory(test.context.images, {
+        objectKey: run.inventory_key,
+        digest: run.inventory_digest,
+        bytes: run.inventory_bytes,
+        captureCount: run.capture_count,
+      });
+      expect(inventory.captures[0]?.metadata.localResult).toMatchObject({
         outcome: "unchanged",
         changedPixels: 0,
         ratio: 0,
         maskExpected: false,
       });
+      expect(
+        await database
+          .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+          .bind(run.id)
+          .first(),
+      ).toEqual({ count: 0 });
+      expect(
+        await database
+          .prepare("SELECT COUNT(*) AS count FROM visonaut_capture_profiles WHERE digest=?")
+          .bind(profile.digest)
+          .first(),
+      ).toEqual({ count: 0 });
       expect(result.outcome).toBe(outcome);
       expect((await test.context.service.status(run.id)).status).toBe("passed");
     },
@@ -1417,12 +1932,20 @@ describe("trusted local Submit", () => {
         sessionHeaders: new Headers(),
       },
     };
-    const model = await reviewModel(privateContext, run.id);
+    const model = parseReviewModel(await reviewModel(privateContext, run.id));
     const removed = model.items
       .flatMap((item) => item.variants)
       .find((variant) => variant.kind === "removed");
     expect(removed).toMatchObject({ kind: "removed", candidate: null });
     expect(removed?.candidateOmitted).toBeUndefined();
+    const added = model.items
+      .flatMap((item) => item.variants)
+      .find((variant) => variant.kind === "added");
+    expect(added).toMatchObject({
+      kind: "added",
+      reference: null,
+      candidate: { digest: image.digest },
+    });
   });
 
   it("requires the complete removed-reference inventory before admitting the new capture", async () => {
@@ -1444,7 +1967,7 @@ describe("trusted local Submit", () => {
       rows.some(
         (row) =>
           row.candidate_capture_id === null &&
-          row.reference_capture_id !== null &&
+          JSON.parse(row.tuple_json).referenceDigest !== null &&
           row.outcome === "changed",
       ),
     ).toBe(true);
@@ -1652,20 +2175,32 @@ describe("trusted local Submit", () => {
     const body = await stageLocal(test, session);
     expect(body.uploads).toEqual([]);
     const run = await materializeWorkflowRun(test.context, test.runId);
-    const saved = await database
-      .prepare("SELECT image_id,metadata_json FROM visonaut_captures WHERE run_id=?")
-      .bind(run.id)
-      .first<{ image_id: string; metadata_json: string }>();
-    expect(saved?.image_id).toBe(seed.imageId);
-    expect(JSON.parse(saved!.metadata_json)).toMatchObject({
+    if (
+      !run.inventory_key ||
+      !run.inventory_digest ||
+      run.inventory_bytes == null ||
+      run.capture_count == null
+    ) {
+      throw new Error("Expected the complete stored inventory.");
+    }
+    const inventoryPointer = {
+      objectKey: run.inventory_key,
+      digest: run.inventory_digest,
+      bytes: run.inventory_bytes,
+      captureCount: run.capture_count,
+    };
+    const inventory = await readCaptureInventory(test.context.images, inventoryPointer);
+    expect(inventory.captures[0]?.image.id).toBe(seed.imageId);
+    expect(inventory.captures[0]?.metadata).toMatchObject({
       candidateStored: false,
       observedImage: { digest: profiledImage.digest },
     });
     const rows = await test.context.service.comparisonRows(run.comparison_id!);
-    expect(rows[0]?.outcome).toBe("unchanged");
-    expect(JSON.parse(rows[0]!.tuple_json)).toMatchObject({
+    expect(rows).toEqual([]);
+    expect(inventory.manifest?.localComparison?.captures[0]).toMatchObject({
       candidateDigest: profiledImage.digest,
       referenceDigest: image.digest,
+      outcome: "unchanged",
     });
     const privateContext = {
       ...test.context,
@@ -1679,7 +2214,7 @@ describe("trusted local Submit", () => {
         sessionHeaders: new Headers(),
       },
     };
-    const model = await reviewModel(privateContext, run.id);
+    const model = parseReviewModel(await reviewModel(privateContext, run.id));
     expect(model.items[0]?.variants[0]).toMatchObject({
       candidate: null,
       candidateOmitted: true,
@@ -1708,15 +2243,15 @@ describe("trusted local Submit", () => {
       comparisonId: run.comparison_id!,
       prefix: `baselines/${snapshotId}`,
       now: Date.now(),
+      inventory: inventoryPointer,
+      imageRunIds: [...new Set(inventory.captures.map((capture) => capture.image.runId))],
     });
-    expect(copies[0]?.image_id).toBe(seed.imageId);
-    for (const copy of copies)
-      await test.context.service.recordSnapshotCopy({
-        snapshotId,
-        captureId: copy.capture_id,
-        objectKey: copy.object_key,
-        digest: copy.digest,
-      });
+    expect(copies).toEqual([]);
+    await test.context.service.recordInventoryVerification({
+      snapshotId,
+      objectKey: inventoryPointer.objectKey,
+      digest: inventoryPointer.digest,
+    });
     await test.context.service.promote({
       snapshotId,
       promotionId: crypto.randomUUID(),
@@ -1728,7 +2263,7 @@ describe("trusted local Submit", () => {
         .prepare("SELECT image_id,digest FROM visonaut_snapshot_images WHERE snapshot_id=?")
         .bind(snapshotId)
         .first(),
-    ).toEqual({ image_id: seed.imageId, digest: image.digest });
+    ).toBeNull();
     expect(
       await database
         .prepare("SELECT 1 AS found FROM work_retention_pins WHERE run_id=? AND owner=?")
@@ -3555,7 +4090,7 @@ describe("workflow-owned upload staging", () => {
   });
 });
 
-describe("temporary D1 upload evidence", () => {
+describe("temporary R2 upload evidence", () => {
   it("projects SQL descriptors and splits declaration pages by serialized bytes", async () => {
     const test = await fixture();
     const capture = test.manifest.captures[0];
@@ -3640,7 +4175,7 @@ describe("temporary D1 upload evidence", () => {
     }
   });
 
-  it("stores canonical Unicode pages and admits images without reading the manifest", async () => {
+  it("stores canonical Unicode R2 receipts and admits images without rereading the manifest", async () => {
     const test = await fixture();
     const testEntry = test.manifest.tests[0];
     if (!testEntry || !test.manifest.discovery) {
@@ -3672,15 +4207,22 @@ describe("temporary D1 upload evidence", () => {
       };
       const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
       expect(stored).toMatchObject({
-        evidence_version: 2,
+        evidence_version: 1,
         evidence_bytes: canonical.length,
-        evidence_page_count: Math.ceil(canonical.length / pageBytes),
+        evidence_page_count: null,
         declaration_complete: 1,
         local_receipt_validated: 1,
         capture_manifest_digest: await captureManifestDigest(test.manifest),
       });
       expect(await evidence.readManifestEvidence(test.context, stored)).toEqual(test.manifest);
-      expect(await quarantine.get(stored.manifest_object_key)).toBeNull();
+      const saved = await quarantine.get(stored.manifest_object_key);
+      expect(saved && new Uint8Array(await saved.arrayBuffer())).toEqual(canonical);
+      expect(
+        await database
+          .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual({ count: 0 });
       const privateRead = vi.spyOn(test.context.quarantine, "get");
       const fullRead = vi.spyOn(evidence, "readManifestEvidence");
       const ticket = body.uploads[0]?.ticket;
@@ -3726,7 +4268,7 @@ describe("temporary D1 upload evidence", () => {
     }
   });
 
-  it("resumes an interrupted page declaration without opening partial evidence", async () => {
+  it("resumes an interrupted R2 declaration without opening partial evidence", async () => {
     const test = await fixture();
     const session = await localSession(test);
     const encode = evidence.encodeManifestEvidence;
@@ -3764,7 +4306,7 @@ describe("temporary D1 upload evidence", () => {
         .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
         .bind(test.runId)
         .first(),
-    ).toEqual({ count: 4 });
+    ).toEqual({ count: 0 });
     await expect(evidence.readManifestEvidence(test.context, stored)).rejects.toThrow("incomplete");
     await expect(
       finalizeStaged(
@@ -3784,13 +4326,13 @@ describe("temporary D1 upload evidence", () => {
         .status,
     ).toBe(200);
     const complete = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-    expect(complete.evidence_page_bytes).toBe(128);
+    expect(complete.evidence_page_bytes).toBeNull();
     expect(await evidence.readManifestEvidence(test.context, complete)).toEqual(test.manifest);
     await expect(
       database
         .prepare(`INSERT INTO ingest_staged_evidence_pages(run_id,job_id,page_number,content)
       VALUES(?,?,?,?)`)
-        .bind(test.runId, test.jobId, complete.evidence_page_count, new Uint8Array([1]).buffer)
+        .bind(test.runId, test.jobId, 0, new Uint8Array([1]).buffer)
         .run(),
     ).rejects.toThrow("immutable");
     await expect(
@@ -3801,7 +4343,7 @@ describe("temporary D1 upload evidence", () => {
     ).rejects.toThrow("immutable");
   });
 
-  it("rejects missing and corrupt pages before publishing declaration completion", async () => {
+  it("rejects missing and corrupt R2 receipts before publishing declaration completion", async () => {
     const test = await fixture();
     const session = await localSession(test);
     const failure = vi
@@ -3819,31 +4361,19 @@ describe("temporary D1 upload evidence", () => {
       test.manifest,
       test.context.configuration.limits.maximumManifestBytes,
     );
-    const first = encoded.pages[0];
-    if (!first) {
-      throw new Error("Missing evidence page.");
-    }
-    const deletePage = () =>
-      database
-        .prepare("DELETE FROM ingest_staged_evidence_pages WHERE run_id=? AND page_number=0")
-        .bind(test.runId)
-        .run();
-    const insertPage = (content: ArrayBuffer) =>
-      database
-        .prepare(
-          "INSERT INTO ingest_staged_evidence_pages(run_id,job_id,page_number,content) VALUES(?,?,0,?)",
-        )
-        .bind(test.runId, test.jobId, content)
-        .run();
-    await deletePage();
+    const first = encoded.bytes;
+    const deleteReceipt = () => quarantine.delete(stored.manifest_object_key);
+    const insertReceipt = (content: Uint8Array<ArrayBuffer>) =>
+      quarantine.put(stored.manifest_object_key, content);
+    await deleteReceipt();
     await expect(evidence.readManifestEvidence(test.context, stored, true)).rejects.toThrow(
-      "incomplete",
+      "unavailable",
     );
     const corrupt = first.slice(0);
-    new Uint8Array(corrupt)[0] = 0;
-    await insertPage(corrupt);
+    corrupt[0] = 0;
+    await insertReceipt(corrupt);
     await expect(evidence.readManifestEvidence(test.context, stored, true)).rejects.toThrow(
-      "digest differs",
+      "immutable digest",
     );
     await expect(
       declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
@@ -3852,15 +4382,19 @@ describe("temporary D1 upload evidence", () => {
       (await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId))
         .declaration_complete,
     ).toBe(0);
-    await deletePage();
-    await insertPage(first);
+    await deleteReceipt();
+    await insertReceipt(first);
     expect(
       (await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey))
         .status,
     ).toBe(200);
     await expect(
-      evidence.readManifestEvidence(test.context, { ...stored, job_id: "wrong-job" }, true),
-    ).rejects.toThrow("incomplete");
+      evidence.readManifestEvidence(
+        test.context,
+        { ...stored, manifest_digest: "0".repeat(64) },
+        true,
+      ),
+    ).rejects.toThrow("immutable digest");
   });
 
   it("keeps an interrupted image upload pending and finalizes concurrent identical retries", async () => {
@@ -4017,7 +4551,7 @@ describe("temporary D1 upload evidence", () => {
         .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
         .bind(test.runId)
         .first(),
-    ).toEqual({ count: 1 });
+    ).toEqual({ count: 0 });
     const recovered = await materializeWorkflowRun(test.context, test.runId);
     const current = await test.context.service.run(recovered.id);
     expect(current.comparison_id).not.toBeNull();
@@ -4137,7 +4671,7 @@ describe("temporary D1 upload evidence", () => {
       await prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
         .bind(test.runId)
         .first(),
-    ).toEqual({ count: 1 });
+    ).toEqual({ count: 0 });
   });
 });
 

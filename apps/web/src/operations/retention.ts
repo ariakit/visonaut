@@ -7,17 +7,54 @@ import {
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
-/** Protected baseline objects use a separate namespace and are never swept here. */
+interface RetainedImageOwner {
+  id: string;
+  object_prefix: string;
+  inventory_key: string | null;
+  inventory_digest: string | null;
+}
+
+function imagePrefix(owner: RetainedImageOwner) {
+  if (
+    owner.object_prefix === `runs/${owner.id}/` &&
+    /^runs\/[A-Za-z0-9_-]+\/$/u.test(owner.object_prefix)
+  ) {
+    return owner.inventory_key ? `${owner.object_prefix}images/` : owner.object_prefix;
+  }
+  const imported = /^baselines\/import\/([a-f0-9]{64})\/images\/$/u.exec(owner.object_prefix);
+  const importDigest = imported?.[1];
+  if (!importDigest || !owner.inventory_digest) return null;
+  const expectedRunId = [
+    importDigest.slice(0, 8),
+    importDigest.slice(8, 12),
+    importDigest.slice(12, 16),
+    importDigest.slice(16, 20),
+    importDigest.slice(20, 32),
+  ].join("-");
+  if (
+    owner.id !== expectedRunId ||
+    !/^[a-f0-9]{64}$/u.test(owner.inventory_digest) ||
+    owner.inventory_key !==
+      `baselines/import/${importDigest}/inventory/${owner.inventory_digest}.json`
+  ) {
+    return null;
+  }
+  // The imported prefix already selects images; its inventory and plan stay live.
+  return owner.object_prefix;
+}
+
+/** Keep sparse review inventories after their original images expire. */
 export async function expireRunImages(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
   const candidates = await database
-    .prepare(`SELECT id,object_prefix FROM work_retained_runs
+    .prepare(`SELECT id,object_prefix,(SELECT inventory_key FROM visonaut_runs WHERE id=work_retained_runs.id) AS inventory_key,
+      (SELECT inventory_digest FROM visonaut_runs WHERE id=work_retained_runs.id) AS inventory_digest FROM work_retained_runs
     WHERE EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=work_retained_runs.id AND summary.state='ready') AND NOT EXISTS(SELECT 1 FROM work_retention_pins WHERE run_id=work_retained_runs.id) AND ((byte_state='live' AND closed_at IS NOT NULL AND closed_at<=?)
        OR (byte_state='deleting' AND deletion_until<=?))
     ORDER BY closed_at,id LIMIT ?`)
     .bind(context.now() - closedRunRetentionMs, context.now(), budget.tasksPerStep)
-    .all<{ id: string; object_prefix: string }>();
+    .all<RetainedImageOwner>();
   let remaining = budget.objectsPerStep;
   for (const candidate of candidates.results ?? []) {
     if (remaining < 1) {
@@ -25,8 +62,8 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
       break;
     }
     // The slash boundary prevents run "a" from deleting run "ab".
-    const prefix = candidate.object_prefix;
-    if (prefix !== `runs/${candidate.id}/` || !/^runs\/[A-Za-z0-9_-]+\/$/u.test(prefix)) {
+    const prefix = imagePrefix(candidate);
+    if (!prefix) {
       await recordEvent(database, {
         kind: "retention",
         subject: candidate.id,

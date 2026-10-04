@@ -31,7 +31,19 @@ import {
   compactRunHistory,
   prepareArchivedCommandReplay,
 } from "./history.ts";
-import type { ComparisonResult, ReviewParams, ValidatedImage } from "./types.ts";
+import type {
+  ComparisonResult,
+  ReviewParams,
+  ValidatedImage,
+  CaptureInventoryPointer,
+  ReferenceCaptureInput,
+  CommitShardParams,
+} from "./types.ts";
+import {
+  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_CODEC,
+  type LocalComparisonReceipt,
+} from "@visonaut/protocol";
 
 class SqliteStatement implements Statement {
   constructor(
@@ -238,19 +250,22 @@ async function setup(service: Service) {
 
 async function promote(service: Service, runId: string) {
   const project = await service.project("project");
-  const copies = await service.preparePromotion({
+  let copies = await service.preparePromotion({
     snapshotId: `snapshot-${runId}`,
     comparisonId: `comparison-${runId}`,
     prefix: `baselines/${runId}`,
     now: 10,
   });
-  for (const copy of copies) {
-    await service.recordSnapshotCopy({
-      snapshotId: `snapshot-${runId}`,
-      captureId: copy.capture_id,
-      objectKey: copy.object_key,
-      digest: copy.digest,
-    });
+  while (copies.length) {
+    for (const copy of copies) {
+      await service.recordSnapshotCopy({
+        snapshotId: `snapshot-${runId}`,
+        captureId: copy.capture_id,
+        objectKey: copy.object_key,
+        digest: copy.digest,
+      });
+    }
+    copies = await service.pendingSnapshotCopies(`snapshot-${runId}`, 50);
   }
   return service.promote({
     snapshotId: `snapshot-${runId}`,
@@ -286,6 +301,561 @@ async function seed(service: Service, items = ["dialog"]) {
 function count(database: TestDatabase, table: string) {
   return database.connection.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count;
 }
+
+interface SparseFixtureParams {
+  id: string;
+  items: string[];
+  changed?: string[];
+  kind?: "main" | "pull_request";
+  related?: string[];
+}
+
+async function sparseFixture(service: Service, input: SparseFixtureParams) {
+  const project = await service.project("project");
+  const source = await service.run("seed");
+  const references: ReferenceCaptureInput[] = input.items.length
+    ? ((
+        await service.database
+          .prepare(`SELECT capture.id,capture.item_key,capture.variant_key,capture.profile_digest,
+      image.id AS image_id,image.run_id,image.digest,image.object_key,image.bytes,image.width,image.height
+      FROM visonaut_captures capture JOIN visonaut_images image ON image.id=capture.image_id WHERE capture.run_id='seed'`)
+          .all<{
+            id: string;
+            item_key: string;
+            variant_key: string;
+            profile_digest: string;
+            image_id: string;
+            run_id: string;
+            digest: string;
+            object_key: string;
+            bytes: number;
+            width: number;
+            height: number;
+          }>()
+      ).results?.map((capture) => ({
+        id: capture.id,
+        itemKey: capture.item_key,
+        variantKey: capture.variant_key,
+        profileDigest: capture.profile_digest,
+        renderingProfileDigest: capture.profile_digest,
+        image: {
+          id: capture.image_id,
+          runId: capture.run_id,
+          digest: capture.digest,
+          objectKey: capture.object_key,
+          bytes: capture.bytes,
+          width: capture.width,
+          height: capture.height,
+          contentType: "image/png" as const,
+        },
+      })) ?? [])
+    : [];
+  await service.reserveRun({
+    id: input.id,
+    projectId: project.id,
+    externalRunId: input.id,
+    attempt: 1,
+    kind: input.kind ?? "main",
+    testedSha: `sha-${input.id}`,
+    lineageKey: input.kind === "pull_request" ? input.id : "main",
+    plan: {
+      digest: "plan",
+      shards: [
+        {
+          key: "chromium",
+          profileDigest: "profile",
+          tests: ["test"],
+          captures: input.items.map((itemKey) => ({
+            itemKey,
+            variantKey: "light",
+            testId: "test",
+          })),
+        },
+      ],
+    },
+    verifiedRelatedRunIds: input.related ?? [],
+    verifiedAncestorShas: [source.tested_sha],
+    verificationDigest: "verified-proof",
+    rerunShardKeys: ["chromium"],
+    now: 20,
+  });
+  const captures: CommitShardParams["captures"] = [];
+  const localComparison: LocalComparisonReceipt = {
+    mode: "local-v1",
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    reference: {
+      manifestDigest: "manifest",
+      snapshotId: project.snapshot_id,
+      baselineRevision: project.baseline_revision,
+      inventoryDigest: "reference",
+      captureCount: references.length,
+    },
+    captures: [],
+    removals: references
+      .filter((reference) => !input.items.includes(reference.itemKey))
+      .map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+  };
+  const owners = new Set<string>();
+  for (const [ordinal, itemKey] of input.items.entries()) {
+    const reference = references.find((entry) => entry.itemKey === itemKey);
+    const changed = !reference || Boolean(input.changed?.includes(itemKey));
+    const image: ValidatedImage = changed
+      ? {
+          id: `image-${input.id}-${itemKey}`,
+          runId: input.id,
+          digest: `${itemKey}-red`,
+          objectKey: `runs/${input.id}/images/${itemKey}`,
+          contentType: "image/png",
+          bytes: 80,
+          width: 10,
+          height: 10,
+        }
+      : reference.image;
+    if (changed) await service.registerImage(image);
+    owners.add(image.runId);
+    const outcome = changed ? ("changed" as const) : ("unchanged" as const);
+    captures.push({
+      id: `capture-${input.id}-${itemKey}`,
+      itemKey,
+      variantKey: "light",
+      ordinal,
+      imageId: image.id,
+      profileDigest: "profile",
+      environmentProfileDigest: "profile",
+      testId: "test",
+      testRetry: 1,
+      metadata: {
+        name: itemKey,
+        localMode: "local-v1",
+        candidateStored: changed,
+        observedImage: image,
+        localResult: {
+          outcome,
+          changedPixels: changed ? 1 : 0,
+          ratio: changed ? 0.01 : 0,
+          maskExpected: false,
+          engineVersion: LOCAL_COMPARISON_ENGINE,
+          codecVersion: LOCAL_COMPARISON_CODEC,
+        },
+      },
+    });
+    localComparison.captures.push({
+      itemKey,
+      variantKey: "light",
+      candidateDigest: image.digest,
+      referenceDigest: reference?.image.digest ?? null,
+      outcome,
+      changedPixels: changed ? 1 : 0,
+      ratio: changed ? 0.01 : 0,
+      sizeChanged: false,
+    });
+  }
+  const inventory: CaptureInventoryPointer = {
+    objectKey: `runs/${input.id}/inventory/${"c".repeat(64)}.json`,
+    digest: "c".repeat(64),
+    bytes: 1024,
+    captureCount: captures.length,
+  };
+  const commit: CommitShardParams = {
+    runId: input.id,
+    key: "chromium",
+    manifestDigest: `manifest-${input.id}`,
+    captures,
+    inventory,
+    imageRunIds: [...owners],
+    localReferenceSnapshotId: project.snapshot_id,
+    finalTestOutcomes: [{ testId: "test", retry: 1, status: "passed" }],
+    now: 21,
+  };
+  const comparisonInput = {
+    id: `comparison-${input.id}`,
+    runId: input.id,
+    referenceSnapshotId: project.snapshot_id,
+    expectedBaselineRevision: project.baseline_revision,
+    localComparison,
+    referenceCaptures: references,
+    now: 23,
+  };
+  const complete = async () => {
+    await service.commitShard(commit);
+    await service.sealRun({ runId: input.id, now: 22 });
+    await service.createComparison(comparisonInput);
+    await service.finalizeComparison({ comparisonId: comparisonInput.id, now: 24 });
+  };
+  return { commit, comparisonInput, inventory, owners: [...owners], complete };
+}
+
+describe("complete R2 inventory with changed D1 rows", () => {
+  it("resumes bounded private comparison pages before exposing the complete review", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    const items = Array.from({ length: 201 }, (_, index) => `item-${index}-${"é".repeat(1000)}`);
+    await seed(service, items);
+    const sparse = await sparseFixture(service, { id: "paged", items, changed: items });
+    await service.commitShard(sparse.commit);
+    await service.sealRun({ runId: "paged", now: 22 });
+    const originalBatch = database.batch.bind(database);
+    const pageSizes: number[] = [];
+    let pages = 0;
+    const interrupted = vi.spyOn(database, "batch").mockImplementation(async (statements) => {
+      for (const entry of statements) {
+        if (
+          !(entry instanceof SqliteStatement) ||
+          !entry.sql.startsWith("INSERT INTO visonaut_comparison_rows")
+        )
+          continue;
+        const page = entry.values[1];
+        if (typeof page !== "string") throw new Error("Missing comparison page");
+        pageSizes.push(new TextEncoder().encode(page).byteLength);
+        expect(JSON.parse(page).length).toBeLessThanOrEqual(100);
+        pages += 1;
+        if (pages === 2) throw new Error("Interrupted comparison write");
+      }
+      return originalBatch(statements);
+    });
+    await expect(service.createComparison(sparse.comparisonInput)).rejects.toThrow(
+      "Interrupted comparison write",
+    );
+    expect((await service.run("paged")).comparison_id).toBeNull();
+    await expect(
+      service.finalizeComparison({ comparisonId: "comparison-paged", now: 24 }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    interrupted.mockRestore();
+    const resumed = await service.createComparison({
+      ...sparse.comparisonInput,
+      id: "comparison-retry",
+    });
+    expect(resumed.id).toBe("comparison-paged");
+    expect((await service.run("paged")).comparison_id).toBe("comparison-paged");
+    expect(
+      database.connection
+        .prepare("SELECT count(*) AS count FROM visonaut_comparison_rows WHERE comparison_id=?")
+        .get(resumed.id)?.count,
+    ).toBe(201);
+    expect(Math.max(...pageSizes)).toBeLessThanOrEqual(512 * 1024);
+    expect(
+      database.connection
+        .prepare("SELECT owner FROM work_retention_pins WHERE owner='comparison:comparison-retry'")
+        .get(),
+    ).toBeUndefined();
+  });
+
+  it("pins every reference image owner, including an original removed from the new inventory", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["changed", "removed", "same"]);
+    await fixture(service, {
+      id: "borrowed",
+      kind: "pull_request",
+      items: ["removed"],
+      color: "red",
+    });
+    database.connection
+      .prepare(
+        "UPDATE visonaut_captures SET image_id=(SELECT image_id FROM visonaut_captures WHERE run_id='borrowed') WHERE run_id='seed' AND item_key='removed'",
+      )
+      .run();
+    database.connection
+      .prepare(
+        "UPDATE visonaut_snapshots SET inventory_key='runs/seed/inventory/reference.json',inventory_digest=?,inventory_bytes=1024,capture_count=3,inventory_verified=1 WHERE id='snapshot-seed'",
+      )
+      .run("b".repeat(64));
+    database.connection
+      .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'")
+      .run();
+    const sparse = await sparseFixture(service, {
+      id: "all-reference-owners",
+      items: ["changed", "same"],
+      changed: ["changed"],
+    });
+    await sparse.complete();
+    expect(
+      database.connection
+        .prepare("SELECT run_id FROM work_retention_pins WHERE owner=? ORDER BY run_id")
+        .all("comparison:comparison-all-reference-owners")
+        .map((pin) => pin.run_id),
+    ).toEqual(["borrowed", "seed"]);
+    expect(
+      database.connection
+        .prepare("SELECT run_id FROM work_retention_pins WHERE owner=? AND run_id='borrowed'")
+        .get("inherited-by:all-reference-owners"),
+    ).toBeUndefined();
+  });
+
+  it("retires verified inventory bytes without a dense archive and keeps inventory headers", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["dialog"]);
+    const inventoryKey = "runs/seed/inventory/reference.json";
+    database.connection
+      .prepare(
+        "UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=1024,capture_count=1 WHERE id='seed'",
+      )
+      .run(inventoryKey, "b".repeat(64));
+    database.connection
+      .prepare(
+        "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=1024,capture_count=1,inventory_verified=1 WHERE id='snapshot-seed'",
+      )
+      .run(inventoryKey, "b".repeat(64));
+    database.connection
+      .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'")
+      .run();
+    database.connection
+      .prepare("UPDATE visonaut_projects SET snapshot_id=NULL,promotion_id=NULL WHERE id='project'")
+      .run();
+    await retireSnapshot(database, { snapshotId: "snapshot-seed", now: 100, graceMs: 0 });
+    expect(
+      database.connection
+        .prepare(
+          `SELECT run.id FROM visonaut_runs run WHERE run.id='seed' AND ${archiveEligibilitySql("run")}`,
+        )
+        .get(),
+    ).toBeUndefined();
+    database.connection
+      .prepare(
+        "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('seed','comparison:descendant','comparison')",
+      )
+      .run();
+    expect(
+      await claimRetiredSnapshotDeletion(database, {
+        snapshotId: "snapshot-seed",
+        token: "pinned",
+        now: 100,
+        leaseMs: 100,
+      }),
+    ).toBeNull();
+    database.connection
+      .prepare("DELETE FROM work_retention_pins WHERE owner='comparison:descendant'")
+      .run();
+    expect(
+      await claimRetiredSnapshotDeletion(database, {
+        snapshotId: "snapshot-seed",
+        token: "delete",
+        now: 100,
+        leaseMs: 100,
+      }),
+    ).not.toBeNull();
+    await completeRetiredSnapshotDeletion(database, {
+      snapshotId: "snapshot-seed",
+      token: "delete",
+      now: 101,
+    });
+    expect((await service.run("seed")).inventory_key).toBe(inventoryKey);
+    expect(
+      database.connection
+        .prepare("SELECT inventory_key FROM visonaut_snapshots WHERE id='snapshot-seed'")
+        .get()?.inventory_key,
+    ).toBe(inventoryKey);
+  });
+
+  it("seals and promotes a full unchanged run without per-item rows or baseline membership copies", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    const items = Array.from({ length: 24 }, (_, index) => `item-${index}`);
+    await seed(service, items);
+    const beforeCaptures = count(database, "visonaut_captures");
+    const beforeRows = count(database, "visonaut_comparison_rows");
+    const beforeMembers = count(database, "visonaut_snapshot_images");
+    const sparse = await sparseFixture(service, { id: "unchanged", items });
+    await sparse.complete();
+    expect(count(database, "visonaut_captures")).toBe(beforeCaptures);
+    expect(count(database, "visonaut_comparison_rows")).toBe(beforeRows);
+    expect((await service.status("unchanged")).status).toBe("passed");
+    const run = await service.run("unchanged");
+    expect(run.capture_count).toBe(24);
+    expect(
+      database.connection
+        .prepare(
+          "SELECT json_extract(plan_json,'$.shards[0].captures') AS captures FROM visonaut_runs WHERE id='unchanged'",
+        )
+        .get()?.captures,
+    ).toBe("[]");
+    const promotion = {
+      snapshotId: "snapshot-unchanged",
+      comparisonId: "comparison-unchanged",
+      prefix: "baselines/unchanged",
+      inventory: sparse.inventory,
+      imageRunIds: sparse.owners,
+      now: 25,
+    };
+    expect(await service.preparePromotion(promotion)).toEqual([]);
+    expect(count(database, "visonaut_snapshot_images")).toBe(beforeMembers);
+    await expect(
+      service.promote({
+        snapshotId: promotion.snapshotId,
+        promotionId: "promotion-unchanged",
+        expectedBaselineRevision: 1,
+        now: 27,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    await expect(
+      service.recordInventoryVerification({
+        snapshotId: promotion.snapshotId,
+        objectKey: sparse.inventory.objectKey,
+        digest: "d".repeat(64),
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    await service.recordInventoryVerification({
+      snapshotId: promotion.snapshotId,
+      objectKey: sparse.inventory.objectKey,
+      digest: sparse.inventory.digest,
+    });
+    await service.promote({
+      snapshotId: promotion.snapshotId,
+      promotionId: "promotion-unchanged",
+      expectedBaselineRevision: 1,
+      now: 27,
+    });
+    expect((await service.referenceCandidates("project"))[0]?.capture_count).toBe(24);
+    expect(
+      database.connection
+        .prepare(
+          "SELECT count(*) AS count FROM work_retention_pins WHERE run_id='seed' AND owner='promotion:snapshot-unchanged'",
+        )
+        .get()?.count,
+    ).toBe(1);
+  });
+
+  it("keeps changes unapproved while introductions and explicit removals use tuple image presence", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["same", "changed", "removed"]);
+    const sparse = await sparseFixture(service, {
+      id: "mixed",
+      items: ["same", "changed", "new"],
+      changed: ["changed"],
+    });
+    await sparse.complete();
+    const rows = await service.comparisonRows("comparison-mixed");
+    expect(rows).toHaveLength(3);
+    expect(rows.every((row) => row.reference_capture_id === null)).toBe(true);
+    const changed = rows.find((row) => row.item_key === "changed");
+    expect(changed?.decision_id).toBeNull();
+    expect(rows.find((row) => row.item_key === "new")?.decision_id).toMatch(/^automatic:/u);
+    expect(rows.find((row) => row.item_key === "removed")?.decision_id).toMatch(/^automatic:/u);
+    expect((await service.status("mixed")).pending).toBe(1);
+    expect(
+      database.connection
+        .prepare("SELECT count(*) AS count FROM visonaut_captures WHERE run_id='mixed'")
+        .get()?.count,
+    ).toBe(2);
+    await review(service, "comparison-mixed");
+    expect((await service.status("mixed")).status).toBe("passed");
+  });
+
+  it("rejects incomplete unchanged coverage and lost removals before sealing or comparison visibility", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["one", "two"]);
+    const sparse = await sparseFixture(service, { id: "partial", items: ["one", "two"] });
+    await expect(
+      service.commitShard({
+        ...sparse.commit,
+        captures: sparse.commit.captures.slice(0, 1),
+        inventory: { ...sparse.inventory, captureCount: 1 },
+      }),
+    ).rejects.toBeInstanceOf(IncompleteError);
+    await expect(service.sealRun({ runId: "partial", now: 22 })).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+    expect((await service.run("partial")).inventory_key).toBeNull();
+    const removed = await sparseFixture(service, { id: "lost-removal", items: ["one"] });
+    await service.commitShard(removed.commit);
+    await service.sealRun({ runId: "lost-removal", now: 22 });
+    await expect(
+      service.createComparison({
+        ...removed.comparisonInput,
+        localComparison: { ...removed.comparisonInput.localComparison, removals: [] },
+      }),
+    ).rejects.toBeInstanceOf(IncompleteError);
+    expect((await service.run("lost-removal")).comparison_id).toBeNull();
+    const hiddenChange = await sparseFixture(service, {
+      id: "hidden-change",
+      items: ["one", "two"],
+      changed: ["one"],
+    });
+    await service.commitShard(hiddenChange.commit);
+    await service.sealRun({ runId: "hidden-change", now: 22 });
+    await expect(
+      service.createComparison({
+        ...hiddenChange.comparisonInput,
+        localComparison: {
+          ...hiddenChange.comparisonInput.localComparison,
+          captures: hiddenChange.comparisonInput.localComparison.captures.map((result) => ({
+            ...result,
+            outcome: "unchanged",
+            changedPixels: 0,
+            ratio: 0,
+          })),
+        },
+      }),
+    ).rejects.toBeInstanceOf(IncompleteError);
+    expect((await service.run("hidden-change")).comparison_id).toBeNull();
+  });
+
+  it("rejects an expired image owner even when there are no changed captures to check", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    const sparse = await sparseFixture(service, { id: "expired-owner", items: ["dialog"] });
+    database.connection.prepare("DELETE FROM work_retention_pins WHERE run_id='seed'").run();
+    database.connection
+      .prepare("UPDATE work_retained_runs SET byte_state='deleting' WHERE id='seed'")
+      .run();
+    await expect(service.commitShard(sparse.commit)).rejects.toBeInstanceOf(ConflictError);
+    expect((await service.run("expired-owner")).inventory_key).toBeNull();
+  });
+
+  it("rolls back stale sparse promotion headers and keeps copied approvals target-owned", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    const first = await sparseFixture(service, {
+      id: "first",
+      items: ["dialog"],
+      changed: ["dialog"],
+      kind: "pull_request",
+    });
+    await first.complete();
+    await review(service, "comparison-first");
+    const second = await sparseFixture(service, {
+      id: "second",
+      items: ["dialog"],
+      changed: ["dialog"],
+      kind: "pull_request",
+      related: ["first"],
+    });
+    await second.complete();
+    expect((await service.status("second")).status).toBe("passed");
+    const target = (await service.comparisonRows("comparison-second"))[0];
+    expect(target?.decision_id).toMatch(/^copied:/u);
+    await review(service, "comparison-first", { verdict: "rejected" });
+    expect((await service.status("second")).status).toBe("passed");
+    const main = await sparseFixture(service, { id: "stale", items: ["dialog"] });
+    await main.complete();
+    database.beforeBatch = () => {
+      database.connection
+        .prepare("UPDATE visonaut_projects SET revision=revision+1 WHERE id='project'")
+        .run();
+    };
+    await expect(
+      service.preparePromotion({
+        snapshotId: "snapshot-stale",
+        comparisonId: "comparison-stale",
+        prefix: "baselines/stale",
+        inventory: main.inventory,
+        imageRunIds: main.owners,
+        now: 30,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(
+      database.connection
+        .prepare("SELECT id FROM visonaut_snapshots WHERE id='snapshot-stale'")
+        .get(),
+    ).toBeUndefined();
+  });
+});
 
 describe("pre-created App check adoption", () => {
   it("adopts the exact check atomically and preserves the old run when its successor is stale", async () => {

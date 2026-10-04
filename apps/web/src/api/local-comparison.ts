@@ -1,4 +1,5 @@
 import { assertDimensions, imageLimits } from "@visonaut/compare";
+import { Buffer } from "node:buffer";
 import {
   captureManifestDigest,
   digestJson,
@@ -17,11 +18,23 @@ import {
   SecurityError,
   type IngestCapability,
 } from "@visonaut/security";
-import { assertion, atomic, IncompleteError, statement } from "@visonaut/service";
+import {
+  assertion,
+  atomic,
+  IncompleteError,
+  statement,
+  type ReferenceCaptureInput,
+} from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { verifyAncestry } from "./ingest.ts";
 import { jsonBody, object, string } from "./input.js";
 import { publicImage } from "./images.ts";
+import type { CaptureInventory } from "../capture-inventory.ts";
+import {
+  readSnapshotInventory,
+  readSnapshotInventoryBody,
+  readSnapshotInventoryHeader,
+} from "../inventory-records.ts";
 
 interface StagedReferenceRun {
   id: string;
@@ -31,6 +44,121 @@ interface StagedReferenceRun {
 
 const pageSize = 200;
 const owner = (runId: string) => `submit:${runId}`;
+
+interface ReferenceImageMembership {
+  database: ApiContext["database"];
+  key: string;
+  imageIds: ReadonlySet<string>;
+}
+
+// Retain one verified ID set per bucket, bounded by the inventory's limits.
+// Receipts, decoded profiles and pending I/O stay within their request.
+// https://github.com/ariakit/visonaut/pull/247#discussion_r4178894713
+const referenceImageMemberships = new WeakMap<ApiContext["images"], ReferenceImageMembership>();
+
+async function referenceImageIds(context: ApiContext, snapshotId: string) {
+  const header = await readSnapshotInventoryHeader(context, snapshotId);
+  if (!header) return null;
+  if (
+    header.projectId !== context.configuration.projectId ||
+    header.captureCount > context.configuration.limits.maximumCaptures
+  ) {
+    throw new IncompleteError("The accepted reference inventory differs from this project.");
+  }
+  const key = JSON.stringify(header);
+  const cached = referenceImageMemberships.get(context.images);
+  if (cached?.database === context.database && cached.key === key) {
+    return cached.imageIds;
+  }
+  const inventory = await readSnapshotInventoryBody(context, header);
+  const imageIds = new Set(inventory.captures.map((capture) => capture.image.id));
+  referenceImageMemberships.set(context.images, { database: context.database, key, imageIds });
+  return imageIds;
+}
+
+/** Accepted inventories are complete; their images never require a parent read. */
+export async function referenceInventory(
+  context: ApiContext,
+  snapshotId: string | null,
+): Promise<CaptureInventory | null> {
+  if (snapshotId === null) return null;
+  const snapshot = await context.database
+    .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id=? AND project_id=?")
+    .bind(snapshotId, context.configuration.projectId)
+    .first<{
+      reference_eligible: number;
+    }>();
+  if (!snapshot || snapshot.reference_eligible !== 1) {
+    throw new IncompleteError("The accepted reference inventory is unavailable.");
+  }
+  const inventory = await readSnapshotInventory(context, snapshotId);
+  if (!inventory) return null;
+  if (
+    inventory.projectId !== context.configuration.projectId ||
+    inventory.captures.length > context.configuration.limits.maximumCaptures
+  ) {
+    throw new IncompleteError("The accepted reference inventory differs from this project.");
+  }
+  return inventory;
+}
+
+export async function referenceCaptureInputs(
+  context: ApiContext,
+  snapshotId: string | null,
+): Promise<ReferenceCaptureInput[]> {
+  if (snapshotId === null) return [];
+  const inventory = await referenceInventory(context, snapshotId);
+  if (inventory) {
+    return inventory.captures.map((capture) => ({
+      id: capture.id,
+      itemKey: capture.itemKey,
+      variantKey: capture.variantKey,
+      profileDigest: capture.profileDigest,
+      renderingProfileDigest: capture.renderingProfileDigest,
+      image: capture.image,
+    }));
+  }
+  const rows = await context.database
+    .prepare(`SELECT capture.id AS capture_id,capture.item_key,capture.variant_key,
+      capture.profile_digest,COALESCE(profile.rendering_digest,capture.profile_digest) AS rendering_digest,
+      image.* FROM visonaut_snapshot_images member JOIN visonaut_captures capture ON capture.id=member.capture_id
+      JOIN visonaut_images image ON image.id=member.image_id
+      LEFT JOIN visonaut_capture_profiles profile ON profile.digest=capture.profile_digest
+      WHERE member.snapshot_id=? AND member.copied=1 AND image.bytes_present=1 AND image.validated=1 AND image.role='original'`)
+    .bind(snapshotId)
+    .all<{
+      capture_id: string;
+      item_key: string;
+      variant_key: string;
+      profile_digest: string;
+      rendering_digest: string;
+      id: string;
+      run_id: string;
+      digest: string;
+      object_key: string;
+      content_type: "image/png" | "image/webp";
+      bytes: number;
+      width: number;
+      height: number;
+    }>();
+  return rows.results.map((row) => ({
+    id: row.capture_id,
+    itemKey: row.item_key,
+    variantKey: row.variant_key,
+    profileDigest: row.profile_digest,
+    renderingProfileDigest: row.rendering_digest,
+    image: {
+      id: row.id,
+      runId: row.run_id,
+      digest: row.digest,
+      objectKey: row.object_key,
+      contentType: row.content_type,
+      bytes: row.bytes,
+      width: row.width,
+      height: row.height,
+    },
+  }));
+}
 
 /** Stored in the existing signed run JSON; it is not supplied by capture code. */
 async function storedReference(context: ApiContext, runId: string) {
@@ -53,6 +181,32 @@ export async function referenceCaptures(
   page?: { offset: number; limit: number },
 ): Promise<LocalReferenceCapture[]> {
   if (reference.snapshotId === null) return [];
+  const inventory = await referenceInventory(context, reference.snapshotId);
+  if (inventory) {
+    const captures = [...inventory.captures].sort((first, second) => {
+      const itemOrder = Buffer.compare(Buffer.from(first.itemKey), Buffer.from(second.itemKey));
+      return (
+        itemOrder || Buffer.compare(Buffer.from(first.variantKey), Buffer.from(second.variantKey))
+      );
+    });
+    return captures
+      .slice(page?.offset ?? 0, page ? page.offset + page.limit : undefined)
+      .map((capture) => ({
+        captureId: capture.id,
+        itemKey: capture.itemKey,
+        variantKey: capture.variantKey,
+        profileDigest: capture.renderingProfileDigest,
+        imageId: capture.image.id,
+        image: {
+          digest: capture.image.digest,
+          mediaType: capture.image.contentType,
+          bytes: capture.image.bytes,
+          width: capture.image.width,
+          height: capture.image.height,
+        },
+        path: `/v1/runs/${runId}/reference/images/${capture.image.id}`,
+      }));
+  }
   const rows = await context.database
     .prepare(`SELECT capture.id AS captureId,capture.item_key AS itemKey,capture.variant_key AS variantKey,
     COALESCE(profile.rendering_digest,capture.profile_digest) AS profileDigest,
@@ -86,7 +240,7 @@ export async function referenceCaptures(
   }));
 }
 
-async function currentReference(
+export async function currentReference(
   context: ApiContext,
   reference: LocalReferenceBinding,
   pullRequest: boolean,
@@ -114,7 +268,7 @@ async function currentReference(
   } else {
     const snapshot = await context.database
       .prepare(
-        "SELECT 1 AS found FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND snapshot.storage_mode='source' AND retention.byte_state='live' AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id=snapshot.id AND copied!=1)",
+        "SELECT 1 AS found FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND snapshot.storage_mode='source' AND retention.byte_state='live' AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR (snapshot.inventory_key IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id=snapshot.id AND copied!=1)))",
       )
       .bind(reference.snapshotId, project.id)
       .first();
@@ -178,6 +332,7 @@ export async function referencePage(
       captureCount: 0,
     };
     const captures = await referenceCaptures(context, run.id, provisional);
+    const inventory = await referenceInventory(context, snapshotId);
     if (captures.length > context.configuration.limits.maximumCaptures)
       throw new IncompleteError("The reference inventory exceeds the configured capture limit.");
     reference = {
@@ -201,19 +356,45 @@ export async function referencePage(
           ? [
               assertion(
                 context.database,
-                "(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=?)=?",
+                inventory
+                  ? "EXISTS(SELECT 1 FROM visonaut_snapshots WHERE id=? AND inventory_verified=1 AND capture_count=?)"
+                  : "(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=?)=?",
                 [snapshotId, captures.length],
               ),
+              ...(inventory
+                ? [
+                    assertion(
+                      context.database,
+                      "NOT EXISTS(SELECT 1 FROM json_each(?) source WHERE NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE id=source.value AND byte_state='live'))",
+                      [
+                        JSON.stringify([
+                          ...new Set(inventory.captures.map((capture) => capture.image.runId)),
+                        ]),
+                      ],
+                    ),
+                  ]
+                : []),
               statement(
                 context.database,
                 "INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'local-submit',?)",
                 [snapshotId, owner(run.id)],
               ),
-              statement(
-                context.database,
-                "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT image.run_id,?,'comparison' FROM visonaut_snapshot_images member JOIN visonaut_images image ON image.id=member.image_id WHERE member.snapshot_id=?",
-                [owner(run.id), snapshotId],
-              ),
+              inventory
+                ? statement(
+                    context.database,
+                    "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)",
+                    [
+                      owner(run.id),
+                      JSON.stringify([
+                        ...new Set(inventory.captures.map((capture) => capture.image.runId)),
+                      ]),
+                    ],
+                  )
+                : statement(
+                    context.database,
+                    "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT image.run_id,?,'comparison' FROM visonaut_snapshot_images member JOIN visonaut_images image ON image.id=member.image_id WHERE member.snapshot_id=?",
+                    [owner(run.id), snapshotId],
+                  ),
             ]
           : []),
         statement(
@@ -286,6 +467,13 @@ export async function referenceImage(
   if (!stored || (await digestJson(stored.reference)) !== (await digestJson(reference)))
     throw new SecurityError("reference_scope", 403, "The reference binding differs.");
   await currentReference(context, reference, stored.pullRequest);
+  const imageIds = await referenceImageIds(context, reference.snapshotId);
+  if (imageIds) {
+    if (!imageIds.has(imageId)) {
+      throw new SecurityError("reference_scope", 404, "The image is not in this Submit reference.");
+    }
+    return publicImage(request, context, imageId);
+  }
   const found = await context.database
     .prepare(
       "SELECT 1 AS found FROM visonaut_snapshot_images WHERE snapshot_id=? AND image_id=? AND copied=1",

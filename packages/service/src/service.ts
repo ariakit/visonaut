@@ -18,6 +18,8 @@ import type {
   RunRow,
   SnapshotRow,
   ValidatedImage,
+  CaptureInventoryPointer,
+  ReferenceCaptureInput,
 } from "./types.ts";
 import {
   reserveRun,
@@ -43,6 +45,7 @@ import {
   pendingSnapshotCopies,
   snapshotCopies,
   recordSnapshotCopy,
+  recordInventoryVerification,
   promote,
 } from "./baseline-promotion.ts";
 
@@ -179,7 +182,7 @@ export class Service {
 
   async referenceCandidates(projectId: string) {
     return this.rows<SnapshotRow>(
-      "SELECT snapshot.* FROM visonaut_snapshots snapshot WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND snapshot.storage_mode='source' AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1) ORDER BY snapshot.created_at DESC, snapshot.id",
+      "SELECT snapshot.* FROM visonaut_snapshots snapshot WHERE snapshot.project_id = ? AND snapshot.reference_eligible = 1 AND snapshot.storage_mode='source' AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR (snapshot.inventory_key IS NULL AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.snapshot_id = snapshot.id AND image.copied != 1))) ORDER BY snapshot.created_at DESC, snapshot.id",
       [projectId],
     );
   }
@@ -191,6 +194,7 @@ export class Service {
     now: number;
     expectedBaselineRevision?: number;
     localComparison: LocalComparisonReceipt;
+    referenceCaptures?: ReferenceCaptureInput[];
   }) {
     return createLocalComparison(this, input);
   }
@@ -257,6 +261,8 @@ export class Service {
     prefix: string;
     now: number;
     copyLimit?: number;
+    inventory?: CaptureInventoryPointer;
+    imageRunIds?: string[];
   }) {
     return preparePromotion(this, input);
   }
@@ -281,6 +287,15 @@ export class Service {
     digest: string;
   }) {
     return recordSnapshotCopy(this, input);
+  }
+
+  /** Call after the complete immutable inventory and new originals are verified. */
+  async recordInventoryVerification(input: {
+    snapshotId: string;
+    objectKey: string;
+    digest: string;
+  }) {
+    return recordInventoryVerification(this, input);
   }
 
   async promote(input: {

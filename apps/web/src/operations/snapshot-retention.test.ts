@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { closedRunRetentionMs } from "@visonaut/service";
-import { captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
+import { captured, context, digest, reserve, TestDatabase } from "./test-fixtures.ts";
 import {
   expireComparisonReferences,
   expireSnapshotImages,
@@ -32,6 +32,40 @@ function readyArchive(database: TestDatabase, id: string) {
     )
     .run(id, `history/${id}/generation/manifest.json`, "a".repeat(64));
 }
+
+it("retains imported inventory metadata and inherited image owners after protected byte expiry", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await snapshot(database, fixture, "imported");
+  const inventoryKey = `baselines/import/imported/inventory/${digest("inventory-metadata")}.json`;
+  const originalKey = "baselines/import/imported/images/original";
+  await fixture.images.put(inventoryKey, "inventory-metadata");
+  await fixture.images.put(originalKey, "original-image-bytes");
+  await fixture.images.delete("baselines/imported/original");
+  database.connection
+    .prepare(
+      "UPDATE visonaut_snapshots SET prefix='baselines/import/imported',inventory_key=?,inventory_digest=?,inventory_bytes=18,capture_count=1,inventory_verified=1 WHERE id='imported'",
+    )
+    .run(inventoryKey, digest("inventory-metadata"));
+  database.connection.exec(
+    "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('imported','promotion:descendant','baseline')",
+  );
+  await expireSnapshotImages(fixture.context);
+  fixture.state.time += 86400001;
+  await expireSnapshotImages(fixture.context);
+  expect(fixture.images.objects.has(originalKey)).toBe(true);
+  database.connection.exec("DELETE FROM work_retention_pins WHERE owner='promotion:descendant'");
+  expect((await expireSnapshotImages(fixture.context)).completed).toEqual(["imported"]);
+  expect(fixture.images.objects.has(originalKey)).toBe(false);
+  expect(fixture.images.objects.has(inventoryKey)).toBe(true);
+  expect(
+    await database
+      .prepare(
+        "SELECT inventory_key,inventory_verified FROM visonaut_snapshots WHERE id='imported'",
+      )
+      .first(),
+  ).toEqual({ inventory_key: inventoryKey, inventory_verified: 1 });
+});
 
 it("pages past a protected current snapshot, then deletes only an unreferenced old prefix after its grace and archive", async () => {
   using database = new TestDatabase();
