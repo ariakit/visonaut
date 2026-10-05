@@ -1,11 +1,15 @@
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { AppHeader } from "../components/app-shell.tsx";
+import { UserMenu } from "../components/user-menu.tsx";
+import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
+import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
+import { LogIn, RotateCcw } from "lucide-react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
-  ShellHeader,
   ShellMain,
   ShellMainBody,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
@@ -50,15 +54,10 @@ type RunState = { status: "guest" } | { status: "ready"; model: ReviewModel };
 
 function RunShell({ children }: { children: ReactNode }) {
   return (
-    <Shell className="h-dvh gap-3 p-3">
-      <ShellHeader $layer="canvas" className="flex items-center justify-between gap-3">
-        <Link to="/" className="font-semibold">
-          Visonaut
-        </Link>
-        <Link to="/">All runs</Link>
-      </ShellHeader>
+    <Shell $layer="canvas" className="[--shell-header-step:calc(48px/14)]">
+      <AppHeader />
       <ShellMain>
-        <ShellMainBody className="grid place-items-center p-6">{children}</ShellMainBody>
+        <ShellMainBody className="min-h-[60dvh] items-center">{children}</ShellMainBody>
       </ShellMain>
     </Shell>
   );
@@ -67,7 +66,9 @@ function RunShell({ children }: { children: ReactNode }) {
 function RunLoading() {
   return (
     <RunShell>
-      <p role="status">Checking access and loading this run…</p>
+      <Text render={<p />} role="status" className="text-sm opacity-60">
+        Checking access and loading this run…
+      </Text>
     </RunShell>
   );
 }
@@ -82,15 +83,27 @@ function RunError({ error, reset }: { error: unknown; reset(): void }) {
         : "The run could not be loaded. Please retry.";
   return (
     <RunShell>
-      <Frame $layer="canvas" $rounded="lg" $border className="grid max-w-lg gap-4 p-6">
-        <h1 className="text-xl font-semibold">This run could not be opened</h1>
+      <Frame
+        $layer="canvas"
+        $lighten={2}
+        $rounded="2xl"
+        $p={6}
+        $border
+        className="grid gap-4 text-sm"
+      >
+        <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">
+          This run could not be opened
+        </Text>
         <p role="alert">{message}</p>
         <Button
           onClick={() => {
             void router.invalidate().then(reset);
           }}
         >
-          Retry
+          <ButtonSlot>
+            <RotateCcw />
+          </ButtonSlot>
+          <ButtonLabel>Retry</ButtonLabel>
         </Button>
       </Frame>
     </RunShell>
@@ -191,39 +204,42 @@ function RunPage({
         commands={commands}
         route={route}
         headerEnd={
-          state.model.preview ? undefined : (
-            <>
-              {actionError && (
-                <p role="alert" className="text-sm text-red-400">
-                  {actionError}
-                </p>
-              )}
-              <Button
-                $kind="flat"
-                $rounded="lg"
-                disabled={action !== null}
-                onClick={() => void signOut()}
-              >
-                {action === "sign-out" ? "Signing out…" : "Sign out"}
-              </Button>
-            </>
-          )
+          <UserMenu
+            preview={state.model.preview}
+            signingOut={action === "sign-out"}
+            error={actionError}
+            onSignOut={() => void signOut()}
+          />
         }
       />
     );
   }
   return (
     <RunShell>
-      <Frame $layer="canvas" $rounded="lg" $border className="grid max-w-lg gap-4 p-6">
-        <h1 className="text-xl font-semibold">Sign in to review this run</h1>
+      <Frame
+        $layer="canvas"
+        $lighten={2}
+        $rounded="2xl"
+        $p={6}
+        $border
+        className="grid gap-4 text-sm"
+      >
+        <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">
+          Sign in to review this run
+        </Text>
         <p>This review is available to Ariakit maintainers.</p>
         {actionError && (
-          <p role="alert" className="text-red-400">
+          <p role="alert" className="ak-text ak-text-danger">
             {actionError}
           </p>
         )}
         <Button disabled={action !== null} onClick={() => void signIn()}>
-          {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
+          <ButtonSlot>
+            <LogIn />
+          </ButtonSlot>
+          <ButtonLabel>
+            {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
+          </ButtonLabel>
         </Button>
       </Frame>
     </RunShell>

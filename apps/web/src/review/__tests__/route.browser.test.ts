@@ -71,7 +71,7 @@ for (const queued of [false, true]) {
     });
     await page.goto("/src/review/__tests__/route-fixture.html");
     await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-    await page.getByRole("button", { name: "Approve A", exact: true }).click();
+    await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText(`Reference: ${reference}.`);
     if (queued) {
       await expect(page.getByRole("alert")).toContainText("The server will continue processing");
@@ -98,7 +98,7 @@ test("dashboard loads its protected run list without a separate identity request
     });
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  await expect(page.getByText("No review work")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All reviews are complete." })).toBeVisible();
   expect(requests).toContain("/api/runs");
   expect(requests).not.toContain("/api/me");
 });
@@ -115,7 +115,77 @@ test("dashboard offers sign-in when the run list rejects its session", async ({ 
   expect(requests).not.toContain("/api/me");
 });
 
-test("dashboard keeps runs in a table and operation alerts in the header", async ({ page }) => {
+for (const [screen, routeEntry] of [
+  ["dashboard", "/"],
+  ["review", "/runs/run-42"],
+] as const) {
+  test(`${screen} Account menu keeps sign-out errors visible and retries without an identity request`, async ({
+    page,
+  }) => {
+    const requests: string[] = [];
+    let resolveRetry = () => {};
+    const retryResponse = new Promise<void>((resolve) => {
+      resolveRetry = resolve;
+    });
+    let signOutRequests = 0;
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      requests.push(path);
+      if (path === "/api/auth/sign-out") {
+        expect(route.request().method()).toBe("POST");
+        signOutRequests += 1;
+        if (signOutRequests === 2) {
+          await retryResponse;
+        }
+        return route.fulfill({
+          status: 503,
+          json: { code: "SERVICE_UNAVAILABLE", message: "Sign-out service unavailable." },
+        });
+      }
+      if (path === "/api/runs") {
+        return route.fulfill({
+          json: { runs: [], project: { repository: "ariakit/ariakit", baselineRevision: 1 } },
+        });
+      }
+      if (path === "/api/operations") {
+        return route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } });
+      }
+      if (path === "/api/runs/run-42") {
+        return route.fulfill({ json: compactReviewModel(fixtureModel()) });
+      }
+      return route.fulfill({ status: 404, json: { error: { code: "not_found" } } });
+    });
+    await page.goto(
+      `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(routeEntry)}`,
+    );
+    const account = page.getByRole("button", { name: "Account menu", exact: true });
+    const menu = page.getByRole("dialog", { name: "Account", exact: true });
+    await account.click();
+    await menu.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect(menu.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
+    await expect(menu.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
+    expect(signOutRequests).toBe(1);
+
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(account).toBeFocused();
+    await account.click();
+    await expect(menu.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
+    await menu.getByRole("button", { name: "Sign out", exact: true }).click();
+    await expect.poll(() => signOutRequests).toBe(2);
+    await expect(menu.getByRole("button", { name: "Signing out…", exact: true })).toBeDisabled();
+    await expect(menu.getByRole("alert")).toHaveCount(0);
+    resolveRetry();
+    await expect(menu.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
+    await expect(menu.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
+    expect(signOutRequests).toBe(2);
+    expect(requests).not.toContain("/api/me");
+  });
+}
+
+test("dashboard keeps recovery runs available and operation alerts in the header", async ({
+  page,
+}) => {
   await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {
@@ -154,8 +224,13 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
-  await expect(page.getByRole("table", { name: "Review work" })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Pull request/ })).toContainText("needs fresh Submit");
+  const recovery = page.getByRole("region", { name: "Needs attention" });
+  await expect(recovery.getByRole("heading", { name: "Pull request" })).toBeVisible();
+  await expect(recovery).toContainText("New capture needed · Attempt 2");
+  await expect(recovery.getByRole("link", { name: "Open run" })).toHaveAttribute(
+    "href",
+    "/runs/run-42",
+  );
   const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
   await expect(alerts).toBeVisible();
   await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
@@ -166,24 +241,25 @@ test("dashboard keeps runs in a table and operation alerts in the header", async
   await page.getByRole("button", { name: "Refresh runs" }).click();
   await expect.poll(() => operationsLoads).toBe(2);
   await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
+  await page.getByRole("link", { name: "View history", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  const table = page.getByRole("table", { name: "Review work" });
+  const table = page.getByRole("table", { name: "Latest 100 runs" });
   await expect(table).toBeVisible();
-  await expect(table.getByRole("columnheader", { name: "State" })).toBeVisible();
-  await expect(table.locator(".dashboard-run-secondary").first()).toBeHidden();
-  const mobileDetails = table.locator(".dashboard-run-mobile-meta").first();
+  await expect(table.getByRole("columnheader", { name: "Result" })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Created" })).toBeHidden();
+  const mobileDetails = table.getByRole("link", { name: /Pull request/ });
   await expect(mobileDetails).toBeVisible();
-  await expect(table).toContainText("0123456789ab");
-  await expect(table).toContainText("Attempt 2");
+  await expect(mobileDetails).toContainText("0123456789ab");
+  await expect(mobileDetails).toContainText("Attempt 2");
   await expect(mobileDetails).toContainText("Sep 26, 2026");
-  await expect(page.getByText("ariakit/ariakit", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText("ariakit/ariakit", { exact: true })).toBeVisible();
   expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
     await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 320, height: 700 });
   await expect(mobileDetails).toBeInViewport();
-  await expect(table.locator(".dashboard-run-state-badge").first()).toBeInViewport();
+  await expect(table.getByText("New capture needed", { exact: true })).toBeInViewport();
   await expect(alerts.locator(".dashboard-alert-count")).toBeInViewport();
   expect(
     await alerts.evaluate((button) => {
@@ -233,8 +309,10 @@ test("opening a historical link loads its selected comparison", async ({ page })
   expect(requests).not.toContain("/api/me");
   expect(requests).not.toContain("/api/review-sessions");
   await page.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(page.locator(".review-metadata")).toContainText("history/one");
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
+    "history/one",
+  );
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   expect(errors).toEqual([]);
 });
 
@@ -455,14 +533,17 @@ test("the work list shows an old PR title while recent history stays separate", 
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  const work = page.getByRole("table", { name: "Review work" });
-  await expect(work.getByRole("link", { name: /#104 · Dialog focus styles/ })).toHaveAttribute(
+  const work = page.getByRole("region", { name: "Ready to review" });
+  const run = work.getByRole("article").filter({ hasText: "Dialog focus styles" });
+  await expect(run.getByRole("heading", { name: "Dialog focus styles" })).toBeVisible();
+  await expect(run).toContainText("#104");
+  await expect(run.getByRole("link", { name: "Review changes" })).toHaveAttribute(
     "href",
     "/runs/old-pending",
   );
-  await expect(work).toContainText("3 pending · 1 rejected");
+  await expect(run).toContainText("3 views await approval, including 1 rejected.");
   await expect(work).not.toContainText("#105");
-  await page.getByRole("link", { name: "History", exact: true }).click();
+  await page.getByRole("link", { name: "View history", exact: true }).click();
   await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
     "#105 · Pull request",
   );
@@ -502,7 +583,7 @@ test("a preview review has image fixtures and no live actions or login", async (
     page.getByText("Preview fixtures are read-only. GitHub login is disabled.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
-  for (const name of ["Approve A", "Reject X", "Undo ⌘/Ctrl Z"]) {
+  for (const name of ["Approve & next A", "Reject view X", "Undo"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
@@ -587,8 +668,8 @@ test("an early conflict keeps later decisions chained and preserves newer confir
     return route.fulfill({ json: compactReviewModel(initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
-  const approve = page.getByRole("button", { name: "Approve A", exact: true });
-  const reject = page.getByRole("button", { name: "Reject X", exact: true });
+  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+  const reject = page.getByRole("button", { name: "Reject view X", exact: true });
   await approve.click();
   await expect(reject).toBeEnabled();
   await reject.click();

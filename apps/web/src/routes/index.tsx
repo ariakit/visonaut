@@ -1,14 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useEffect, useState } from "react";
+import {
+  ArrowRightIcon,
+  CheckCheckIcon,
+  CircleAlertIcon,
+  Clock3Icon,
+  GitCommitHorizontalIcon,
+  GitPullRequestIcon,
+  RotateCcwIcon,
+  SearchIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
+import { AppHeader } from "../components/app-shell.tsx";
+import { UserMenu } from "../components/user-menu.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import { Badge, BadgeLabel } from "../components/ariakit/components/badge.ariakit.react.tsx";
-import { Nav, NavLink } from "../components/ariakit/components/nav.ariakit.react.tsx";
+import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
+import {
+  Badge,
+  BadgeLabel,
+  BadgeSlot,
+} from "../components/ariakit/components/badge.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import {
   Shell,
-  ShellHeader,
-  ShellHeaderCenter,
   ShellMain,
   ShellMainBody,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
@@ -19,11 +35,10 @@ import {
   TableRowGroup,
 } from "../components/ariakit/components/table.ariakit.react.tsx";
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
-import "../review.css";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): { view?: "history" } => ({
-    view: search.view === "history" ? "history" : undefined,
+  validateSearch: (search: Record<string, unknown>): { view?: "history" | "service" } => ({
+    view: search.view === "history" || search.view === "service" ? search.view : undefined,
   }),
   component: Index,
 });
@@ -113,7 +128,14 @@ function kindLabel(kind: string) {
 }
 
 function stateLabel(state: string) {
-  if (state === "needs-recompare") return "needs fresh Submit";
+  if (state === "needs-recompare") return "New capture needed";
+  if (state === "needs-review" || state === "reviewing") return "Needs review";
+  if (state === "incomplete") return "Waiting for screenshots";
+  if (state === "comparing") return "Comparing images";
+  if (state === "passed") return "Passed";
+  if (state === "rejected") return "Changes rejected";
+  if (state === "failed") return "Run failed";
+  if (state === "superseded") return "Replaced by a newer run";
   return state.replaceAll("_", " ").replaceAll("-", " ");
 }
 
@@ -193,7 +215,7 @@ function Index() {
     try {
       const result = await createAuthClient().signIn.social({
         provider: "github",
-        callbackURL: "/",
+        callbackURL: view ? `/?view=${view}` : "/",
       });
       if (result.error) throw new Error("Sign-in could not start. Please try again.");
     } catch (error) {
@@ -217,164 +239,137 @@ function Index() {
     }
   };
 
-  if (state.status === "guest") {
-    return (
-      <Frame
-        $layer="canvas"
-        $p={6}
-        render={<main />}
-        className="max-w-xl mx-auto mt-[12dvh] text-sm"
-      >
-        <div className="text-base font-semibold">Visonaut</div>
-        <h1 className="text-3xl font-semibold my-6">Every detail, reviewed.</h1>
-        <p className="my-5 ak-ink-60">Visual regression review for Ariakit maintainers.</p>
-        <Button className="text-xs" disabled={action !== null} onClick={() => void signIn()}>
-          {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
-        </Button>
-        {actionError && <p role="alert">{actionError}</p>}
-        <p className="text-xs ak-ink-60 mt-6">
-          Access requires write permission to the configured repository.
-        </p>
-      </Frame>
-    );
-  }
+  const refresh = () => {
+    setState({ status: "loading" });
+    setReload((value) => value + 1);
+  };
 
   return (
-    <Shell className="dashboard text-sm">
-      <ShellHeader
-        $height="lg"
-        $stackCenter
-        className="z-20"
-        start={
-          <Link to="/" className="text-base font-semibold">
-            Visonaut
-          </Link>
-        }
-        center={
-          <ShellHeaderCenter $shrink>
-            <span className="block truncate max-w-[40vw] text-xs ak-ink-60">
-              {state.status === "ready" ? state.repository : "Repository"}
-            </span>
-          </ShellHeaderCenter>
-        }
+    <Shell $layer="canvas" className="dashboard text-sm [--shell-header-step:calc(48px/14)]">
+      <AppHeader
+        active={view === "history" ? "history" : view === "service" ? "service" : "queue"}
+        repository={state.status === "ready" ? state.repository : undefined}
         end={
           <div className="flex items-center gap-2">
-            {state.status === "ready" && !state.preview && (
+            {state.status === "ready" && !state.preview && view !== "service" && (
               <OperationsAttention onAccessDenied={onAccessDenied} />
             )}
-            {state.status !== "loading" && !(state.status === "ready" && state.preview) && (
-              <Button
-                className="text-xs"
-                $kind="flat"
-                $rounded="lg"
-                disabled={action !== null}
-                onClick={() => void signOut()}
-              >
-                {action === "sign-out" ? "Signing out…" : "Sign out"}
-              </Button>
+            {state.status !== "loading" && state.status !== "guest" && (
+              <UserMenu
+                preview={state.status === "ready" && state.preview}
+                signingOut={action === "sign-out"}
+                error={actionError}
+                onSignOut={() => void signOut()}
+              />
             )}
           </div>
         }
       />
-      <ShellMain $maxWidth="80rem" $p="clamp(1rem, 2.5vw, 2rem)">
-        <ShellMainBody className="dashboard-main">
-          {actionError && (
-            <p className="text-sm ak-ink-danger" role="alert">
+      <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
+        <ShellMainBody className="dashboard-main py-4 sm:py-6">
+          {actionError && (state.status === "loading" || state.status === "guest") && (
+            <Text render={<p />} className="mb-5 text-sm ak-ink-danger" role="alert">
               {actionError}
-            </p>
+            </Text>
           )}
-          {state.status === "loading" && <p role="status">Checking access and loading runs…</p>}
+          {state.status === "loading" && (
+            <Text render={<p />} className="py-12 ak-ink-60" role="status">
+              Checking access and loading runs…
+            </Text>
+          )}
+          {state.status === "guest" && (
+            <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center max-w-4xl mx-auto py-8 sm:py-16">
+              <div>
+                <Text
+                  render={<p />}
+                  className="text-xs font-medium uppercase tracking-widest ak-ink-60"
+                >
+                  Visual regression review
+                </Text>
+                <Text
+                  render={<h1 />}
+                  className="text-4xl sm:text-5xl font-semibold tracking-tight leading-tight mt-4"
+                >
+                  Every change.
+                  <br />A clear decision.
+                </Text>
+                <Text render={<p />} className="text-base leading-relaxed ak-ink-60 mt-5">
+                  Compare screenshots and approve expected changes in your repository.
+                </Text>
+              </div>
+              <Frame $layer $lighten $border $rounded="2xl" $p={7} className="grid gap-5">
+                <Frame $layer="primary" $rounded="xl" $p={3} className="w-fit">
+                  <ShieldCheckIcon size={24} aria-hidden="true" />
+                </Frame>
+                <Text render={<h2 />} className="text-2xl font-semibold tracking-tight">
+                  Review visual changes.
+                </Text>
+                <Text render={<p />} className="text-sm leading-relaxed ak-ink-60">
+                  Use a GitHub account with write access to this repository.
+                </Text>
+                <Button $layer="primary" disabled={action !== null} onClick={() => void signIn()}>
+                  <ButtonLabel>
+                    {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
+                  </ButtonLabel>
+                  <ButtonSlot>
+                    <ArrowRightIcon />
+                  </ButtonSlot>
+                </Button>
+              </Frame>
+            </div>
+          )}
           {(state.status === "error" || state.status === "forbidden") && (
-            <Frame $layer $lighten $rounded="lg" $border render={<section />} className="space-y-3">
-              <h1>
+            <Frame
+              $layer
+              $lighten
+              $rounded="2xl"
+              $border
+              $p={6}
+              render={<section />}
+              className="max-w-xl mx-auto my-10 grid gap-4"
+            >
+              <CircleAlertIcon size={24} className="ak-ink-warning" aria-hidden="true" />
+              <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">
                 {state.status === "forbidden"
                   ? "Repository access required"
-                  : "Runs could not be loaded"}
-              </h1>
-              <p role="alert">{state.message}</p>
-              <Button
-                className="text-xs"
-                onClick={() => {
-                  setState({ status: "loading" });
-                  setReload((value) => value + 1);
-                }}
-              >
-                Retry
-              </Button>
+                  : "The review queue could not be loaded"}
+              </Text>
+              <Text render={<p />} className="ak-ink-60 leading-relaxed" role="alert">
+                {state.message}
+              </Text>
+              <div className="flex flex-wrap gap-2">
+                <Button $border onClick={refresh}>
+                  <ButtonLabel>Retry</ButtonLabel>
+                </Button>
+                {state.status === "forbidden" && (
+                  <Button
+                    $layer="primary"
+                    disabled={action !== null}
+                    onClick={() => void signOut()}
+                  >
+                    <ButtonLabel>Use another account</ButtonLabel>
+                  </Button>
+                )}
+              </div>
             </Frame>
           )}
           {state.status === "ready" && (
             <>
-              <Frame $p={0} className="flex flex-wrap items-end justify-between gap-4 mb-5">
-                <div>
-                  <p className="text-xs ak-ink-60">
-                    {state.preview
-                      ? "Preview fixtures · GitHub login is disabled"
-                      : "Visual regression review"}
-                  </p>
-                  <h1 className="text-2xl font-semibold">Review work</h1>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs ak-ink-60">
-                  <span>
-                    {state.baselineRevision > 0
-                      ? `Baseline revision ${state.baselineRevision}`
-                      : "No baseline yet"}
-                  </span>
-                  <Button
-                    onClick={() => {
-                      setState({ status: "loading" });
-                      setReload((value) => value + 1);
-                    }}
-                  >
-                    Refresh runs
-                  </Button>
-                </div>
-              </Frame>
-              <Nav
-                $layout="horizontal"
-                $rounded="none"
-                $forceRounded
-                $p={0}
-                $gap={1}
-                glider={{ $kind: "bar", $barOffset: "frame" }}
-                aria-label="Run views"
-                className="border-b border-(--ak-edge) mb-4"
-              >
-                <NavLink
-                  $kind="flat"
-                  $selectedPush={false}
-                  aria-current={view !== "history" ? "page" : undefined}
-                  render={<Link to="/" search={{}} />}
-                >
-                  Needs attention ({state.actionable.length})
-                </NavLink>
-                <NavLink
-                  $kind="flat"
-                  $selectedPush={false}
-                  aria-current={view === "history" ? "page" : undefined}
-                  render={<Link to="/" search={{ view: "history" }} />}
-                >
-                  History
-                </NavLink>
-              </Nav>
-              {view === "history" ? (
-                <>
-                  <p className="text-xs ak-ink-60 my-3">
-                    Latest 100 runs. Older work that needs attention stays in the review list.
-                  </p>
-                  <RunTable
-                    runs={state.runs}
-                    title="Latest 100 runs"
-                    empty="No runs yet"
-                    description="The first complete capture run will appear here."
-                  />
-                </>
+              {state.preview && (
+                <Text render={<p />} className="text-xs ak-ink-60 mb-6">
+                  Preview fixtures · GitHub login is disabled
+                </Text>
+              )}
+              {view === "service" ? (
+                <OperationsAttention onAccessDenied={onAccessDenied} layout="page" />
+              ) : view === "history" ? (
+                <RunHistory runs={state.runs} repository={state.repository} onRefresh={refresh} />
               ) : (
-                <RunTable
+                <ReviewQueue
                   runs={state.actionable}
-                  title="Review work"
-                  empty="No review work"
-                  description="All captures that need review or recovery appear here."
+                  repository={state.repository}
+                  baselineRevision={state.baselineRevision}
+                  onRefresh={refresh}
                 />
               )}
             </>
@@ -385,74 +380,373 @@ function Index() {
   );
 }
 
-function RunTable({
+function RunStatus({ state }: { state: string }) {
+  const color = stateColor(state);
+  const Icon =
+    state === "passed" ? CheckCheckIcon : color === "danger" ? CircleAlertIcon : Clock3Icon;
+  return (
+    <Badge $layer={color ?? true} $rounded="full" className="text-xs max-w-full">
+      <BadgeSlot>
+        <Icon aria-hidden="true" />
+      </BadgeSlot>
+      <BadgeLabel className="whitespace-normal">{stateLabel(state)}</BadgeLabel>
+    </Badge>
+  );
+}
+
+function RunIdentity({ run }: { run: DashboardRun }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs ak-ink-60">
+      <Text className="inline-flex items-center gap-1.5">
+        <GitCommitHorizontalIcon size={14} aria-hidden="true" />
+        <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code>
+      </Text>
+      <Text>Attempt {run.attempt}</Text>
+      <Text render={<time />}>{runDate(run.createdAt)}</Text>
+    </div>
+  );
+}
+
+interface ReviewQueueProps {
+  runs: DashboardRun[];
+  repository: string;
+  baselineRevision: number;
+  onRefresh(): void;
+}
+
+function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQueueProps) {
+  const inProgress = runs.filter((run) => run.state === "comparing" || run.state === "incomplete");
+  const recovery = runs.filter((run) =>
+    ["needs-recompare", "failed", "superseded"].includes(run.state),
+  );
+  const review = runs.filter((run) => !inProgress.includes(run) && !recovery.includes(run));
+  const pending = runs.reduce((total, run) => total + run.pending, 0);
+  const rejected = runs.reduce((total, run) => total + run.rejected, 0);
+  return (
+    <>
+      <div className="flex flex-wrap justify-between items-start gap-5">
+        <div>
+          <Text render={<p />} className="text-xs uppercase tracking-widest font-medium ak-ink-60">
+            {repository}
+          </Text>
+          <Text render={<h1 />} className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3">
+            Your review queue.
+          </Text>
+          <Text render={<p />} className="text-sm leading-relaxed ak-ink-60 mt-3">
+            {review.length
+              ? `${review.length} run${review.length === 1 ? " is" : "s are"} ready for review.`
+              : runs.length
+                ? "Captures in progress and runs that need attention appear here."
+                : "No runs need a decision or recovery."}
+          </Text>
+        </div>
+        <Button $border onClick={onRefresh}>
+          <ButtonSlot>
+            <RotateCcwIcon />
+          </ButtonSlot>
+          <ButtonLabel>Refresh runs</ButtonLabel>
+        </Button>
+      </div>
+      <div className="grid grid-cols-3 my-8 border-y border-(--ak-edge) py-5">
+        {[
+          [review.length, "Runs to review"],
+          [pending, "Awaiting approval"],
+          [rejected, "Rejected views"],
+        ].map(([count, label], index) => (
+          <div
+            key={label}
+            className={`min-w-0 px-2 sm:px-6 ${index ? "border-l border-(--ak-edge)" : "sm:pl-0"}`}
+          >
+            <Text className="block text-3xl font-medium tracking-tight tabular-nums">{count}</Text>
+            <Text className="block text-xs ak-ink-60 mt-1">{label}</Text>
+          </div>
+        ))}
+      </div>
+      {review.length > 0 && (
+        <section aria-labelledby="ready-heading">
+          <Text
+            render={<h2 id="ready-heading" />}
+            className="text-xs uppercase tracking-widest font-semibold ak-ink-60 mb-4"
+          >
+            Ready to review
+          </Text>
+          <div className="grid gap-4">
+            {review.map((run) => (
+              <Frame
+                key={run.id}
+                $layer
+                $lighten
+                $border
+                $rounded="2xl"
+                $p={6}
+                render={<article />}
+                className="grid gap-5"
+              >
+                <div className="flex flex-wrap items-center gap-3">
+                  <Frame $layer $darken={3} $rounded="lg" $p={2}>
+                    <GitPullRequestIcon size={18} aria-hidden="true" />
+                  </Frame>
+                  <Text className="text-xs ak-ink-60">
+                    {run.pullRequestNumber ? `#${run.pullRequestNumber}` : kindLabel(run.kind)}
+                  </Text>
+                  <RunStatus state={run.state} />
+                </div>
+                <div>
+                  <Text
+                    render={<h3 />}
+                    className="text-xl sm:text-2xl font-semibold tracking-tight wrap-anywhere"
+                  >
+                    {run.title ?? kindLabel(run.kind)}
+                  </Text>
+                  <Text render={<p />} className="text-sm ak-ink-60 mt-3">
+                    {run.pending} view{run.pending === 1 ? "" : "s"} await approval
+                    {run.rejected ? `, including ${run.rejected} rejected.` : "."}
+                  </Text>
+                </div>
+                <RunIdentity run={run} />
+                <Button
+                  $layer="primary"
+                  className="justify-self-start"
+                  render={<Link to="/runs/$runId" params={{ runId: run.id }} />}
+                >
+                  <ButtonLabel>Review changes</ButtonLabel>
+                  <ButtonSlot>
+                    <ArrowRightIcon />
+                  </ButtonSlot>
+                </Button>
+              </Frame>
+            ))}
+          </div>
+        </section>
+      )}
+      {!runs.length && (
+        <Frame
+          $layer
+          $lighten
+          $border
+          $rounded="2xl"
+          $p={8}
+          className="grid justify-items-center text-center gap-3"
+        >
+          <CheckCheckIcon size={32} className="ak-ink-success" aria-hidden="true" />
+          <Text render={<h2 />} className="text-xl font-semibold">
+            {baselineRevision ? "All reviews are complete." : "No captures yet."}
+          </Text>
+          <Text render={<p />} className="text-sm ak-ink-60 max-w-md">
+            {baselineRevision
+              ? "New visual changes will appear here."
+              : "Run the visual test workflow to create your first baseline."}
+          </Text>
+        </Frame>
+      )}
+      {inProgress.length > 0 && <RunGroup title="In progress" runs={inProgress} />}
+      {recovery.length > 0 && <RunGroup title="Needs attention" runs={recovery} />}
+      <div className="flex flex-wrap items-center gap-3 mt-8 text-xs ak-ink-60">
+        <ShieldCheckIcon size={15} aria-hidden="true" />
+        <Text>
+          {baselineRevision ? `Baseline revision ${baselineRevision}` : "No baseline yet"}
+        </Text>
+        <Button className="sm:ml-auto" render={<Link to="/" search={{ view: "history" }} />}>
+          <ButtonLabel>View history</ButtonLabel>
+          <ButtonSlot>
+            <ArrowRightIcon />
+          </ButtonSlot>
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function RunGroup({ title, runs }: { title: string; runs: DashboardRun[] }) {
+  return (
+    <section className="mt-8" aria-label={title}>
+      <Text
+        render={<h2 />}
+        className="text-xs uppercase tracking-widest font-semibold ak-ink-60 mb-4"
+      >
+        {title}
+      </Text>
+      <div className="grid gap-3">
+        {runs.map((run) => (
+          <Frame
+            key={run.id}
+            $layer
+            $lighten
+            $border
+            $rounded="xl"
+            $p={4}
+            className="flex flex-wrap items-center gap-4"
+          >
+            <Frame $layer $darken={3} $rounded="lg" $p={2.5}>
+              <Clock3Icon size={18} aria-hidden="true" />
+            </Frame>
+            <div className="flex-1 min-w-40">
+              <Text render={<h3 />} className="text-sm font-semibold wrap-anywhere">
+                {run.pullRequestNumber ? `#${run.pullRequestNumber} · ` : ""}
+                {run.title ?? kindLabel(run.kind)}
+              </Text>
+              <Text render={<p />} className="text-xs ak-ink-60 mt-1">
+                {stateLabel(run.state)} · Attempt {run.attempt}
+              </Text>
+            </div>
+            <Button $border render={<Link to="/runs/$runId" params={{ runId: run.id }} />}>
+              <ButtonLabel>Open run</ButtonLabel>
+              <ButtonSlot>
+                <ArrowRightIcon />
+              </ButtonSlot>
+            </Button>
+          </Frame>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RunHistory({
   runs,
-  title,
-  empty,
-  description,
+  repository,
+  onRefresh,
 }: {
   runs: DashboardRun[];
-  title: string;
-  empty: string;
-  description: string;
+  repository: string;
+  onRefresh(): void;
 }) {
-  if (!runs.length) {
-    return (
-      <Frame $layer $border $rounded="lg" $p={5} render={<section />}>
-        <h2 className="text-lg font-semibold">{empty}</h2>
-        <p className="text-sm ak-ink-60 mt-2">{description}</p>
-      </Frame>
-    );
-  }
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const visible = runs.filter(
+    (run) =>
+      (filter === "all" || run.state === filter) &&
+      `${run.title ?? ""} ${run.pullRequestNumber ?? ""} ${run.testedSha} ${kindLabel(run.kind)}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
   return (
-    <Table
-      caption={{ children: title, className: "sr-only" }}
-      container={{ $layer: true, $border: true, $rounded: "lg" }}
-      $borderBlock
-      className="w-full text-sm"
-    >
-      <TableRowGroup group="head">
-        <TableRow>
-          <TableCell>Review</TableCell>
-          <TableCell>State</TableCell>
-          <TableCell className="dashboard-run-secondary max-md:hidden">Created</TableCell>
-        </TableRow>
-      </TableRowGroup>
-      <TableRowGroup>
-        {runs.map((run) => (
-          <TableRow key={run.id}>
-            <TableCell header="row">
-              <Link
-                to="/runs/$runId"
-                params={{ runId: run.id }}
-                className="block min-w-0 max-w-[38rem]"
-              >
-                <strong className="block text-sm font-medium wrap-anywhere">
-                  {run.pullRequestNumber
-                    ? `#${run.pullRequestNumber} · ${run.title ?? "Pull request"}`
-                    : (run.title ?? kindLabel(run.kind))}
-                </strong>
-                <small className="block text-xs ak-ink-60 mt-1 wrap-anywhere">
-                  {run.pending} pending · {run.rejected} rejected ·{" "}
-                  <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code> · Attempt{" "}
-                  {run.attempt}
-                </small>
-                <small className="dashboard-run-mobile-meta block text-xs ak-ink-60 md:hidden">
+    <>
+      <div className="flex flex-wrap justify-between items-start gap-4">
+        <div>
+          <Text render={<p />} className="text-xs uppercase tracking-widest font-medium ak-ink-60">
+            {repository}
+          </Text>
+          <Text render={<h1 />} className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3">
+            Run history.
+          </Text>
+          <Text render={<p />} className="text-sm ak-ink-60 mt-3">
+            Results for the latest 100 runs. Older work that needs attention stays in the review
+            queue.
+          </Text>
+        </div>
+        <Button $border onClick={onRefresh}>
+          <ButtonSlot>
+            <RotateCcwIcon />
+          </ButtonSlot>
+          <ButtonLabel>Refresh runs</ButtonLabel>
+        </Button>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 mt-8 mb-5">
+        <Frame
+          $layer
+          $lighten
+          $border
+          $rounded="lg"
+          $p={3}
+          render={<label />}
+          className="flex gap-2 items-center flex-1 max-w-md min-w-40"
+        >
+          <SearchIcon size={16} aria-hidden="true" />
+          <input
+            aria-label="Search loaded history"
+            placeholder="Search loaded history…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="min-w-0 w-full bg-transparent text-sm outline-none focus-visible:underline"
+          />
+        </Frame>
+        <Frame
+          $layer
+          $lighten
+          $border
+          $rounded="lg"
+          $p={3}
+          render={<label />}
+          className="flex items-center gap-2 text-sm"
+        >
+          <Text>Result</Text>
+          <select
+            aria-label="Filter history by result"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            className="bg-transparent min-w-0 max-w-48 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <option value="all">All results</option>
+            {[...new Set(runs.map((run) => run.state))].map((state) => (
+              <option key={state} value={state}>
+                {stateLabel(state)}
+              </option>
+            ))}
+          </select>
+        </Frame>
+      </div>
+      {visible.length ? (
+        <Table
+          caption={{ children: "Latest 100 runs", className: "sr-only" }}
+          container={{ $layer: true, $lighten: true, $border: true, $rounded: "xl" }}
+          $borderBlock
+          className="w-full text-sm"
+        >
+          <TableRowGroup group="head">
+            <TableRow>
+              <TableCell>Run</TableCell>
+              <TableCell>Result</TableCell>
+              <TableCell className="max-md:hidden">Created</TableCell>
+            </TableRow>
+          </TableRowGroup>
+          <TableRowGroup>
+            {visible.map((run) => (
+              <TableRow key={run.id}>
+                <TableCell header="row">
+                  <Link
+                    to="/runs/$runId"
+                    params={{ runId: run.id }}
+                    className="block min-w-0 max-w-[38rem] focus-visible:outline-2 focus-visible:outline-offset-4"
+                  >
+                    <Text className="block text-sm font-medium wrap-anywhere">
+                      {run.pullRequestNumber ? `#${run.pullRequestNumber} · ` : ""}
+                      {run.title ?? kindLabel(run.kind)}
+                    </Text>
+                    <Text className="block text-xs ak-ink-60 mt-2 wrap-anywhere">
+                      <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code> · Attempt{" "}
+                      {run.attempt}
+                    </Text>
+                    <Text className="block text-xs ak-ink-60 mt-1 md:hidden">
+                      {runDate(run.createdAt)}
+                    </Text>
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <RunStatus state={run.state} />
+                </TableCell>
+                <TableCell className="max-md:hidden text-xs ak-ink-60">
                   {runDate(run.createdAt)}
-                </small>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Badge className="dashboard-run-state-badge" $layer={stateColor(run.state) ?? true}>
-                <BadgeLabel className="whitespace-normal">{stateLabel(run.state)}</BadgeLabel>
-              </Badge>
-            </TableCell>
-            <TableCell className="dashboard-run-secondary max-md:hidden">
-              {runDate(run.createdAt)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableRowGroup>
-    </Table>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableRowGroup>
+        </Table>
+      ) : (
+        <Frame $layer $lighten $border $rounded="xl" $p={7} className="grid gap-2">
+          <Text render={<h2 />} className="text-lg font-semibold">
+            {runs.length ? "No matching runs" : "No runs yet"}
+          </Text>
+          <Text render={<p />} className="text-sm ak-ink-60">
+            {runs.length
+              ? "Change the search or result filter."
+              : "The first capture run will appear here."}
+          </Text>
+        </Frame>
+      )}
+      <Text render={<p />} className="text-xs ak-ink-60 mt-4">
+        Search and filters apply to the loaded runs.
+      </Text>
+    </>
   );
 }

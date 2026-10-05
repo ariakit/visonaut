@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { BellIcon } from "lucide-react";
+import { ActivityIcon, BellIcon, RotateCcwIcon } from "lucide-react";
+import { Frame } from "../ariakit/components/frame.ariakit.react.tsx";
+import { Text } from "../ariakit/components/text.ariakit.react.tsx";
 import type { CapacitySnapshot } from "../../capacity.ts";
 import { ControlButton as Button } from "../control-button.tsx";
 import { Badge, BadgeLabel } from "../ariakit/components/badge.ariakit.react.tsx";
-import { ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
+import { ButtonLabel, ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
 import {
   Popover,
   PopoverDescription,
@@ -11,7 +13,6 @@ import {
   PopoverDismiss,
   PopoverHeading,
   PopoverProvider,
-  PopoverScroll,
 } from "../ariakit/components/popover.ariakit.react.tsx";
 
 interface OperationEvent {
@@ -211,7 +212,9 @@ function eventId(event: OperationEvent) {
 
 export function OperationsAttention({
   onAccessDenied,
+  layout = "popover",
 }: {
+  layout?: "popover" | "page";
   onAccessDenied: (status: 401 | 403) => void;
 }) {
   const [status, setStatus] = useState<OperationsStatus | null>(null);
@@ -296,107 +299,220 @@ export function OperationsAttention({
         ? `Service attention: ${status?.hasMore ? "at least " : ""}${alertCount} alert${alertCount === 1 ? "" : "s"}`
         : "Service attention: no alerts";
 
+  const panel = (
+    <div
+      className={
+        layout === "page" ? "flex flex-col gap-5 max-w-4xl mx-auto" : "flex flex-col gap-3 min-h-0"
+      }
+    >
+      <div className="flex items-center justify-between gap-3">
+        {layout === "page" ? (
+          <div>
+            <Text
+              render={<p />}
+              className="text-xs uppercase tracking-widest font-medium ak-ink-60"
+            >
+              Operations
+            </Text>
+            <Text
+              render={<h1 />}
+              className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3"
+            >
+              Service status.
+            </Text>
+          </div>
+        ) : (
+          <PopoverHeading>Service attention</PopoverHeading>
+        )}
+        {layout === "popover" && <PopoverDismiss />}
+      </div>
+      {layout === "page" ? (
+        <Text render={<p />} className="text-sm ak-ink-60 leading-relaxed">
+          Unresolved alerts and what they mean for your reviews. This page checks for updates every
+          minute.
+        </Text>
+      ) : (
+        <PopoverDescription>
+          Alerts refresh every minute while this dashboard is open. No external notifications are
+          sent.
+        </PopoverDescription>
+      )}
+      <div className="flex max-md:flex-col items-start justify-between gap-3">
+        <p className="text-xs ak-ink-60">
+          {status
+            ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
+            : loading
+              ? "Checking for unresolved operation alerts…"
+              : "No current alert data."}
+        </p>
+        <Button
+          className="text-xs"
+          disabled={loading}
+          onClick={() => {
+            setLoading(true);
+            setReload((value) => value + 1);
+          }}
+        >
+          <ButtonSlot>
+            <RotateCcwIcon />
+          </ButtonSlot>
+          <ButtonLabel>
+            {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
+          </ButtonLabel>
+        </Button>
+      </div>
+      <div
+        className={
+          layout === "page" ? "grid gap-5" : "min-h-0 max-h-[50dvh] overflow-auto space-y-3"
+        }
+      >
+        {error && (
+          <p className="ak-ink-danger" role="alert">
+            {error}{" "}
+            {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
+          </p>
+        )}
+        {status?.capacity && (
+          <Frame
+            $layer
+            $lighten
+            $border
+            $rounded="xl"
+            $p={4}
+            className="text-xs ak-ink-60 leading-relaxed"
+          >
+            Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
+            {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
+            before new runs pause.
+            <br />
+            Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
+            Capacity sampled {time(status.capacity.observedAt)}.
+          </Frame>
+        )}
+        {status && status.events.length > 0 && (
+          <ul className="list-none m-0 p-0 grid gap-4">
+            {status.events.map((event) => {
+              const help = recovery(event);
+              return (
+                <Frame
+                  key={`${event.kind}:${event.subject}:${event.code}`}
+                  render={<li />}
+                  $layer
+                  $lighten
+                  $border
+                  $rounded="xl"
+                  $p={5}
+                  className="wrap-anywhere"
+                >
+                  <Text render={<h3 />} className="text-base font-semibold">
+                    {help.title}
+                  </Text>
+                  <Text render={<p />} className="text-sm leading-relaxed ak-ink-60 mt-3">
+                    {help.action}
+                  </Text>
+                  <details className="mt-4 border-t border-(--ak-edge) pt-3">
+                    <Text render={<summary />} className="text-xs cursor-pointer font-medium">
+                      Technical details
+                    </Text>
+                    <Text render={<p />} className="text-xs ak-ink-60 leading-relaxed mt-3">
+                      {event.kind} · {event.code} · <code>{event.subject}</code>
+                      <br />
+                      First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}
+                    </Text>
+                  </details>
+                </Frame>
+              );
+            })}
+          </ul>
+        )}
+        {layout === "page" && status && status.events.length === 0 && !error && (
+          <Frame
+            $layer
+            $lighten
+            $border
+            $rounded="2xl"
+            $p={7}
+            className="grid gap-3 justify-items-start"
+          >
+            <ActivityIcon size={24} aria-hidden="true" />
+            <Text render={<h2 />} className="text-xl font-semibold">
+              No unresolved alerts.
+            </Text>
+            <Text render={<p />} className="text-sm ak-ink-60">
+              This view reports operation alerts. It does not test every service dependency.
+            </Text>
+          </Frame>
+        )}
+        {status?.hasMore && (
+          <Text render={<p />} className="text-xs ak-ink-60">
+            Showing the 50 most recently reported unresolved alerts.
+          </Text>
+        )}
+      </div>
+      <Button
+        $border
+        className="self-start max-w-full text-left"
+        render={
+          <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md" />
+        }
+      >
+        <ButtonLabel className="whitespace-normal">
+          Open the operations and recovery guide
+        </ButtonLabel>
+      </Button>
+      {layout === "page" && (
+        <Text render={<p />} className="text-xs ak-ink-60">
+          No external notifications are sent.
+        </Text>
+      )}
+    </div>
+  );
+
   return (
     <PopoverProvider placement="bottom-end">
       <span className="sr-only" role="status" aria-live="polite">
         {announcement}
       </span>
-      <PopoverDisclosure
-        $kind="bevel"
-        $rounded="sm"
-        className="relative min-w-9 min-h-9 gap-1 [&_svg]:size-4"
-        aria-label={alertLabel}
-      >
-        <ButtonSlot>
-          <BellIcon aria-hidden="true" />
-        </ButtonSlot>
-        {alertCount > 0 && (
-          <Badge
-            $layer="danger"
-            className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! text-[10px] leading-none"
-            aria-hidden="true"
+      {layout === "page" ? (
+        panel
+      ) : (
+        <>
+          <PopoverDisclosure
+            $kind="flat"
+            $border
+            $rounded="lg"
+            className="relative min-w-9 min-h-9 gap-1 [&_svg]:size-4"
+            aria-label={alertLabel}
           >
-            <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
-          </Badge>
-        )}
-        {error && (
-          <span className="dashboard-alert-error-mark ak-ink-danger font-bold" aria-hidden="true">
-            !
-          </span>
-        )}
-      </PopoverDisclosure>
-      <Popover
-        className="flex flex-col gap-3 w-[min(460px,calc(100vw-24px))] max-h-[min(72dvh,var(--popover-available-height))] text-sm"
-        portal
-      >
-        <div className="flex items-center justify-between gap-3">
-          <PopoverHeading>Service attention</PopoverHeading>
-          <PopoverDismiss />
-        </div>
-        <PopoverDescription>
-          Alerts refresh every minute while this dashboard is open. No external notifications are
-          sent.
-        </PopoverDescription>
-        <div className="flex max-md:flex-col items-start justify-between gap-3">
-          <p className="text-xs ak-ink-60">
-            {status
-              ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
-              : loading
-                ? "Checking for unresolved operation alerts…"
-                : "No current alert data."}
-          </p>
-          <Button
-            className="text-xs"
-            disabled={loading}
-            onClick={() => {
-              setLoading(true);
-              setReload((value) => value + 1);
-            }}
+            <ButtonSlot>
+              <BellIcon aria-hidden="true" />
+            </ButtonSlot>
+            {alertCount > 0 && (
+              <Badge
+                $layer="danger"
+                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! text-[10px] leading-none"
+                aria-hidden="true"
+              >
+                <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
+              </Badge>
+            )}
+            {error && (
+              <span
+                className="dashboard-alert-error-mark ak-ink-danger font-bold"
+                aria-hidden="true"
+              >
+                !
+              </span>
+            )}
+          </PopoverDisclosure>
+          <Popover
+            className="flex flex-col w-[min(460px,calc(100vw-24px))] max-h-[min(72dvh,var(--popover-available-height))] text-sm"
+            portal
           >
-            {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
-          </Button>
-        </div>
-        <PopoverScroll className="min-h-0 max-h-[50dvh] space-y-3">
-          {error && (
-            <p className="ak-ink-danger" role="alert">
-              {error}{" "}
-              {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
-            </p>
-          )}
-          {status?.capacity && (
-            <p className="text-xs ak-ink-60 mt-1">
-              Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
-              {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
-              before new runs pause.
-              <br />
-              Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
-              Capacity sampled {time(status.capacity.observedAt)}.
-            </p>
-          )}
-          {status && status.events.length > 0 && (
-            <ul className="list-none m-0 p-0 divide-y divide-(--ak-edge) [&>li]:py-3 [&>li]:wrap-anywhere [&_h3]:font-semibold [&_p]:mt-1">
-              {status.events.map((event) => {
-                const help = recovery(event);
-                return (
-                  <li key={`${event.kind}:${event.subject}:${event.code}`}>
-                    <h3>{help.title}</h3>
-                    <p>{help.action}</p>
-                    <p className="text-xs ak-ink-60 mt-1">
-                      {event.kind} · {event.code} · <code>{event.subject}</code>
-                      <br />
-                      First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {status?.hasMore && <p>Showing the 50 most recently reported unresolved alerts.</p>}
-        </PopoverScroll>
-        <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md">
-          Open the operations and recovery guide
-        </a>
-      </Popover>
+            {panel}
+          </Popover>
+        </>
+      )}
     </PopoverProvider>
   );
 }
