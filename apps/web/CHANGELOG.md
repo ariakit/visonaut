@@ -1,5 +1,11 @@
 # @visonaut/web
 
+## 0.2.3
+
+### Patch Changes
+
+- f83fef6: Redesigned the review queue, run history, service status, and screenshot review workspace. Added screenshot search and status filters, a saved sidebar preference, capture details, and a compact action bar with visible keyboard shortcuts.
+
 ## 0.2.2
 
 ### Patch Changes
