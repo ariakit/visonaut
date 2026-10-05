@@ -67,18 +67,18 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "visonaut-production",
-          "database_id": "441904d8-790b-44e3-9d83-a4c19e45c835",
+          "database_name": "visonaut",
+          "database_id": "3c0b122f-9186-4d34-80a8-09a50eed2cc1",
           "migrations_dir": "migrations",
         },
       ],
       "r2_buckets": [
         {
-          "bucket_name": "visonaut-production-images",
+          "bucket_name": "visonaut-images",
           "binding": "IMAGES",
         },
         {
-          "bucket_name": "visonaut-production-quarantine",
+          "bucket_name": "visonaut-quarantine",
           "binding": "QUARANTINE",
         },
       ],
