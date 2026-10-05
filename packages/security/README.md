@@ -2,13 +2,13 @@
 
 This private package owns the authentication and GitHub boundaries. Public client packages must not import it.
 
-Construct Better Auth inside each Worker request. Use separate D1 databases, OAuth credentials, capability keys, webhook secrets, and Better Auth secrets for production and preview. Apply `migrations/0001_auth.sql` before the first request. The schema was generated with Better Auth 1.7.5.
+Construct Better Auth inside each production Worker request. Production owns the live D1 database, OAuth credentials, capability keys, webhook secrets, and Better Auth secrets. Preview serves synthetic fixtures without authentication or backend bindings. Local tests use separate ephemeral storage and credentials. Apply `migrations/0001_auth.sql` before the first authenticated request. The schema was generated with Better Auth 1.7.5.
 
 ```ts
 const auth = createAuth({
   database: env.DB,
   origin: env.APP_ORIGIN,
-  environment: "preview",
+  environment: "production",
   secret: env.BETTER_AUTH_SECRET,
   githubClientId: env.GITHUB_CLIENT_ID,
   githubClientSecret: env.GITHUB_CLIENT_SECRET,

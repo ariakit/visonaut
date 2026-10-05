@@ -16,6 +16,7 @@ import {
   githubConfiguration,
   type OperationsMessage,
   reportSchedulerFailure,
+  requireBackendBindings,
   runScheduledOperations,
 } from "./runtime.ts";
 
@@ -77,6 +78,7 @@ export default {
         if (fixture) return securePrivateResponse(fixture);
         return await render(request);
       }
+      requireBackendBindings(env);
       if (url.pathname.startsWith("/api/auth/")) {
         if (url.origin !== env.VISONAUT_ORIGIN)
           return securePrivateResponse(new Response(null, { status: 403 }));
@@ -127,6 +129,7 @@ export default {
   async scheduled(_controller: ScheduledController, env: Env) {
     if (env.VISONAUT_ENVIRONMENT === "preview") return;
     try {
+      requireBackendBindings(env);
       // Frequent cron triggers have a 30-second CPU limit; the queue runs the work.
       await env.OPERATIONS.send({ kind: "recovery" } satisfies OperationsMessage);
     } catch {

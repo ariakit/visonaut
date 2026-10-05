@@ -10,6 +10,7 @@ import { unstable_readConfig } from "wrangler";
 import * as preRun from "./api/pre-run.ts";
 import * as webhooks from "./api/webhooks.ts";
 import server from "./server.ts";
+import type { BackendEnv } from "./runtime.ts";
 
 // These tests exercise real request handlers without the application renderer.
 vi.mock("@tanstack/react-start/server", () => ({
@@ -18,7 +19,7 @@ vi.mock("@tanstack/react-start/server", () => ({
 }));
 
 let runtime: Miniflare;
-let env: Env;
+let env: BackendEnv;
 const correlationId = "af4a9c01-3e33-4faa-903c-31c1b20d2bac";
 const startedAt = 1_000;
 const createAuth = security.createAuth;
@@ -48,7 +49,7 @@ beforeAll(async () => {
       serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );
-  env = await runtime.getBindings<Env>();
+  env = await runtime.getBindings<BackendEnv>();
   await applyTestMigrations(env.DB);
   await env.DB.prepare(
     "INSERT INTO visonaut_projects(id, repository_id, policy_digest) VALUES (?,?,?)",

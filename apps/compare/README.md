@@ -15,7 +15,7 @@ const response = await env.COMPARATOR.fetch("https://compare/validate", {
 });
 ```
 
-The Wrangler configurations retain the provisioned D1, R2, and OPERATIONS bindings for each environment. Verify exact resource IDs and detached comparison consumers before deployment. Generate binding types after configuration changes. The following local commands do not deploy:
+The production Wrangler environment retains the provisioned D1, R2, and OPERATIONS bindings. Verify exact resource IDs and detached comparison consumers before production deployment. The default `visonaut-compare-local` configuration has no backend bindings or Durable Object migrations. The public preview serves fixtures and does not use a hosted comparator. Generate binding types after configuration changes. The following local commands do not deploy:
 
 ```sh
 pnpm --filter @visonaut/compare-worker typecheck
@@ -31,7 +31,7 @@ pnpm --filter @visonaut/compare probe /path/to/largest-capture.webp
 
 The probe follows the production result contract: equal images return `maskBytes: 0` and allocate no review mask. The returned RGBA size includes both decoded images and a mask only when one exists. The probe reports WASM linear memory and allocated RGBA sizes; these are not peak isolate memory. Attach Cloudflare trace CPU/resource evidence before launch.
 
-Production uses the Worker codec only. There is no backend environment switch or Container binding. The `worker-only-v2` Durable Object migration deletes the former `ComparisonContainer` storage. Before deploying that migration in either environment, check the live deployment, old Container activity, queued and leased tasks, and stored namespace data. Do not deploy the deletion while any live work or retained data still needs the class. This source change and a dry-run do not establish that live gate.
+Production uses the Worker codec only. There is no backend environment switch or Container binding. The production `worker-only-v2` Durable Object migration deletes the former `ComparisonContainer` storage. Before deploying that migration, check the live deployment, old Container activity, queued and leased tasks, and stored namespace data. Do not deploy the deletion while any live work or retained data still needs the class. This source change and a dry-run do not establish that live gate.
 
 The alternate Container remains an explicit diagnostic probe in `wrangler.container-probe.jsonc`. Its separate Worker has no D1, R2, or queue bindings. It accepts only token-authorized `POST /compare` requests with bounded, synthetic image payloads. It cannot consume production work or become an automatic fallback. The local transport fixture in `container/transport.ts` retains the earlier validation research. Container thumbnails still have different research keys; a future production migration must qualify that difference.
 

@@ -28,47 +28,12 @@
     "VISONAUT_API_LIMITS": "{}",
     "VISONAUT_OPERATIONS_BUDGET": "{}",
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "visonaut-preview",
-      "database_id": "395b539c-c423-4ce4-887c-a5792792a63b",
-      "migrations_dir": "migrations",
-    },
-  ],
-  "r2_buckets": [
-    {
-      "bucket_name": "visonaut-preview-images",
-      "binding": "IMAGES",
-    },
-    {
-      "bucket_name": "visonaut-preview-quarantine",
-      "binding": "QUARANTINE",
-    },
-  ],
-  "services": [
-    {
-      "binding": "COMPARATOR",
-      "service": "visonaut-preview-compare",
-    },
-  ],
+  "d1_databases": [],
+  "r2_buckets": [],
+  "services": [],
   "queues": {
-    "producers": [
-      {
-        "binding": "OPERATIONS",
-        "queue": "visonaut-preview-operations",
-      },
-    ],
-    "consumers": [
-      {
-        "queue": "visonaut-preview-operations",
-        "max_batch_size": 1,
-        "max_batch_timeout": 1,
-        "max_concurrency": 1,
-        "max_retries": 5,
-        "dead_letter_queue": "visonaut-preview-dead-letter",
-      },
-    ],
+    "producers": [],
+    "consumers": [],
   },
   "preview_urls": false,
   "limits": {
@@ -102,8 +67,8 @@
       "d1_databases": [
         {
           "binding": "DB",
-          "database_name": "visonaut-production-delta-20261004",
-          "database_id": "f33b9393-cd04-4f7f-9213-428d1c3635b6",
+          "database_name": "visonaut-production",
+          "database_id": "441904d8-790b-44e3-9d83-a4c19e45c835",
           "migrations_dir": "migrations",
         },
       ],

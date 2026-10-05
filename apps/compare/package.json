@@ -8,7 +8,6 @@
     "test": "vitest run",
     "build": "wrangler deploy --dry-run --outdir dist",
     "probe": "wrangler dev --config wrangler.probe.jsonc",
-    "deploy": "wrangler deploy",
     "probe:container": "wrangler dev --config wrangler.container-probe.jsonc",
     "typecheck:container": "wrangler types --config wrangler.container-probe.jsonc --env-interface ContainerProbeEnv container/worker-configuration.d.ts && tsc6 -p container/tsconfig.json"
   },

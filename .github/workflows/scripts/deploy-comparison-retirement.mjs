@@ -7,10 +7,6 @@ export const comparisonQueues = Object.freeze({
     { id: "56f8f86170914a0492c0bbe93a42c553", name: "visonaut-production-comparisons" },
     { id: "54e58a2877004b2d8664509916e05a0d", name: "visonaut-production-comparison-dead-letter" },
   ],
-  preview: [
-    { id: "2c3e7b1e19f84d2386c0a3ced075b2b7", name: "visonaut-preview-comparisons" },
-    { id: "24a0be386d6d465c87a0ac71ac6f7822", name: "visonaut-preview-comparison-dead-letter" },
-  ],
 });
 
 /** Config removal does not detach an existing live Queue consumer. */
