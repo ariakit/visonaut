@@ -1,6 +1,10 @@
 import { BanIcon, ContrastIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { NavIcon } from "../components/ariakit/components/nav.ariakit.react.tsx";
+import {
+  ButtonContent,
+  ButtonLabel,
+  ButtonSlot,
+} from "../components/ariakit/components/button.ariakit.react.tsx";
 import chromeIcon from "./icons/chrome.svg";
 import firefoxIcon from "./icons/firefox.svg";
 import reactIcon from "./icons/react.svg";
@@ -46,47 +50,88 @@ function tooltipForPart(part: string, kind?: ReviewVariantPart["kind"]) {
   return part;
 }
 
-export function VariantSummary({ variant, index }: { variant: ReviewVariant; index: number }) {
-  const parts =
+function labelForPart(part: string) {
+  const key = part.toLowerCase();
+  if (key === "webkit") return "WebKit";
+  if (key === "no-preference") return "System";
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+interface VariantSummaryProps {
+  variant: ReviewVariant;
+  index: number;
+  showFramework?: boolean;
+}
+
+export function VariantSummary({ variant, index, showFramework = true }: VariantSummaryProps) {
+  const sourceParts =
     variant.labelParts ?? variant.label.split(" · ").map((value) => ({ value, kind: undefined }));
+  const seen = new Set<string>();
+  const parts = sourceParts.filter((part) => {
+    const identity = `${part.kind}:${part.value.toLowerCase()}`;
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    if (!showFramework && part.kind === "framework" && iconForPart(part)) return false;
+    return true;
+  });
+  const visibleLabels = new Set(
+    parts
+      .filter(
+        (part) => iconForPart(part) && part.kind !== "contrast" && part.kind !== "forcedColors",
+      )
+      .map((part) => labelForPart(part.value).toLowerCase()),
+  );
   const title = parts
-    .filter((part) => !iconForPart(part))
+    .filter((part) => !iconForPart(part) && !visibleLabels.has(part.value.toLowerCase()))
     .map((part) => part.value)
     .join(" · ");
   return (
-    <span className="review-variant-summary flex items-center gap-1.5 min-w-0">
-      {variant.thumbnail && (
-        <img className="review-variant-thumbnail" src={variant.thumbnail} alt="" loading="lazy" />
-      )}
+    <ButtonContent
+      $orientation="horizontal"
+      className="review-variant-summary flex-nowrap! items-center gap-3! min-w-0"
+    >
       <span
-        className="review-variant-index text-xs tabular-nums shrink-0 ak-ink-60"
-        aria-hidden="true"
-      >
-        {index + 1}
-      </span>
-      <span
-        className="review-variant-icons inline-flex items-center shrink-0 gap-1 [--control-inline:0]"
+        className="review-variant-icons inline-flex shrink-0 items-center gap-2.5 empty:hidden [--control-inline:0]"
         aria-hidden="true"
       >
         {parts.map((part, partIndex) => {
           const icon = iconForPart(part);
           return icon ? (
-            <NavIcon key={partIndex} title={tooltipForPart(part.value, part.kind)}>
-              {icon}
-            </NavIcon>
+            <span
+              key={partIndex}
+              title={tooltipForPart(part.value, part.kind)}
+              className="inline-flex shrink-0 items-center gap-1.5"
+            >
+              <ButtonSlot $size="md">{icon}</ButtonSlot>
+              {part.kind !== "contrast" && part.kind !== "forcedColors" && (
+                <ButtonLabel $truncate={false} className="text-xs">
+                  {labelForPart(part.value)}
+                </ButtonLabel>
+              )}
+            </span>
           ) : null;
         })}
       </span>
       {title && (
-        <span
-          className="review-variant-title min-w-0 truncate text-xs"
+        <ButtonLabel
+          className="review-variant-title min-w-0 max-w-48 truncate text-xs"
           aria-hidden="true"
           title={title}
         >
           {title}
-        </span>
+        </ButtonLabel>
+      )}
+      {index < 6 && (
+        <ButtonSlot
+          $kind="shortcut"
+          $size="sm"
+          className="review-variant-index shrink-0 text-[10px] tabular-nums ak-ink-40"
+          aria-hidden="true"
+        >
+          {index + 1}
+        </ButtonSlot>
       )}
       <span className="sr-only">{variant.label}</span>
-    </span>
+    </ButtonContent>
   );
 }

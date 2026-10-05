@@ -1,10 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useEffect, useState } from "react";
+import {
+  ArrowLeftIcon,
+  ArrowUpRightIcon,
+  CheckCheckIcon,
+  CircleAlertIcon,
+  Clock3Icon,
+  GitPullRequestIcon,
+} from "lucide-react";
+import { AppHeader } from "../components/app-shell.tsx";
+import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
+import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
-  ShellHeader,
   ShellMain,
   ShellMainBody,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
@@ -122,57 +132,160 @@ function PullRequest() {
     }
   };
 
+  const switchAccount = async () => {
+    setAction(true);
+    try {
+      const result = await createAuthClient().signOut();
+      if (result.error) {
+        throw new Error("Sign-out failed. Please try again.");
+      }
+      setState({ status: "guest" });
+    } catch {
+      setState({ status: "error", message: "Sign-out failed. Please try again." });
+    } finally {
+      setAction(false);
+    }
+  };
+
   return (
-    <Shell>
-      <ShellHeader start={<Link to="/">Visonaut</Link>} center={`Pull request #${pullNumber}`} />
-      <ShellMain>
-        <ShellMainBody className="mx-auto w-full max-w-3xl p-6">
+    <Shell $layer="canvas" className="[--shell-header-step:calc(48px/14)]">
+      <AppHeader repository={state.status === "pending" ? state.repository : undefined} />
+      <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
+        <ShellMainBody className="mx-auto w-full max-w-2xl py-8 sm:py-16">
+          <Button className="mb-6" render={<Link to="/" search={{}} />}>
+            <ButtonSlot>
+              <ArrowLeftIcon />
+            </ButtonSlot>
+            <ButtonLabel>Review queue</ButtonLabel>
+          </Button>
           <Frame
             $layer
             $lighten
             $border
-            $rounded="lg"
+            $rounded="2xl"
+            $p={7}
             render={<section />}
-            className="grid gap-4 p-6"
+            className="grid gap-5"
           >
+            <Frame $layer $darken={3} $rounded="xl" $p={3} className="w-fit">
+              <GitPullRequestIcon size={24} aria-hidden="true" />
+            </Frame>
+            <Text
+              render={<p />}
+              className="text-xs uppercase tracking-widest font-medium ak-ink-60"
+            >
+              Visual review · Pull request #{pullNumber}
+            </Text>
             {state.status === "loading" && (
-              <p role="status">Finding this pull request’s visual review…</p>
+              <Text render={<p />} className="text-sm ak-ink-60" role="status">
+                Finding this pull request’s visual review…
+              </Text>
             )}
             {state.status === "guest" && (
               <>
-                <h1>Sign in to review pull request #{pullNumber}</h1>
-                <p>This review is available to Ariakit maintainers.</p>
-                <Button disabled={action} onClick={() => void signIn()}>
-                  {action ? "Opening GitHub…" : "Sign in with GitHub"}
+                <Text render={<h1 />} className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  Sign in to review pull request #{pullNumber}
+                </Text>
+                <Text render={<p />} className="text-sm leading-relaxed ak-ink-60">
+                  Compare screenshots and approve expected changes. Use a GitHub account with write
+                  access to this repository.
+                </Text>
+                <Button
+                  $layer="primary"
+                  className="justify-self-start"
+                  disabled={action}
+                  onClick={() => void signIn()}
+                >
+                  <ButtonLabel>{action ? "Opening GitHub…" : "Sign in with GitHub"}</ButtonLabel>
+                  <ButtonSlot>
+                    <ArrowUpRightIcon />
+                  </ButtonSlot>
                 </Button>
               </>
             )}
             {(state.status === "error" || state.status === "forbidden") && (
               <>
-                <h1>Review unavailable</h1>
-                <p role="alert">{state.message}</p>
-                {state.status === "error" && (
-                  <Button onClick={() => setReload((value) => value + 1)}>Retry</Button>
+                <Text render={<h1 />} className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  {state.status === "forbidden"
+                    ? "Repository access required"
+                    : "Review unavailable"}
+                </Text>
+                <Text render={<p />} className="text-sm leading-relaxed ak-ink-60" role="alert">
+                  {state.message}
+                </Text>
+                {state.status === "error" ? (
+                  <Button
+                    $border
+                    className="justify-self-start"
+                    onClick={() => setReload((value) => value + 1)}
+                  >
+                    <ButtonLabel>Retry</ButtonLabel>
+                  </Button>
+                ) : (
+                  <Button
+                    $layer="primary"
+                    className="justify-self-start"
+                    disabled={action}
+                    onClick={() => void switchAccount()}
+                  >
+                    <ButtonLabel>{action ? "Signing out…" : "Use another account"}</ButtonLabel>
+                  </Button>
                 )}
               </>
             )}
             {state.status === "pending" && (
               <>
-                <h1>Pull request #{pullNumber}</h1>
-                <p role="status">
-                  {state.capture === "not-required"
-                    ? "This pull request does not require a visual capture."
-                    : state.capture === "failed"
-                      ? "Visual capture failed before a review was ready. Open the GitHub PR to see the failing check."
-                      : "The visual capture has not reached Visonaut yet. This page will update when it arrives."}
-                </p>
+                <Text render={<h1 />} className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                  Pull request #{pullNumber}
+                </Text>
+                <Frame
+                  $layer={state.capture === "failed" ? "warning" : true}
+                  $rounded="xl"
+                  $p={4}
+                  className="flex items-start gap-3"
+                  role="status"
+                >
+                  {state.capture === "not-required" ? (
+                    <CheckCheckIcon size={20} className="shrink-0" aria-hidden="true" />
+                  ) : state.capture === "failed" ? (
+                    <CircleAlertIcon size={20} className="shrink-0" aria-hidden="true" />
+                  ) : (
+                    <Clock3Icon size={20} className="shrink-0" aria-hidden="true" />
+                  )}
+                  <div>
+                    <Text render={<p />} className="text-sm font-semibold">
+                      {state.capture === "not-required"
+                        ? "No visual review needed."
+                        : state.capture === "failed"
+                          ? "Visual capture failed."
+                          : "Waiting for screenshots."}
+                    </Text>
+                    <Text render={<p />} className="text-sm leading-relaxed ak-ink-60 mt-2">
+                      {state.capture === "not-required"
+                        ? "This pull request does not require a visual capture."
+                        : state.capture === "failed"
+                          ? "No review is ready. Open the pull request on GitHub to inspect the failing check."
+                          : "The visual capture has not reached Visonaut yet. This page updates automatically when the review is ready."}
+                    </Text>
+                  </div>
+                </Frame>
                 <div className="flex flex-wrap items-center gap-3">
                   {state.capture !== "not-required" && (
-                    <Button onClick={() => setReload((value) => value + 1)}>Check again</Button>
+                    <Button $border onClick={() => setReload((value) => value + 1)}>
+                      <ButtonLabel>Check again</ButtonLabel>
+                    </Button>
                   )}
-                  <a href={`https://github.com/${state.repository}/pull/${pullNumber}`}>
-                    Open on GitHub
-                  </a>
+                  <Button
+                    $border
+                    render={
+                      <a href={`https://github.com/${state.repository}/pull/${pullNumber}`} />
+                    }
+                  >
+                    <ButtonLabel>Open on GitHub</ButtonLabel>
+                    <ButtonSlot>
+                      <ArrowUpRightIcon />
+                    </ButtonSlot>
+                  </Button>
                 </div>
               </>
             )}

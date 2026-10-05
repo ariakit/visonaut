@@ -1,5 +1,6 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts, useRouter } from "@tanstack/react-router";
 import "../styles.css";
+import { sidebarPreferenceScript } from "../review/sidebar-preference.ts";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,9 +16,14 @@ export const Route = createRootRoute({
 });
 
 function Root() {
+  const router = useRouter();
   return (
-    <html lang="en">
+    <html lang="en" className="[font-synthesis:none]" suppressHydrationWarning>
       <head>
+        <script
+          nonce={router.options.ssr?.nonce}
+          dangerouslySetInnerHTML={{ __html: sidebarPreferenceScript }}
+        />
         <HeadContent />
       </head>
       <body>

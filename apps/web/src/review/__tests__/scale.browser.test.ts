@@ -40,13 +40,13 @@ test("sidebar fills its body and the bar follows the selected virtual row", asyn
   const bar = nav.locator(":scope > .glider-bar");
   const scroll = nav.locator(".review-item-scroll").first();
   await expect(bar).toBeVisible();
-  const bodyBounds = await page.locator(".review-sidebar-body").boundingBox();
+  const bodyBounds = await nav.boundingBox();
   const scrollBounds = await scroll.boundingBox();
   if (!bodyBounds || !scrollBounds) throw new Error("Missing sidebar bounds");
   expect(scrollBounds.height).toBeGreaterThan(bodyBounds.height - 24);
-  expect((await page.locator(".shell-sidebar-header").boundingBox())?.height).toBeLessThanOrEqual(
-    40,
-  );
+  expect(
+    (await page.locator(".review-sidebar .shell-sidebar-header").boundingBox())?.height,
+  ).toBeLessThanOrEqual(48);
   await row(page, 0).focus();
   await page.keyboard.press("End");
   await expect(row(page, 999)).toBeFocused();
@@ -197,7 +197,7 @@ test("long names have measured height and do not overlap at browser zoom", async
   await expect(first).toBeVisible();
   const geometry = await first.evaluate((element) => {
     const row = element.getBoundingClientRect();
-    const content = element.querySelector(":scope > span:last-child")?.getBoundingClientRect();
+    const content = element.querySelector(".control-content")?.getBoundingClientRect();
     const next = element
       .closest("li")
       ?.nextElementSibling?.querySelector(".review-item")
@@ -218,12 +218,14 @@ test("long names have measured height and do not overlap at browser zoom", async
 
 test("narrow layout keeps items, tabs and image controls inside the page", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
   await expect(row(page, 0)).toBeVisible();
   await row(page, 0).focus();
   await page.keyboard.press("End");
   await expect(row(page, 999)).toBeFocused();
   await expect(row(page, 999)).toBeInViewport();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 

@@ -167,18 +167,25 @@ test("framework names do not display browser marks", async ({ page }) => {
 for (const width of [1280, 390]) {
   test(`automatically accepted additions stay in the main list at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
+    if (width < 1024) {
+      await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+    }
     const accepted = page.getByRole("button", { name: "Accepted (1)" });
     const addition = page.locator('[id="review-item-new%2Fopen"]');
     await expect(addition).toBeVisible();
     await expect(accepted).toHaveAttribute("aria-expanded", "false");
     await expect(addition).toContainText("0 of 1 need review");
-    await expect(page.locator(".review-result-heading")).toContainText("9 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("9 of 11 need review");
     await page.locator('[id="review-item-menu%2Fopen"]').click();
     await page.keyboard.press("ArrowDown");
     await expect(addition).toBeFocused();
     await ready(page);
-    await expect(page.locator(".review-result-heading")).toContainText("Accepted automatically");
+    await expect(addition).toHaveAttribute("aria-current", "page");
     await expect(accepted).toHaveAttribute("aria-expanded", "false");
+    if (width < 1024) {
+      await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
+    }
+    await expect(page.locator(".review-result-heading")).toContainText("Accepted automatically");
     await focusWorkspace(page);
     await page.keyboard.press("ArrowUp");
     await expect(selected(page)).toContainText("Menu");
@@ -190,6 +197,9 @@ for (const width of [1280, 390]) {
       verdict: "approved",
       source: "automatic",
     });
+    if (width < 1024) {
+      await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+    }
     await addition.click();
     await page.keyboard.press("ArrowDown");
     await expect(page.locator('[id="review-item-removed%2Fopen"]')).toBeFocused();
@@ -225,14 +235,14 @@ test("mixed items stay visible after their changed and added variants are approv
   const addition = page.locator('[id="review-item-new%2Fopen"]');
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await expect(addition).toContainText("1 of 3 need review");
-  await expect(page.locator(".review-result-heading")).toContainText("8 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("8 of 13 need review");
   await addition.click();
   await expect(selected(page)).toContainText("Existing");
   await ready(page);
-  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
   await expect(addition).toContainText("0 of 3 need review");
-  await expect(page.locator(".review-result-heading")).toContainText("7 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 of 13 need review");
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await addition.click();
   await page
@@ -240,11 +250,11 @@ test("mixed items stay visible after their changed and added variants are approv
     .getByRole("link", { name: /Addition/ })
     .click();
   await ready(page);
-  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await callCount(page, 2);
   await expect(addition).toBeVisible();
   await expect(addition).toContainText("0 of 3 need review");
-  await expect(page.locator(".review-result-heading")).toContainText("7 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 of 13 need review");
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   expect(
     await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
@@ -429,16 +439,16 @@ test("approve and reject queue while saving, and repeat keys do not submit twice
   await callCount(page, 1);
   await expect(selected(page)).toContainText("Solid");
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
-  await expect(page.locator(".review-result-heading")).toContainText("8 of 11 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("8 of 11 need review");
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
   await page
     .getByLabel("Review workspace", { exact: true })
     .dispatchEvent("keydown", { key: "a", repeat: true });
   await page.keyboard.press("x");
   await expect(selected(page)).toContainText("Dark");
   await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
-  await expect(page.locator(".review-result-heading")).toContainText("7 of 11 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 of 11 need review");
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await callCount(page, 1);
   await page.evaluate(() => window.reviewFixture.resolve());
@@ -462,9 +472,10 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
   page,
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(selected(page)).toContainText("Solid");
   await ready(page);
+  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
   await page.getByRole("button", { name: /Reject whole item/ }).click();
   await expect(selected(page)).toContainText("Menu");
   await expect(page.getByText("2 queued on server. You can close this window.")).toBeVisible();
@@ -523,15 +534,15 @@ test("a later failed save preserves confirmed decisions and retries its exact co
 for (const behavior of ["offline", "conflict", "noop"]) {
   test(`an optimistic approval restores the original item after ${behavior}`, async ({ page }) => {
     await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-    await page.getByRole("button", { name: "Approve A", exact: true }).click();
+    await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
     await expect(selected(page)).toHaveAccessibleName(/Solid/);
-    await expect(page.locator(".review-result-heading")).toContainText("8 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("8 of 11 need review");
     await page.evaluate((behavior) => {
       window.reviewFixture.setBehavior(behavior);
       window.reviewFixture.resolve();
     }, behavior);
     await expect(selected(page)).toHaveAccessibleName(/React.*Needs review/);
-    await expect(page.locator(".review-result-heading")).toContainText("9 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("9 of 11 need review");
     await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   });
 }
@@ -644,7 +655,10 @@ test("a replacement comparison does not inherit a pending decision or its Undo",
   });
   await expect(selected(page)).toHaveAccessibleName(/Solid.*Needs review/);
   await expect(page.getByRole("link", { name: /React.*Needs review/ })).toBeVisible();
-  await expect(page.locator(".review-metadata")).toContainText("replacement-comparison");
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
+    "replacement-comparison",
+  );
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await page.evaluate(async () => {
     window.reviewFixture.setBehavior("offline");
@@ -675,13 +689,15 @@ test("long item and variant names keep the navigation and main header compact", 
   const links = page.getByRole("navigation", { name: "Variants" }).getByRole("link");
   for (const link of await links.all()) {
     const bounds = await link.boundingBox();
-    expect(bounds?.width).toBeLessThanOrEqual(224);
     expect(bounds?.height).toBeLessThanOrEqual(48);
+    expect((await link.locator(".review-variant-title").boundingBox())?.width).toBeLessThanOrEqual(
+      192,
+    );
   }
-  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(80);
-  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(48);
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
-  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(80);
+  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(48);
 });
 
 test("a saved review keeps its reviewer visible when revisited", async ({ page }) => {
@@ -690,7 +706,9 @@ test("a saved review keeps its reviewer visible when revisited", async ({ page }
   await page.keyboard.press("ArrowLeft");
   await expect(selected(page)).toContainText("React");
   await page.getByRole("button", { name: "Details", exact: true }).click();
-  await expect(page.locator(".review-metadata")).toContainText("maintainer-1");
+  await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
+    "maintainer-1",
+  );
 });
 
 test("whole item freezes all changed IDs in one undoable command", async ({ page }) => {
@@ -802,11 +820,11 @@ test("decoded panes appear independently while review waits for all evidence", a
   await expect(page.getByRole("img", { name: "New image", exact: true })).not.toBeVisible();
   await page.keyboard.press("a");
   await callCount(page, 0);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
 test("the new image appears while the reference is still loading", async ({ page }) => {
@@ -829,7 +847,7 @@ test("the new image appears while the reference is still loading", async ({ page
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "Reference", exact: true })).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
@@ -853,7 +871,7 @@ test("load errors block review and retry loads the same evidence", async ({ page
     window.reviewFixture.update(model);
   });
   await expect(page.getByText("Image evidence unavailable")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
   failing = false;
   await page.getByRole("button", { name: "Retry images" }).click();
@@ -865,7 +883,7 @@ test("load errors block review and retry loads the same evidence", async ({ page
         .evaluate((element: HTMLImageElement) => element.naturalWidth),
     )
     .toBe(600);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
 for (const status of ["failed", "superseded", "needs-recompare"] as const) {
@@ -888,7 +906,9 @@ for (const status of ["failed", "superseded", "needs-recompare"] as const) {
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Refresh comparison" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Approve & next A", exact: true }),
+    ).toBeDisabled();
     await expect(page.getByText(/Review is unavailable until the run is sealed/)).toHaveCount(0);
     if (status === "failed") {
       await page.getByRole("button", { name: "Recompare now" }).click();
@@ -951,7 +971,7 @@ test("a dimension mismatch cannot be fixed with image retry", async ({ page }) =
   await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
 
 test("a decode failure offers image retry", async ({ page }) => {
@@ -970,7 +990,7 @@ test("a decode failure offers image retry", async ({ page }) => {
   await expect(page.getByText("Image evidence unavailable")).toBeVisible();
   await expect(page.getByText(/image could not be decoded/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry images" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
 
 for (const kind of ["unchanged", "changed"] as const) {
@@ -992,7 +1012,7 @@ for (const kind of ["unchanged", "changed"] as const) {
     }, kind);
     await ready(page);
     await page.keyboard.press("d");
-    await expect(page.getByRole("button", { name: "Pixel diff D" })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -1026,7 +1046,7 @@ for (const kind of ["unchanged", "changed"] as const) {
     }, kind);
     await ready(page);
     await page.keyboard.press("d");
-    await expect(page.getByRole("button", { name: "Pixel diff D" })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -1037,7 +1057,9 @@ for (const kind of ["unchanged", "changed"] as const) {
     await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
     if (kind === "changed") {
-      await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+      await expect(
+        page.getByRole("button", { name: "Approve & next A", exact: true }),
+      ).toBeEnabled();
       await page.keyboard.press("a");
       await callCount(page, 1);
     }
@@ -1057,7 +1079,7 @@ test("an explicitly required mask fails closed even with zero changed pixels", a
   await ready(page);
   await page.keyboard.press("d");
   await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
 
 for (const changedPixels of [120, undefined]) {
@@ -1079,7 +1101,9 @@ for (const changedPixels of [120, undefined]) {
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
     await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Approve & next A", exact: true }),
+    ).toBeDisabled();
     await page.keyboard.press("a");
     await page.keyboard.press("x");
     await callCount(page, 0);
@@ -1113,7 +1137,9 @@ for (const changedPixels of [0, 1]) {
     await page.keyboard.press("d");
     await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
     await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Approve & next A", exact: true }),
+    ).toBeDisabled();
     await page.keyboard.press("a");
     await callCount(page, 0);
     await expect.poll(() => !!release).toBe(true);
@@ -1135,7 +1161,7 @@ test("addition and removal empty panes remain distinct and D keeps the current v
   await expect(page.getByText("New image, no reference", { exact: true })).toBeVisible();
   await page.keyboard.press("f");
   await page.keyboard.press("d");
-  await expect(page.getByRole("button", { name: "New only F" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Current F" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -1146,7 +1172,7 @@ test("addition and removal empty panes remain distinct and D keeps the current v
   await expect(page.getByText(/Matched locally/)).not.toBeVisible();
   await page.keyboard.press("s");
   await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Pixel diff D" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
     "aria-disabled",
     "true",
   );
@@ -1157,7 +1183,7 @@ test("Original only shows the reference image and G switches from the other view
 }) => {
   await ready(page);
   await page.keyboard.press("g");
-  await expect(page.getByRole("button", { name: "Original only G" })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Baseline G" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -1206,7 +1232,7 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
   await page.keyboard.press("ArrowRight");
   await callCount(page, 0);
   await expect(selected(page)).toContainText("React");
-  await page.getByRole("button", { name: "Approve A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await callCount(page, 1);
 });
 
@@ -1278,7 +1304,7 @@ test("fit, 100%, 200%, and narrow layout preserve inspectable original images", 
   await page.evaluate(() => {
     document.body.style.zoom = "2";
   });
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("zoom-200.png"), fullPage: true });
 });
 
@@ -1412,12 +1438,12 @@ test("recompare keeps prior evidence visible and blocks review until the new com
   await page.getByRole("button", { name: "Recompare stored run" }).click();
   await expect(page.getByText("Comparison 2", { exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await page.evaluate(() => window.reviewFixture.completeComparison());
   await expect(page.getByText("Comparison 3", { exact: true })).toBeVisible();
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
 test("pending comparisons poll only status and pause while the page is hidden", async ({
@@ -1496,8 +1522,8 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
   await expect(
     page.getByText("Review is unavailable until the run is sealed", { exact: false }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject X", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Undo", exact: false })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await focusWorkspace(page);
@@ -1512,7 +1538,7 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
 
 test("active review has no export control and still saves decisions", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
   await page.keyboard.press("a");
   await callCount(page, 1);
   await expect(selected(page)).toContainText("Solid");
@@ -1558,8 +1584,8 @@ test("existing historical work completes while closed history remains read-only"
     "aria-current",
     "page",
   );
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject X", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await focusWorkspace(page);
   await page.keyboard.press("a");
@@ -1616,7 +1642,7 @@ test("a failed historical comparison stops polling and shows its failure reason"
   await expect(
     page.getByText("The previous comparison remains visible", { exact: false }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await page.clock.runFor(4100);
   await expect(page.getByText("Waiting for the new comparison.", { exact: false })).toHaveCount(0);
@@ -1639,8 +1665,8 @@ test("a run that closes before recompare also disables the previous Undo while c
     `Comparison ${previousRevision}`,
   );
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject X", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
   await focusWorkspace(page);
   await page.keyboard.press("Control+z");
   await callCount(page, 1);
@@ -1685,7 +1711,7 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
   await ready(page);
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
   expect(requests).toBe(0);
-  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await page.getByRole("button", { name: "Difference D" }).click();
   await ready(page);
   await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
   expect(requests).toBe(1);
@@ -1703,9 +1729,9 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
     left: element.scrollLeft,
     top: element.scrollTop,
   }));
-  await page.getByRole("button", { name: "New only F" }).click();
+  await page.getByRole("button", { name: "Current F" }).click();
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await page.getByRole("button", { name: "Difference D" }).click();
   await ready(page);
   await expect
     .poll(() =>
@@ -1714,7 +1740,7 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
     .toEqual(position);
   expect(requests).toBe(1);
 
-  await page.getByRole("button", { name: "New only F" }).click();
+  await page.getByRole("button", { name: "Current F" }).click();
   await focusWorkspace(page);
   await page.keyboard.press("ArrowRight");
   await ready(page);
@@ -1724,7 +1750,7 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
   await ready(page);
   await expect(selected(page)).toContainText("React");
   expect(requests).toBe(1);
-  await page.getByRole("button", { name: "Pixel diff D" }).click();
+  await page.getByRole("button", { name: "Difference D" }).click();
   await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
   await expect
     .poll(() =>
@@ -1760,7 +1786,9 @@ for (const imagesExpired of [false, true]) {
     ).toBeVisible();
     await expect(page.locator(".review-viewer")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Approve A", exact: true })).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Approve & next A", exact: true }),
+    ).toBeDisabled();
     await page.keyboard.press("ArrowRight");
     await expect(selected(page)).toContainText("Solid");
   });
@@ -1786,10 +1814,10 @@ for (const forcedColors of ["none", "active"] as const) {
       document.documentElement.style.zoom = "2";
     });
     await ready(page);
-    const header = page.locator(".shell-main-header");
-    const approve = page.getByRole("button", { name: "Approve A", exact: true });
+    const workspace = page.getByLabel("Review workspace", { exact: true });
+    const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
     await expect(approve).toBeVisible();
-    const geometry = await header.evaluate((element) => {
+    const geometry = await workspace.evaluate((element) => {
       const context = element.querySelector(".review-result-heading")?.getBoundingClientRect();
       const actions = element.querySelector(".review-actions")?.getBoundingClientRect();
       if (!context || !actions) throw new Error("Missing review header content.");
@@ -1811,3 +1839,115 @@ for (const forcedColors of ["none", "active"] as const) {
     );
   });
 }
+
+test("bulk confirmation closes when a queued failure restores another selection", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await callCount(page, 1);
+  await expect(selected(page)).toContainText("Solid");
+  await ready(page);
+  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Review all changed views" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Success dialog");
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("offline");
+    window.reviewFixture.resolve();
+  });
+  await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
+  await expect(dialog).toBeHidden();
+  await expect(selected(page)).toContainText("React");
+  await callCount(page, 1);
+});
+
+for (const change of ["comparison", "targets"] as const) {
+  test(`bulk confirmation closes after a change to its ${change}`, async ({ page }) => {
+    await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+    const dialog = page.getByRole("dialog", { name: "Review all changed views" });
+    await expect(dialog).toBeVisible();
+    await page.evaluate((change) => {
+      const model = window.reviewFixture.model();
+      if (change === "comparison") {
+        model.comparisonId = "replacement-comparison";
+      } else {
+        model.items[0]?.variants.pop();
+      }
+      window.reviewFixture.update(model);
+    }, change);
+    await expect(dialog).toBeHidden();
+    await ready(page);
+    await callCount(page, 0);
+  });
+}
+
+test("workspace arrows and screenshot buttons follow the filtered item order", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const first = model.items[0];
+    const addition = model.items[2];
+    if (!first || !addition) {
+      throw new Error("Missing filtered navigation items.");
+    }
+    first.name = "Focus dialog";
+    addition.name = "Focus addition";
+    window.reviewFixture.update(model);
+  });
+  await page.getByRole("combobox", { name: "Search screenshots" }).fill("Focus");
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".review-item")).toHaveCount(2);
+  await focusWorkspace(page);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("heading", { name: "Focus addition", exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("button", { name: "Next screenshot", exact: true })).toBeDisabled();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("heading", { name: "Focus dialog", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Next screenshot", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Focus addition", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Previous screenshot", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Focus dialog", exact: true })).toBeVisible();
+  await callCount(page, 0);
+});
+
+test("mobile screenshot filters persist and update navigation while the dialog is closed", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
+  const search = dialog.getByRole("combobox", { name: "Search screenshots" });
+  await search.fill("Open menu");
+  await page.keyboard.press("Escape");
+  await expect(dialog.locator(".review-item")).toHaveCount(1);
+  await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const next = page.getByRole("button", { name: "Next screenshot", exact: true });
+  await expect(
+    page.getByRole("button", { name: "Previous screenshot", exact: true }),
+  ).toBeDisabled();
+  await next.click();
+  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await expect(next).toBeDisabled();
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const addition = model.items[2];
+    if (!addition) throw new Error("Missing added screenshot.");
+    addition.name = "Open menu additional";
+    window.reviewFixture.update(model);
+  });
+  await expect(next).toBeEnabled();
+  await focusWorkspace(page);
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    page.getByRole("heading", { name: "Open menu additional", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  await expect(search).toHaveValue("Open menu");
+  await expect(dialog.locator(".review-item")).toHaveCount(2);
+  await expect(dialog.locator('.review-item[aria-current="page"]')).toContainText(
+    "Open menu additional",
+  );
+  await callCount(page, 0);
+});
