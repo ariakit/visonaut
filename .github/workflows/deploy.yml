@@ -199,7 +199,7 @@ jobs:
             'Migrations must not use a redirected application build.');
           const configuration = unstable_readConfig({ config: 'apps/web/wrangler.jsonc', env: 'production' });
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), [{
-            binding: 'DB', database_id: '441904d8-790b-44e3-9d83-a4c19e45c835'
+            binding: 'DB', database_id: '3c0b122f-9186-4d34-80a8-09a50eed2cc1'
           }]);
           JS
       - name: Load only the existing deployment key at its reviewed root path
@@ -343,11 +343,11 @@ jobs:
           assert.equal(configuration.vars?.VISONAUT_ORIGIN, preview ? 'https://preview.visonaut.com' : 'https://visonaut.com');
           assert.equal(configuration.vars?.VISONAUT_LAUNCH_ENABLED, preview ? 'false' : 'true');
           assert.deepEqual(configuration.d1_databases.map(({ binding, database_id }) => ({ binding, database_id })), preview ? [] : [{
-            binding: 'DB', database_id: '441904d8-790b-44e3-9d83-a4c19e45c835'
+            binding: 'DB', database_id: '3c0b122f-9186-4d34-80a8-09a50eed2cc1'
           }]);
           assert.deepEqual(configuration.r2_buckets.map(({ binding, bucket_name }) => ({ binding, bucket_name })), preview ? [] : [
-            { binding: 'IMAGES', bucket_name: 'visonaut-production-images' },
-            { binding: 'QUARANTINE', bucket_name: 'visonaut-production-quarantine' }
+            { binding: 'IMAGES', bucket_name: 'visonaut-images' },
+            { binding: 'QUARANTINE', bucket_name: 'visonaut-quarantine' }
           ]);
           assert.deepEqual(configuration.services.map(({ binding, service }) => ({ binding, service })), preview ? [] : [
             { binding: 'COMPARATOR', service: 'visonaut-compare' }
