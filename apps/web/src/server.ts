@@ -27,6 +27,16 @@ const render = createStartHandler(async (context) => {
   return { ...result, response: securePrivateResponse(result.response, nonce) };
 });
 
+// Sign-in uses these four routes of Better Auth: the start, the GitHub
+// callback, the sign-out, and the error page, to which a failed callback
+// redirects. The match is exact. Each other path below /api/auth/ answers 404.
+const servedAuthRoutes: ReadonlySet<string> = new Set([
+  "POST /api/auth/sign-in/social",
+  "GET /api/auth/callback/github",
+  "POST /api/auth/sign-out",
+  "GET /api/auth/error",
+]);
+
 function launchEnabled(value: string) {
   return value === "true";
 }
@@ -80,6 +90,10 @@ export default {
       }
       requireBackendBindings(env);
       if (url.pathname.startsWith("/api/auth/")) {
+        // This answer comes before the auth instance, so no database work runs.
+        if (!servedAuthRoutes.has(`${request.method} ${url.pathname}`)) {
+          return securePrivateResponse(new Response(null, { status: 404 }));
+        }
         if (url.origin !== env.VISONAUT_ORIGIN)
           return securePrivateResponse(new Response(null, { status: 403 }));
         const auth = createAuth(authConfiguration(env));

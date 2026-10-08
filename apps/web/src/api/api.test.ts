@@ -1715,6 +1715,25 @@ describe("private recomparison API", () => {
     ).toEqual(expect.objectContaining({ results: [] }));
   });
 
+  it.each(["/api/session", "/api/auth/error"])(
+    "returns a private not-found response for %s, which the API does not handle",
+    async (path) => {
+      const test = await fixture();
+      const headers = { authorization: `Bearer ${test.token}` };
+      const anonymous = await test.send(path);
+      expect(anonymous.status).toBe(401);
+      expect(await objectResponse(anonymous)).toMatchObject({
+        error: { code: "sign_in_required" },
+      });
+      const response = await test.send(path, { headers });
+      expect(response.status).toBe(404);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(await objectResponse(response)).toMatchObject({
+        error: { code: "not_found", message: "The endpoint was not found." },
+      });
+    },
+  );
+
   it("keeps an expired closed run immutable when the active policy changes", async () => {
     const test = await fixture();
     await test.complete();

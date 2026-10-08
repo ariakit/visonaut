@@ -14,7 +14,7 @@ import { runStatus } from "./ingest.js";
 import { uuid } from "./input.js";
 import { publicImage } from "./images.js";
 import { reportVisualPlan } from "./pre-run.js";
-import { handleReview } from "./review.js";
+import { handleReview, reviewCommandRoute } from "./review.js";
 import { receiveWebhook } from "./webhooks.js";
 import {
   beginStaged,
@@ -121,16 +121,13 @@ export async function handleApi(
       });
     }
     const dashboardRead = path === "/api/runs" && request.method === "GET";
-    if (!path.startsWith("/api/auth/") && !dashboardRead) {
+    if (!dashboardRead) {
       await assertConfiguredProject(context);
     }
     if ((path === "/v1/webhooks" || path === "/webhooks/github") && request.method === "POST") {
       return privateResponse(await receiveWebhook(request, context, lifetime));
     }
     const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
-    if (path.startsWith("/api/auth/")) {
-      return privateResponse(await auth.handler(request));
-    }
     if (path === "/v1/plan" && request.method === "POST") {
       return privateResponse(await reportVisualPlan(request, context));
     }
@@ -189,8 +186,7 @@ export async function handleApi(
     }
     // A signed upload token is never accepted by this live-session boundary.
     const github = await createGitHubClient(bindings.configuration.github);
-    const reviewWrite =
-      request.method === "POST" && /^\/api\/comparisons\/[a-f0-9-]+\/commands$/.test(path);
+    const reviewWrite = request.method === "POST" && reviewCommandRoute.test(path);
     const identity = await requireMaintainer({
       request,
       auth,

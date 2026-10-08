@@ -9,8 +9,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vite
 import { unstable_readConfig } from "wrangler";
 import * as preRun from "./api/pre-run.ts";
 import * as webhooks from "./api/webhooks.ts";
+import { object, string } from "./api/input.ts";
 import server from "./server.ts";
-import type { BackendEnv } from "./runtime.ts";
+import { authConfiguration, githubConfiguration, type BackendEnv } from "./runtime.ts";
 
 // These tests exercise real request handlers without the application renderer.
 vi.mock("@tanstack/react-start/server", () => ({
@@ -206,11 +207,9 @@ it("keeps a known outer authentication failure without a support reference", asy
   vi.mocked(security.createAuth).mockImplementationOnce(() => {
     throw error;
   });
-  const response = await server.fetch(
-    new Request(`${env.VISONAUT_ORIGIN}/api/auth/get-session`),
-    env,
-    { waitUntil() {} },
-  );
+  const response = await server.fetch(new Request(`${env.VISONAUT_ORIGIN}/api/auth/error`), env, {
+    waitUntil() {},
+  });
   expect(response.status).toBe(401);
   expect(await response.json()).toEqual({
     error: { code: error.code, message: error.message },
@@ -226,6 +225,263 @@ it("keeps a known outer authentication failure without a support reference", asy
       elapsedMilliseconds: 0,
     }),
   );
+});
+
+interface AppRequestOptions {
+  origin?: string;
+  cookie?: string;
+  body?: unknown;
+}
+
+/** A request as the page sends it, with the Origin header and a JSON body. */
+function appRequest(
+  method: string,
+  path: string,
+  { origin = env.VISONAUT_ORIGIN, cookie, body }: AppRequestOptions = {},
+) {
+  const headers = new Headers({ origin });
+  if (cookie) {
+    headers.set("cookie", cookie);
+  }
+  if (body !== undefined) {
+    headers.set("content-type", "application/json");
+  }
+  return new Request(`${origin}${path}`, {
+    method,
+    headers,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+}
+
+/** Each use of the database throws, so a 404 answer proves no database work. */
+function withoutDatabase(): BackendEnv {
+  return {
+    ...env,
+    DB: new Proxy(env.DB, {
+      get() {
+        throw new Error("A closed auth route used the database.");
+      },
+    }),
+  };
+}
+
+// The status is the answer of Better Auth to a request with no session.
+const servedAuthRoutes = [
+  "302 GET /api/auth/callback/github",
+  "200 GET /api/auth/error",
+  "200 POST /api/auth/sign-in/social",
+  "200 POST /api/auth/sign-out",
+];
+
+it("serves 4 of the 30 auth routes and answers 404 for the 26 others", async () => {
+  // The library gives the route list, so a route that an upgrade adds fails
+  // the count.
+  const auth = createAuth(authConfiguration(env));
+  authContexts.push(auth.$context);
+  const closed = withoutDatabase();
+  const paths = new Set<string>();
+  const answered: string[] = [];
+  for (const endpoint of Object.values(auth.api)) {
+    // An endpoint with no path is not an HTTP route.
+    if (!endpoint.path) continue;
+    // A route has one path parameter at most. The provider name fills it.
+    const path = `/api/auth${endpoint.path.replace(/:\w+/, "github")}`;
+    paths.add(path);
+    for (const method of [endpoint.options.method].flat()) {
+      const served = servedAuthRoutes.some((route) => route.endsWith(` ${method} ${path}`));
+      const body = method === "POST" ? { provider: "github", callbackURL: "/" } : undefined;
+      const response = await server.fetch(
+        appRequest(method, path, { body }),
+        served ? env : closed,
+        { waitUntil() {} },
+      );
+      privateHeaders(response);
+      if (response.status !== 404) {
+        answered.push(`${response.status} ${method} ${path}`);
+      }
+    }
+  }
+  expect(paths.size).toBe(30);
+  expect(answered.sort()).toEqual([...servedAuthRoutes].sort());
+  const closedPaths = [...paths].filter(
+    (path) => !answered.some((route) => route.endsWith(` ${path}`)),
+  );
+  expect(closedPaths).toHaveLength(26);
+  expect(security.createAuth).toHaveBeenCalledTimes(servedAuthRoutes.length);
+});
+
+it.each([
+  ["GET", "/api/auth/"],
+  ["GET", "/api/auth/sign-out"],
+  ["HEAD", "/api/auth/error"],
+  ["POST", "/api/auth/callback/github"],
+  ["GET", "/api/auth/callback/gitlab"],
+  ["GET", "/api/auth/error/"],
+  ["GET", "/api/auth//error"],
+  ["GET", "/api/auth/Error"],
+  ["GET", "/api/auth/%65rror"],
+  ["GET", "/api/auth/error/more"],
+])("answers 404 for %s %s, which is not an exact served auth route", async (method, path) => {
+  const response = await server.fetch(appRequest(method, path), withoutDatabase(), {
+    waitUntil() {},
+  });
+  expect(response.status).toBe(404);
+  privateHeaders(response);
+  expect(security.createAuth).not.toHaveBeenCalled();
+});
+
+it.each([
+  { path: "/api/auth/error", status: 403 },
+  { path: "/api/auth/unlisted", status: 404 },
+])("answers $status for $path at another origin", async ({ path, status }) => {
+  const response = await server.fetch(
+    appRequest("GET", path, { origin: "https://other.example" }),
+    withoutDatabase(),
+    { waitUntil() {} },
+  );
+  expect(response.status).toBe(status);
+  privateHeaders(response);
+  expect(security.createAuth).not.toHaveBeenCalled();
+});
+
+it("sends a failed GitHub callback to the served error page", async () => {
+  const lifetime = { waitUntil() {} };
+  const callback = await server.fetch(
+    appRequest("GET", "/api/auth/callback/github?error=access_denied"),
+    env,
+    lifetime,
+  );
+  expect(callback.status).toBe(302);
+  const location = new URL(callback.headers.get("location") ?? "", env.VISONAUT_ORIGIN);
+  expect(location.origin + location.pathname).toBe(`${env.VISONAUT_ORIGIN}/api/auth/error`);
+  const page = await server.fetch(
+    appRequest("GET", location.pathname + location.search),
+    env,
+    lifetime,
+  );
+  expect(page.status).toBe(200);
+  expect(page.headers.get("content-type")).toContain("text/html");
+  privateHeaders(page);
+});
+
+function cookieHeader(jar: Map<string, string>) {
+  return [...jar].map(([name, value]) => `${name}=${value}`).join("; ");
+}
+
+/** Keeps each cookie of the answer, and drops a cookie that the answer ends. */
+function storeCookies(jar: Map<string, string>, response: Response) {
+  for (const cookie of response.headers.getSetCookie()) {
+    const [pair = "", ...attributes] = cookie.split(";");
+    const separator = pair.indexOf("=");
+    const name = pair.slice(0, separator).trim();
+    const expired = attributes.some((attribute) => /^\s*max-age=0$/i.test(attribute));
+    if (expired) {
+      jar.delete(name);
+    } else {
+      jar.set(name, pair.slice(separator + 1).trim());
+    }
+  }
+}
+
+it("signs in with GitHub, reads the identity, and signs out through the served routes", async () => {
+  const githubUserId = 4_242;
+  const email = "maintainer@example.com";
+  const lifetime = { waitUntil() {} };
+  const jar = new Map<string, string>();
+  // Better Auth asks GitHub for the token and for the profile of the user.
+  const github = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url === "https://github.com/login/oauth/access_token") {
+      return Response.json({ access_token: "test-access-token", token_type: "bearer" });
+    }
+    if (url === "https://api.github.com/user") {
+      return Response.json({ id: githubUserId, login: "maintainer", name: "Maintainer", email });
+    }
+    if (url === "https://api.github.com/user/emails") {
+      return Response.json([{ email, primary: true, verified: true }]);
+    }
+    throw new Error(`Unexpected request to ${url}.`);
+  });
+  // The identity route asks the GitHub App for the user and for the permission.
+  const { appId, repositoryId, repository } = githubConfiguration(env);
+  vi.spyOn(security, "createGitHubClient").mockResolvedValue({
+    appId,
+    repositoryId,
+    repository,
+    async request(path) {
+      if (!path.endsWith("/permission")) {
+        return { id: githubUserId, login: "maintainer" };
+      }
+      return { user: { id: githubUserId }, permission: "write", role_name: "write" };
+    },
+  });
+
+  const start = await server.fetch(
+    appRequest("POST", "/api/auth/sign-in/social", {
+      body: { provider: "github", callbackURL: "/?view=history" },
+    }),
+    env,
+    lifetime,
+  );
+  expect(start.status).toBe(200);
+  storeCookies(jar, start);
+  const authorization = new URL(string(object(await start.json()).url, 4096));
+  expect(authorization.origin + authorization.pathname).toBe(
+    "https://github.com/login/oauth/authorize",
+  );
+  expect(authorization.searchParams.get("redirect_uri")).toBe(
+    `${env.VISONAUT_ORIGIN}/api/auth/callback/github`,
+  );
+
+  const callbackQuery = new URLSearchParams({
+    code: "test-code",
+    state: authorization.searchParams.get("state") ?? "",
+  });
+  const callback = await server.fetch(
+    appRequest("GET", `/api/auth/callback/github?${callbackQuery}`, { cookie: cookieHeader(jar) }),
+    env,
+    lifetime,
+  );
+  expect(callback.status).toBe(302);
+  expect(callback.headers.get("location")).toBe("/?view=history");
+  storeCookies(jar, callback);
+  expect(github).toHaveBeenCalledTimes(3);
+
+  const signedIn = cookieHeader(jar);
+  const identity = await server.fetch(
+    appRequest("GET", "/api/me", { cookie: signedIn }),
+    env,
+    lifetime,
+  );
+  expect(identity.status).toBe(200);
+  const userId = string(object(await identity.json()).userId);
+  expect(
+    await env.DB.prepare("SELECT accountId, providerId FROM account WHERE userId=?")
+      .bind(userId)
+      .all(),
+  ).toMatchObject({ results: [{ accountId: String(githubUserId), providerId: "github" }] });
+
+  const signOut = await server.fetch(
+    appRequest("POST", "/api/auth/sign-out", { cookie: signedIn, body: {} }),
+    env,
+    lifetime,
+  );
+  expect(signOut.status).toBe(200);
+  expect(await signOut.json()).toEqual({ success: true });
+  storeCookies(jar, signOut);
+  expect(cookieHeader(jar)).toBe("");
+  // The cookie of the ended session is no longer a credential.
+  const signedOut = await server.fetch(
+    appRequest("GET", "/api/me", { cookie: signedIn }),
+    env,
+    lifetime,
+  );
+  expect(signedOut.status).toBe(401);
+  expect(
+    await env.DB.prepare("SELECT action FROM auth_audit WHERE user_id=? ORDER BY created_at, rowid")
+      .bind(userId)
+      .all(),
+  ).toMatchObject({ results: [{ action: "sign_in" }, { action: "sign_out" }] });
 });
 
 it("preserves the request lifetime receiver when passing failure context to the API", async () => {
