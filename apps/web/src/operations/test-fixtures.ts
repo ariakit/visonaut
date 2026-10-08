@@ -1,5 +1,13 @@
 import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
-import type { CaptureProfile } from "@visonaut/protocol";
+import {
+  digestEnvironmentProfile,
+  digestJson,
+  digestRenderingProfile,
+  LOCAL_COMPARISON_CODEC,
+  LOCAL_COMPARISON_ENGINE,
+  type CaptureProfile,
+  type LocalComparisonReceipt,
+} from "@visonaut/protocol";
 import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
@@ -9,7 +17,15 @@ import {
   type Result,
   type SqlValue,
   type Statement,
+  type ValidatedImage,
 } from "@visonaut/service";
+import {
+  writeCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "../capture-inventory.ts";
+import { readSnapshotInventory } from "../inventory-records.ts";
+import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 class SqliteStatement implements Statement {
   constructor(
@@ -205,11 +221,8 @@ export function context(database: TestDatabase) {
   };
   return { context: value, images, quarantine, state };
 }
-export async function reserve(
-  context: OperationsContext,
-  id = "run",
-  kind: "main" | "pull_request" = "pull_request",
-) {
+/** Create the fixture project on first use. */
+async function projectService(context: OperationsContext) {
   const service = new Service(context.database);
   if (!(await context.database.prepare("SELECT id FROM visonaut_projects").first())) {
     await service.createPolicy({
@@ -218,6 +231,14 @@ export async function reserve(
     });
     await service.createProject({ id: "project", repositoryId: "123", policyDigest: "policy" });
   }
+  return service;
+}
+export async function reserve(
+  context: OperationsContext,
+  id = "run",
+  kind: "main" | "pull_request" = "pull_request",
+) {
+  const service = await projectService(context);
   await service.reserveRun({
     id,
     projectId: "project",
@@ -386,3 +407,258 @@ export const profile = {
   animationPolicy: "disabled",
   captureOptions: { animations: "disabled", caret: "hide", scale: "css" },
 } satisfies CaptureProfile;
+
+export interface InventoryRunParams {
+  id: string;
+  kind: "main" | "pull_request";
+  /** The image bytes of each item. Bytes equal to the baseline keep its image. */
+  items: Record<string, string>;
+}
+
+/**
+ * Build a sealed and approved run of the inventory form: a capture inventory,
+ * a local comparison receipt, and images only for the captures that differ
+ * from the project baseline. The baseline must have an inventory. The first
+ * main run of a project has no baseline.
+ */
+export async function inventoryRun(
+  context: OperationsContext,
+  { id, kind, items }: InventoryRunParams,
+) {
+  const service = await projectService(context);
+  const project = await service.project("project");
+  const snapshotId = project.snapshot_id;
+  const reference = snapshotId ? await readSnapshotInventory(context, snapshotId) : null;
+  if (snapshotId && !reference) {
+    throw new Error("The baseline of an inventory run needs an inventory.");
+  }
+  const references = new Map(
+    (reference?.captures ?? []).map((capture) => [capture.itemKey, capture]),
+  );
+  const profileDigest = await digestJson(profile);
+  const renderingProfileDigest = await digestRenderingProfile(profile);
+  const environmentProfileDigest = await digestEnvironmentProfile(profile);
+  const profiles = [{ digest: profileDigest, profile }];
+  const testedSha = digest(id).slice(0, 40);
+  const variant = { key: "light", browser: "chromium" } as const;
+  const receipt: LocalComparisonReceipt = {
+    mode: "local-v1",
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    reference: {
+      snapshotId,
+      baselineRevision: project.baseline_revision,
+      // Only the Submit route verifies these two digests.
+      manifestDigest: "e".repeat(64),
+      inventoryDigest: "f".repeat(64),
+      captureCount: references.size,
+    },
+    captures: [],
+    removals: [...references.values()]
+      .filter((capture) => !Object.hasOwn(items, capture.itemKey))
+      .map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+  };
+  const captures: InventoryCapture[] = [];
+  const uploads: { image: ValidatedImage; body: string }[] = [];
+  for (const [ordinal, [itemKey, body]] of Object.entries(items).entries()) {
+    const referenceImage = references.get(itemKey)?.image;
+    const image: ValidatedImage =
+      referenceImage?.digest === digest(body)
+        ? referenceImage
+        : {
+            id: `image-${id}-${itemKey}`,
+            runId: id,
+            objectKey: `runs/${id}/images/${itemKey}.png`,
+            digest: digest(body),
+            bytes: new TextEncoder().encode(body).byteLength,
+            contentType: "image/png",
+            width: 1,
+            height: 1,
+          };
+    const isChanged = image !== referenceImage;
+    if (isChanged) {
+      uploads.push({ image, body });
+    }
+    const observedImage = {
+      path: `images/${itemKey}.png`,
+      mediaType: image.contentType,
+      digest: image.digest,
+      bytes: image.bytes,
+      width: image.width,
+      height: image.height,
+    };
+    const outcome = isChanged ? ("changed" as const) : ("unchanged" as const);
+    const changedPixels = isChanged ? 1 : 0;
+    captures.push({
+      id: `capture-${id}-${itemKey}`,
+      itemKey,
+      variantKey: variant.key,
+      ordinal,
+      imageId: image.id,
+      image,
+      profileDigest,
+      renderingProfileDigest,
+      environmentProfileDigest,
+      testId: "test",
+      testRetry: 0,
+      metadata: {
+        name: itemKey,
+        variant,
+        profile: captureProfileReference(profileDigest),
+        localMode: receipt.mode,
+        observedImage,
+        candidateStored: isChanged,
+        localResult: {
+          outcome,
+          changedPixels,
+          ratio: changedPixels,
+          maskExpected: false,
+          engineVersion: LOCAL_COMPARISON_ENGINE,
+          codecVersion: LOCAL_COMPARISON_CODEC,
+        },
+      },
+    });
+    receipt.captures.push({
+      itemKey,
+      variantKey: variant.key,
+      candidateDigest: image.digest,
+      referenceDigest: referenceImage?.digest ?? null,
+      outcome,
+      changedPixels,
+      ratio: changedPixels,
+      sizeChanged: false,
+    });
+  }
+  const planDigest = digest(`plan-${id}`);
+  await service.reserveRun({
+    id,
+    projectId: project.id,
+    externalRunId: id,
+    attempt: 1,
+    kind,
+    testedSha,
+    lineageKey: kind === "main" ? "main" : id,
+    plan: {
+      digest: planDigest,
+      shards: [
+        {
+          key: "combined",
+          profileDigest,
+          tests: ["test"],
+          captures: captures.map(({ itemKey, variantKey }) => ({
+            itemKey,
+            variantKey,
+            testId: "test",
+          })),
+        },
+      ],
+    },
+    verifiedRelatedRunIds: [],
+    verifiedAncestorShas: reference ? [reference.testedSha] : [],
+    verificationDigest: "verified",
+    rerunShardKeys: ["combined"],
+    now: context.now(),
+  });
+  for (const { image, body } of uploads) {
+    await context.images.put(image.objectKey, body, {
+      httpMetadata: { contentType: image.contentType },
+    });
+    await service.registerImage(image);
+  }
+  // Production stores a profile row only for a run with a changed capture.
+  if (uploads.length) {
+    await storeCaptureProfiles(context.database, profiles);
+  }
+  const inventory: CaptureInventory = {
+    schemaVersion: "baseline-delta-v1",
+    projectId: project.id,
+    runId: id,
+    testedSha,
+    referenceSnapshotId: snapshotId,
+    captures,
+    profiles,
+    manifest: {
+      schemaVersion: "1.0",
+      producer: {
+        name: "visonaut",
+        version: "1.0.0",
+        nodeVersion: "24",
+        playwrightVersion: "1.63.0",
+      },
+      run: {
+        repository: "owner/repo",
+        repositoryId: "123",
+        workflowRunId: "456",
+        workflowAttempt: 1,
+        testedSha,
+        planDigest,
+      },
+      shard: { key: "combined", jobId: "789", sourceAttempt: 1 },
+      profiles,
+      tests: [
+        { id: "test", file: "fixture.test.ts", titlePath: ["Fixture"], retry: 0, status: "passed" },
+      ],
+      captures: captures.map((capture) => ({
+        itemKey: capture.itemKey,
+        variant,
+        ordinal: capture.ordinal,
+        testId: capture.testId,
+        testRetry: capture.testRetry,
+        profileDigest,
+        image: {
+          path: `images/${capture.itemKey}.png`,
+          mediaType: capture.image.contentType,
+          digest: capture.image.digest,
+          bytes: capture.image.bytes,
+          width: capture.image.width,
+          height: capture.image.height,
+        },
+      })),
+      localComparison: receipt,
+    },
+  };
+  const pointer = await writeCaptureInventory(context.images, inventory);
+  await service.commitShard({
+    runId: id,
+    key: "combined",
+    manifestDigest: digest(`manifest-${id}`),
+    captures,
+    inventory: pointer,
+    imageRunIds: [...new Set(captures.map((capture) => capture.image.runId))],
+    ...(snapshotId ? { localReferenceSnapshotId: snapshotId } : {}),
+    finalTestOutcomes: [{ testId: "test", retry: 0, status: "passed" }],
+    now: context.now(),
+  });
+  await service.sealRun({ runId: id, now: context.now() });
+  const comparisonId = `comparison-${id}`;
+  await service.createComparison({
+    id: comparisonId,
+    runId: id,
+    referenceSnapshotId: snapshotId,
+    expectedBaselineRevision: project.baseline_revision,
+    localComparison: receipt,
+    referenceCaptures: [...references.values()].map((capture) => ({
+      id: capture.id,
+      itemKey: capture.itemKey,
+      variantKey: capture.variantKey,
+      profileDigest: capture.profileDigest,
+      renderingProfileDigest: capture.renderingProfileDigest,
+      image: capture.image,
+    })),
+    now: context.now(),
+  });
+  await service.finalizeComparison({ comparisonId, now: context.now() });
+  for (const row of await service.comparisonRows(comparisonId)) {
+    await service.review({
+      commandId: `approve-${row.id}`,
+      actorId: "maintainer",
+      sessionId: "session",
+      comparisonId,
+      verdict: "approved",
+      targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+      selection: { itemKey: row.item_key, variantKey: row.variant_key },
+      now: context.now(),
+    });
+  }
+  return { service, inventory: pointer };
+}
