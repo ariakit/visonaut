@@ -47,6 +47,9 @@
     "production": {
       "workers_dev": true,
       "routes": [{ "pattern": "visonaut.com", "custom_domain": true }],
+      // The D1 primary is in ENAM. Run each request near it, and not near the
+      // visitor, because one page makes several D1 round trips.
+      "placement": { "region": "aws:us-east-1" },
       "vars": {
         "VISONAUT_ENVIRONMENT": "production",
         "VISONAUT_REPOSITORY": "ariakit/ariakit",
