@@ -696,6 +696,9 @@ async function conflictResponse(context: PrivateContext, error: ConflictError, r
   );
 }
 
+/** The route of a review command. The access check and the handler share it. */
+export const reviewCommandRoute = /^\/api\/comparisons\/([a-f0-9-]+)\/commands$/;
+
 export async function handleReview(
   request: Request,
   context: PrivateContext,
@@ -709,15 +712,6 @@ export async function handleReview(
         repositoryId: context.configuration.github.repositoryId,
       }),
     );
-  }
-  if (path === "/api/session" && request.method === "GET") {
-    return Response.json({
-      user: {
-        id: context.identity.userId,
-        githubUserId: context.identity.githubUserId,
-        login: context.identity.login,
-      },
-    });
   }
   if (path === "/api/review-sessions" && request.method === "POST") {
     const id = crypto.randomUUID();
@@ -834,7 +828,7 @@ export async function handleReview(
     }
     return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
   }
-  const commandMatch = /^\/api\/comparisons\/([a-f0-9-]+)\/commands$/.exec(path);
+  const commandMatch = reviewCommandRoute.exec(path);
   if (commandMatch?.[1] && request.method === "POST") {
     const comparisonId = uuid(commandMatch[1]);
     const comparison = await context.service.comparison(comparisonId);
