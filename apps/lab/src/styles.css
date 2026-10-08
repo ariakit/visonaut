@@ -1,0 +1,45 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+/* Tailwind scans only this folder. Without `source`, it scans the whole app
+   folder, which has the audit document and the design records: their text
+   added 10% to the style sheet, and a write to one of them reloaded each open
+   page. */
+@import "tailwindcss" source("./");
+@import "./components/ariakit/styles/ui.css";
+@import "./lab/knobs.css";
+
+/* The lab selects the scheme with an attribute so that each preview can show
+   dark or light without a change to the system setting. apps/web uses the
+   system setting only. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Lab chrome breakpoints. Below `lab-stack`, the feedback bar moves to a
+   second header row. From `lab-wide`, header controls show their labels. */
+@custom-variant lab-stack (@media (width < 56rem));
+@custom-variant lab-wide (@media (width >= 80rem));
+
+@theme {
+  --font-mono:
+    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* A notice that appears only when a wait gets long. A short wait shows
+     nothing, so a fast load does not blink. */
+  --animate-lab-late: lab-late 200ms 1s both;
+
+  @keyframes lab-late {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

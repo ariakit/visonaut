@@ -1,0 +1,114 @@
+/* Look controls. Each rule maps one `data-*` attribute to an Ariakit theme
+   token, so every primitive follows without a class change. The inline script
+   sets the attributes on the `html` element. A `.lab-look` element can carry
+   the same attributes to show one preset in place, as the swatches in the
+   look menu do.
+
+   Every selector has the specificity of one attribute, the same as the dark
+   canvas rule of the Ariakit theme. Order decides: this file loads after the
+   theme, and each dark rule follows its light rule. */
+
+/* Brand. `--color-primary` follows the brand, as in the Ariakit theme. */
+:where(:root, .lab-look)[data-brand] {
+  --color-primary: var(--color-brand);
+}
+
+:where(:root, .lab-look)[data-brand="blue"] {
+  --color-brand: oklch(56.7% 0.1546 248.5156);
+}
+
+:where(:root, .lab-look)[data-brand="violet"] {
+  --color-brand: oklch(55% 0.2 292);
+}
+
+:where(:root, .lab-look)[data-brand="green"] {
+  --color-brand: oklch(58% 0.14 155);
+}
+
+:where(:root, .lab-look)[data-brand="orange"] {
+  --color-brand: oklch(66% 0.17 48);
+}
+
+:where(:root, .lab-look)[data-brand="pink"] {
+  --color-brand: oklch(62% 0.21 355);
+}
+
+/* A neutral brand has no hue to carry it, so it takes the far end of the
+   lightness scale in each scheme. */
+:where(:root, .lab-look)[data-brand="mono"] {
+  --color-brand: oklch(26% 0 0);
+}
+
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-brand="mono"] {
+  --color-brand: oklch(93% 0 0);
+}
+
+/* Canvas, light scheme. */
+:where(:root, .lab-look)[data-canvas="cool"] {
+  --color-canvas: oklch(99.33% 0.0011 197.14);
+}
+
+:where(:root, .lab-look)[data-canvas="neutral"] {
+  --color-canvas: oklch(98.6% 0 0);
+}
+
+:where(:root, .lab-look)[data-canvas="warm"] {
+  --color-canvas: oklch(98% 0.008 85);
+}
+
+/* The highest contrast: white in light, black in dark. */
+:where(:root, .lab-look)[data-canvas="black"] {
+  --color-canvas: oklch(100% 0 0);
+}
+
+:where(:root, .lab-look)[data-canvas="dim"] {
+  --color-canvas: oklch(95% 0.005 260);
+}
+
+/* Canvas, dark scheme. */
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-canvas="cool"] {
+  --color-canvas: oklch(16.34% 0.0091 264.28);
+}
+
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-canvas="neutral"] {
+  --color-canvas: oklch(17% 0 0);
+}
+
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-canvas="warm"] {
+  --color-canvas: oklch(17.5% 0.009 60);
+}
+
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-canvas="black"] {
+  --color-canvas: oklch(0% 0 0);
+}
+
+:where(:root[data-theme="dark"], [data-theme="dark"] .lab-look)[data-canvas="dim"] {
+  --color-canvas: oklch(24% 0.012 264);
+}
+
+/* Radius. Every named radius step multiplies this token. */
+:where(:root, .lab-look)[data-radius="sharp"] {
+  --radius: 0.05em;
+}
+
+:where(:root, .lab-look)[data-radius="default"] {
+  --radius: 0.25em;
+}
+
+:where(:root, .lab-look)[data-radius="round"] {
+  --radius: 0.4em;
+}
+
+/* Density. Every spacing utility and every `$p` recipe value multiplies this
+   token, so sizes that use the spacing scale change with it too. */
+:where(:root, .lab-look)[data-density="compact"] {
+  --spacing: 0.21em;
+}
+
+:where(:root, .lab-look)[data-density="default"] {
+  --spacing: 0.25em;
+}
+
+:where(:root, .lab-look)[data-density="comfortable"] {
+  --spacing: 0.29em;
+}

@@ -1,0 +1,181 @@
+{
+  "summary": "Review of the direction \"changes\" (Changes feed) is complete. Invoked skills: ariakit-general-workflow, ariakit-general-code-style (no Visonaut-specific skill exists). I captured and read the full matrix (73 captures: every scenario at 1440 dark, each main scenario in light, at 390 and at 768, review at 1920, data=today, and the brand, canvas, radius, and density values), ran keyboard, pointer, and touch flows, and fixed what I found. Final state: the matrix reports no console error or warning, no horizontal overflow, and one h1 on every capture. Type check is clean for the whole lab. oxlint and oxfmt --check are clean for the 57 files of this direction.\n\nMAIN DEFECTS THAT I FOUND AND FIXED\n1. Review: the page moved each time a control in a sticky bar took the focus again (a menu or a popover closed): 58 px each time, down to the top of the page. Cause: the stock shell gives every element with an id in the main column a scroll margin of the height of the sticky bars. Fix: one class on the toolbar, the change bars, and the box bands:\n   `export const noScrollMargin = \"[&_[id]]:[scroll-margin-block-start:0px]!\";`\n2. Review: after A on the last change of a screenshot in the large run, the next change ended above the toolbar (its bar at y = 19, the change not visible). Cause: the reveal ran for a fixed 420 ms, and a fold ends later when frames are slow. Fix: the reveal now ends when the target stood still for 250 ms (limit 2.5 s), and a key or a press of the person ends it.\n3. Review: the screenshot key was absent from a stuck change bar after a jump (for example after Shift+A). Cause: the observer watched the top edge of a section, and a section that jumps from below the screen to above the line never crosses it. Fix: the observer root is now one line under the toolbar, so the state is right after any jump.\n4. Review, data=today: no change had a highlight, because the API of today sends no regions. A change of 100 pixels was invisible. Fix: the page reads the regions from the mask that the API sends today (new file mask-regions.ts, the same rule as the proposed API field).\n5. Review tree: names were cut (\"wrapped-acr…\", \"segmented-c…\") because each row had a dot for every unchanged variant. Fix: tree rows show only the marks of changed variants, as the brief says.\n6. Review: a stuck bar and every bar on a phone did not name the shared axis (\"Light\" without \"WebKit\"). Fixed. On a phone the decision bar of a short feed was in the middle of the page: it is now on the bottom edge. The jump bar printed \"0/3\" without a cursor. The Finish popover printed \"0 rejected\".\n7. Run top bar (kit): below 56rem the state badge lay over the run number, and after a first fix the bar cut the badge. Both fixed at 390, 768, and 900.\n8. Pull request page: the attempts box was 12 px narrower than the merge box and had lost its radius (nested frame pitfall). The state text was right-aligned and wrapped to three lines on a phone. Now the state follows \"Attempt N\" in one column, the time is at the end, and a phone has two lines. Copy now follows the brief (\"Rejected · 15 to review · 1 rejected\").\n9. Sign-in: the sample change was louder than the gate, and its first region ring was a 6 px square. The sample text is now at ink 50, and the rings follow the review page.\n10. Lists: the loading line was inset in the column 10 px under the top bar. It is now directly under the top bar and as wide as the page (queue, history, status, pull). The empty queue no longer shows the \"/ filter\" hint. The Captures meter of the status page no longer uses the success color.\n\nALSO VERIFIED: the extra scenarios that the builders never saw in a browser (status overflow, pull waiting, capture-failed, and error, review expired, error, and probes, history error). I mapped them to catalog scenarios for one capture run and restored the files after it. All render without errors. I corrected the copy of the expired run (\"The images of this run expired.\").\n\nTHINGS TO KNOW\n- I ran oxfmt two times on whole surface folders (pages/pull, pages/sign-in, pages/review) and not only on the files of this direction. oxfmt changes format only, but it can have rewritten files of other directions there. I cannot list them, because apps/lab is untracked. Later runs used only the paths of this direction.\n- Key latency in the large run (246 changes) is still about two times that of a normal run in the dev build. I added content-visibility: auto to far sections (measured gain 10% to 15%). The root cause is the :has() rules of the stock style sheet, as the lead reported.\n- New file: /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/explorations/pages/review/changes/mask-regions.ts . Scripts and flow captures are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/changes/reviewer/ .\n- Not in the API (new): the changed regions of a variant in today mode are read from the mask image in a canvas. In production the mask must be readable by a canvas (same origin, or CORS headers).",
+  "pages": [
+    {
+      "surface": "sign-in",
+      "score": 8,
+      "strengths": [
+        "One gate card with the exact copy of the brief in all four states, at most 16 words each",
+        "The primary button has the initial focus and the Enter hint, and the forbidden and error states stand alone without the sample",
+        "The sample is a real change of the product (real Ariakit images and regions), inert and hidden from assistive technology",
+        "Light, phone, and today mode hold with no change of layout"
+      ],
+      "fixed": [
+        "The sample was at full ink and took the eye before the gate: its label, facts, captions, and buttons are now at ink 50 or 40, and its buttons have the compact size of a change bar",
+        "The first region ring was a 6 px square: the rings now use the rule of the review page (a little outside the region, never smaller than 24 px, small radius)"
+      ],
+      "remaining": [
+        "The gate and the sample are centered in the height of the page; the brief draws them near the top",
+        "The pull request number is a constant (7754), and the heading without a target (\"Sign in to Visonaut\") has no scenario",
+        "The sample shows only from 64rem, so a tablet shows the card alone"
+      ]
+    },
+    {
+      "surface": "inbox",
+      "score": 8,
+      "strengths": [
+        "Three stock boxes with fixed columns for the bar and the words, so counts align across To review, Running, and Needs attention",
+        "Long titles truncate and the 171-character title of #7755 holds; today mode reads \"#7754 Pull request\" with no hole",
+        "Keys work and are discoverable: J and K move the real focus, Right and Left open previews, / filters, ? shows the keys",
+        "Empty, first-run, loading, and error states have the copy of the brief and the final geometry"
+      ],
+      "fixed": [
+        "The loading and refresh line was inset in the column 10 px under the top bar: it is now directly under the top bar and as wide as the page",
+        "The empty queue showed the hint \"/ filter\" with no filter field: the legend now leaves it out there"
+      ],
+      "remaining": [
+        "first-run is three lines at the top left of an empty page, as the brief specifies",
+        "The state \"Could not refresh. Showing runs from 15:18.\" is not built, because the fixture refresh never fails",
+        "The error state has no Error ID, because the fixture error has no reference",
+        "improved mode says \"15 to review\" and today mode says \"17 to review\" for #7754 (the fixture pending value includes the 2 failed comparisons)",
+        "Text typed in the filter before hydration is lost"
+      ]
+    },
+    {
+      "surface": "history",
+      "score": 8,
+      "strengths": [
+        "One stock table with a sticky sortable head, day rows, flat status tabs with counts, and replaced rows at ink 60: 100 rows scan fast",
+        "The title opens the run and #7754 opens the pull request page, both in the same direction",
+        "Below 56rem the tabs are a select, and below 42rem the table is a two-line list with no horizontal scroll",
+        "no-match and empty have the exact copy; today mode drops the Changes column in place of empty cells"
+      ],
+      "fixed": ["The loading line now lies directly under the top bar, as wide as the page"],
+      "remaining": [
+        "The loading skeleton has no sort icons in its head and six tab pills for eight tabs, so the head moves a few pixels when the data arrives",
+        "In today mode 85 rows read \"#77xx Pull request\", and a main run prints its hash as its name and in the Commit column",
+        "The number link and the title link of each row are both tab stops (200 for 100 rows)",
+        "no-match shows eight tabs with the count 0",
+        "The empty state is three words at the top left of an empty page, as the brief specifies"
+      ]
+    },
+    {
+      "surface": "status",
+      "score": 8,
+      "strengths": [
+        "One box: a tinted result band, stock disclosure rows with the mark, the title, the subject in mono, and the first-seen time, and a footer band with two meters",
+        "Healthy, alerts, loading, and error keep one geometry; the error state keeps the page name and the refresh control",
+        "The overflow scenario (50 alerts) renders and keeps its rhythm (verified in this review)",
+        "Phone layout drops the subject and stacks the meters with no overflow"
+      ],
+      "fixed": [
+        "The Captures meter and a database below its warning size used the success color, which this direction keeps for a finished decision: they now have the stock fill, as a running capture has",
+        "The loading line now lies directly under the top bar, as wide as the page"
+      ],
+      "remaining": [
+        "The alert list is read-only (no acknowledge, no dismiss), and the text of a failed refresh (\"Showing alerts from 15:18\") is not built",
+        "\"Show all 50\" removes the focused button, so the focus falls to the page",
+        "The two meters have different bar widths, because their end texts differ in length",
+        "Capacity numbers are the fixture limits (2,048 MiB, 5 captures), not the numbers of the brief",
+        "In today mode every alert is a warning, because the API has no severity"
+      ]
+    },
+    {
+      "surface": "pull",
+      "score": 8,
+      "strengths": [
+        "The merge box states the outcome in one line, the source in a second line, and has the one brand button with the initial focus and the Enter hint",
+        "Every outcome of the brief renders: needs review, passed, not required, waiting, capture failed, and error (the last three verified in this review)",
+        "The timeline groups attempts by commit; J and K move between the button and the attempt rows",
+        "Today mode holds: \"Pull request #7754\" with no meta line and no hole"
+      ],
+      "fixed": [
+        "The attempts box was 12 px narrower than the merge box and had lost its radius inside the list item: it now ends at the column edge and keeps the xl radius",
+        "Attempt rows: the state now follows \"Attempt N\" in one left-aligned column with the time at the end, as the brief draws it; before, the state was right-aligned and ragged",
+        "On a phone the state wrapped to three lines beside a centered time: it is now a second line under the attempt, and a long error wraps",
+        "Row copy now follows the brief: \"Rejected · 15 to review · 1 rejected\" (the word \"changes\" stays in the merge box only)",
+        "The loading timeline now has the geometry of the real rows, and the loading line lies directly under the top bar",
+        "The state badge of the top bar no longer lies over the number or gets cut below 56rem"
+      ],
+      "remaining": [
+        "Commit lines show the hash and the \"head\" badge only, because no fixture has a commit message",
+        "The waiting state does not poll and change in place",
+        "The status icon of the top bar opens the status page in its default (healthy) scenario",
+        "today mode says \"17 changes to review\" where the review page says 15 (fixture pending value)",
+        "The run title shows two times (breadcrumb and page title), as the brief draws it"
+      ]
+    },
+    {
+      "surface": "review",
+      "score": 8,
+      "strengths": [
+        "The signature moment works: A folds the change to a ticked line, the next change bar lands under the toolbar (y = 48.5), the tree gets a tick, and the title counts down; Undo restores the change and the scroll",
+        "One cursor with a brand rail and labelled Reject X and Approve A; every other change has icon buttons, so the target of a key is never in doubt",
+        "All ten catalog scenarios and three extra ones render with real behavior: filters, tree, compare modes, zoom, details, seen and Finish, failed save, read-only, comparing",
+        "Pixel budget near the brief: first screenshot pixel at about 197 px on arrival and 97 px while working; 61%, 70%, and 86% of the viewport",
+        "Real data holds: 246 changes, the 68-character key, single-browser runs (\"Only WebKit changed\"), size changes, new and removed variants, and today mode",
+        "Phone: a jump bar, swipe by default, and a decision bar on the bottom edge; the tree is a dialog"
+      ],
+      "fixed": [
+        "The page scrolled up 58 px each time a control in a sticky bar took the focus again (a menu or popover closed), down to the top of the page: the stock scroll margin is now reset in the toolbar, the change bars, and the box bands",
+        "After A across two screenshots in the large run the next change ended above the toolbar: the reveal now waits until the layout stands still, and a key or a press of the person ends it",
+        "A stuck bar lost its screenshot key after a jump (for example after Shift+A): the stuck observer now uses a line under the toolbar and no top-edge sentinel",
+        "today mode had no highlight at all: the page now reads the changed regions from the mask (mask-regions.ts), so the rings and the swipe start position work without the proposed API field",
+        "Tree names were cut by the mark strip: rows now show only the marks of changed variants (\"○ 2\", \"✓✓✕○○○\"), and \"segmented-control\" and the link names read in full",
+        "A stuck bar, and every bar on a phone, now names the shared axis (\"WebKit · Light\")",
+        "Phone: the decision bar of a short feed (one-change) is now on the bottom edge and not in the middle of the page; the jump bar prints \"3\" and not \"0/3\" without a cursor",
+        "Finish popover: no \"0 rejected\"; expired run: the copy of the brief",
+        "Far sections use content-visibility: auto (10% to 15% less key latency in the large run), and the cursor pick no longer measures sections above the screen"
+      ],
+      "remaining": [
+        "Key latency in the large run is still about two times that of a normal run in the dev build; the root cause is the :has() rules of the stock style sheet",
+        "On a wide viewport, small cards leave empty mat space to the right of the pair (most visible at 1920)",
+        "After A the ticked line of the decided change is directly above the toolbar edge and not on screen",
+        "Images of the large run take about 3 s to show in the dev build (hydration of about 7,900 nodes)",
+        "No change ruler for tall images, no warning line for a refused command, no conflict line",
+        "The keyboard shortcuts switch is not stored between visits",
+        "Not verified by looking: reduced motion, the pulse of the read-only callout, and the failed-save callout after my changes"
+      ]
+    }
+  ],
+  "briefDeviations": [
+    "Maintainer rule (stock primitives): the stock Progress replaces the five-square meter and the three-segment bar; stock vertical ButtonGroup rows with gliders replace seamed rows; a stock CheckboxField replaces the switch; a stuck bar has no shadow",
+    "Review: the toolbar is 49 px (ShellMainHeader sm), not 45 px, so the first screenshot pixel is at about 197 px on arrival and 97 px while working (brief: 188 and 93)",
+    "Review: the box header strip shows every variant with a dot for each unchanged one; the tree shows only changed variants (as the brief says) in a compact form, and no seen marks",
+    "Review: Details is a Dialog, not a Popover; the keys dialog uses the key list of the direction, not reviewShortcuts",
+    "Review: the key legend is after the tree rows, not in a pinned sidebar footer",
+    "Review: side-by-side panes are adjacent fit-content columns and never enlarge an image, so wide viewports have empty mat space",
+    "Review: on a phone the decision bar is sticky at the bottom of the column, not fixed (the shell is a size container, which makes a fixed element relative to it)",
+    "Review: a decided screenshot opens while the cursor visits it; a spacer is under the feed while changes remain; screenshots that only compare are one box",
+    "Review, new: in today mode the changed regions come from the mask, read in a canvas for changes near the screen. The brief loads the mask only for Overlay and Diff (P02)",
+    "Review, new: far sections use content-visibility: auto with an estimated height until the browser has rendered them once",
+    "Review: no change ruler, no refused-command line, no conflict line; the View menu has the lab item \"Fail the next save (lab)\"",
+    "Queue: the brand button \"Review\" of the single scenario is in the box band, not in the row; a \"Previews\" button toggles the strips; R refreshes; failed rows have the error as a second line",
+    "Queue: preview strips show current images (the fixtures have no diff thumbnail); no \"Error ID\" in the error state; the failed-refresh state is not built",
+    "History: tab \"Rerun needed\" added; rows are about 35 px; the When column prints the clock time under an earlier day; one responsive table replaces the separate phone list; tabs are a select below 56rem",
+    "Status: capacity numbers are the fixture limits; alert rows are stock Disclosure items; a meter below its limit has the stock fill (no success color); the list is read-only",
+    "Pull: commit lines have no message; attempt rows are composed from the stock Button parts and not from the kit Row, so the state can follow the attempt and the time can stay at the end on a phone; the waiting poll is not built",
+    "Sign-in: the sample is a small static copy of a real change of the one-change run, not the dialog scene of getScreenshotSet and not the change component of the review feed; its buttons are neutral",
+    "Loading: the progress line is 2 px directly under the top bar and as wide as the page; the 5 s notice replaces a skeleton line so nothing moves",
+    "All list and run pages: a key legend under the list adds four words to the chrome"
+  ],
+  "screenshots": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/sign-in-guest-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/inbox-busy-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/history-full-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/status-alerts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/pull-attempts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-changes-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-changes-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-changes-1440-light.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-changes-1440-dark-today.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-problems-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-one-browser-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/review-one-change-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/changes/pull-attempts-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/changes/reviewer/fs-approve-all.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/changes/reviewer/ob-stuck-light-today.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/changes/reviewer/x-status-overflow.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/changes/reviewer/x-pull-waiting.png"
+  ]
+}

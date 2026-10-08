@@ -1,0 +1,6 @@
+Ariakit UI components and recipes copied from ariakit/ariakit commit 643a23aff5a5ac4c0a81022973d5297de004b506.
+Source: https://github.com/ariakit/ariakit/tree/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/src
+Copyright Diego Haz. Distributed under the MIT license in LICENSE.
+The copy is complete and unmodified, except that test files are omitted.
+styles/ui.css requires @ariakit/tailwind.
+This copy belongs to the temporary design lab only. apps/web keeps its own pinned copy.

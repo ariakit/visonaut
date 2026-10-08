@@ -1,0 +1,22 @@
+{
+  "review": {
+    "variant": "ariakit",
+    "reason": "It shows one change in all of its variants at one time, each with its change marked, and one key decides them all. A run in production has about six variants for each screenshot, so this is the common case. Focus is the runner-up: it has the largest stage (82.6% of the window) and the best phone layout, but it shows one variant at a time."
+  },
+  "inbox": {
+    "variant": "ariakit",
+    "reason": "It shows the changed pictures of each run, so you know a run before you open it, and each running or failed run is one line. The pictures need the proposed preview field: with the data of today the cards have text only. Changes feed is the runner-up: one calm list with aligned counts that is complete with the data of today."
+  },
+  "history": {
+    "variant": "ariakit",
+    "reason": "It folds the earlier attempts of a run into the row of that run (`2 earlier`), so the list shows runs and not attempts. In the other three designs, 85 of the 100 rows say Replaced. Console is the runner-up: the densest table, with a sort on each column."
+  },
+  "pull": {
+    "variant": "ariakit",
+    "reason": "It shows the result of the head commit as three counts on one bar and as the changed pictures, with one action on Enter, and the earlier attempts are one row each. Changes feed is the runner-up: it states the outcome in one line and keeps the attempts in a timeline."
+  },
+  "status": {
+    "variant": "focus",
+    "reason": "It says the impact and the action of the first alert in words, with the recovery guide on Enter, so no click is necessary to read them. The impact line needs the proposed alert fields. Console is the runner-up: every fact of an alert in a side panel beside the list."
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "summary": "I reviewed the six Focus pages in 75 matrix screenshots and about 100 flow screenshots, used them with the keys, and fixed the defects I found. The lab type check, oxlint, and oxfmt are clean for the Focus files, and the final matrix run reports no console error, one h1 on every page, and no horizontal scroll. Skills invoked: ariakit-general-workflow, ariakit-general-code-style.\n\nThe defects that mattered most:\n\n1. Lost radius (primitives pitfall 2). The history search and select, and the primary button of every phone dock, had a 2 px radius, because a plain `Frame $layer` started a radius context. They are 8 px and 13.5 px now:\n\n```tsx\n// before: <Frame $layer className=\"sticky bottom-0 …\">\n<Layer className=\"sticky bottom-0 …\">{dock}</Layer>\n```\n\n2. One run had two numbers. The queue said \"15 left · 15 of 30\" for #7754, the pull request page said \"18 left · 15 of 32\", and the Done card said \"18 changes\". `getLeft`, `getDecisions`, and `getChangeWords` are now in the kit, and all three pages use them.\n\n3. Heading errors. Status loading and pull request loading had no h1. Review clean, passed, and comparing had two.\n\n4. Real data broke the review dock. A screenshot with 12 variants ran its variant label under the flip switch at 768 px, \"Size changed\" was cut at 1440 px, and the 43-character screenshot name ran out of the sheet on a phone. Screenshots with more than 8 variants now have a stock select in place of the row of marks.\n\n5. The review `expired` state showed an empty stage. It now says \"Images expired · The decisions remain\".\n\n6. Consistency between pages. Standalone messages sat at three different heights and widths, the pull request fold used another control than the queue fold, and loading and error pages had an account button on two pages only.\n\nChecked after the fixes: the review flow (approve, reject, undo, steps, variant keys, all compare modes, zoom, hold Space, whole screenshot, sheet, shortcuts, details, View, menus, Tab walk, finish, undo on Done, Enter to the next run), linked pan in Side by side, the lead's pixel budget and gesture scripts, and the queue and history flow script. That script has one failure: its text check for the fold row expects \"Capturing\" in the first 40 characters, and the word is now on the second line of the row. The focus does enter the fold.\n\nNot checked: the 60 s auto refresh of the queue and of the status page, pinch zoom (not built), and the waiting hero of the queue (no scenario reaches it). The extra scenarios (pull waiting, capture-failed, error; status overflow; history error; review error, expired) were captured with a script that points the page file at the scenario for a moment; the four files are restored.\n\nScratch scripts are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/design/scratch/focus/review/ (matrix.mjs, shots.mjs with spec-a.json to spec-h.json, flow-review.mjs, extras.mjs, probe.mjs).",
+  "pages": [
+    {
+      "surface": "sign-in",
+      "score": 8.5,
+      "strengths": [
+        "One 26rem card with a title, one line, and one action on Enter. Guest, signing in, no access, and error are the same card.",
+        "The phone layout follows the brief: no card frame, and the button is in the bottom dock.",
+        "A missing repository or user leaves no hole (\"Sign in to review\", no account chip)."
+      ],
+      "fixed": [
+        "The phone dock button had a 2 px radius. It is 13.5 px now (kit ActionDock is a Layer).",
+        "The disabled \"Opening GitHub\" button still showed the Enter cap. A disabled primary action has no cap now.",
+        "On a phone, \"Back to GitHub\" was centered under text that starts at the left edge. It starts with the text now."
+      ],
+      "remaining": [
+        "A phone shows the desktop card for a moment before hydration (the server renders the wide layout).",
+        "No deep-link title (\"Review #4863\"): the lab has no route for it.",
+        "On a phone the page is two lines of text at the top and a button at the bottom, as the brief draws it. The middle is empty."
+      ]
+    },
+    {
+      "surface": "inbox",
+      "score": 8.5,
+      "strengths": [
+        "The question \"what do I review now?\" has one answer on screen: the hero card with Review on Enter.",
+        "Rows keep one set of columns, and the hover and focus gliders make the list feel like one control.",
+        "Empty, first run, error, and loading are distinct and calm. The loading skeleton has the final sizes."
+      ],
+      "fixed": [
+        "The open fold cut each title at about 31 characters (\"Fix Tooltip arrow color on a br…\"). The state is now a second line (\"Capturing · 1,290 of 3,832\" with its bar, \"Failed · reason\"), so titles keep the width and the columns of the rows above.",
+        "The single scenario left three of four preview columns empty. Fewer than four previews now share the row and show the whole image.",
+        "First run and error were 720 px wide cards glued under the header. They are 28rem cards a tenth of the viewport lower, as the sign-in card and the Done card.",
+        "The phone dock button radius, and 24 px of empty space at the bottom of a card on a phone.",
+        "The fold is now a kit part (ThenFold) that the pull request page shares."
+      ],
+      "remaining": [
+        "The Review button does not take the focus on load (the builder's choice, to keep the focus of the lab frame). Enter works from anywhere.",
+        "With the API of today the hero is text only, and the queue says \"17 left\" where the review page says 15, because pending includes two failed variants.",
+        "Fold rows have three lines on a phone.",
+        "The hero title is one line in light and two lines in dark at 1440 px: the dark card has a real border, and the title fits by 1 px.",
+        "The waiting hero has no catalog scenario, and I did not look at it."
+      ]
+    },
+    {
+      "surface": "history",
+      "score": 8,
+      "strengths": [
+        "One line for each run with a mark, a state word, a number, and a title. Replaced runs are dim, so the 15 runs that count stand out of 100.",
+        "The search works while the rows load, \"/\" focuses it, and Down moves into the rows.",
+        "The result select shows a count for each state."
+      ],
+      "fixed": [
+        "The search field and the result select had a 2 px radius (a sticky `Frame $layer` around them). They are 8 px now, and the radius control changes them.",
+        "The error page is a 28rem card in the same place as the other error pages."
+      ],
+      "remaining": [
+        "85 of 100 rows read \"Replaced\". The page does not say which of them had passed, or which pull request was closed.",
+        "All 100 rows render, with no windowing (a row is one link with five text nodes).",
+        "The sticky search bar has no edge, so a row is cut where it passes under the bar.",
+        "On a phone only the search sticks.",
+        "\"/\" does nothing while the focus is on the result select."
+      ]
+    },
+    {
+      "surface": "status",
+      "score": 8,
+      "strengths": [
+        "One alert on stage with its cost, its action, and the guide on Enter. The other alerts are rows that go on stage with a click or with the arrow keys.",
+        "A critical alert and a warning differ by shape and by word, not only by color.",
+        "\"All clear\" is one calm line with two thin meters."
+      ],
+      "fixed": [
+        "The loading page had no h1 and no account button. The error page had no account button, and its button was focused on load while the queue error was not.",
+        "The Captures meter was brand blue and competed with the one primary action. Meters have a neutral fill now, and a warning keeps the warning color.",
+        "\"All clear\" sat 90 px higher than \"All done\" on the queue. Both use the kit `stagePlace` now.",
+        "The phone dock button radius."
+      ],
+      "remaining": [
+        "With the API of today every alert is a warning with no impact line.",
+        "The 60 s auto check is not exercised.",
+        "\"Last good check 4 min ago\" on the error page is a fixed value: the fixtures have none.",
+        "On a phone the meters scroll under the sticky dock until the page is scrolled."
+      ]
+    },
+    {
+      "surface": "pull",
+      "score": 8,
+      "strengths": [
+        "The queue card for one pull request: the same parts, the same action, the same key.",
+        "A run with nothing to decide has a neutral \"Open run\" on Enter, so brand blue always means a decision.",
+        "No run, waiting, and capture failed are one message each, with the pull request number above."
+      ],
+      "fixed": [
+        "The numbers did not match the queue and the review page (\"18 left · 15 of 32\" against \"15 left · 15 of 30\").",
+        "\"2 earlier runs\" was a stock Disclosure in larger, bolder type than the queue fold. It is the same ThenFold now, with the glider and the arrow keys.",
+        "The loading page had no h1 and no account button, and the error page no account button.",
+        "The card had about 28 px of empty space at its bottom on a phone.",
+        "The waiting bar was brand blue on a page with no primary action. It is neutral now.",
+        "Long titles are cut at a word in the tab title."
+      ],
+      "remaining": [
+        "Waiting has an indeterminate bar and no \"412 of 600\": the pull fixture has no capture counts.",
+        "The loading page shows #7754 as a stand-in for the number in the URL.",
+        "The SHA is a stock Code with a ring. The ring starts 1 px left of the text column."
+      ]
+    },
+    {
+      "surface": "review",
+      "score": 8.5,
+      "strengths": [
+        "The pixel budget of the brief holds, measured again after my changes: the first screenshot pixel is at y = 76 at 1440 x 900, with an 80 px dock.",
+        "The loop works by keys alone: a change arrives on its baseline and cuts to current with rings, A or X decides, one rail bar fills, and the next change plays. Undo works from the Done card.",
+        "Each state has its own stage: Done, nothing to review, comparing, failed, read-only, expired, loading, and error.",
+        "The phone layout is a real design: tap to flip, swipe to step, two large decision buttons."
+      ],
+      "fixed": [
+        "Clean, passed, and comparing had two h1 elements. A stage message is now one level below the run title.",
+        "The `expired` state showed an empty black stage. It now shows \"Images expired · The decisions remain\", and the dock says only \"Read-only\".",
+        "A screenshot with 12 or 24 variants rendered every mark, and at 768 px the variant label ran under the flip switch. Above 8 variants a stock select with a status mark for each variant takes the place of the row.",
+        "\"Size changed\" was cut to \"Size chang…\" at 1440 px.",
+        "The 43-character screenshot name ran out of the sheet on a phone with no ellipsis. The folder now gives way first, then the name is cut.",
+        "Swipe did not say which side is the baseline. \"Baseline\" and \"Current\" now sit over the two ends of the image.",
+        "In Side by side the labels were about 40 px above their images. Label and image are now centered as one block.",
+        "The read-only dock printed the two-sentence API reason, cut on a phone. It is one line now (\"A newer run replaced this one\").",
+        "\"Lab: fail the next save\" was the first item of the account menu. It is the last one before Sign out.",
+        "The Done card said \"Next: #7754 · 18 changes\" for a run whose counter says 15. It says \"15 left\".",
+        "With one bar for each screenshot the rail read as loose dashes. The bars are 2 px apart now.",
+        "The loading and error headers have the account button. A 171-character title no longer fills the tab title. The dock no longer repeats \"Unchanged\" and \"Failed\"."
+      ],
+      "remaining": [
+        "The needs-review bars of the rail are a stock empty track with a faint warning edge, and the mark of the change on stage is a 2 px brand line. Both are quiet, most of all in light.",
+        "At 1920 x 1080 a 416 px card shows at 400% (the rule of the brief). A 200% cap is the maintainer's call.",
+        "The 44 px map for a zoomed tall image, pinch zoom, the \"Queued\" save state, and the left-to-right light-up of the rail on Done are not built.",
+        "The View button also shows for a failed or expired variant, where it has nothing to change.",
+        "The loading header has no shortcuts button.",
+        "On a phone the sibling marks are 30 px targets."
+      ]
+    }
+  ],
+  "briefDeviations": [
+    "The maintainer's steer replaces the custom rail segments (hollow, solid, tall, dashed) with stock Progress bars in stock buttons. MiniRail is one Progress, the Shortcuts switch is a CheckboxField, and the avatar alert is a count badge, not a dot.",
+    "Region rings are a 2 px brand border with no canvas-colored outer line.",
+    "Standalone messages (first run, errors, no runs, All done, All clear) are 28rem wide and a tenth of the viewport below the header. The brief draws them in the 45rem column under the header.",
+    "Queue fold rows have two lines from 640 px: the title, then \"Capturing · 1,290 of 3,832\" with a neutral 48 px bar. The brief has one line with a brand Progress of thickness 1.",
+    "The queue fold and the pull request fold are a stock NavDisclosure inside the row list (kit ThenFold). The brief names Disclosure.",
+    "\"{n} left\" is the number of undecided variants (the counter of the review page), not `pending`, on the queue, the pull request page, and the Done card.",
+    "The Done card says \"Next: #7754 · 15 left\". The brief says \"{n} changes\".",
+    "A screenshot with more than 8 variants has a stock select (\"Chromium · Desktop · Light style  1 of 12\") in place of the sibling marks and the variant label.",
+    "The read-only dock shows a short line by kind, not `session.readOnlyReason`. An expired run shows only \"Read-only\", because the stage says why.",
+    "Capacity meters and capture bars have a neutral fill. The brief leaves the stock brand fill.",
+    "Swipe has the labels \"Baseline\" and \"Current\" above the image. The brief has no labels there.",
+    "The Review button of the queue does not take the focus on load. Only the sign-in button does.",
+    "History renders 100 rows (the brief says 40) and shows the time of day under a date label.",
+    "Status: the eyebrow reads \"Alert · n of m\" after the first alert, the R key checks now, and \"Show 40 more\" expands in place.",
+    "Review header is 48 px (44 px on a phone) through the shell variable, and the decision buttons are 55 px tall. Below 1280 px the dock has two rows.",
+    "Review on a phone: the page actions are in the account menu (no separate menu button), and pinch zoom is not built.",
+    "Keys 1 to 9 select a variant (the brief says 1 to 6). The lab keys J, K, U, and O are off.",
+    "Not built: the 44 px map of a zoomed tall image, the \"Queued\" save state, the rail light-up on Done, the URL state for item, variant, view, and zoom, and the deep-link title of sign-in.",
+    "The screenshot sheet shows 50 rows for each group with \"Show 50 more\", not a virtual list."
+  ],
+  "screenshots": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/sign-in-guest-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/inbox-busy-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/history-full-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/status-alerts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/pull-attempts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/review-changes-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/review-changes-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/review-problems-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/review-changes-1440-light.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/c-queue-open.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/c-single.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/a-pull-open.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/e-queue-first.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/a-side.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/c-swipe.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/d-size-change.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/c-12-variants-open.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/g-longest-phone.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/x-review-expired-1440.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/a-read-only.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/focus/flow/24-done.png"
+  ]
+}

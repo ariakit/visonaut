@@ -1,0 +1,38 @@
+{
+  "name": "@visonaut/lab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Temporary design exploration app for the Visonaut UI. It has no backend.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4320 --strictPort",
+    "build": "vite build",
+    "capture": "node scripts/capture-cards.ts",
+    "typecheck": "tsc6 --noEmit"
+  },
+  "dependencies": {
+    "@ariakit/react": "0.4.40",
+    "@ariakit/react-utils": "0.2.6",
+    "@ariakit/tailwind": "0.2.8",
+    "@ariakit/utils": "0.2.1",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@tanstack/react-router": "1.170.38",
+    "@tanstack/react-start": "1.168.57",
+    "clava": "0.7.0",
+    "lucide-react": "1.47.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.57.1",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.0",
+    "wrangler": "4.136.1"
+  }
+}

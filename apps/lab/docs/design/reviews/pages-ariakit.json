@@ -1,0 +1,192 @@
+{
+  "summary": "Review of the direction \"ariakit\" (Folio) is done: all six pages are fixed, looked at again, and clean on the three checks. Checks at the end: `pnpm --filter @visonaut/lab typecheck` reports 0 errors for the whole lab, `oxlint` exits 0, and `oxfmt` is clean on the 59 files of the direction. The final run (74 matrix screenshots, 6 review flows, 18 list-page flows, 96 structure checks) printed no console error, no page error, no failed request, and no failed step. Each of the 32 scenarios has one h1, one main, named controls, and no horizontal scroll at 1440, 768, and 390; the review page does not scroll.\n\nThe defects that mattered most, all fixed:\n- Review, `data=today`: the cover showed six tiny whole pictures in large black wells, so the signature moment failed with the API of today. The page now reads the changed areas from the mask (new file `review/ariakit/use-mask-regions.ts`), so the cover crops in both data modes.\n- Review, Radius control: nothing in the workspace followed it, because every frame took a concentric share of the fixed 20 px shell radius. Every `Shell` now takes the kit token `shellRadius` (`3xl`, 21 px at the default), and sharp and round restyle the folder, the list, and the header.\n- Review, zoom: `+` from Fit (200%) went to 100%. Steps now start from the scale on screen (Fit 200% goes to 300%).\n- Review, covers of whole pictures (added, removed, size change): the grid now takes the columns that show the pictures largest (six added cards: 100% in two columns, was 87% in three).\n- Thumbnails on the inbox and the pull request page were blurred (a 160 px thumbnail stretched). `PreviewWell` now draws the picture itself.\n- Buttons inside callouts and tinted bands had square corners (nested radius pitfall), and busy buttons lost their surface (`Opening GitHub` looked like bare text).\n- Errors were inconsistent across pages (neutral or brand button, with or without a sheet). One kit `RetryButton` and one callout pattern now serve every page.\n\nStates that no builder had looked at (pull `waiting`, `capture-failed`, `error`; history `error`; status `overflow`; review `error`, `expired`, `probes`) I looked at through a temporary scenario mapping in the four page files, which I removed and confirmed removed. That found and fixed: six repeated \"Images expired\" cells, a card inside a card for a failed capture, and a tall picture that opened with its change out of view.\n\nI ran no git command that changes state, made no commit, and edited only the kit and the page files of this direction. Skills invoked for this Ariakit repository: `ariakit-general-workflow` and `ariakit-general-code-style`; no repository-specific workflow skill exists for `ariakit/visonaut`.\n\nNot in the API today, added by this review: `RunPreview.image` for the preview wells, and the changed areas read from the mask on a canvas (a mask of another origin needs CORS headers, else the cover shows whole pictures).",
+  "pages": [
+    {
+      "surface": "sign-in",
+      "score": 8.5,
+      "strengths": [
+        "One card at a fixed top edge, so nothing jumps between guest, forbidden, and error",
+        "The brand card is the only loud surface, with one inverted action and its Enter cap",
+        "Enter works in every state, and guest leads to the inbox of the same direction",
+        "Holds missing data: no repository line and no account badge in today mode"
+      ],
+      "fixed": [
+        "Signing-in and retrying buttons kept the stock disabled look, which removed their surface. They are now busy (aria-busy, no second click) and keep their surface"
+      ],
+      "remaining": [
+        "The button uses the LogIn icon, because lucide-react has no GitHub mark",
+        "The brand card is loud for a daily tool, as the brief itself notes"
+      ]
+    },
+    {
+      "surface": "inbox",
+      "score": 8.5,
+      "strengths": [
+        "Priority is the layout: one brand hero, three preview cards, then one-line rows for runs that take no decision",
+        "Sharp previews make the hero and the cards scannable",
+        "Refresh keeps the list on screen, with a thin progress line",
+        "J, K, Enter, and / work, and the roving focus is visible on hero, cards, and rows",
+        "Today mode closes up cleanly: the hero reads `Pull request #7754` with no hole"
+      ],
+      "fixed": [
+        "Blurred thumbnails in the hero and the cards (kit PreviewWell now draws the picture, not the 160 px thumbnail)",
+        "The `Try again` button had square corners and a neutral look; it is now the shared brand RetryButton with a busy state",
+        "The `92 earlier runs` link and the key legend were on two lines; they now share one"
+      ],
+      "remaining": [
+        "`Changes` counts pending variants here (18) and changed variants in the history (30), as the brief specifies",
+        "Main run rows start with `main 8786de4`, so their titles start further right than pull request rows",
+        "Inbox rows are 42 px and cards 149 px (brief: 40 and 176)"
+      ]
+    },
+    {
+      "surface": "history",
+      "score": 8.5,
+      "strengths": [
+        "One table sheet with day labels, and the runs of one pull request folded under the newest (100 runs become 41 rows)",
+        "The head stays in view while the table scrolls inside the page",
+        "Result badges use the one status vocabulary of the direction",
+        "Right and Left open and close a fold, and the row shows the stock focus ring",
+        "On a phone each row is two lines with the status mark first"
+      ],
+      "fixed": [
+        "The number link was underlined on each of 41 rows; the underline now shows on hover and focus only",
+        "The Result and When columns moved 13 px and 3 px between loading, no match, and loaded; they now keep their x position (measured 994, 1134, 1222 in all three)",
+        "The error state uses the shared brand RetryButton"
+      ],
+      "remaining": [
+        "The query, the filter, and the sort are not in the URL, because the lab has none",
+        "In the flat `Most changes` sort, two attempts of one pull request differ only by result and age",
+        "The fixed page height repeats the header height and gutter of the kit shell as a calc in history-page.tsx"
+      ]
+    },
+    {
+      "surface": "status",
+      "score": 8,
+      "strengths": [
+        "The whole page is one tinted card: verdict, check time, and the alerts as stock disclosures",
+        "Words are in the More info popover, not in the chrome",
+        "Two meters explain most alerts, with a marker at the warning size",
+        "J, K, and Enter walk and open the alerts",
+        "Today mode falls back to a warning tint with no count badge and no hole"
+      ],
+      "fixed": [
+        "Subject, count, and time of the alert rows were ragged; they are now three aligned columns, with the time in the column form (`2 min`)",
+        "The loading card was 49 px and the real card 68 px; the skeleton now has the same 68 px",
+        "The Captures card had an empty line where the Database card has its note; the note now shares the label line, and both cards are 106 px",
+        "The error state was a callout inside a sheet with its own button style; it is now the shared callout and RetryButton"
+      ],
+      "remaining": [
+        "Alert rows are 53 px (brief: 44), because the stock disclosure group padding aligns the row text with the heading",
+        "The overflow list scrolls inside the card with no visible scroll hint beside the line `50 shown · more exist`",
+        "The 2 px threshold marker is a custom inverted Frame, because no primitive draws a marker on a Progress"
+      ]
+    },
+    {
+      "surface": "pull",
+      "score": 8,
+      "strengths": [
+        "Commits are folder tabs, the same structure as the review workspace",
+        "One panel gives the state, a segmented bar with its legend, the changed pictures, and one brand action",
+        "Earlier attempts are rows that open the run",
+        "The loading page shows the number and a working GitHub button at once",
+        "Waiting, no review needed, and capture failed each have their own clear state"
+      ],
+      "fixed": [
+        "Blurred thumbnails in the preview well",
+        "Today mode read `PR #7754 Pull request`; the heading is now `Pull request #7754`",
+        "The folder moved 5 px between loading and loaded; title, tab strip, and tabs now match exactly (measured 51.5, 138.5, 58, 35 in both)",
+        "The phone action label was left-aligned in a full-width button; it is centered as on the inbox",
+        "The legend offered Left and Right for commits with a single commit tab",
+        "A failed capture was a callout inside a sheet; it is now the callout alone",
+        "The skeleton tabs had no accessible name",
+        "The error state uses the shared callout and RetryButton"
+      ],
+      "remaining": [
+        "The fixture has one commit, so the two-tab folder of the brief and the Replaced panel cannot be seen with real data",
+        "The loading page takes its number from the `attempts` scenario, because the lab has no URL",
+        "The counts here (14 approved, 1 rejected, 15 need review) and the inbox (18 changes) describe the same run in two ways"
+      ]
+    },
+    {
+      "surface": "review",
+      "score": 8.5,
+      "strengths": [
+        "The cover is the signature: every variant that takes a verdict, cropped to the change at 200%, with one mask color and area boxes",
+        "One status per level: ring in the header, dot strip in the list, mark on the tab",
+        "Keys are printed on the controls, and A, X, Shift+A, Undo, N, 0 to 9, modes, and zoom all work; no step threw in the flows",
+        "The stage keeps 64.8% of the viewport and the page never scrolls",
+        "Holds real data: 626 screenshots behind closed families, 12 and 24 variants, a 68-character name, a 1280 × 1640 picture, a 1 px change",
+        "Clean, passed, read-only, comparing, save error, and loading each have a designed state"
+      ],
+      "fixed": [
+        "Today mode: the cover showed tiny whole pictures; areas are now read from the mask, so crops and area boxes work in both data modes",
+        "The Radius control had no effect on the workspace; it now restyles folder, list, and header",
+        "Zoom in from Fit shrank the picture; steps now start from the scale on screen, and the zoom label no longer cuts off (`10...`)",
+        "Covers of whole pictures pick the columns that show them largest (added: two columns at 100%; size change: one column at 100%)",
+        "A tall picture now opens on its first changed area instead of its top edge",
+        "A filter in the All scope left its matches behind closed families; up to 60 matches now open their families",
+        "The `/` key focused the filter one frame late, so a fast first key could act as a shortcut; it now focuses in the key event",
+        "The list legend wrapped to an uneven second line; it is a two-column grid",
+        "The coach button `Got it` had lost its shape; it is now the inverted action with its radius",
+        "Buttons in the save-error band, the completion band, and the read-only and failed callouts had square corners",
+        "An expired run showed `Images expired` in each of six cells; the cover now shows one note",
+        "A cover with more than nine cells left an empty band; its rows now share the stage",
+        "The phone read-only band cut the reason to `This run is ar…`; it now takes two lines",
+        "The loading state did not set the document title"
+      ],
+      "remaining": [
+        "No minimap for a tall picture (brief). The picture opens on its first area and R steps through the areas",
+        "The area stepper stays hidden in today mode, because the session viewer counts only the areas of the API",
+        "A cover with two cells leaves large wells at 1440, and a size change of 2 px is hard to see at 100%",
+        "A double click toggles Fit and 100% but does not center on the pointer",
+        "Variant tabs are not links, because the lab has no URL for a variant",
+        "A card at Fit covers 17.5% of the viewport, because Fit stops at 200% as the brief rules"
+      ]
+    }
+  ],
+  "briefDeviations": [
+    "Kit: every Shell takes `$rounded=\"3xl\"` (token `shellRadius`, 21 px at the default) in place of the stock fixed 20 px shell radius, so that the Radius control restyles the pages. The default look changes by 1 px.",
+    "Kit: PreviewWell draws `preview.image`, not `preview.thumbnail`, because the thumbnail is 160 px on its longest side and shows blurred.",
+    "Kit: a button that waits (Opening GitHub, Try again) is busy and not disabled, because the stock disabled look removes its surface. The brief says disabled.",
+    "Kit: every error state is one danger callout with the brand RetryButton and no sheet around it. The brief asks for a neutral card around the callout on the status page and a panel on the pull request page.",
+    "Kit: a block callout has 1rem of padding (was 0.75em) so a button in it keeps its radius; the data of a row callout takes two lines before it cuts off.",
+    "Status: the `Warns at` note is on the label line of the Database card, not under the bar. Alert facts are three fixed columns, and the time has no `ago`. No dashed separator under the health line, and rows are 53 px (builder).",
+    "History: the number link shows its underline on hover and focus only. Wide rows have no leading status mark, and closed runs show their closed state (builder).",
+    "Pull request: without a title the heading is `Pull request #7754` with no `PR` prefix. The fixture gives one commit tab, not two.",
+    "Review: the changed areas come from the mask when the API sends none. The brief names this as an option.",
+    "Review: the cover grid picks its columns from the size of what the cells show; the brief fixes them by cell count. Crops keep the columns of the brief.",
+    "Review: zoom steps start from the scale of Fit, and the zoom list has 300%.",
+    "Review: a tall picture opens on its first changed area. The 48 px minimap of the brief is not built.",
+    "Review: an expired run shows one note in the cover. A filter with at most 60 matches opens the families of its matches.",
+    "Review (builder, kept): no corner chips on the pixels in Overlay; the scope is `Changes | All 626` with one disclosure per family; family labels always show; the list toggle is in the header; mode labels collapse below 80rem; the keyboard setting is a CheckboxField; the Checker stage background is dropped; footer band 43 px and list row 34 px.",
+    "Sign-in (builder, kept): the card is anchored at a fixed top edge instead of centered, and the forbidden state has two full-width buttons.",
+    "Inbox (builder, kept): a card is a Frame with a preview well and one link row, not one Button link; the toolbar stays disabled in empty, first-run, loading, and error; the hero skeleton tint is 15%."
+  ],
+  "screenshots": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/sign-in-guest-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/inbox-busy-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/history-full-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/status-alerts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/pull-attempts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-1440-dark-today.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-1440-light.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-1440-dark-radius-sharp.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/review-changes-1440-dark-radius-round.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/r2-review-problems-added.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/r2-review-problems-brand.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/r2-review-zoom-in.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/x2-review-probes-tall-single.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/x2-review-expired-cover.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/x2-pull-capture-failed.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/x-pull-waiting.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/x-status-overflow.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/r2-status-error.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/r2-sign-in-signing-in.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/fl-pull-today-390.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/inbox-busy-390-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/ariakit/history-full-390-dark.png"
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "summary": "Independent review of the six Console pages. I captured the 71-shot matrix before and after the fixes (every scenario at 1440 dark; main scenarios in light, at 390, and at 768; review at 1920; data=today; brand, canvas, radius, density on the review page). I ran keyboard and click flows: the A A A X A cascade, Shift+A, Undo, review complete, the six compare views, zoom, region step, matrix and inspector toggles, key map, command menu with a live filter, the decision menu, run meter, account menu, session log, a failed save, Tab order, and inbox to review to inbox to history to status with the keys. The pages were in good shape. The defects were mostly in keyboard focus, density, and long names. The whole lab type check reported no error on the last run. One capture (review, changes, 1920) returned a server 500 once and was clean on the next capture; I did not find the cause.",
+  "pages": [
+    {
+      "surface": "review",
+      "score": 8,
+      "strengths": [
+        "The pixel budget of the brief holds: first image pixel at y = 82, 23 px of chrome below the stage.",
+        "The cascade works as the brief describes: marks flip in place, the cursor ring jumps, the meter counts down, the status line echoes each decision, and the last decision gives the green line.",
+        "The matrix shows where the change is: `one-browser` reads as two amber columns with the label `WebKit only`.",
+        "Every key is on its control, in the status line, in the docked key map, and in the command menu.",
+        "The failed save state is clear: danger tint, `Not saved · 1 decision returned`, Retry and Reload run, decisions blocked."
+      ],
+      "fixed": [
+        "density=compact: the key letters of the tool rail sat on top of their icons. The letter line used a spacing step, which shrinks with the density. It now has the height of its text.",
+        "Long screenshot keys: a narrow matrix row started with a bare slash (`/applied-light-week-hover`), because the directory part shrank to nothing. The directory now keeps a short stub, and the leaf stays whole while the directory still has room to give. The context bar uses the same rule.",
+        "Session log popover: the newest line was cut at its start (`pproved · …`) because the list scrolled sideways to its Undo button. The line now truncates at its end, and the popover is 30rem wide.",
+        "Loading: the two pane outlines were side by side, but the first real card shows one pane above the other. The outlines now have the place and the shape of the most common picture (416 x 136 at twice its size), so nothing jumps when the images arrive.",
+        "Phone: the status text in the decision bar was `Approved · …` cut after one word. It now shows the first part of the message only (`Approved`, `Undone`)."
+      ],
+      "remaining": [
+        "At 768 px the variant strip in the context bar is cut in the middle of the second chip. It scrolls, but it is tight.",
+        "A shortened directory shows as `a.` or `a…` (a clipped ellipsis), which is honest but not pretty.",
+        "The loading frame has no command field and no account button, so the top bar changes when the run arrives.",
+        "Blink uses the 700 ms of the fixture hook (brief: 600 ms).",
+        "`workspace.tsx`, `stage.tsx`, and `matrix.tsx` are still long files."
+      ]
+    },
+    {
+      "surface": "inbox",
+      "score": 8,
+      "strengths": [
+        "One 29 px line for each run with aligned numbers. Eight runs take 320 px where the app today needs several screens.",
+        "The title of 171 characters truncates cleanly, and the failure reason follows the title in soft ink.",
+        "data=today holds: `Pull request` in soft ink, no bar, numbers still aligned.",
+        "The error and loading states keep the frame and the table head."
+      ],
+      "fixed": [
+        "Keyboard focus (kit, all four list pages): the first Tab of a fresh page skipped the whole top bar and landed on a row. The cause was a `scrollIntoView` call at mount. The first Tab now goes to the mark.",
+        "Every row link was its own Tab stop, 100 stops in the history. The list is now one Tab stop: only the link of the cursor row takes Tab.",
+        "With the focus on a row link, the arrows moved the cursor but not the focus, so Enter opened the wrong run (I pressed Down to #7753 and Enter opened #7754). The focus now follows the cursor.",
+        "The row link had the browser default focus ring. It now has the stock ring of the primitives.",
+        "The count badge on the Inbox tab rendered at 9.75 px, because a small text class sat on a badge slot that scales its text itself. It is now 10.6 px, the stock badge size.",
+        "Loading: skeleton title bars were up to 640 px long (shares of a 1000 px column). They now have the lengths of real titles."
+      ],
+      "remaining": [
+        "Three of the four rows to review show an empty progress track, which is true (nothing decided) but adds little.",
+        "The first-run notice sits alone at the top start of an empty pane, as the brief asks.",
+        "Only seven runs have their own review scenario, so some rows open a run with another number (a lab limit)."
+      ]
+    },
+    {
+      "surface": "history",
+      "score": 7,
+      "strengths": [
+        "100 rows read well: dim replaced runs recede, and the eye finds the 15 live rows.",
+        "Day rows, sortable heads, and state chips with counts all work. `3 of 100 runs` in the status line follows the filter.",
+        "data=today drops the two columns it cannot fill instead of showing 100 dashes."
+      ],
+      "fixed": [
+        "The chip count badges and the select badges rendered at 9.75 px. Now 10.6 px, the stock badge size.",
+        "The same keyboard focus fixes as the inbox. This page had the worst case, with 100 Tab stops.",
+        "Loading: skeleton title bars now have realistic lengths."
+      ],
+      "remaining": [
+        "Nine chips with nine count badges is a busy toolbar. `Replaced 85` dominates, and six chips have a count of 1.",
+        "In `no-match` all nine chips stay on screen, disabled, with a 0 badge.",
+        "The table stops at 96rem and is centered at 1920 px while the top bar spans the window.",
+        "In data=today the loading skeleton has two columns that go away when the runs arrive."
+      ]
+    },
+    {
+      "surface": "status",
+      "score": 7,
+      "strengths": [
+        "One line for each alert and one inspector for the cursor alert replaces a card with a paragraph for each alert.",
+        "The summary strip tells the state in one line: `1 critical · 2 warnings` and two meters with real numbers and the warning tick.",
+        "The error state keeps the last good alerts on screen, dim, with `3 alerts from 15:29` and a retry countdown."
+      ],
+      "fixed": [
+        "The row button had the browser default focus ring and every row was a Tab stop. It now has the stock ring and the roving Tab stop.",
+        "The first Tab now starts at the top bar.",
+        "Loading: skeleton bars of the Alert column were up to 730 px long. They now have realistic lengths."
+      ],
+      "remaining": [
+        "The alert titles of the fixtures are generic (`A GitHub check needs attention`), so the three rows look alike. The subject of the first is a UUID that wraps to two lines in the inspector.",
+        "Enter and `Open guide` only show `Lab: the guide opens on GitHub` in the status line.",
+        "Below 1024 px the Disclosure list does not have the roving Tab stop of the table.",
+        "Tooltips on the meter tick and on the ages are native titles."
+      ]
+    },
+    {
+      "surface": "pull",
+      "score": 7,
+      "strengths": [
+        "The pipeline strip answers where the pull request stands in one line: `Capture ✓ › Compare ✓ › Review ● 17 left · 1 rejected › Check ✕ failing`.",
+        "Attempts of one commit are easy to tell apart, and a replaced run says in which state it closed.",
+        "One brand button with the real count (`Review 18 changes`). data=today falls back to `Pull request #7754` without a hole."
+      ],
+      "fixed": [
+        "The run link had the browser default focus ring and every row was a Tab stop. It now has the stock ring and the roving Tab stop.",
+        "The first Tab now starts at the top bar, and the focus follows the cursor, so Enter opens the cursor run."
+      ],
+      "remaining": [
+        "The data columns end at 760 px and the rest of the row is empty up to the Enter cap. The brief's sketch has this, but it looks unbalanced at 1440 px.",
+        "The main button keeps empty room where its Enter cap was while the cursor is on another run.",
+        "Phone: the pipeline strip scrolls sideways and its last step is cut.",
+        "The extra states `waiting`, `capture-failed`, and `error` are built but not reachable through the lab. I did not view them."
+      ]
+    },
+    {
+      "surface": "sign-in",
+      "score": 8,
+      "strengths": [
+        "Twelve to fourteen words for each state. One panel, one heading, one fact, one brand button with its key.",
+        "The four states share one layout, so the heading does not move between them.",
+        "The error state has the Error ID with a copy button and a countdown in the danger status line."
+      ],
+      "fixed": [
+        "Exact copy: the status line hint of the guest state said `↵ Sign in with GitHub`. It is now `↵ Sign in`, as the brief says."
+      ],
+      "remaining": [
+        "The panel has a fixed top offset and is not centered vertically.",
+        "The status line of the phone is an empty band in the guest state.",
+        "The heading for a deep link (`Sign in to review #4863`) is not built, because no scenario has a target.",
+        "After a retry the disabled button loses the focus."
+      ]
+    }
+  ],
+  "briefDeviations": [
+    "Stock-primitive rule (the maintainer's steer): the cursor row is the stock `TableRow selected` tint, not a neutral lift with a 2 px brand bar. Key caps are the stock `Kbd`, not mono caps. Meters are one stock `Progress`, not three colored segments. The key switch is a `CheckboxField`. Controls keep their stock radius.",
+    "Type size: the brief says no text below 12 px. The stock `Kbd` renders at 11.4 px in bars and 10.5 px in the status line, and the stock badge count at 10.6 px. I kept the stock sizes and removed only the double shrink.",
+    "Matrix sections are a snapshot of the load-time status, so no row moves while the reviewer decides. A fully approved row stays under `Needs review` until reload.",
+    "Matrix columns stop at 9 and fold into a `+n` menu cell (brief: fold after column 12). The pane header is 36 px so its seam meets the context bar.",
+    "Scenario `problems`: the fixture run takes decisions, so the top bar shows the meter (brief: `Failed`, no decisions).",
+    "Diff opacity slider is in the caption under the image, not in a tooltip popover. Region numbers show for up to four regions.",
+    "The inspector is a pane at every desktop width (brief: a popover below 1280 px).",
+    "History chips have neutral count badges and show from 1024 px. From 768 to 1023 px the page uses the select of the phone layout.",
+    "History `Created` shows the clock time under a day row for every day (brief: a date for older rows).",
+    "Inbox `Recent` has one row for each pull request, not the five latest rows. The failure reason follows the title. The kept text filter shows in a band above the table.",
+    "Command menu: `Filter: “text”` is first only when a row matches.",
+    "Status: titles, subjects, and numbers come from the fixtures. The error state also counts down and retries by itself.",
+    "Pull request: the h1 is the title in the header block, not in the top bar. The pipeline is an ordered list of text and marks, not a `ButtonGroup`. The loading state also has a skeleton pipeline band.",
+    "Sign-in: the mark above the heading follows the state (lock, danger triangle). The `?` button stays. The hints of the forbidden and error states use the button label.",
+    "GitHub links do not leave the lab: the click is prevented and the status line says what would open.",
+    "New in this review: a list is one Tab stop (roving tabindex on the row link) and the focus follows the cursor. The brief does not specify the Tab order of a list.",
+    "New in this review: the loading outlines of the review page are stacked and sized like the most common card."
+  ],
+  "notVerified": [
+    "Flow captures taken but not read: the Current, Baseline, and Blink views, the region step, change marks off, matrix closed, the cascade Undo step, and most of the list-flow pictures (history chip, status cursor, inbox key steps). The flows printed no error for them.",
+    "Matrix captures taken but not read after the fixes: the light and 390/768 shots of sign-in, history, and pull; `radius=sharp`; `review-large-today`; `inbox-single-today`; `pull-single-today`. I read the dark 1440 shots of every scenario before the fixes, and the changed states after them.",
+    "`kits/console/example.tsx` now uses the row link helper. It type-checks, but no page mounts it, so I did not look at it."
+  ],
+  "screenshots": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/sign-in-guest-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/inbox-busy-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/history-full-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/status-alerts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/pull-attempts-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/review-changes-1440-dark.png",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/shots/console/review-changes-390-dark.png"
+  ]
+}
