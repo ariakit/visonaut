@@ -20,7 +20,7 @@ import {
   DiffIcon,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import {
@@ -92,8 +92,19 @@ function excludesShortcuts(event: globalThis.KeyboardEvent) {
   if (target.nodeType !== 1) return true;
   const element = target as HTMLElement;
   return !!element.closest(
-    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"], .review-variants, [data-screenshot-search]',
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"], [data-screenshot-search]',
   );
+}
+
+// Scroll only the strip. `scrollIntoView` also moves the page.
+function revealSelectedVariant(strip: HTMLElement) {
+  const chip = strip.querySelector<HTMLElement>('[aria-current="page"]');
+  if (!chip) return;
+  const stripBox = strip.getBoundingClientRect();
+  const chipBox = chip.getBoundingClientRect();
+  if (chipBox.left >= stripBox.left && chipBox.right <= stripBox.right) return;
+  const centered = (stripBox.width - chipBox.width) / 2;
+  strip.scrollLeft += chipBox.left - stripBox.left - centered;
 }
 
 function followVariantLink(event: KeyboardEvent<HTMLElement>) {
@@ -245,6 +256,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     ),
   );
   const workspace = useRef<HTMLDivElement>(null);
+  const variantStrip = useRef<HTMLElement>(null);
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
   const select = (next: ReviewSelection) => {
     if (route) route.onSelect(next);
@@ -352,6 +364,13 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
   }, [item, variant, routedSelection, onRouteSelect]);
 
+  const selectedVariantId = variant?.id;
+  useLayoutEffect(() => {
+    if (variantStrip.current) {
+      revealSelectedVariant(variantStrip.current);
+    }
+  }, [selectedVariantId]);
+
   const selectItem = (index: number) => {
     const next = model.items[index];
     if (!next) return;
@@ -413,6 +432,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     const itemIndex = model.items.indexOf(item);
     const itemPosition = order.indexOf(itemIndex);
     const variantIndex = item.variants.indexOf(variant);
+    const selectsByKey = key.startsWith("arrow") || /^[1-6]$/.test(key);
     if (key === "arrowup") {
       selectItem(order[itemPosition - 1] ?? -1);
     } else if (key === "arrowdown") {
@@ -439,6 +459,12 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       return;
     }
     event.preventDefault();
+    // A selection key can change the selection while a chip has focus. Move
+    // focus away so that the strip does not step from the stale chip. The
+    // target is a node here, because excludesShortcuts checked it.
+    if (selectsByKey && variantStrip.current?.contains(event.target as Node)) {
+      focusWorkspace();
+    }
   });
   useEffect(() => {
     const document = workspace.current?.ownerDocument;
@@ -727,6 +753,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 }}
                 aria-label="Variants"
                 className="review-variants max-w-full mb-4"
+                ref={variantStrip}
                 onKeyDown={followVariantLink}
               >
                 {item.variants.map((entry, index) => (

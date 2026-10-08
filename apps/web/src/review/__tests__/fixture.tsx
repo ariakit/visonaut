@@ -33,6 +33,15 @@ if (new URLSearchParams(window.location.search).has("localComparison")) {
   model.recompareAllowed = false;
   model.recompareDisabledReason = "Rerun trusted Submit to compare locally again.";
 }
+if (new URLSearchParams(window.location.search).has("fifthVariantChanged")) {
+  const item = model.items[0];
+  if (!item) throw new Error("Variant strip fixture is missing.");
+  item.variants = item.variants.slice(0, 6);
+  for (const [index, entry] of item.variants.entries()) {
+    if (index === 4) continue;
+    Object.assign(entry, { kind: "unchanged", verdict: null, source: null, diff: null });
+  }
+}
 const saved = new Map<string, { model: ReviewModel; result: ReviewSaveResult }>();
 const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];
