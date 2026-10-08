@@ -8,7 +8,9 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as security from "@visonaut/security";
 import carriedJobs from "./fixtures/failed-job-rerun.json";
+import { dashboard } from "./dashboard.ts";
 import { handleApi, apiContext, type ApiBindings } from "./index.ts";
+import { measureD1 } from "./test-d1-costs.ts";
 import { processWebhook, reconcileWebhooks } from "./webhooks.ts";
 import { sanitizeRestoredDatabase } from "../operations/recovery.ts";
 import { reconcileStagedWorkflows } from "./workflow-materialize.ts";
@@ -357,6 +359,36 @@ function preRunFixture() {
     };
   }
   return { github, webhook, workflowWebhook, state };
+}
+
+/** Bindings whose GitHub App client answers from the fixture, with a real signing key. */
+async function githubBindings(
+  base: ApiBindings,
+  fixture: ReturnType<typeof preRunFixture>,
+): Promise<ApiBindings> {
+  const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+  const privateKeyPem = await exportPKCS8(privateKey);
+  return {
+    ...base,
+    configuration: {
+      ...base.configuration,
+      github: {
+        ...base.configuration.github,
+        privateKey: privateKeyPem,
+        fetch: async (input, init) => {
+          const path = new URL(String(input)).pathname + new URL(String(input)).search;
+          if (path.endsWith("/access_tokens")) {
+            return Response.json({
+              token: "fixture-installation-token",
+              expires_at: new Date(Date.now() + 600_000).toISOString(),
+            });
+          }
+          const result = await fixture.github.request(path, init);
+          return Response.json(result, { status: init?.method === "POST" ? 201 : 200 });
+        },
+      },
+    },
+  };
 }
 
 async function boundMainWorkflowFixture() {
@@ -1026,29 +1058,7 @@ describe("pre-run App checks", () => {
 
   it("reconciles a signed webhook when the PR merge ref becomes available", async () => {
     const fixture = preRunFixture();
-    const { privateKey } = await generateKeyPair("RS256", { extractable: true });
-    const privateKeyPem = await exportPKCS8(privateKey);
-    const scoped: ApiBindings = {
-      ...preRunBindings,
-      configuration: {
-        ...preRunBindings.configuration,
-        github: {
-          ...preRunBindings.configuration.github,
-          privateKey: privateKeyPem,
-          fetch: async (input, init) => {
-            const path = new URL(String(input)).pathname + new URL(String(input)).search;
-            if (path.endsWith("/access_tokens")) {
-              return Response.json({
-                token: "fixture-installation-token",
-                expires_at: new Date(Date.now() + 600_000).toISOString(),
-              });
-            }
-            const result = await fixture.github.request(path, init);
-            return Response.json(result, { status: init?.method === "POST" ? 201 : 200 });
-          },
-        },
-      },
-    };
+    const scoped = await githubBindings(preRunBindings, fixture);
     const payload = {
       ...fixture.webhook.payload,
       repository: { id: 100 },
@@ -3727,6 +3737,146 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
       payload_json: "{}",
       processed_at: 1,
     });
+  });
+});
+
+describe("pull request titles in processed webhooks", () => {
+  const title = "Add the dialog animation";
+  const keptPayload = JSON.stringify({
+    pull_request: { number: 7, title },
+    repository: { id: 100 },
+  });
+  const pullRequestWebhook = (deliveryId = crypto.randomUUID(), receivedAt = Date.now()) => ({
+    deliveryId,
+    event: "pull_request",
+    payloadDigest: "a".repeat(64),
+    payload: {
+      action: "edited",
+      number: 7,
+      pull_request: {
+        number: 7,
+        title,
+        body: "A long description that the Queue does not need.",
+        head: { sha: sourceSha },
+        base: { sha: baseSha },
+        merge_commit_sha: mergeSha,
+      },
+      repository: { id: 100, full_name: "ariakit/ariakit" },
+      installation,
+      sender,
+    },
+    receivedAt,
+  });
+  const dashboardContext = {
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  };
+  const storedPayload = async (deliveryId: string) =>
+    (
+      await database
+        .prepare("SELECT payload_json FROM github_webhook_delivery WHERE delivery_id=?")
+        .bind(deliveryId)
+        .first<{ payload_json: string }>()
+    )?.payload_json;
+  const insertRun = async () => {
+    await database
+      .prepare(`INSERT INTO visonaut_runs
+        (id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,
+          plan_digest,plan_json,state,created_at)
+        VALUES ('1234','project','77',1,'pull_request',?,'pr:7','plan','{}','reviewing',1)`)
+      .bind(mergeSha)
+      .run();
+  };
+  afterEach(async () => {
+    await database
+      .prepare("DELETE FROM operations_events WHERE id='restore:activation:secrets-required'")
+      .run();
+  });
+
+  it("shows the title of a run after the webhook is processed", async () => {
+    await insertRun();
+    const scoped = await githubBindings(bindings, preRunFixture());
+    const webhook = pullRequestWebhook();
+    const pending: Promise<unknown>[] = [];
+    const received = await handleApi(
+      await request("pull_request", webhook.payload, webhook.deliveryId),
+      scoped,
+      {
+        waitUntil(promise) {
+          pending.push(promise);
+        },
+      },
+    );
+    expect(received?.status).toBe(202);
+    await Promise.all(pending);
+    expect(await processed(webhook.deliveryId)).toBeTypeOf("number");
+    expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
+    expect((await dashboard(dashboardContext)).runs).toMatchObject([
+      { pullRequestNumber: 7, title },
+    ]);
+  });
+
+  it("keeps the title when a delivery from before a restore is settled without replay", async () => {
+    await insertRun();
+    await sanitizeRestoredDatabase(database, Date.now() - 1000);
+    const webhook = pullRequestWebhook(crypto.randomUUID(), 1);
+    await persistWebhook(database, webhook);
+    // The plain bindings have no GitHub fixture, so a replay would stay pending.
+    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 1, pending: [] });
+    expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
+    expect((await dashboard(dashboardContext)).runs).toMatchObject([{ title }]);
+  });
+
+  it("keeps the title of a pending delivery when the database is restored", async () => {
+    await insertRun();
+    const webhook = pullRequestWebhook();
+    await persistWebhook(database, webhook);
+    await persistWebhook(database, {
+      deliveryId: crypto.randomUUID(),
+      event: "ping",
+      payloadDigest: "b".repeat(64),
+      payload: { zen: "Keep it simple" },
+      receivedAt: Date.now(),
+    });
+    await sanitizeRestoredDatabase(database, Date.now());
+    expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
+    expect(
+      await database
+        .prepare("SELECT payload_json FROM github_webhook_delivery WHERE event='ping'")
+        .first(),
+    ).toEqual({ payload_json: "{}" });
+    expect((await dashboard(dashboardContext)).runs).toMatchObject([{ title }]);
+    // A second restore pass leaves the kept fields as they are.
+    await sanitizeRestoredDatabase(database, Date.now());
+    expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
+  });
+
+  it("writes the same rows to settle a pull_request webhook", async () => {
+    const scoped = await githubBindings(bindings, preRunFixture());
+    const measured = measureD1(database);
+    const webhook = pullRequestWebhook();
+    await persistWebhook(measured.database, webhook);
+    await processWebhook(apiContext({ ...scoped, database: measured.database }), webhook);
+    // The settlement rewrites the row that the receipt wrote. It adds no row.
+    expect(measured.totals().rows_written).toBe(6);
+  });
+
+  it("leaves pull_request receipts out of the one-time compaction", async () => {
+    const webhook = pullRequestWebhook();
+    await persistWebhook(database, webhook);
+    await database
+      .prepare("UPDATE github_webhook_delivery SET processed_at=1,payload_json=?")
+      .bind(keptPayload)
+      .run();
+    const statement = await readFile(
+      new URL("../../../../docs/operations/compact-processed-webhooks.sql", import.meta.url),
+      "utf8",
+    );
+    await database.prepare(statement).run();
+    expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
   });
 });
 

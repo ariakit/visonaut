@@ -18,6 +18,20 @@ export function restoredDeliveryGuidSql(guidExpression: string) {
     WHERE recovery.guid=${guidExpression} AND COALESCE(recovery.last_requested_at,0)<=restore.last_seen_at)`;
 }
 
+/**
+ * The payload of a processed delivery. A pull request keeps its number, title,
+ * and repository ID because the Queue reads the title from here. Every other
+ * delivery keeps `{}`. Running it on a settled row gives the same value.
+ */
+export const settledPayloadSql = `CASE WHEN event='pull_request'
+  AND json_extract(payload_json,'$.pull_request.number') IS NOT NULL
+  THEN json_object(
+    'pull_request',json_object(
+      'number',json_extract(payload_json,'$.pull_request.number'),
+      'title',json_extract(payload_json,'$.pull_request.title')),
+    'repository',json_object('id',json_extract(payload_json,'$.repository.id')))
+  ELSE '{}' END`;
+
 export async function readRestoreCutoff(database: Database) {
   return (
     (await database.prepare(`SELECT ${restoreCutoffSql} AS cutoff`).first<{ cutoff: number }>())
@@ -70,7 +84,7 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     ),
     database
       .prepare(
-        "UPDATE github_webhook_delivery SET processed_at=COALESCE(processed_at,?),payload_json='{}'",
+        `UPDATE github_webhook_delivery SET processed_at=COALESCE(processed_at,?),payload_json=${settledPayloadSql}`,
       )
       .bind(now),
     // The cutoff must commit with access/work fencing, before any new capture.

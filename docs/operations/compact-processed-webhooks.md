@@ -1,6 +1,6 @@
 # One-time processed webhook compaction
 
-Deploy the processed-webhook settlement change before running this backfill. New deliveries retain their full JSON while `processed_at` is null and clear it in the same write that marks them processed. Keep `delivery_id`, `event`, `payload_digest`, `received_at`, and `processed_at` for replay detection and audit.
+Deploy the processed-webhook settlement change before running this backfill. New deliveries retain their full JSON while `processed_at` is null and replace it in the same write that marks them processed. A `pull_request` delivery keeps its pull request number, its title, and the repository ID, because the Queue reads the title from there. Every other delivery keeps `{}`. This backfill leaves `pull_request` deliveries as they are. Keep `delivery_id`, `event`, `payload_digest`, `received_at`, and `processed_at` for replay detection and audit.
 
 The September 28 production count was 30,562 processed receipts. [Cloudflare D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/) counts a changed row as a row written; updating this unindexed JSON column should therefore use about 30,562 row writes if that count is still current. At the paid-plan overage rate of $1 per million writes, that is about $0.031 before included usage. Each statement below changes at most 250 rows, so that count needs at most 123 successful statements. Read counts and storage effects must be checked from D1's returned metadata; this estimate does not authorize an unbounded write.
 
@@ -9,7 +9,7 @@ Before writing, count the remaining rows in production and confirm the current r
 ```sql
 SELECT COUNT(*) AS remaining
 FROM github_webhook_delivery
-WHERE processed_at IS NOT NULL AND payload_json != '{}';
+WHERE processed_at IS NOT NULL AND event != 'pull_request' AND payload_json != '{}';
 ```
 
 Run [`compact-processed-webhooks.sql`](./compact-processed-webhooks.sql) once against the production D1 database:
