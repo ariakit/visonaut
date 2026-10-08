@@ -396,6 +396,70 @@ test("item and variant navigation stops at ends and remembers each item", async 
   await expect(selected(page)).toContainText("Removal");
 });
 
+test("shortcuts keep working after a click on a variant chip", async ({ page }) => {
+  await page.getByRole("link", { name: /Solid/ }).click();
+  await expect(selected(page)).toContainText("Solid");
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toContainText("Dark");
+  await page.keyboard.press("d");
+  await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(selected(page)).toBeFocused();
+  await ready(page);
+  await page.keyboard.press("a");
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(selected(page)).toContainText("Contrast");
+  await callCount(page, 1);
+  const calls = await page.evaluate(() => window.reviewFixture.calls);
+  expect(calls[0]).toMatchObject({
+    verdict: "approved",
+    selection: { itemKey: "dialog/open", variantKey: "Dark" },
+  });
+});
+
+test("the next arrow key follows the selection after a shortcut on a variant chip", async ({
+  page,
+}) => {
+  await page.getByRole("link", { name: /Solid/ }).click();
+  await page.keyboard.press("5");
+  await expect(selected(page)).toContainText("Firefox");
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toContainText("WebKit");
+});
+
+test("the selected variant chip is inside the strip without moving the page", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 300 });
+  await page.goto("/src/review/__tests__/index.html?fifthVariantChanged");
+  await ready(page);
+  const strip = page.getByRole("navigation", { name: "Variants" });
+  const chipIsInside = () =>
+    strip.evaluate((element) => {
+      const chip = element.querySelector('a[aria-current="page"]');
+      if (!chip) return false;
+      const stripBox = element.getBoundingClientRect();
+      const chipBox = chip.getBoundingClientRect();
+      return chipBox.left >= stripBox.left && chipBox.right <= stripBox.right;
+    });
+  await expect(selected(page)).toContainText("Firefox");
+  expect(await strip.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  await expect.poll(chipIsInside).toBe(true);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
+  // With the strip above the viewport, a scroll of the page would show.
+  await page.evaluate(() => window.scrollTo(0, 400));
+  expect(await page.evaluate(() => window.scrollY)).toBe(400);
+  expect(await strip.evaluate((element) => element.getBoundingClientRect().bottom)).toBeLessThan(0);
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toContainText("WebKit");
+  await expect.poll(chipIsInside).toBe(true);
+  await page.keyboard.press("1");
+  await expect(selected(page)).toContainText("React");
+  await expect.poll(chipIsInside).toBe(true);
+  expect(await page.evaluate(() => window.scrollY)).toBe(400);
+});
+
 test("item navigation picks the first variant needing review unless one was chosen", async ({
   page,
 }) => {
