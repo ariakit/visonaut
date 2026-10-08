@@ -7,9 +7,11 @@ export interface CapacityPolicy {
   databaseAdmissionBytes: number;
   maximumActiveRuns: number;
 }
-export interface CapacitySnapshot extends CapacityPolicy {
+interface CapacitySample {
   databaseBytes: number;
   activeRuns: number;
+}
+export interface CapacitySnapshot extends CapacityPolicy, CapacitySample {
   observedAt: number;
 }
 
@@ -22,20 +24,32 @@ export function validateCapacityPolicy(policy: CapacityPolicy) {
     throw new Error("Database capacity policy is invalid.");
 }
 
-function blocked(snapshot: CapacitySnapshot) {
-  return (
-    snapshot.databaseBytes >= snapshot.databaseAdmissionBytes ||
-    snapshot.activeRuns >= snapshot.maximumActiveRuns
+// One code for each cause. A client can wait on `capacity_exceeded`, because an
+// active run ends without a maintainer. A wait does not clear the size limit.
+const refusals = {
+  database_size_exceeded:
+    "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check Service attention.",
+  capacity_exceeded:
+    "New capture runs are paused at the limit of active runs. Existing runs can continue. Send the request again after an active run ends.",
+};
+
+/** The size limit comes first: with both limits reached, a wait cannot help. */
+function refusalCode(sample: CapacitySample, policy: CapacityPolicy): keyof typeof refusals | null {
+  if (sample.databaseBytes >= policy.databaseAdmissionBytes) return "database_size_exceeded";
+  if (sample.activeRuns >= policy.maximumActiveRuns) return "capacity_exceeded";
+  return null;
+}
+
+function measurementUnavailable() {
+  return new SecurityError(
+    "capacity_unavailable",
+    503,
+    "Database capacity could not be measured. Existing runs can continue.",
   );
 }
 
-/** Admission thresholds preserve operational headroom; these are not a strict byte quota. */
-export async function monitorDatabaseCapacity(
-  database: Database,
-  policy: CapacityPolicy,
-  now: number,
-) {
-  validateCapacityPolicy(policy);
+/** Read one physical sample. D1 returns the database size with each query, so no write is necessary. */
+async function measureDatabaseCapacity(database: Database): Promise<CapacitySample | null> {
   const result = await database
     .prepare(`SELECT
     (SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs`)
@@ -44,25 +58,31 @@ export async function monitorDatabaseCapacity(
     }>();
   const bytes = result.meta?.size_after;
   const row = result.results?.[0];
-  if (!row || !Number.isSafeInteger(bytes) || typeof bytes !== "number" || bytes < 1) {
+  if (!row || !Number.isSafeInteger(bytes) || typeof bytes !== "number" || bytes < 1) return null;
+  return { databaseBytes: bytes, activeRuns: row.active_runs };
+}
+
+/**
+ * Store one sample and its alerts for Service attention.
+ * Admission thresholds preserve operational headroom; these are not a strict byte quota.
+ */
+export async function monitorDatabaseCapacity(
+  database: Database,
+  policy: CapacityPolicy,
+  now: number,
+) {
+  validateCapacityPolicy(policy);
+  const sample = await measureDatabaseCapacity(database);
+  if (!sample) {
     await recordEvent(database, {
       kind: "database-capacity",
       subject: "database",
       code: "measurement-unavailable",
       now,
     });
-    throw new SecurityError(
-      "capacity_unavailable",
-      503,
-      "Database capacity could not be measured. Existing runs can continue.",
-    );
+    throw measurementUnavailable();
   }
-  const snapshot: CapacitySnapshot = {
-    ...policy,
-    databaseBytes: bytes,
-    activeRuns: row.active_runs,
-    observedAt: now,
-  };
+  const snapshot: CapacitySnapshot = { ...policy, ...sample, observedAt: now };
   await database
     .prepare(
       "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
@@ -70,14 +90,14 @@ export async function monitorDatabaseCapacity(
     .bind(JSON.stringify(snapshot))
     .run();
   await resolveEvents(database, "database-capacity", "database", now);
-  if (blocked(snapshot)) {
+  if (refusalCode(sample, policy)) {
     await recordEvent(database, {
       kind: "database-capacity",
       subject: "database",
       code: "admission-blocked",
       now,
     });
-  } else if (snapshot.databaseBytes >= policy.databaseWarningBytes) {
+  } else if (sample.databaseBytes >= policy.databaseWarningBytes) {
     await recordEvent(database, {
       kind: "database-capacity",
       subject: "database",
@@ -88,6 +108,10 @@ export async function monitorDatabaseCapacity(
   return snapshot;
 }
 
+/**
+ * Check a new run against a fresh sample. The check only reads, because a refused
+ * request repeats with traffic. The scheduled pass stores the sample and the alerts.
+ */
 export async function checkRunAdmission(
   database: Database,
   policy: CapacityPolicy,
@@ -96,7 +120,6 @@ export async function checkRunAdmission(
     externalRunId: string;
     attempt: number;
   },
-  now: number,
 ) {
   validateCapacityPolicy(policy);
   const existing = await database
@@ -104,12 +127,13 @@ export async function checkRunAdmission(
     .bind(identity.projectId, identity.externalRunId, identity.attempt)
     .first();
   if (existing) return { maximumActiveRuns: policy.maximumActiveRuns };
-  const snapshot = await monitorDatabaseCapacity(database, policy, now);
-  if (blocked(snapshot))
-    throw new SecurityError(
-      "capacity_exceeded",
-      503,
-      "New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.",
-    );
+  const sample = await measureDatabaseCapacity(database);
+  if (!sample) {
+    throw measurementUnavailable();
+  }
+  const code = refusalCode(sample, policy);
+  if (code) {
+    throw new SecurityError(code, 503, refusals[code]);
+  }
   return { maximumActiveRuns: policy.maximumActiveRuns };
 }

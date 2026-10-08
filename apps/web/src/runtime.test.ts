@@ -307,6 +307,48 @@ it("reads a healthy native D1 size sample", async () => {
   expect(snapshot.activeRuns).toBe(0);
 });
 
+it("leaves the alert of a capacity stop to the scheduled pass", async () => {
+  vi.mocked(capacity.monitorDatabaseCapacity).mockRestore();
+  const stored = async () => {
+    const snapshot = await env.DB.prepare(
+      "SELECT value FROM operations_cursors WHERE id='database-capacity'",
+    ).first<{ value: string }>();
+    return {
+      snapshot: snapshot ? JSON.parse(snapshot.value) : null,
+      alert: await event("database-capacity:database:admission-blocked"),
+    };
+  };
+  await env.DB.prepare("DELETE FROM operations_cursors WHERE id='database-capacity'").run();
+  await env.DB.prepare(
+    "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,active,state) VALUES('active',?,'active',1,1,'uploading')",
+  )
+    .bind(env.VISONAUT_PROJECT_ID)
+    .run();
+  try {
+    const refused = apiBindings(env).admission?.({
+      projectId: env.VISONAUT_PROJECT_ID,
+      externalRunId: "new",
+      attempt: 1,
+    });
+    await expect(refused).rejects.toMatchObject({ status: 503, code: "capacity_exceeded" });
+    // Until the next pass, the refusal is only in the request log.
+    expect(await stored()).toEqual({ snapshot: null, alert: null });
+    await runScheduledOperations(env);
+    expect(await stored()).toMatchObject({
+      snapshot: { activeRuns: 1, maximumActiveRuns: 1, observedAt: now },
+      alert: { occurrences: 1, resolved_at: null },
+    });
+  } finally {
+    await env.DB.prepare("DELETE FROM visonaut_runs WHERE id='active'").run();
+  }
+  await runScheduledOperations(env);
+  expect(await stored()).toMatchObject({
+    snapshot: { activeRuns: 0 },
+    alert: { occurrences: 1, resolved_at: now },
+  });
+  await env.DB.prepare("DELETE FROM operations_cursors WHERE id='database-capacity'").run();
+});
+
 it("keeps existing work and cleanup running when capacity sampling fails", async () => {
   vi.mocked(capacity.monitorDatabaseCapacity).mockRejectedValue(
     new Error("Missing size metadata."),
