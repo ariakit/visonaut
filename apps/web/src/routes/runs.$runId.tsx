@@ -232,7 +232,7 @@ function RunPage({
             {actionError}
           </p>
         )}
-        <Button disabled={action !== null} onClick={() => void signIn()}>
+        <Button $layer="brand" disabled={action !== null} onClick={() => void signIn()}>
           <ButtonSlot>
             <LogIn />
           </ButtonSlot>
