@@ -31,16 +31,12 @@ export const failedDecision = {
 
 /**
  * The receipt of a saved decision: the stored result of its command, with the
- * reviewer and the review state of the run after it.
+ * review state of the run after it. The answer of the service adds the name
+ * of the reviewer.
  */
-export function decisionReceipt(
-  result: CommandResult,
-  reviewer: string,
-  state: ReviewCounts & { status: string },
-) {
+export function decisionReceipt(result: CommandResult, state: ReviewCounts & { status: string }) {
   return {
     ...result,
-    reviewer,
     runStatus: state.status,
     counts: { pending: state.pending, rejected: state.rejected, approved: state.approved },
   };
@@ -177,7 +173,7 @@ export async function processReviewQueue(
         id: task.id,
         token,
         now: context.now(),
-        result: JSON.stringify(decisionReceipt(result, input.actorId, status)),
+        result: JSON.stringify(decisionReceipt(result, status)),
       });
       if (completed) {
         report.completed.push(task.id);

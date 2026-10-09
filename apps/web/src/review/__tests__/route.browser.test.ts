@@ -186,6 +186,91 @@ test("a decision that lost the race with another write says so and shows the cur
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
+for (const conflict of [
+  {
+    name: "a conflict names the other reviewer with the stored profile name",
+    variant: 0,
+    decision: { verdict: "rejected", reviewer: "Kenji Mori" },
+    key: "a",
+    text: "Conflict. Kenji Mori rejected this variant. Your approval was not saved.",
+    state: /React.*Rejected/,
+    details: /· Rejected · Kenji Mori/,
+  },
+  {
+    name: 'a conflict with a decision of the own other tab says "You already"',
+    variant: 0,
+    decision: { verdict: "approved", reviewer: "Aiko Tanaka", ownDecision: true },
+    key: "x",
+    text: "Conflict. You already approved this variant. Your rejection was not saved.",
+    state: /React.*Approved/,
+    // The Details panel has the stored name, also for the own decision.
+    details: /· Approved · Aiko Tanaka/,
+  },
+  {
+    name: "a conflict with a reviewer who has no stored name says so",
+    variant: 0,
+    decision: { verdict: "rejected" },
+    key: "a",
+    text: "Conflict. Another reviewer rejected this variant. Your approval was not saved.",
+    state: /React.*Rejected/,
+    // No name, and no GitHub user ID in its place.
+    details: /· Rejected(?! ·)/,
+  },
+  {
+    name: "a conflict of a whole-item decision with a decision for a variant that is not selected says so",
+    variant: 1,
+    decision: { verdict: "rejected", reviewer: "Kenji Mori" },
+    key: "Shift+A",
+    text: "Conflict. Kenji Mori rejected another variant of this item. Your approval was not saved.",
+    state: /Solid.*Rejected/,
+    // The selection stays on the first variant, which has no decision.
+    details: /React.*· Needs review/,
+  },
+] as const) {
+  test(conflict.name, async ({ page }) => {
+    const initial = fixtureModel();
+    // The state of the refusal: a person decided for a variant of the item first.
+    const current = structuredClone(initial);
+    current.comparisonRevision += 1;
+    const decided = current.items[0]?.variants[conflict.variant];
+    if (!decided) throw new Error("Missing review variant");
+    Object.assign(decided, { source: "human", revision: 1 }, conflict.decision);
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/review-sessions") {
+        return route.fulfill({ json: { reviewSessionId: "session-conflict" } });
+      }
+      if (path.endsWith("/commands")) {
+        const command = route.request().postDataJSON();
+        return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+      }
+      if (path.endsWith("/queued")) {
+        return route.fulfill({
+          status: 409,
+          json: {
+            error: {
+              code: "conflict",
+              message: "A target changed or belongs to another comparison.",
+            },
+            model: compactReviewModel(current),
+          },
+        });
+      }
+      return route.fulfill({ json: compactReviewModel(initial) });
+    });
+    await page.goto("/src/review/__tests__/route-fixture.html");
+    await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+    await page.keyboard.press(conflict.key);
+    await expect(page.getByRole("alert")).toContainText(conflict.text);
+    // The decision is not saved, and the page has the state of the answer.
+    await expect(page.getByRole("link", { name: conflict.state })).toBeVisible();
+    await page.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
+      conflict.details,
+    );
+  });
+}
+
 test("dashboard loads its protected run list without a separate identity request", async ({
   page,
 }) => {

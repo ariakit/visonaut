@@ -235,7 +235,8 @@ it("saves one Approve to the database through the review queue", async () => {
   expect(alerts.results).toEqual([]);
   const saved = await json(`/api/commands/${commandId}/queued`);
   expect(saved.status).toBe(200);
-  expect(saved.body).toMatchObject({ commandId, reviewer: String(maintainer.id) });
+  // The local sign-in stores the login as the profile name.
+  expect(saved.body).toMatchObject({ commandId, reviewer: maintainer.login });
   const decisions = await env.DB.prepare(
     "SELECT verdict,actor_id,revoked FROM visonaut_decisions WHERE kind='human'",
   ).all();

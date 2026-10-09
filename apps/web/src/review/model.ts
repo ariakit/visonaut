@@ -32,7 +32,13 @@ export interface ReviewVariant {
   revision: number;
   verdict: ReviewVerdict | null;
   source: "human" | "automatic" | null;
+  /**
+   * The stored profile name of the person of a human decision. It is missing
+   * for a person with no stored name.
+   */
   reviewer?: string;
+  /** True for a human decision of the person who has this page open. */
+  ownDecision?: boolean;
   reference: ReviewImage | null;
   candidate: ReviewImage | null;
   diff: ReviewImage | null;
@@ -181,6 +187,7 @@ export interface ReviewSaveResult {
   runRevision?: number;
   /** The run revision when the service answered. */
   currentRunRevision?: number;
+  /** The stored profile name of the reviewer, who is the person of this page. */
   reviewer?: string;
   runStatus?: string;
   counts?: ReviewCounts;
@@ -204,21 +211,18 @@ export interface ReviewCommands {
 
 export class ReviewCommandError extends ClientError {
   readonly model?: ReviewModel;
-  readonly reviewer?: string;
   readonly conflict: boolean;
 
   constructor(
     message: string,
     options: ClientErrorFacts & {
       model?: ReviewModel;
-      reviewer?: string;
       conflict?: boolean;
     } = {},
   ) {
     super(message, options);
     this.name = "ReviewCommandError";
     this.model = options.model;
-    this.reviewer = options.reviewer;
     this.conflict = options.conflict ?? false;
   }
 }

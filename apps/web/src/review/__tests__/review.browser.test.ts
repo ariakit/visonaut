@@ -1390,12 +1390,30 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
 test("conflict identifies reviewer and does not advance or save a partial item", async ({
   page,
 }) => {
-  await page.evaluate(() => window.reviewFixture.setBehavior("conflict"));
+  await page.evaluate(() => window.reviewFixture.setBehavior("other-conflict"));
   await page.keyboard.press("Shift+A");
-  await expect(page.getByRole("alert")).toContainText("Updated by octocat");
+  await expect(page.getByRole("alert")).toContainText(
+    "Conflict. Kenji Mori rejected this variant. Your approval was not saved.",
+  );
   await expect(selected(page)).toContainText("React");
+  await expect(page.getByRole("link", { name: /React.*Rejected/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
+  // The Details panel has the same name.
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
+    "Kenji Mori",
+  );
+});
+
+test("a conflict with a decision of the same person in another tab says so", async ({ page }) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("own-conflict"));
+  await page.keyboard.press("x");
+  await expect(page.getByRole("alert")).toContainText(
+    "Conflict. You already approved this variant. Your rejection was not saved.",
+  );
+  await expect(selected(page)).toContainText("React");
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
 });
 
 test("disconnect shows unsaved state and retries the same frozen command", async ({ page }) => {

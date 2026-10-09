@@ -1349,7 +1349,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
         previousRunRevision: Number(model.comparisonRevision) + 1,
         runRevision: Number(model.comparisonRevision) + 2,
         currentRunRevision: Number(model.comparisonRevision) + 2,
-        reviewer: "42",
+        reviewer: "Maintainer",
         runStatus: "rejected",
         counts: { pending: 2, rejected: 2, approved: 0 },
       });
@@ -2025,7 +2025,7 @@ it("stores ordered review decisions and completes them without further browser r
   expect(result).toMatchObject({
     commandId: second.commandId,
     revisions: [{ id: variant?.id, expectedRevision: Number(variant?.revision) + 2 }],
-    reviewer: "42",
+    reviewer: "Maintainer",
     runStatus: "passed",
   });
   expect(
@@ -2123,7 +2123,7 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
   expect(stable.comparisonRevision).toBe((await test.service.run(test.runId)).revision);
   expect(objects(objects(stable.items)[0]?.variants)[0]).toMatchObject({
     verdict: "rejected",
-    reviewer: "other-reviewer",
+    source: "human",
   });
   expect((await test.send(`/api/commands/${second.commandId}/queued`)).status).toBe(401);
 });
@@ -2340,7 +2340,7 @@ describe("the receipt of a saved decision", () => {
       promotionId: model.promotionId,
       previousRunRevision: model.comparisonRevision,
       runRevision: Number(model.comparisonRevision) + 1,
-      reviewer: "42",
+      reviewer: "Maintainer",
       runStatus: "passed",
       counts: { pending: 0, rejected: 0, approved: 1 },
       currentRunRevision: Number(model.comparisonRevision) + 1,
@@ -2396,6 +2396,119 @@ describe("the receipt of a saved decision", () => {
     const last = await receipts.at(-1);
     expect(last?.currentRunRevision).toBe(last?.runRevision);
     expect(page).toEqual(await commands.refresh());
+  });
+});
+
+describe("the stored profile name of a reviewer", () => {
+  it("names each reviewer of a run in the model and in a conflict, with one statement in a batch that the read already sends", async () => {
+    const test = await fixture({ duplicateOriginal: true });
+    await test.complete();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    // A second person who signed in: the GitHub user 77.
+    await database.batch([
+      database.prepare(
+        `INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES ('user-kenji', 'Kenji Mori', 'kenji@example.com', 1, 1, 1)`,
+      ),
+      database.prepare(
+        `INSERT INTO "account" (id, accountId, providerId, userId, createdAt, updatedAt) VALUES ('account-kenji', '77', 'github', 'user-kenji', 1, 1)`,
+      ),
+    ]);
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const initial = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const comparisonId = string(initial.comparisonId);
+    const item = objects(initial.items)[0];
+    const [first, second] = objects(item?.variants);
+    /** A decision that the service stores for a person, with no request. */
+    const decide = (actorId: string, variant: typeof first, revision = Number(variant?.revision)) =>
+      test.service.review({
+        commandId: crypto.randomUUID(),
+        actorId,
+        sessionId: `session-${actorId}`,
+        comparisonId,
+        verdict: "rejected",
+        targets: [{ id: string(variant?.id), expectedRevision: revision }],
+        selection: { itemKey: string(item?.key), variantKey: string(variant?.key) },
+        now: Date.now(),
+      });
+    // The other person decides for the first variant, and the person of the
+    // session for the second one, as in another tab.
+    await decide("77", first);
+    await decide("42", second);
+    const batches: string[][] = [];
+    const costs = measureD1(database, {
+      async beforeBatch(sql) {
+        batches.push(sql);
+      },
+    });
+    test.bindings.database = costs.database;
+    const response = await test.send(`/api/runs/${test.runId}`, { headers });
+    const body = await response.text();
+    const bytes = new TextEncoder().encode(body).byteLength;
+    const totals = costs.totals();
+    costs.report(
+      `run model read: ${costs.costs.length} statements, ${costs.roundTrips()} round trips, ${totals.rows_read} rows read, ${bytes} bytes`,
+    );
+    test.bindings.database = database;
+    const variants = objects(objects(object(JSON.parse(body)).items)[0]?.variants);
+    expect(variants[0]).toMatchObject({ verdict: "rejected", reviewer: "Kenji Mori" });
+    expect(variants[0]).not.toHaveProperty("ownDecision");
+    expect(variants[1]).toMatchObject({
+      verdict: "rejected",
+      reviewer: "Maintainer",
+      ownDecision: true,
+    });
+    // The names come with the first batch of each model read. The read has no
+    // round trip of its own for them.
+    const named = batches.filter((batch) => batch.some((sql) => sql.includes('"account"')));
+    expect(named).toHaveLength(1);
+    expect(named[0]?.some((sql) => sql.includes("work_retained_runs"))).toBe(true);
+    expect(costs.costs.filter((cost) => cost.sql.includes('"account"'))).toHaveLength(1);
+    expect(totals.rows_written).toBe(0);
+    // A decision of the session for the first variant comes after the one of
+    // the other person. The state of the refusal has the name.
+    const commandId = crypto.randomUUID();
+    const admission = await test.send(`/api/comparisons/${comparisonId}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        queued: true,
+        reviewSessionId: session.reviewSessionId,
+        commandId,
+        verdict: "approved",
+        targets: [{ id: first?.id, expectedRevision: first?.revision }],
+        selection: { itemKey: item?.key, variantKey: first?.key },
+        expectedBaselineRevision: initial.baselineRevision,
+      }),
+    });
+    expect(admission.status).toBe(202);
+    await test.flushBackground();
+    const refusal = await test.send(`/api/commands/${commandId}/queued`, { headers });
+    expect(refusal.status).toBe(409);
+    const refused = await objectResponse(refusal);
+    expect(refused.error).toMatchObject({ code: "conflict" });
+    expect(Object.keys(refused).sort()).toEqual(["error", "model"]);
+    expect(objects(objects(object(refused.model).items)[0]?.variants)[0]).toMatchObject({
+      id: first?.id,
+      verdict: "rejected",
+      reviewer: "Kenji Mori",
+    });
+    // A person with no account row, and a person with an empty name, have no
+    // name in the model. The model has no GitHub user ID in place of a name.
+    await decide("other-reviewer", first, Number(first?.revision) + 1);
+    await database.prepare(`UPDATE "user" SET name = ' ' WHERE name = 'Maintainer'`).run();
+    const unnamed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const [unknown, own] = objects(objects(unnamed.items)[0]?.variants);
+    expect(unknown).toMatchObject({ verdict: "rejected", source: "human" });
+    expect(unknown).not.toHaveProperty("reviewer");
+    expect(unknown).not.toHaveProperty("ownDecision");
+    expect(own).toMatchObject({ verdict: "rejected", source: "human", ownDecision: true });
+    expect(own).not.toHaveProperty("reviewer");
   });
 });
 
@@ -2505,7 +2618,7 @@ describe("two writes at the same time, and the limits of one command", () => {
       id: theirs.targets[0]?.id,
       revision: Number(theirs.targets[0]?.expectedRevision) + 1,
       verdict: "rejected",
-      reviewer: "other-reviewer",
+      source: "human",
     });
     expect(object(answer.model).comparisonRevision).toBe(before.runRevision + 1);
     const after = await state.stored();

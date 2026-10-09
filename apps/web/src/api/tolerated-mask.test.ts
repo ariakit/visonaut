@@ -154,6 +154,8 @@ for (const changedProfile of [false, true]) {
         projectId: "project",
         github: { repository: "ariakit/visonaut-diagnostics", repositoryId: "123" },
       },
+      // The model marks the decisions of the person who reads it.
+      identity: { githubUserId: "viewer" },
     });
     const comparing = parseReviewModel(await reviewModel(privateContext, "run"));
     expect(comparing.run.status).toBe("comparing");

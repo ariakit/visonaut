@@ -90,7 +90,13 @@ export interface ApiContext extends ApiBindings {
 }
 
 export interface PrivateContext extends ApiContext {
-  identity: MaintainerIdentity & { userId: string; sessionId: string; sessionHeaders: Headers };
+  identity: MaintainerIdentity & {
+    userId: string;
+    /** The stored profile name of the account. It is personal data: log it nowhere. */
+    name: string;
+    sessionId: string;
+    sessionHeaders: Headers;
+  };
   lifetime: { waitUntil(promise: Promise<unknown>): void };
 }
 
