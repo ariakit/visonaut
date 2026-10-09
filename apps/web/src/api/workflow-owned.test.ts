@@ -90,6 +90,11 @@ const profiledImage = await validateImage(profiledPng);
 const privateKey = await exportPKCS8(
   (await generateKeyPair("RS256", { extractable: true })).privateKey,
 );
+// The service keeps the signing keys of GitHub between requests, so each
+// signed request of this file uses one key pair.
+const oidcKeys = await generateKeyPair("RS256");
+const oidcKeyId = "workflow-test";
+const oidcJwk = { ...(await exportJWK(oidcKeys.publicKey)), kid: oidcKeyId, alg: "RS256" };
 const pin = "f".repeat(40);
 const sourceDigest = await workflowSourceDigest(pin);
 const executorDigest = "e".repeat(64);
@@ -100,6 +105,17 @@ beforeAll(async () => {
   await applyTestMigrations(database);
 });
 afterAll(async () => runtime.dispose());
+
+/** Answer the request for the signing keys of GitHub, and no other request. */
+function stubGitHubSigningKeys() {
+  vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
+      throw new Error("Unexpected test network request");
+    }
+    return Response.json({ keys: [oidcJwk] });
+  });
+}
 
 async function fixture(
   shardKeyOverride?: string,
@@ -2552,7 +2568,8 @@ describe("workflow-owned upload staging", () => {
       const response = await handleApi(
         new Request("https://preview.example/v1/runs", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          // Each CLI sends a bearer token. The body is refused before the token is verified.
+          headers: { authorization: "Bearer unverified", "content-type": "application/json" },
           body: JSON.stringify({
             schemaVersion: "1.0",
             ...test.manifest.run,
@@ -2717,8 +2734,6 @@ describe("workflow-owned upload staging", () => {
           },
         ],
       });
-      const keys = await generateKeyPair("RS256");
-      const jwk = { ...(await exportJWK(keys.publicKey)), kid: "reserve-test", alg: "RS256" };
       const token = await new SignJWT({
         repository: "ariakit/ariakit",
         repository_id: repositoryId,
@@ -2734,7 +2749,7 @@ describe("workflow-owned upload staging", () => {
         job_workflow_ref: workflowOwned.reusableWorkflowRef,
         job_workflow_sha: workflowOwned.reusableWorkflowSha,
       })
-        .setProtectedHeader({ alg: "RS256", kid: "reserve-test" })
+        .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
         .setIssuer("https://token.actions.githubusercontent.com")
         .setAudience("https://preview.example/submit")
         .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
@@ -2742,18 +2757,12 @@ describe("workflow-owned upload staging", () => {
         .setNotBefore("0s")
         .setExpirationTime("5m")
         .setJti(crypto.randomUUID())
-        .sign(keys.privateKey);
+        .sign(oidcKeys.privateKey);
       const costs = measureD1(nativeDatabase);
       test.context.database = costs.database;
       test.context.service = new Service(costs.database);
       test.context.admission = (identity) => checkRunAdmission(costs.database, policy, identity);
-      vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
-          throw new Error("Unexpected test network request");
-        }
-        return Response.json({ keys: [jwk] });
-      });
+      stubGitHubSigningKeys();
       try {
         const response = await handleApi(
           new Request("https://preview.example/v1/runs", {
@@ -3088,15 +3097,7 @@ describe("workflow-owned upload staging", () => {
         job(submitJobId, test.context.configuration.workflowOwned?.submitJobName ?? ""),
       ],
     });
-    const keys = await generateKeyPair("RS256");
-    const jwk = { ...(await exportJWK(keys.publicKey)), kid: "submit-test", alg: "RS256" };
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
-      const url = String(input instanceof Request ? input.url : input);
-      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
-        throw new Error("Unexpected test network request");
-      }
-      return Response.json({ keys: [jwk] });
-    });
+    stubGitHubSigningKeys();
     try {
       const signedToken = (checkRunId: string, attempt = 1) =>
         new SignJWT({
@@ -3114,7 +3115,7 @@ describe("workflow-owned upload staging", () => {
           job_workflow_ref: workflowOwned.reusableWorkflowRef,
           job_workflow_sha: workflowOwned.reusableWorkflowSha,
         })
-          .setProtectedHeader({ alg: "RS256", kid: "submit-test" })
+          .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
           .setIssuer("https://token.actions.githubusercontent.com")
           .setAudience("https://preview.example/submit")
           .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
@@ -3122,7 +3123,7 @@ describe("workflow-owned upload staging", () => {
           .setNotBefore("0s")
           .setExpirationTime("5m")
           .setJti(crypto.randomUUID())
-          .sign(keys.privateKey);
+          .sign(oidcKeys.privateKey);
       const send = (token: string) =>
         handleApi(
           new Request(`https://preview.example/v1/runs/${workflowRunId}/submit`, {
@@ -5497,4 +5498,247 @@ describe("D1 evidence phase costs", () => {
     },
     20_000,
   );
+});
+
+describe("credential checks of the ingest routes", () => {
+  type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+  /** Send one request through the API and record each D1 statement that it runs. */
+  const sendMeasured = async (test: Fixture, path: string, init: RequestInit) => {
+    const costs = measureD1(nativeDatabase);
+    const response = await handleApi(
+      new Request(`https://preview.example${path}`, init),
+      { ...test.context, database: costs.database },
+      { waitUntil() {} },
+    );
+    if (!response) {
+      throw new Error("Expected a response of the API.");
+    }
+    return { response, statements: costs.costs.map((cost) => cost.sql) };
+  };
+
+  /** The request form of CLI 0.5.4: a bearer token and a JSON body. */
+  const cliJson = (token: string, body: unknown): RequestInit => ({
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  /** A GitHub token with a correct form and the signature of an unknown key. */
+  const tokenOfUnknownKey = async () => {
+    const unknownKeys = await generateKeyPair("RS256");
+    return new SignJWT({})
+      .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
+      .setIssuer("https://token.actions.githubusercontent.com")
+      .setAudience("https://preview.example/submit")
+      .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+      .setIssuedAt()
+      .setNotBefore("0s")
+      .setExpirationTime("5m")
+      .setJti(crypto.randomUUID())
+      .sign(unknownKeys.privateKey);
+  };
+
+  const ingestRoutes = [
+    ["POST", "/v1/plan"],
+    ["POST", "/v1/runs"],
+    ["POST", "/v1/runs/:workflowRun/begin"],
+    ["POST", "/v1/runs/:workflowRun/submit"],
+    ["POST", "/v1/runs/:run/reference"],
+    ["GET", "/v1/runs/:run/reference/images/:image"],
+    ["POST", "/v1/runs/:run/shards/combined"],
+    ["PUT", "/v1/uploads/ticket"],
+    ["POST", "/v1/runs/:run/reuse"],
+    ["POST", "/v1/runs/:run/finalize"],
+  ] as const;
+
+  /** Send one ingest route of the table, with its path values and the given headers. */
+  const sendIngestRoute = (
+    test: Fixture,
+    method: string,
+    route: string,
+    headers: Record<string, string> = {},
+  ) => {
+    const path = route
+      .replace(":workflowRun", test.manifest.run.workflowRunId)
+      .replace(":run", test.runId)
+      .replace(":image", crypto.randomUUID());
+    return sendMeasured(test, path, {
+      method,
+      headers: method === "GET" ? headers : { ...headers, "content-type": "application/json" },
+      ...(method === "GET" ? {} : { body: "{}" }),
+    });
+  };
+
+  it.each(ingestRoutes)(
+    "refuses %s %s with no bearer token before the first read of D1",
+    async (method, route) => {
+      const test = await fixture();
+      const { response, statements } = await sendIngestRoute(test, method, route);
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({
+        error: { code: "credential_required", message: "A bearer credential is required." },
+      });
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(statements).toEqual([]);
+    },
+  );
+
+  it.each(ingestRoutes)(
+    "keeps the project check of %s %s for a request with a bearer token",
+    async (method, route) => {
+      const test = await fixture();
+      test.context.configuration.github.repositoryId = "999999";
+      const { response } = await sendIngestRoute(test, method, route, {
+        authorization: "Bearer unverified",
+      });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        error: { code: "repository_configuration" },
+      });
+    },
+  );
+
+  it("answers 401 to Submit with no bearer token", async () => {
+    const test = await fixture();
+    const runNumbers = [test.manifest.run.workflowRunId, "987654321"];
+    for (const runNumber of runNumbers) {
+      const { response, statements } = await sendMeasured(test, `/v1/runs/${runNumber}/submit`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: 1 }),
+      });
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({ error: { code: "credential_required" } });
+      expect(statements).toEqual([]);
+    }
+  });
+
+  it("answers 400 to a shard path with a percent sequence that is not valid", async () => {
+    const test = await fixture();
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const { response } = await sendMeasured(
+        test,
+        `/v1/runs/${test.runId}/shards/%E0%A4%A`,
+        cliJson(test.capability, test.manifest),
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: { code: "invalid_path", message: "The request path is invalid." },
+      });
+      expect(output).not.toHaveBeenCalled();
+    } finally {
+      output.mockRestore();
+    }
+  });
+
+  it("decodes a percent sequence of a shard path that is valid", async () => {
+    const test = await fixture("linux/x64");
+    const { response } = await sendMeasured(
+      test,
+      `/v1/runs/${test.runId}/shards/${encodeURIComponent("linux/x64")}`,
+      cliJson(test.capability, test.manifest),
+    );
+    expect(response.status).toBe(200);
+  });
+
+  it("answers 401 to a reserve call and to Submit with a token of an unknown key", async () => {
+    const test = await fixture();
+    const token = await tokenOfUnknownKey();
+    stubGitHubSigningKeys();
+    try {
+      const reserve = await sendMeasured(
+        test,
+        "/v1/runs",
+        cliJson(token, {
+          schemaVersion: "1.0",
+          ...test.manifest.run,
+          shardKey: "combined",
+          comparisonMode: LOCAL_COMPARISON_MODE,
+        }),
+      );
+      expect(reserve.response.status).toBe(401);
+      expect(await reserve.response.json()).toMatchObject({ error: { code: "invalid_oidc" } });
+      const submit = await sendMeasured(
+        test,
+        `/v1/runs/${test.manifest.run.workflowRunId}/submit`,
+        cliJson(token, { schemaVersion: "1.0", workflowAttempt: 1 }),
+      );
+      expect(submit.response.status).toBe(401);
+      expect(await submit.response.json()).toMatchObject({ error: { code: "invalid_oidc" } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("answers 401 to an upload with a capability of another secret", async () => {
+    const test = await fixture();
+    const capability = await issueIngestCapability(
+      {
+        ...test.context.configuration.capability,
+        secret: "another-secret-with-32-characters-or-more",
+      },
+      await verifyIngestCapability(test.context.configuration.capability, test.capability),
+    );
+    const { response } = await sendMeasured(test, "/v1/uploads/ticket", {
+      method: "PUT",
+      headers: { authorization: `Bearer ${capability}`, "content-type": "image/png" },
+      body: png,
+    });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: { code: "invalid_capability" } });
+  });
+
+  it("stages a capture through the API with the requests of CLI 0.5.4", async () => {
+    const test = await fixture();
+    const session = await localSession(test);
+    const declared = await sendMeasured(
+      test,
+      `/v1/runs/${encodeURIComponent(test.runId)}/shards/${encodeURIComponent(test.shardKey)}`,
+      cliJson(session.capability, test.manifest),
+    );
+    expect(declared.response.status).toBe(200);
+    const declaration = (await declared.response.json()) as {
+      manifestDigest: string;
+      uploads: Array<{ ticket: string; imageDigest: string }>;
+    };
+    expect(declaration.uploads).toHaveLength(1);
+    for (const upload of declaration.uploads) {
+      const uploaded = await sendMeasured(
+        test,
+        `/v1/uploads/${encodeURIComponent(upload.ticket)}`,
+        {
+          method: "PUT",
+          headers: {
+            accept: "application/json",
+            authorization: `Bearer ${session.capability}`,
+            "content-type": "image/png",
+          },
+          body: upload.imageDigest === image.digest ? png : profiledPng,
+        },
+      );
+      expect(uploaded.response.status).toBe(204);
+    }
+    const finalized = await sendMeasured(
+      test,
+      `/v1/runs/${encodeURIComponent(test.runId)}/finalize`,
+      cliJson(session.capability, {
+        schemaVersion: "1.0",
+        shardKey: test.shardKey,
+        manifestDigest: declaration.manifestDigest,
+      }),
+    );
+    expect(finalized.response.status).toBe(202);
+    expect(await finalized.response.json()).toMatchObject({
+      runId: test.runId,
+      shardKey: test.shardKey,
+      manifestDigest: declaration.manifestDigest,
+      state: "staged",
+    });
+  });
 });

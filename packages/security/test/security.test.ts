@@ -61,6 +61,28 @@ describe("current repository permissions", () => {
     );
   });
 
+  it("keeps the verified login of a user after a refused permission", async () => {
+    const permissionPath = "/repos/ariakit/ariakit/collaborators/renamed-user/permission";
+    const refused = { code: "not_maintainer", status: 403 };
+    const firstRequest = githubWithPermission("read");
+    firstRequest.appId = "refused-hint-test";
+    await expect(requireRepositoryWrite(firstRequest, "42")).rejects.toMatchObject(refused);
+    expect(firstRequest.request).toHaveBeenCalledWith("/user/42");
+    const secondRequest = githubWithPermission("read");
+    secondRequest.appId = "refused-hint-test";
+    await expect(requireRepositoryWrite(secondRequest, "42")).rejects.toMatchObject(refused);
+    expect(secondRequest.request).not.toHaveBeenCalledWith("/user/42");
+    expect(secondRequest.request).toHaveBeenLastCalledWith(permissionPath);
+    // The kept login grants nothing: GitHub still decides about each check.
+    const grantedRequest = githubWithPermission("write");
+    grantedRequest.appId = "refused-hint-test";
+    expect(await requireRepositoryWrite(grantedRequest, "42")).toMatchObject({
+      login: "renamed-user",
+    });
+    expect(grantedRequest.request).not.toHaveBeenCalledWith("/user/42");
+    expect(grantedRequest.request).toHaveBeenLastCalledWith(permissionPath);
+  });
+
   it("resolves a renamed login after a stale hint redirects", async () => {
     const github = githubWithPermission("write");
     github.appId = "rename-test";

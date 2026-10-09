@@ -31,7 +31,11 @@ const keys = await generateKeyPair("RS256");
 const publicKey = await exportJWK(keys.publicKey);
 const keySet = createLocalJWKSet({ keys: [{ ...publicKey, kid: "test-key", alg: "RS256" }] });
 
-async function token(overrides: Record<string, unknown> = {}, audience = configuration.audience) {
+async function token(
+  overrides: Record<string, unknown> = {},
+  audience = configuration.audience,
+  signingKey = keys.privateKey,
+) {
   return new SignJWT({
     repository,
     repository_id: "10",
@@ -56,7 +60,7 @@ async function token(overrides: Record<string, unknown> = {}, audience = configu
     .setNotBefore("0s")
     .setExpirationTime("5m")
     .setJti(crypto.randomUUID())
-    .sign(keys.privateKey);
+    .sign(signingKey);
 }
 
 function github(
@@ -1052,4 +1056,42 @@ it("accepts a newly issued identity token after database recovery", async () => 
       keySet,
     }),
   ).resolves.toMatchObject({ testedSha, workflowRunId: "20", workflowAttempt: 2 });
+});
+
+describe("the signing keys of GitHub", () => {
+  it("loads the keys one time and verifies later tokens with the kept keys", async () => {
+    // A new module instance has no kept keys, so the result does not depend
+    // on the tests that ran before.
+    vi.resetModules();
+    const { verifyGitHubOidc: verify } = await import("../src/oidc.js");
+    const loadKeys = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
+        throw new Error("Unexpected test network request");
+      }
+      return Response.json({ keys: [{ ...publicKey, kid: "test-key", alg: "RS256" }] });
+    });
+    vi.stubGlobal("fetch", loadKeys);
+    try {
+      const verified = { testedSha, workflowRunId: "20", workflowAttempt: 2 };
+      await expect(
+        verify({ token: await token(), request, configuration, github: github() }),
+      ).resolves.toMatchObject(verified);
+      await expect(
+        verify({ token: await token(), request, configuration, github: github() }),
+      ).resolves.toMatchObject(verified);
+      const otherKeys = await generateKeyPair("RS256");
+      await expect(
+        verify({
+          token: await token({}, configuration.audience, otherKeys.privateKey),
+          request,
+          configuration,
+          github: github(),
+        }),
+      ).rejects.toMatchObject({ code: "invalid_oidc", status: 401 });
+      expect(loadKeys).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -1,4 +1,5 @@
 import { compactReviewModel } from "./compact-model.ts";
+import type { DashboardRun, RunsAnswer } from "../api/dashboard.ts";
 import type { ReviewImage, ReviewModel } from "./model.ts";
 
 export const previewRunId = "00000000-0000-4000-8000-000000000001";
@@ -77,19 +78,20 @@ export function previewFixtureResponse(request: Request): Response | null {
   )
     return null;
   if (request.method === "GET" && pathname === "/api/runs") {
-    const run = {
+    const run: DashboardRun = {
       id: previewRunId,
       kind: "pull_request",
       testedSha: "0".repeat(40),
-      state: "reviewing",
+      state: "needs-review",
       attempt: 1,
       createdAt: 0,
+      comparisonId: null,
       title: "Dialog review example",
       pending: 2,
       rejected: 0,
       approved: 0,
     };
-    return Response.json({
+    const answer: RunsAnswer = {
       preview: true,
       runs: [run],
       actionable: [run],
@@ -99,7 +101,10 @@ export function previewFixtureResponse(request: Request): Response | null {
         snapshotId: null,
         promotionId: null,
       },
-    });
+      alertCount: 0,
+      user: { id: "preview", githubUserId: "0", login: "preview" },
+    };
+    return Response.json(answer);
   }
   if (request.method === "GET" && pathname === `/api/runs/${previewRunId}`) {
     return Response.json(compactReviewModel(previewReviewModel()));

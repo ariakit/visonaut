@@ -1,9 +1,11 @@
 import { ProtocolError, SCHEMA_VERSION } from "@visonaut/protocol";
 import {
+  bearerToken,
   createAuth,
   createGitHubClient,
   requireMaintainer,
   requireSameOrigin,
+  requireSessionCredential,
   securePrivateResponse,
   SecurityError,
 } from "@visonaut/security";
@@ -83,6 +85,15 @@ function errorResponse(error: unknown, failure: OperationFailureContext) {
   );
 }
 
+/** Decode one path segment. A percent sequence that is not valid is a bad request. */
+function pathSegment(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new SecurityError("invalid_path", 400, "The request path is invalid.");
+  }
+}
+
 export async function handleApi(
   request: Request,
   bindings: ApiBindings,
@@ -120,27 +131,35 @@ export async function handleApi(
         headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
       });
     }
-    const dashboardRead = path === "/api/runs" && request.method === "GET";
-    if (!dashboardRead) {
-      await assertConfiguredProject(context);
-    }
+    // The webhook handler checks the signature before it reads the project.
     if ((path === "/v1/webhooks" || path === "/webhooks/github") && request.method === "POST") {
       return privateResponse(await receiveWebhook(request, context, lifetime));
     }
-    const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
+    // An ingest route takes only a bearer credential. A request with none gets
+    // its 401 before the first read. Each route checks the values of its path
+    // after this step.
+    const admitIngest = async () => {
+      bearerToken(request);
+      await assertConfiguredProject(context);
+    };
     if (path === "/v1/plan" && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await reportVisualPlan(request, context));
     }
     if (path === "/v1/runs" && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await reserveStaged(request, context));
     }
     const beginMatch = /^\/v1\/runs\/([1-9][0-9]*)\/begin$/.exec(path);
     if (beginMatch?.[1] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await beginStaged(request, context, beginMatch[1]));
     }
     const referenceMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference$/.exec(path);
-    if (referenceMatch?.[1] && request.method === "POST")
+    if (referenceMatch?.[1] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await stagedReference(request, context, uuid(referenceMatch[1])));
+    }
     const referenceImageMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference\/images\/([a-f0-9-]+)$/.exec(
       path,
     );
@@ -148,7 +167,8 @@ export async function handleApi(
       referenceImageMatch?.[1] &&
       referenceImageMatch[2] &&
       ["GET", "HEAD"].includes(request.method)
-    )
+    ) {
+      await admitIngest();
       return privateResponse(
         await stagedReferenceImage(
           request,
@@ -157,34 +177,43 @@ export async function handleApi(
           referenceImageMatch[2],
         ),
       );
+    }
     const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
     if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(
-        await declareStaged(
-          request,
-          context,
-          uuid(shardMatch[1]),
-          decodeURIComponent(shardMatch[2]),
-        ),
+        await declareStaged(request, context, uuid(shardMatch[1]), pathSegment(shardMatch[2])),
       );
     }
     const uploadMatch = /^\/v1\/uploads\/([A-Za-z0-9_.-]{1,8192})$/.exec(path);
     if (uploadMatch?.[1] && request.method === "PUT") {
+      await admitIngest();
       return privateResponse(await uploadStagedImage(request, context, uploadMatch[1]));
     }
     const reuseMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reuse$/.exec(path);
     if (reuseMatch?.[1] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await reuseStagedImages(request, context, uuid(reuseMatch[1])));
     }
     const finalizeMatch = /^\/v1\/runs\/([a-f0-9-]+)\/finalize$/.exec(path);
     if (finalizeMatch?.[1] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await finalizeStaged(request, context, uuid(finalizeMatch[1])));
     }
     const submitMatch = /^\/v1\/runs\/([1-9][0-9]*)\/submit$/.exec(path);
     if (submitMatch?.[1] && request.method === "POST") {
+      await admitIngest();
       return privateResponse(await submitStaged(request, context, submitMatch[1]));
     }
+    // Each other route takes a session. A request with no session cookie and
+    // no bearer token gets its 401 before the first read.
+    requireSessionCredential(request);
+    const dashboardRead = path === "/api/runs" && request.method === "GET";
+    if (!dashboardRead) {
+      await assertConfiguredProject(context);
+    }
     // A signed upload token is never accepted by this live-session boundary.
+    const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
     const github = await createGitHubClient(bindings.configuration.github);
     const reviewWrite = request.method === "POST" && reviewCommandRoute.test(path);
     const identity = await requireMaintainer({

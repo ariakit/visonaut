@@ -221,6 +221,9 @@ export async function requireRepositoryWrite(
     if (numericId(verifiedUser.id) !== id) {
       return null;
     }
+    // GitHub confirmed that this login has the numeric ID. Keep the login also
+    // when the permission is refused: the next check then starts from it.
+    rememberLogin(key, login);
     // GitHub maps maintain to write; custom role names do not define base access.
     // https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user
     if (result.permission !== "write" && result.permission !== "admin") {
@@ -233,7 +236,6 @@ export async function requireRepositoryWrite(
     try {
       const identity = await checkPermission(hint);
       if (identity) {
-        rememberLogin(key, hint);
         return identity;
       }
     } catch (error) {
@@ -257,6 +259,5 @@ export async function requireRepositoryWrite(
   if (!identity) {
     throw new GitHubUnavailableError();
   }
-  rememberLogin(key, login);
   return identity;
 }

@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import { Service } from "@visonaut/service";
 import { TestDatabase } from "../operations/test-fixtures.ts";
 import { dashboard } from "./dashboard.ts";
+import { operationsStatus } from "./operations.ts";
 
 it("keeps older live work outside the 100-run history bound and returns current titles/counts", async () => {
   using database = new TestDatabase();
@@ -353,6 +354,155 @@ it("reports a closed run that failed as failed and not as replaced", async () =>
     expect(result.runs.find((run) => run.id === id)?.state).toBe(state);
     expect((await service.status(id)).status).toBe(state);
   }
+});
+
+it("returns why each closed run closed and the state it had before", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      // The baseline moved on after each comparison below, which has the revision 0.
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest,baseline_revision) VALUES('project','100','policy',3)",
+    )
+    .run();
+  // One run for each cause, and the rows that decide the state before closing.
+  const pull = { kind: "pull_request", state: "superseded" } as const;
+  const closedRuns = [
+    { ...pull, id: "replaced", reason: "replaced", rows: ["undecided"] },
+    { ...pull, id: "pull", reason: "pull-request-closed", rows: ["rejected"] },
+    { ...pull, id: "group", kind: "merge_group", reason: "merge-group-destroyed", rows: [] },
+    { ...pull, id: "baseline", kind: "main", reason: "baseline-retired", rows: ["approved"] },
+    { ...pull, id: "expired", state: "failed", reason: "expired", rows: [] },
+    { ...pull, id: "legacy", reason: null, rows: ["approved"] },
+    { ...pull, id: "unsealed", reason: "replaced", rows: [] },
+    { ...pull, id: "compacted", reason: "replaced", rows: ["approved"] },
+  ] as const;
+  for (const [index, entry] of closedRuns.entries()) {
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,active,closed_at,closed_reason,comparison_id,sealed_at,created_at) VALUES(?,'project',?,1,?,'sha',?,'plan','{}',?,0,1,?,?,1,?)",
+      )
+      .run(
+        entry.id,
+        entry.id,
+        entry.kind,
+        entry.kind === "pull_request" ? "pr:1" : entry.kind,
+        entry.state,
+        entry.reason,
+        entry.id,
+        index,
+      );
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at) VALUES(?,?,0,'policy',0,'ready',0)",
+      )
+      .run(entry.id, entry.id);
+    for (const [ordinal, verdict] of entry.rows.entries()) {
+      const decided = verdict === "undecided" ? null : `decision-${entry.id}`;
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json,outcome,decision_id) VALUES(?,?,'item','light',?,'{}','changed',?)",
+        )
+        .run(`row-${entry.id}`, entry.id, ordinal, decided);
+      if (!decided) continue;
+      database.connection
+        .prepare(
+          "INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,tuple_json,created_at) VALUES(?,?,1,?,'human','42','{}',0)",
+        )
+        .run(decided, `row-${entry.id}`, verdict);
+    }
+  }
+  // The stored rows of these two runs cannot give the state before the close.
+  database.connection.exec(
+    "UPDATE visonaut_runs SET sealed_at=NULL,comparison_id=NULL WHERE id='unsealed'",
+  );
+  database.connection.exec("UPDATE visonaut_runs SET detail_archived=1 WHERE id='compacted'");
+  const result = await dashboard({
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  });
+  const byId = (id: string) => result.runs.find((run) => run.id === id);
+  expect(
+    closedRuns.map((entry) => {
+      const run = byId(entry.id);
+      return [entry.id, run?.state, run?.closedReason, run?.closedState];
+    }),
+  ).toEqual([
+    ["replaced", "superseded", "replaced", "needs-review"],
+    ["pull", "superseded", "pull-request-closed", "rejected"],
+    ["group", "superseded", "merge-group-destroyed", "passed"],
+    ["baseline", "superseded", "baseline-retired", "passed"],
+    // A run that expired is failed, so it has no other state before the close.
+    ["expired", "failed", "expired", undefined],
+    ["legacy", "superseded", undefined, "passed"],
+    // It was capturing or had failed: the close replaced that state.
+    ["unsealed", "superseded", "replaced", undefined],
+    ["compacted", "superseded", "replaced", undefined],
+  ]);
+});
+
+it("returns no closed reason or closed state for an open run", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at) VALUES('open','project','open',1,'main','sha','main','plan','{}','uploading',0)",
+    )
+    .run();
+  const result = await dashboard({
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  });
+  expect(result.runs[0]).toMatchObject({ id: "open", state: "incomplete" });
+  expect(result.runs[0]).toHaveProperty("closedReason", undefined);
+  expect(result.runs[0]).toHaveProperty("closedState", undefined);
+});
+
+it("counts the alerts that a person can still act on", async () => {
+  using database = new TestDatabase();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+    )
+    .run();
+  const context = {
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  };
+  expect((await dashboard(context)).alertCount).toBe(0);
+  for (const [id, resolved] of [
+    ["open-1", null],
+    ["open-2", null],
+    ["resolved", 5],
+  ] as const) {
+    database.connection
+      .prepare(
+        "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,resolved_at) VALUES(?,'backup',?,'backup-failed',1,1,?)",
+      )
+      .run(id, id, resolved);
+  }
+  expect((await dashboard(context)).alertCount).toBe(2);
+  // The count reads the same alerts as `/api/operations`.
+  const events = await operationsStatus({
+    database,
+    projectId: "project",
+    repositoryId: "100",
+  });
+  expect(events.events).toHaveLength(2);
 });
 
 it("looks up the returned PR title through the narrow receipt index", () => {
