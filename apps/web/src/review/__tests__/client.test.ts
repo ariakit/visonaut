@@ -19,7 +19,18 @@ function json(value: unknown, status = 200) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
+
+/** Makes the next request of the review client fail with this answer. */
+function failedRefresh(answer: () => Response) {
+  vi.stubGlobal("fetch", async () => answer());
+  return createReviewCommands("run-42").refresh();
+}
+
+function html(status: number, headers: Record<string, string> = {}, body = "<html></html>") {
+  return new Response(body, { status, headers: { "content-type": "text/html", ...headers } });
+}
 
 test("the review client keeps the configured repository and rejects an invalid label", () => {
   const model = fixtureModel();
@@ -285,10 +296,279 @@ test("unexpected review failures include the support reference in the retry erro
   await expect(createReviewCommands("run-42").refresh()).rejects.toMatchObject({
     name: "ReviewCommandError",
     status: 503,
+    code: "service_unavailable",
     conflict: false,
     reference,
     message: `The service is temporarily unavailable. Reference: ${reference}.`,
   });
+});
+
+test("a 409 with review_session_expired keeps its status and code and names its own cause", async () => {
+  await expect(
+    failedRefresh(() =>
+      json(
+        {
+          error: {
+            code: "review_session_expired",
+            message: "Start a new review session after signing in.",
+          },
+        },
+        409,
+      ),
+    ),
+  ).rejects.toMatchObject({
+    name: "ReviewCommandError",
+    status: 409,
+    code: "review_session_expired",
+    conflict: true,
+    message: "Your review session ended. Reload the page to continue.",
+  });
+});
+
+test("a failed fetch says No connection and keeps no status", async () => {
+  const lost = new TypeError("Failed to fetch");
+  vi.stubGlobal("fetch", async () => {
+    throw lost;
+  });
+  const error = await createReviewCommands("run-42")
+    .refresh()
+    .then(
+      () => undefined,
+      (failure: unknown) => failure,
+    );
+  expect(error).toBeInstanceOf(Error);
+  expect(error).toMatchObject({ message: "No connection.", status: undefined, cause: lost });
+});
+
+test("only a failed fetch says No connection", async () => {
+  // The answer arrived, so the connection works. A broken body is another cause.
+  await expect(
+    failedRefresh(
+      () => new Response("{", { status: 200, headers: { "content-type": "application/json" } }),
+    ),
+  ).rejects.toMatchObject({
+    status: 200,
+    message: "The service did not return the expected data. Refresh and try again.",
+  });
+  await expect(failedRefresh(() => html(200))).rejects.toMatchObject({
+    status: 200,
+    message: "The service did not return the expected data. Refresh and try again.",
+  });
+});
+
+function brokenBody(status: number, error: Error) {
+  const body = new ReadableStream({
+    pull(controller) {
+      controller.error(error);
+    },
+  });
+  return new Response(body, { status, headers: { "content-type": "application/json" } });
+}
+
+test("a body that breaks keeps the cause of the status", async () => {
+  const broken = new TypeError("terminated");
+  await expect(failedRefresh(() => brokenBody(200, broken))).rejects.toMatchObject({
+    status: 200,
+    message: "The service did not return the expected data. Refresh and try again.",
+  });
+  await expect(failedRefresh(() => brokenBody(503, broken))).rejects.toMatchObject({
+    status: 503,
+    message: "The service is temporarily unavailable.",
+  });
+  await expect(failedRefresh(() => brokenBody(409, broken))).rejects.toMatchObject({
+    status: 409,
+    conflict: true,
+    message: "The request conflicts with the current state. Refresh to see it.",
+  });
+});
+
+test("a cancellation during the read of a body is not a failure of the request", async () => {
+  const cancelled = new DOMException("Aborted", "AbortError");
+  for (const status of [200, 503]) {
+    await expect(failedRefresh(() => brokenBody(status, cancelled))).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  }
+});
+
+test("a 5xx answer that is not JSON says not available and gives the Retry-After time", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const now = Date.parse("2026-10-08T22:48:00Z");
+  vi.setSystemTime(now);
+  const minutes = (count: number) => new Date(now + count * 60_000);
+  const sameDay = (date: Date) => date.toLocaleString(undefined, { timeStyle: "short" });
+  const otherDay = (date: Date) =>
+    date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const available = (time: string) => `Visonaut is not available. Try again at ${time}.`;
+  const later = "Visonaut is not available. Try again later.";
+  const cases: Array<[string, Response, string]> = [
+    ["seconds", html(503, { "retry-after": "120" }), available(sameDay(minutes(2)))],
+    [
+      "a date",
+      html(503, { "retry-after": minutes(2).toUTCString() }),
+      available(sameDay(minutes(2))),
+    ],
+    [
+      "a plain text maintenance page",
+      new Response("Visonaut is temporarily unavailable during maintenance.", {
+        status: 503,
+        headers: { "content-type": "text/plain", "retry-after": "60" },
+      }),
+      available(sameDay(minutes(1))),
+    ],
+    ["two days later", html(502, { "retry-after": "172800" }), available(otherDay(minutes(2880)))],
+    ["no header", html(503), later],
+    ["zero seconds", html(503, { "retry-after": "0" }), later],
+    ["a past date", html(503, { "retry-after": minutes(-5).toUTCString() }), later],
+    ["a negative number", html(503, { "retry-after": "-30" }), later],
+    [
+      "nine digits",
+      html(503, { "retry-after": "999999999" }),
+      available(otherDay(new Date(now + 999_999_999_000))),
+    ],
+    ["ten digits", html(503, { "retry-after": "1000000000" }), later],
+    ["an ISO date", html(503, { "retry-after": "2099-01-01T00:00:00Z" }), later],
+    ["a number that no date can hold", html(503, { "retry-after": "9".repeat(17) }), later],
+    ["a fraction", html(503, { "retry-after": "1.5" }), later],
+    ["a word", html(503, { "retry-after": "soon" }), later],
+    ["an invalid date", html(504, { "retry-after": "Xyz, 99 Foo 2026 99:99:99 GMT" }), later],
+  ];
+  for (const [form, answer, sentence] of cases) {
+    await expect(
+      failedRefresh(() => answer),
+      form,
+    ).rejects.toMatchObject({
+      name: "ReviewCommandError",
+      status: answer.status,
+      code: undefined,
+      reference: undefined,
+      message: sentence,
+    });
+  }
+});
+
+test("the status decides the cause before the body is read", async () => {
+  const cases: Array<[number, () => Response, string]> = [
+    [401, () => html(401), "Sign in with GitHub."],
+    [
+      403,
+      () => json({ error: { code: "not_maintainer" } }, 403),
+      "Write access to this repository is required.",
+    ],
+    [403, () => new Response(null, { status: 403 }), "The service refused this request."],
+    [
+      403,
+      () => json({ error: { code: "invalid_origin" } }, 403),
+      "The service refused this request.",
+    ],
+    [
+      404,
+      () => json({ error: { code: "not_found" } }, 404),
+      "The service could not find this run or decision.",
+    ],
+    [
+      409,
+      () => json({ error: { code: "history_closed" } }, 409),
+      "The request conflicts with the current state. Refresh to see it.",
+    ],
+    [
+      409,
+      () => new Response("{", { status: 409, headers: { "content-type": "application/json" } }),
+      "The request conflicts with the current state. Refresh to see it.",
+    ],
+    [
+      400,
+      () =>
+        json({ error: { code: "invalid_targets", message: "<b>Injected</b> ".repeat(500) } }, 400),
+      "The service refused this request.",
+    ],
+    [
+      500,
+      () => json({ error: { code: "invalid_review_link" } }, 500),
+      "The service is temporarily unavailable.",
+    ],
+    [
+      502,
+      () => new Response("{", { status: 502, headers: { "content-type": "application/json" } }),
+      "The service is temporarily unavailable.",
+    ],
+    [
+      304,
+      () => new Response(null, { status: 304 }),
+      "The service did not return the expected data. Refresh and try again.",
+    ],
+  ];
+  for (const [status, answer, sentence] of cases) {
+    await expect(failedRefresh(answer), String(status)).rejects.toMatchObject({
+      status,
+      message: sentence,
+    });
+  }
+});
+
+test("a conflict keeps its status when its evidence is malformed", async () => {
+  await expect(
+    failedRefresh(() =>
+      json(
+        { error: { code: "conflict" }, model: { format: "compact-review-1" }, reviewer: 42 },
+        409,
+      ),
+    ),
+  ).rejects.toMatchObject({
+    name: "ReviewCommandError",
+    status: 409,
+    code: "conflict",
+    conflict: true,
+    model: undefined,
+    reviewer: undefined,
+  });
+});
+
+test("the code and the reference of an answer are kept and shown only in their safe form", async () => {
+  const reference = "af4a9c01-3e33-4faa-903c-31c1b20d2bac";
+  const failed = (error: Record<string, unknown>) =>
+    failedRefresh(() => json({ error: { message: "Server text.", ...error } }, 503));
+  const unavailable = "The service is temporarily unavailable.";
+  await expect(failed({ code: "a".repeat(64), reference })).rejects.toMatchObject({
+    code: "a".repeat(64),
+    reference,
+    message: `${unavailable} Reference: ${reference}.`,
+  });
+  const unsafeCodes = [
+    "a".repeat(65),
+    "a".repeat(100_000),
+    "Service_Unavailable",
+    "service-unavailable",
+    "<script>",
+    "",
+    42,
+    null,
+    { toString: () => "service_unavailable" },
+  ];
+  for (const code of unsafeCodes) {
+    await expect(failed({ code, reference }), String(code).slice(0, 12)).rejects.toMatchObject({
+      code: undefined,
+      reference,
+    });
+  }
+  const unsafeReferences = [
+    reference.slice(1),
+    `${reference}0`,
+    reference.toUpperCase(),
+    "<img src=x onerror=alert(1)>".padEnd(36, "0"),
+    "0".repeat(100_000),
+    "",
+    42,
+    null,
+    [reference],
+  ];
+  for (const unsafe of unsafeReferences) {
+    await expect(failed({ code: "service_unavailable", reference: unsafe })).rejects.toMatchObject({
+      code: "service_unavailable",
+      reference: undefined,
+      message: unavailable,
+    });
+  }
 });
 
 test("unknown additive API fields stay compatible, but unsupported verdicts fail clearly", () => {
