@@ -33,7 +33,32 @@ function acceptanceValiditySql() {
         WHERE source_row.id = decision.row_id AND source_row.decision_id = decision.id
         AND source_run.project_id = target_run.project_id
         AND (source_run.id = target_run.id OR EXISTS (SELECT 1 FROM visonaut_lineage lineage
-          WHERE lineage.source_run_id = source_run.id AND lineage.target_run_id = target_run.id)))`;
+          WHERE lineage.source_run_id = source_run.id AND lineage.target_run_id = target_run.id))
+        AND NOT ${newerRejectionSql()})`;
+}
+
+function newerRejectionSql() {
+  // Undo makes the earlier decision of a row current again and keeps its time.
+  // A Reject that is current after an Undo counts from the time of that Undo.
+  const undoAfterApproval = `EXISTS (SELECT 1 FROM visonaut_decisions undone
+              JOIN visonaut_commands undone_command ON undone_command.id = undone.command_id
+              JOIN visonaut_commands undo ON undo.id = undone_command.undone_by
+              WHERE undone.row_id = rejection.row_id AND undo.created_at >= decision.created_at)`;
+  // A current Reject of the same tuple in the target lineage stops a new copy.
+  // Only a reviewer's own approval that is newer than the Reject is still a
+  // source. A copy, an automatic acceptance, and an equal time are not newer.
+  return `EXISTS (SELECT 1 FROM visonaut_decisions rejection
+          JOIN visonaut_comparison_rows rejected_row ON rejected_row.id = rejection.row_id
+            AND rejected_row.decision_id = rejection.id
+          JOIN visonaut_comparisons rejected_comparison ON rejected_comparison.id = rejected_row.comparison_id
+          WHERE rejection.verdict = 'rejected' AND rejection.revoked = 0
+          AND json_extract(rejection.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
+          AND json_extract(rejection.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
+          AND rejection.tuple_json = row.tuple_json
+          AND (decision.kind != 'human' OR decision.source_decision_id IS NOT NULL
+            OR rejection.created_at >= decision.created_at OR ${undoAfterApproval})
+          AND (rejected_comparison.run_id = target_run.id OR EXISTS (SELECT 1 FROM visonaut_lineage lineage
+            WHERE lineage.source_run_id = rejected_comparison.run_id AND lineage.target_run_id = target_run.id)))`;
 }
 
 interface SparseComparisonParams {

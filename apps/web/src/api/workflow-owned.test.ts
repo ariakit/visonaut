@@ -2135,6 +2135,219 @@ describe("trusted local Submit", () => {
     });
   });
 
+  describe("reference selection reads", () => {
+    /** Record each ancestry request that the service sends to GitHub. */
+    const recordComparisons = (test: Awaited<ReturnType<typeof fixture>>) => {
+      const github = test.context.configuration.github;
+      const send = github.fetch;
+      if (!send) {
+        throw new Error("Expected fixture GitHub transport");
+      }
+      const requests: string[] = [];
+      github.fetch = async (input, init) => {
+        const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+        if (url.pathname.includes("/compare/")) {
+          requests.push(url.pathname.slice(url.pathname.indexOf("/compare/")) + url.search);
+        }
+        return send(input, init);
+      };
+      return requests;
+    };
+
+    interface AcceptedCommitParams {
+      test: Awaited<ReturnType<typeof fixture>>;
+      seed: Awaited<ReturnType<typeof acceptedReference>>;
+      /** Two snapshots with one index have one commit. */
+      index: number;
+      createdAt: number;
+      status?: "ahead" | "diverged";
+    }
+
+    /** Add an accepted snapshot with no images. Its commit is an ancestor unless it diverged. */
+    const acceptedCommit = async ({
+      test,
+      seed,
+      index,
+      createdAt,
+      status = "ahead",
+    }: AcceptedCommitParams) => {
+      const snapshotId = crypto.randomUUID();
+      const testedSha = index.toString(16).padStart(40, "9");
+      await database
+        .prepare(
+          "INSERT INTO visonaut_snapshots (id, project_id, run_id, comparison_id, tested_sha, state, reference_eligible, prefix, created_at, storage_mode) SELECT ?, project_id, run_id, comparison_id, ?, state, 1, ?, ?, storage_mode FROM visonaut_snapshots WHERE id = ?",
+        )
+        .bind(snapshotId, testedSha, `baselines/${snapshotId}`, createdAt, seed.snapshotId)
+        .run();
+      test.githubResponses.set(
+        `/repos/ariakit/ariakit/compare/${testedSha}...${test.manifest.run.testedSha}`,
+        { status },
+      );
+      return { snapshotId, testedSha };
+    };
+
+    it.each(["push", "pull_request"] as const)(
+      "stops at the project snapshot when 100 accepted commits are ancestors of a %s run",
+      async (event) => {
+        const test = await fixture(undefined, pin, event);
+        const seed = await acceptedReference(test);
+        for (let index = 1; index < 100; index += 1) {
+          await acceptedCommit({ test, seed, index, createdAt: Date.now() + index });
+        }
+        const requests = recordComparisons(test);
+        const session = await localSession(test);
+        expect(session.page.reference).toMatchObject({
+          snapshotId: seed.snapshotId,
+          baselineRevision: 1,
+        });
+        expect(requests).toEqual([
+          `/compare/${seed.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+        ]);
+        if (event === "push") return;
+        // The conversion still stores each accepted ancestor of the run.
+        requests.length = 0;
+        await stageLocal(test, session);
+        await materializeWorkflowRun(test.context, test.runId);
+        const ancestry = requests.filter((request) =>
+          request.includes(`...${test.manifest.run.testedSha}`),
+        );
+        expect(new Set(ancestry).size).toBe(100);
+        expect(ancestry.every((request) => request.endsWith("?per_page=1"))).toBe(true);
+        expect(
+          await database
+            .prepare("SELECT COUNT(*) AS count FROM visonaut_ancestry WHERE run_id = ?")
+            .bind(test.runId)
+            .first(),
+        ).toEqual({ count: 100 });
+      },
+    );
+
+    it("selects the newest accepted ancestor of a pull request when the project snapshot is not one", async () => {
+      const test = await fixture(undefined, pin, "pull_request");
+      const seed = await acceptedReference(test);
+      const older = await acceptedCommit({ test, seed, index: 1, createdAt: 1 });
+      // Two newer snapshots have one commit that is not an ancestor.
+      const future = Date.now() + 60_000;
+      const diverged = await acceptedCommit({
+        test,
+        seed,
+        index: 2,
+        createdAt: future,
+        status: "diverged",
+      });
+      await acceptedCommit({ test, seed, index: 2, createdAt: future + 1, status: "diverged" });
+      // This promotion makes a project snapshot whose commit is not an ancestor.
+      const latest = await acceptedReference(test, seed);
+      const requests = recordComparisons(test);
+      const session = await localSession(test);
+      expect(session.page.reference).toMatchObject({ snapshotId: seed.snapshotId });
+      // One request for each commit, in the order of preference, until the first ancestor.
+      expect(requests).toEqual([
+        `/compare/${latest.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+        `/compare/${diverged.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+        `/compare/${seed.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+      ]);
+      expect(requests.join()).not.toContain(older.testedSha);
+    });
+
+    it("does not select a snapshot outside the newest 100 accepted commits", async () => {
+      const test = await fixture(undefined, pin, "pull_request");
+      // The project snapshot is an ancestor, but 100 newer commits put it outside the bound.
+      const seed = await acceptedReference(test);
+      const future = Date.now() + 60_000;
+      for (let index = 1; index < 100; index += 1) {
+        await acceptedCommit({ test, seed, index, createdAt: future + index });
+      }
+      const newest = await acceptedCommit({ test, seed, index: 100, createdAt: future + 100 });
+      const requests = recordComparisons(test);
+      const session = await localSession(test);
+      expect(session.page.reference).toMatchObject({ snapshotId: newest.snapshotId });
+      expect(requests).toEqual([
+        `/compare/${newest.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+      ]);
+    });
+
+    it("gives a main run only the project snapshot", async () => {
+      const test = await fixture();
+      const seed = await acceptedReference(test);
+      await acceptedCommit({ test, seed, index: 1, createdAt: Date.now() + 1 });
+      test.githubResponses.set(
+        `/repos/ariakit/ariakit/compare/${seed.testedSha}...${test.manifest.run.testedSha}`,
+        { status: "diverged" },
+      );
+      const requests = recordComparisons(test);
+      await expect(localSession(test)).rejects.toThrow("No retained accepted ancestor");
+      expect(requests).toEqual([
+        `/compare/${seed.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
+      ]);
+    });
+  });
+
+  describe("conversion of a submitted attempt", () => {
+    it("keeps the plan evidence in the provenance row and writes no plan object", async () => {
+      const test = await fixture();
+      await stageLocal(test, await localSession(test));
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      const provenance = await database
+        .prepare(
+          "SELECT verified_json, plan_object_key, storage_version FROM ingest_run_provenance WHERE run_id = ?",
+        )
+        .bind(run.id)
+        .first<{ verified_json: string; plan_object_key: string; storage_version: number }>();
+      if (!provenance) {
+        throw new Error("Expected the provenance of the run.");
+      }
+      const evidence = object(JSON.parse(provenance.verified_json));
+      const workflowOwned = test.context.configuration.workflowOwned;
+      expect(evidence).toMatchObject({
+        workflowSourceDigest: sourceDigest,
+        callerWorkflowPath: workflowOwned?.callerWorkflowPath,
+        reusableWorkflowRef: workflowOwned?.reusableWorkflowRef,
+        jobSetDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+        bundles: [
+          {
+            key: "combined",
+            sourceAttempt: 1,
+            jobId: test.jobId,
+            manifestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          },
+        ],
+      });
+      // Version 2 marks a record in D1. No R2 document has this key.
+      expect(provenance).toMatchObject({
+        plan_object_key: `d1:provenance/${run.id}/${String(evidence.jobSetDigest)}`,
+        storage_version: 2,
+      });
+      expect(
+        await quarantine.head(`plans/workflow/${String(evidence.jobSetDigest)}.json`),
+      ).toBeNull();
+    });
+
+    it("reads the workflow run of a first attempt two times while it reconciles the job set", async () => {
+      const test = await fixture();
+      await stageLocal(test, await localSession(test));
+      const github = test.context.configuration.github;
+      const send = github.fetch;
+      if (!send) {
+        throw new Error("Expected fixture GitHub transport");
+      }
+      const runPath = `/repos/ariakit/ariakit/actions/runs/${test.manifest.run.workflowRunId}`;
+      let runReads = 0;
+      github.fetch = async (input, init) => {
+        const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+        if (url.pathname === runPath) {
+          runReads += 1;
+        }
+        return send(input, init);
+      };
+      const reconciled = await reconcileWorkflowJobSet(test.context, test.runId);
+      // One read before the job checks, and one read after them.
+      expect(runReads).toBe(2);
+      expect(reconciled.run.id).toBe(test.runId);
+      expect(reconciled.bundles.map((bundle) => bundle.key)).toEqual(["combined"]);
+    });
+  });
+
   it("holds main's selected reference across renewals and rejects a changed baseline", async () => {
     const test = await fixture();
     const session = await localSession(test);
