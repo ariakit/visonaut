@@ -1,3 +1,6 @@
+import { ClientError } from "../client-error.ts";
+import type { ClientErrorFacts } from "../client-error.ts";
+
 export type ReviewVerdict = "approved" | "rejected";
 export type ReviewMode = "side" | "diff" | "new" | "original";
 export type ReviewZoom = "fit" | 1 | 2;
@@ -159,29 +162,23 @@ export interface ReviewCommands {
   recompare?(): Promise<ReviewModel>;
 }
 
-export class ReviewCommandError extends Error {
+export class ReviewCommandError extends ClientError {
   readonly model?: ReviewModel;
   readonly reviewer?: string;
   readonly conflict: boolean;
-  readonly status?: number;
-  readonly reference?: string;
 
   constructor(
     message: string,
-    options: {
+    options: ClientErrorFacts & {
       model?: ReviewModel;
       reviewer?: string;
       conflict?: boolean;
-      status?: number;
-      reference?: string;
     } = {},
   ) {
-    super(message);
+    super(message, options);
     this.name = "ReviewCommandError";
     this.model = options.model;
     this.reviewer = options.reviewer;
     this.conflict = options.conflict ?? false;
-    this.status = options.status;
-    this.reference = options.reference;
   }
 }

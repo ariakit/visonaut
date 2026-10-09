@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Route } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
@@ -85,6 +86,55 @@ for (const queued of [false, true]) {
     expect(posted[0]).toEqual(posted[1]);
   });
 }
+
+test("a run that cannot be loaded names the true cause", async ({ page }) => {
+  const loadRun = async (answer: (route: Route) => Promise<void>) => {
+    await page.route("**/api/**", answer);
+    await page.goto("/src/review/__tests__/route-fixture.html");
+  };
+  await loadRun((route) => route.abort("connectionrefused"));
+  await expect(page.getByRole("alert")).toHaveText("No connection.");
+  await page.unrouteAll();
+  await loadRun((route) =>
+    route.fulfill({
+      status: 503,
+      headers: { "content-type": "text/html", "retry-after": "90" },
+      body: "<html><body>Service Unavailable</body></html>",
+    }),
+  );
+  // Within 90 seconds of local midnight, the time has a date before it.
+  await expect(page.getByRole("alert")).toHaveText(
+    /^Visonaut is not available\. Try again at .*\d{1,2}:\d{2}.*\.$/,
+  );
+  await page.unrouteAll();
+  await loadRun((route) =>
+    route.fulfill({ status: 404, json: { error: { code: "not_found", message: "Server text." } } }),
+  );
+  await expect(page.getByRole("alert")).toHaveText(
+    "The service could not find this run or decision.",
+  );
+});
+
+test("a save that cannot reach the service says No connection and offers Retry", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-offline" } });
+    }
+    if (path.endsWith("/commands")) {
+      return route.abort("connectionrefused");
+    }
+    return route.fulfill({ json: compactReviewModel(initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Not saved. No connection.");
+  await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
+});
 
 test("dashboard loads its protected run list without a separate identity request", async ({
   page,
