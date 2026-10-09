@@ -654,6 +654,22 @@ it("counts the D1 work of the access check of one private request", async () => 
   expect(rows_read).toBeLessThanOrEqual(4);
 });
 
+it("refuses the identity request with no session cookie and no bearer token before the sign-in instance", async () => {
+  const measured = measureD1(await runtime.getD1Database("DB"));
+  const response = await server.fetch(
+    appRequest("GET", "/api/me"),
+    { ...env, DB: measured.database },
+    { waitUntil() {} },
+  );
+  expect(response.status).toBe(401);
+  expect(await response.json()).toEqual({
+    error: { code: "sign_in_required", message: "Sign in with GitHub." },
+  });
+  privateHeaders(response);
+  expect(security.createAuth).toHaveBeenCalledTimes(0);
+  expect(measured.roundTrips()).toBe(0);
+});
+
 // A private JSON answer has these headers and no other, except for the cookie
 // of a renewed session.
 const privateJsonHeaders = [
