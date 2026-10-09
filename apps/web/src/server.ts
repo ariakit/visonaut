@@ -4,6 +4,7 @@ import {
   createAuth,
   createGitHubClient,
   requireMaintainer,
+  requireSessionCredential,
   securePrivateResponse,
   SecurityError,
 } from "@visonaut/security";
@@ -111,6 +112,7 @@ export default {
           return securePrivateResponse(
             new Response(null, { status: request.method === "GET" ? 403 : 405 }),
           );
+        requireSessionCredential(request);
         const auth = createAuth(authConfiguration(env));
         const github = await createGitHubClient(githubConfiguration(env));
         const identity = await requireMaintainer({
