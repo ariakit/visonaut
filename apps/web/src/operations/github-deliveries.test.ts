@@ -630,3 +630,105 @@ it("still writes a changed GitHub entry ID and opens a closed alert again", asyn
       .get(),
   ).toEqual({ occurrences: 2, last_seen_at: 3_000_000, resolved_at: null });
 });
+
+const minute = 60_000;
+
+it("waits two times longer before each later request of one delivery", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 5;
+  const start = Date.UTC(2026, 8, 29, 13);
+  const requestTimes: number[] = [];
+  // One pass each 5 minutes, for 2 hours.
+  for (let pass = 0; pass <= 24; pass += 1) {
+    test.operations.now = () => start + pass * 5 * minute;
+    const result = await test.recover();
+    if (result.requested) {
+      requestTimes.push(pass * 5);
+    }
+  }
+  expect(requestTimes).toEqual([0, 5, 15, 35, 75]);
+  expect(openAlerts(test)).toEqual([{ subject_id: guid }]);
+});
+
+it("requests nothing one pass before the wait is over", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 5;
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'1',3,?)",
+    )
+    .run(guid, 100 * minute);
+  // The wait after the third request is 20 minutes.
+  test.operations.now = () => 119 * minute;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  test.operations.now = () => 120 * minute;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+});
+
+it("does not claim a request before the wait is over", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 5;
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'1',3,?)",
+    )
+    .run(guid, 100 * minute);
+  test.operations.now = () => 120 * minute;
+  // The check before the claim sees a wait that is over. The claim statement
+  // then gets a time inside the wait, so its own condition must refuse it.
+  const prepare = test.database.prepare.bind(test.database);
+  test.database.prepare = (sql) => {
+    if (sql.startsWith("UPDATE github_webhook_recovery SET attempts=attempts+1")) {
+      test.operations.now = () => 119 * minute;
+    }
+    return prepare(sql);
+  };
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  expect(test.posts).toEqual([]);
+  expect(
+    test.database.connection
+      .prepare("SELECT attempts,last_requested_at FROM github_webhook_recovery")
+      .get(),
+  ).toEqual({ attempts: 3, last_requested_at: 100 * minute });
+});
+
+it("settles a delivery that arrives between two requests, and requests no more", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 5;
+  const start = Date.UTC(2026, 8, 29, 13);
+  test.operations.now = () => start;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+  // The redelivery arrived: GitHub lists a newer entry with success.
+  test.pages[""] = {
+    deliveries: [
+      { id: 2, guid, status_code: 200, delivered_at: "2026-09-29T13:01:00Z" },
+      { id: 1, guid, status_code: 503 },
+    ],
+  };
+  for (let pass = 1; pass <= 24; pass += 1) {
+    test.operations.now = () => start + pass * 5 * minute;
+    expect(await test.recover()).toEqual({ checked: 2, requested: 0 });
+  }
+  expect(test.posts).toHaveLength(1);
+  expect(openAlerts(test)).toEqual([]);
+  expect(
+    test.database.connection
+      .prepare("SELECT attempts,resolved_at FROM github_webhook_recovery")
+      .get(),
+  ).toEqual({ attempts: 1, resolved_at: start + 5 * minute });
+});
+
+it("waits one day at most before the next request", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 12;
+  // The doubling alone gives a wait of more than 3 days after 11 requests.
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'1',11,0)",
+    )
+    .run(guid);
+  test.operations.now = () => 24 * 60 * minute - 1;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  test.operations.now = () => 24 * 60 * minute;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+});
