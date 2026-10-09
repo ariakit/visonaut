@@ -131,10 +131,10 @@ describe("public commands under temporary service backpressure", () => {
     expect(result.stderr).toContain("Rerun this job");
   });
 
-  it("reports a database size stop as a general refusal without retrying reserve", async () => {
+  it("reports a database size stop as a general refusal with its code without retrying reserve", async () => {
     const result = await refusedReserve("database_size_exceeded");
     expect(result.stderr).toContain(
-      "The service refused the request (HTTP 503). No visual approval was granted.",
+      "The service refused the request (HTTP 503, database_size_exceeded). No visual approval was granted.",
     );
     expect(result.stderr).not.toContain("capacity limit");
   });
