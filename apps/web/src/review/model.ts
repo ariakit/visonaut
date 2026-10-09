@@ -111,6 +111,16 @@ export interface ReviewModel {
   items: ReviewItem[];
 }
 
+/** One page of the unchanged screenshots of a run. */
+export interface ReviewCapturePage {
+  page: number;
+  pages: number;
+  items: ReviewItem[];
+}
+
+/** A page by its number, or the page that holds one screenshot. */
+export type ReviewCapturePlace = { page: number } | ReviewSelection;
+
 export interface ReviewPollState {
   run: { status: string; error?: string };
   comparisonState: ComparisonState;
@@ -173,6 +183,7 @@ export interface ReviewCommands {
   undo(command: UndoCommand): Promise<ReviewCommandResult>;
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;
+  capturePage(place: ReviewCapturePlace): Promise<ReviewCapturePage>;
   recompare?(): Promise<ReviewModel>;
 }
 

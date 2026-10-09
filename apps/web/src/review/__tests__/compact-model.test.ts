@@ -1,7 +1,21 @@
 import { expect, test } from "vitest";
-import { parseReviewModel } from "../client.ts";
-import { compactReviewModel } from "../compact-model.ts";
+import { parseCapturePage, parseReviewModel } from "../client.ts";
+import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+
+test("a capture page keeps its items in the compact form", () => {
+  const items = fixtureModel().items;
+  const page = {
+    format: "review-captures-1" as const,
+    page: 1,
+    pages: 3,
+    ...compactReviewItems(items),
+  };
+  expect(parseCapturePage(page)).toEqual({ page: 1, pages: 3, items });
+  expect(() => parseCapturePage({ ...page, format: "compact-review-2" })).toThrow(
+    "Refresh before reviewing",
+  );
+});
 
 test("one compact complete model retains variant-specific evidence and diagnostics", () => {
   const model = fixtureModel();

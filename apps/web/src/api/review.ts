@@ -5,13 +5,17 @@ import {
   reviewTaskId,
   type QueuedReviewInput,
 } from "../operations/review-queue.ts";
-import { compactReviewModel } from "../review/compact-model.ts";
+import {
+  compactReviewItems,
+  compactReviewModel,
+  type CompactCapturePage,
+} from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
 import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
-import { CAPTURE_PAGE_ROWS, identityKey } from "@visonaut/protocol";
-import { readReviewInventory } from "./review-inventory.ts";
+import { CAPTURE_PAGE_ROWS, compareCaptureIdentity, identityKey } from "@visonaut/protocol";
+import { readReviewInventory, unchangedReviewRows } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
   ConflictError,
@@ -68,7 +72,6 @@ interface ImageRecord {
   digest: string;
   width: number;
   height: number;
-  bytes_present: number;
 }
 interface CaptureRecord {
   id: string;
@@ -204,7 +207,6 @@ function historyImage(row: HistoryRow): ImageRecord {
     digest: historyString(row, "digest"),
     width: historyNumber(row, "width"),
     height: historyNumber(row, "height"),
-    bytes_present: 0,
   };
 }
 
@@ -239,7 +241,7 @@ function storedBaseline(row: ReviewRow, referenceDigest: unknown) {
   }
   return {
     capture: { id: row.id, image_id: imageId, metadata_json: row.reference_json },
-    image: { id: imageId, digest: referenceDigest, width, height, bytes_present: 1 },
+    image: { id: imageId, digest: referenceDigest, width, height },
   };
 }
 
@@ -247,6 +249,257 @@ function storedBaseline(row: ReviewRow, referenceDigest: unknown) {
 function lacksStoredBaseline(row: ReviewRow) {
   if (row.reference_capture_id || row.reference_json) return false;
   return typeof object(JSON.parse(row.tuple_json)).referenceDigest === "string";
+}
+
+interface ReviewItemsParams {
+  rows: ReviewRow[];
+  captures: Map<string, CaptureRecord>;
+  images: Map<string, ImageRecord>;
+  decisions: Map<string, DecisionRecord>;
+  eligibleApprovals: Set<string>;
+  /** The capture lists, for a capture or a baseline that D1 does not hold. */
+  inventory: Awaited<ReturnType<typeof readReviewInventory>>;
+  /** The comparison ended before each row had a result. */
+  comparisonStopped: boolean;
+  policyDigest?: string;
+  /** The threshold text of the project policy, for a capture with no settings of its own. */
+  threshold: string;
+  /** The reasons of a run that takes no decision. */
+  disabledReasons?: Pick<VariantView, "rejectDisabledReason" | "approveDisabledReason">;
+}
+
+/** The items of a review answer, with one variant for each row. */
+function reviewItems({
+  rows,
+  captures,
+  images: imageById,
+  decisions,
+  eligibleApprovals,
+  inventory,
+  comparisonStopped,
+  policyDigest,
+  threshold,
+  disabledReasons,
+}: ReviewItemsParams) {
+  const imageView = (id: string | undefined): ImageView | null => {
+    const image = id ? imageById.get(id) : null;
+    if (!image) return null;
+    return {
+      id: image.id,
+      url: `/images/${image.id}`,
+      digest: image.digest,
+      width: image.width,
+      height: image.height,
+    };
+  };
+  const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
+  let rowsWithCandidate = 0;
+  for (const row of rows) {
+    const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
+    const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
+    const tuple = object(JSON.parse(row.tuple_json));
+    if (tuple.candidateDigest !== null) {
+      rowsWithCandidate += 1;
+    }
+    const baseline = storedBaseline(row, tuple.referenceDigest);
+    if (baseline) {
+      imageById.set(baseline.image.id, baseline.image);
+    }
+    const candidate =
+      tuple.candidateDigest === null
+        ? null
+        : ((row.candidate_capture_id ? captures.get(row.candidate_capture_id) : null) ??
+          inventory?.candidateByIdentity.get(identity));
+    const reference =
+      tuple.referenceDigest === null
+        ? null
+        : ((row.reference_capture_id ? captures.get(row.reference_capture_id) : null) ??
+          baseline?.capture ??
+          inventory?.referenceByIdentity.get(identity));
+    const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
+    const variant =
+      metadata.variant && typeof metadata.variant === "object" ? object(metadata.variant) : {};
+    const candidateOmitted =
+      row.outcome === "unchanged" &&
+      tuple.candidateDigest !== null &&
+      (metadata.candidateStored === false || metadata.candidateStored === 0) &&
+      tuple.candidateDigest !== tuple.referenceDigest;
+    const result = object(JSON.parse(row.result_json ?? "{}"));
+    const decision = decisions.get(row.source_decision_id ?? row.decision_id ?? "");
+    const effective =
+      decision &&
+      !decision.revoked &&
+      (decision.verdict !== "approved" || eligibleApprovals.has(row.id))
+        ? decision
+        : null;
+    const item = items.get(row.item_key) ?? {
+      key: row.item_key,
+      name: typeof metadata.name === "string" ? metadata.name : row.item_key,
+      variants: [],
+    };
+    const labelParts: VariantView["labelParts"] = [];
+    for (const [kind, value] of [
+      ["framework", variant.framework],
+      ["browser", variant.browser],
+      ["colorScheme", variant.colorScheme],
+      ["contrast", variant.contrast],
+      ["forcedColors", variant.forcedColors],
+      ["key", row.variant_key],
+    ] as const) {
+      if (typeof value === "string") {
+        labelParts.push({ kind, value });
+      }
+    }
+    const label = labelParts.map((part) => part.value).join(" · ");
+    const view: VariantView = {
+      id: row.id,
+      key: row.variant_key,
+      label,
+      labelParts,
+      kind: stoppedBeforeEvidence
+        ? "error"
+        : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
+          ? row.outcome
+          : tuple.referenceDigest === null
+            ? "added"
+            : tuple.candidateDigest === null
+              ? "removed"
+              : "changed",
+      revision: row.decision_revision,
+      verdict: effective?.verdict ?? null,
+      source: effective?.kind ?? null,
+      ...(effective?.actor_id ? { reviewer: effective.actor_id } : {}),
+      reference: imageView(reference?.image_id),
+      candidate: candidateOmitted ? null : imageView(candidate?.image_id),
+      ...(candidateOmitted ? { candidateOmitted: true } : {}),
+      diff: imageView(typeof result.maskImageId === "string" ? result.maskImageId : undefined),
+      ...(typeof result.thumbnailImageId === "string" && imageById.has(result.thumbnailImageId)
+        ? { thumbnail: `/images/${result.thumbnailImageId}` }
+        : {}),
+      ...(typeof result.changedPixels === "number" ? { changedPixels: result.changedPixels } : {}),
+      ...(typeof result.maskImageId === "string"
+        ? { maskExpected: true }
+        : typeof result.maskExpected === "boolean"
+          ? { maskExpected: result.maskExpected }
+          : result.outcome === "unchanged"
+            ? { maskExpected: false }
+            : {}),
+      ...(typeof result.ratio === "number" ? { ratio: result.ratio } : {}),
+      ...(typeof result.engineVersion === "string" ? { engine: result.engineVersion } : {}),
+      ...(typeof result.codecVersion === "string" ? { codec: result.codecVersion } : {}),
+      policy:
+        typeof metadata.comparisonDigest === "string" ? metadata.comparisonDigest : policyDigest,
+      threshold:
+        metadata.comparison && typeof metadata.comparison === "object"
+          ? `Color threshold ${object(metadata.comparison).threshold}; ${object(metadata.comparison).maxDiffPixels === undefined ? "" : `maximum ${object(metadata.comparison).maxDiffPixels} pixels; `}${object(metadata.comparison).maxDiffPixelRatio === undefined ? "" : `ratio ${object(metadata.comparison).maxDiffPixelRatio}`}`
+          : threshold,
+      ...(typeof tuple.referenceProfileDigest === "string"
+        ? { referenceProfile: tuple.referenceProfileDigest }
+        : {}),
+      ...(typeof tuple.candidateProfileDigest === "string"
+        ? { candidateProfile: tuple.candidateProfileDigest }
+        : {}),
+      ...(stoppedBeforeEvidence
+        ? { error: "Comparison stopped before evidence was available." }
+        : row.outcome === "error"
+          ? { error: "Comparison evidence is unavailable." }
+          : {}),
+      ...disabledReasons,
+    };
+    item.variants.push(view);
+    items.set(item.key, item);
+  }
+  return { items: [...items.values()], rowsWithCandidate };
+}
+
+/** The threshold text of a project policy. */
+function policyThreshold(policyJson: string) {
+  const policy = object(JSON.parse(policyJson));
+  const pixelLimit =
+    typeof policy.maxChangedPixels === "number"
+      ? `maximum ${policy.maxChangedPixels} changed pixels; `
+      : "";
+  return `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
+}
+
+/** A page by its number, or the page that holds one capture. */
+export type CapturePagePlace = { page: number } | { itemKey: string; variantKey: string };
+
+const capturePageNotFound = "The capture page was not found.";
+
+/**
+ * One page of the captures of a run, as unchanged variants: the second
+ * request of a run page. A page is the `CAPTURE_PAGE_ROWS` captures at that
+ * place in the order of the item key and then the variant key, which is the
+ * order of the capture pages of the protocol. The answer leaves out a capture
+ * with a stored review row, because the first response has it. It fails for a
+ * capture that has a change and no stored row.
+ */
+export async function reviewCapturePage(
+  context: PrivateContext,
+  runId: string,
+  place: CapturePagePlace,
+): Promise<CompactCapturePage> {
+  const run = await projectRun(context, runId);
+  const listed =
+    run.comparison_id && run.inventory_key && !run.inventory_key.startsWith("baselines/import/");
+  const [evidence, comparison] = listed
+    ? await Promise.all([
+        readReviewInventory(context, run.id),
+        context.service.comparison(run.comparison_id ?? ""),
+      ])
+    : [null, null];
+  if (!evidence || !comparison) {
+    throw new SecurityError("not_found", 404, capturePageNotFound);
+  }
+  const captures = [...evidence.inventory.captures].sort((first, second) =>
+    compareCaptureIdentity([first.itemKey, first.variantKey], [second.itemKey, second.variantKey]),
+  );
+  const pages = Math.ceil(captures.length / CAPTURE_PAGE_ROWS);
+  const index =
+    "page" in place
+      ? place.page * CAPTURE_PAGE_ROWS
+      : captures.findIndex(
+          (capture) => capture.itemKey === place.itemKey && capture.variantKey === place.variantKey,
+        );
+  if (index < 0 || index >= captures.length) {
+    throw new SecurityError("not_found", 404, capturePageNotFound);
+  }
+  const page = Math.floor(index / CAPTURE_PAGE_ROWS);
+  // The identities of the stored rows: a capture of the page with a change
+  // must have one. The rows grow with the changes of the run, not its captures.
+  const [policies, identities] = await context.database.batch([
+    context.database
+      .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
+      .bind(comparison.policy_digest),
+    context.database
+      .prepare("SELECT item_key, variant_key FROM visonaut_comparison_rows WHERE comparison_id = ?")
+      .bind(comparison.id),
+  ]);
+  const policy = batchRows<{ policy_json: string }>(policies)[0];
+  const stored = new Set(
+    batchRows<{ item_key: string; variant_key: string }>(identities).map((row) =>
+      identityKey({ itemKey: row.item_key, variantKey: row.variant_key }),
+    ),
+  );
+  const { items } = reviewItems({
+    rows: unchangedReviewRows(
+      evidence,
+      captures.slice(page * CAPTURE_PAGE_ROWS, (page + 1) * CAPTURE_PAGE_ROWS),
+      comparison.id,
+      stored,
+    ),
+    // Each capture and each baseline of a page comes from the capture lists.
+    captures: new Map(),
+    images: new Map(evidence.images.map((image) => [image.id, image])),
+    decisions: new Map(),
+    eligibleApprovals: new Set(),
+    inventory: evidence,
+    comparisonStopped: false,
+    policyDigest: comparison.policy_digest,
+    threshold: policyThreshold(policy?.policy_json ?? "{}"),
+  });
+  return { format: "review-captures-1", page, pages, ...compactReviewItems(items) };
 }
 
 /**
@@ -373,7 +626,7 @@ export async function reviewModel(
             .bind(comparison.id, comparison.id),
           context.database
             .prepare(
-              "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
+              "SELECT i.id, i.digest, i.width, i.height FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
             )
             .bind(comparison.id, comparison.id),
           context.database
@@ -433,157 +686,35 @@ export async function reviewModel(
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
   const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
-  const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
-  const pixelLimit =
-    typeof policy.maxChangedPixels === "number"
-      ? `maximum ${policy.maxChangedPixels} changed pixels; `
-      : "";
-  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
+  const threshold = policyThreshold(policyRow ? historyString(policyRow, "policy_json") : "{}");
   const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
   const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));
   const decisionById = new Map(decisions.results.map((decision) => [decision.id, decision]));
-  const imageView = (id: string | undefined): ImageView | null => {
-    const image = id ? imageById.get(id) : null;
-    if (!image) return null;
-    return {
-      id: image.id,
-      url: `/images/${image.id}`,
-      digest: image.digest,
-      width: image.width,
-      height: image.height,
-    };
-  };
   const comparisonStopped =
     comparison?.state === "invalidated" ||
     (!historical && (status.status === "failed" || status.status === "superseded"));
-  const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
-  let rowsWithCandidate = 0;
-  for (const row of rows) {
-    const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
-    const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
-    const tuple = object(JSON.parse(row.tuple_json));
-    if (tuple.candidateDigest !== null) rowsWithCandidate += 1;
-    const baseline = storedBaseline(row, tuple.referenceDigest);
-    if (baseline) imageById.set(baseline.image.id, baseline.image);
-    const candidate =
-      tuple.candidateDigest === null
-        ? null
-        : ((row.candidate_capture_id ? captureById.get(row.candidate_capture_id) : null) ??
-          inventory?.candidateByIdentity.get(identity));
-    const reference =
-      tuple.referenceDigest === null
-        ? null
-        : ((row.reference_capture_id ? captureById.get(row.reference_capture_id) : null) ??
-          baseline?.capture ??
-          inventory?.referenceByIdentity.get(identity));
-    const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
-    const variant =
-      metadata.variant && typeof metadata.variant === "object" ? object(metadata.variant) : {};
-    const candidateOmitted =
-      row.outcome === "unchanged" &&
-      tuple.candidateDigest !== null &&
-      (metadata.candidateStored === false || metadata.candidateStored === 0) &&
-      tuple.candidateDigest !== tuple.referenceDigest;
-    const result = object(JSON.parse(row.result_json ?? "{}"));
-    const decision = decisionById.get(row.source_decision_id ?? row.decision_id ?? "");
-    const effective =
-      decision &&
-      !decision.revoked &&
-      (decision.verdict !== "approved" || eligibleApprovals.has(row.id))
-        ? decision
-        : null;
-    const promotedHistory = Boolean(history || run.state === "accepted");
-    const item = items.get(row.item_key) ?? {
-      key: row.item_key,
-      name: typeof metadata.name === "string" ? metadata.name : row.item_key,
-      variants: [],
-    };
-    const labelParts: VariantView["labelParts"] = [];
-    for (const [kind, value] of [
-      ["framework", variant.framework],
-      ["browser", variant.browser],
-      ["colorScheme", variant.colorScheme],
-      ["contrast", variant.contrast],
-      ["forcedColors", variant.forcedColors],
-      ["key", row.variant_key],
-    ] as const) {
-      if (typeof value === "string") {
-        labelParts.push({ kind, value });
-      }
-    }
-    const label = labelParts.map((part) => part.value).join(" · ");
-    const view: VariantView = {
-      id: row.id,
-      key: row.variant_key,
-      label,
-      labelParts,
-      kind: stoppedBeforeEvidence
-        ? "error"
-        : row.outcome === "error" || row.outcome === "pending" || row.outcome === "unchanged"
-          ? row.outcome
-          : tuple.referenceDigest === null
-            ? "added"
-            : tuple.candidateDigest === null
-              ? "removed"
-              : "changed",
-      revision: row.decision_revision,
-      verdict: effective?.verdict ?? null,
-      source: effective?.kind ?? null,
-      ...(effective?.actor_id ? { reviewer: effective.actor_id } : {}),
-      reference: imageView(reference?.image_id),
-      candidate: candidateOmitted ? null : imageView(candidate?.image_id),
-      ...(candidateOmitted ? { candidateOmitted: true } : {}),
-      diff: imageView(typeof result.maskImageId === "string" ? result.maskImageId : undefined),
-      ...(typeof result.thumbnailImageId === "string" && imageById.has(result.thumbnailImageId)
-        ? { thumbnail: `/images/${result.thumbnailImageId}` }
-        : {}),
-      ...(typeof result.changedPixels === "number" ? { changedPixels: result.changedPixels } : {}),
-      ...(typeof result.maskImageId === "string"
-        ? { maskExpected: true }
-        : typeof result.maskExpected === "boolean"
-          ? { maskExpected: result.maskExpected }
-          : result.outcome === "unchanged"
-            ? { maskExpected: false }
-            : {}),
-      ...(typeof result.ratio === "number" ? { ratio: result.ratio } : {}),
-      ...(typeof result.engineVersion === "string" ? { engine: result.engineVersion } : {}),
-      ...(typeof result.codecVersion === "string" ? { codec: result.codecVersion } : {}),
-      policy:
-        typeof metadata.comparisonDigest === "string"
-          ? metadata.comparisonDigest
-          : comparison?.policy_digest,
-      threshold:
-        metadata.comparison && typeof metadata.comparison === "object"
-          ? `Color threshold ${object(metadata.comparison).threshold}; ${object(metadata.comparison).maxDiffPixels === undefined ? "" : `maximum ${object(metadata.comparison).maxDiffPixels} pixels; `}${object(metadata.comparison).maxDiffPixelRatio === undefined ? "" : `ratio ${object(metadata.comparison).maxDiffPixelRatio}`}`
-          : threshold,
-      ...(typeof tuple.referenceProfileDigest === "string"
-        ? { referenceProfile: tuple.referenceProfileDigest }
-        : {}),
-      ...(typeof tuple.candidateProfileDigest === "string"
-        ? { candidateProfile: tuple.candidateProfileDigest }
-        : {}),
-      ...(stoppedBeforeEvidence
-        ? { error: "Comparison stopped before evidence was available." }
-        : row.outcome === "error"
-          ? { error: "Comparison evidence is unavailable." }
-          : {}),
-      ...(archive
+  const promotedHistory = Boolean(history || run.state === "accepted");
+  const { items, rowsWithCandidate } = reviewItems({
+    rows,
+    captures: captureById,
+    images: imageById,
+    decisions: decisionById,
+    eligibleApprovals,
+    inventory,
+    comparisonStopped,
+    policyDigest: comparison?.policy_digest,
+    threshold,
+    disabledReasons: archive
+      ? { rejectDisabledReason: readOnlyReason, approveDisabledReason: readOnlyReason }
+      : promotedHistory
         ? {
-            rejectDisabledReason: readOnlyReason,
-            approveDisabledReason: readOnlyReason,
+            rejectDisabledReason:
+              "This run is already in the baseline. Capture a correction in a new complete main run.",
+            approveDisabledReason: "Promoted history is read-only.",
           }
-        : promotedHistory
-          ? {
-              rejectDisabledReason:
-                "This run is already in the baseline. Capture a correction in a new complete main run.",
-              approveDisabledReason: "Promoted history is read-only.",
-            }
-          : {}),
-    };
-    item.variants.push(view);
-    items.set(item.key, item);
-  }
+        : undefined,
+  });
   // The capture list of a run has each capture. A stored row with a candidate
   // is one of them, and each other capture of the list is unchanged.
   const captureCount =
@@ -654,7 +785,7 @@ export async function reviewModel(
       count: unchangedCount,
       pages: unchangedCount ? Math.ceil(captureCount / CAPTURE_PAGE_ROWS) : 0,
     },
-    items: [...items.values()],
+    items,
   };
   return compactReviewModel(model);
 }
@@ -791,6 +922,23 @@ export async function handleReview(
     const selected = new URL(request.url).searchParams.get("comparison");
     return Response.json(
       await reviewModel(context, uuid(runMatch[1]), selected ? uuid(selected) : undefined),
+    );
+  }
+  const capturesMatch = /^\/api\/runs\/([a-f0-9-]+)\/captures$/.exec(path);
+  if (capturesMatch?.[1] && request.method === "GET") {
+    const query = new URL(request.url).searchParams;
+    const page = query.get("page");
+    if (page !== null && !/^(0|[1-9][0-9]{0,5})$/.test(page)) {
+      throw new SecurityError("not_found", 404, capturePageNotFound);
+    }
+    return Response.json(
+      await reviewCapturePage(
+        context,
+        uuid(capturesMatch[1]),
+        page === null
+          ? { itemKey: string(query.get("item")), variantKey: string(query.get("variant")) }
+          : { page: Number(page) },
+      ),
     );
   }
   const runStateMatch = /^\/api\/runs\/([a-f0-9-]+)\/state$/.exec(path);

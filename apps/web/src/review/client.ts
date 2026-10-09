@@ -1,6 +1,7 @@
 import { fetchOrFail, readFailure, readSuccess } from "../client-error.ts";
 import { ReviewCommandError } from "./model.ts";
 import type {
+  ReviewCapturePage,
   ReviewCommandResult,
   ReviewCommands,
   ReviewImage,
@@ -153,15 +154,28 @@ function item(value: unknown, shared: SharedReviewEvidence): ReviewItem {
   };
 }
 
+/** The items of an answer, with the evidence that its variants share. */
+function items(data: Record<string, unknown>): ReviewItem[] {
+  const shared: SharedReviewEvidence = {
+    images: values(data.images).map(image),
+    metadata: values(data.metadata).map(record),
+  };
+  return values(data.items).map((value) => item(value, shared));
+}
+
+export function parseCapturePage(value: unknown): ReviewCapturePage {
+  const data = record(value);
+  if (data.format !== "review-captures-1") {
+    throw new Error("This review format has changed. Refresh before reviewing.");
+  }
+  return { page: number(data.page), pages: number(data.pages), items: items(data) };
+}
+
 export function parseReviewModel(value: unknown): ReviewModel {
   const data = record(value);
   if (data.format !== "compact-review-2") {
     throw new Error("This review format has changed. Refresh before reviewing.");
   }
-  const shared: SharedReviewEvidence = {
-    images: values(data.images).map(image),
-    metadata: values(data.metadata).map(record),
-  };
   const run = record(data.run);
   const counts = record(data.counts);
   const unchanged = record(data.unchanged);
@@ -211,7 +225,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
       approved: number(counts.approved),
     },
     unchanged: { count: number(unchanged.count), pages: number(unchanged.pages) },
-    items: values(data.items).map((value) => item(value, shared)),
+    items: items(data),
   };
 }
 
@@ -359,6 +373,14 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
     },
     async refresh() {
       return parseReviewModel(await request(selectedPath()));
+    },
+    async capturePage(place) {
+      // The captures belong to the run: each comparison of it has the same list.
+      const query =
+        "page" in place
+          ? `page=${place.page}`
+          : `item=${encodeURIComponent(place.itemKey)}&variant=${encodeURIComponent(place.variantKey)}`;
+      return parseCapturePage(await request(`${runPath}/captures?${query}`));
     },
     async pollStatus() {
       return parseReviewPollState(await request(selectedPath("/state")));

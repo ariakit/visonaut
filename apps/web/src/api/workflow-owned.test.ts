@@ -18,6 +18,7 @@ import {
   digestRenderingProfile,
   canonicalJson,
   captureManifestDigest,
+  compareCaptureIdentity,
   LOCAL_COMPARISON_MODE,
   LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_CODEC,
@@ -29,7 +30,7 @@ import {
   type Manifest,
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
-import { ConflictError, retireSnapshot, Service } from "@visonaut/service";
+import { ConflictError, IncompleteError, retireSnapshot, Service } from "@visonaut/service";
 import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -59,11 +60,11 @@ import {
 import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-retention.js";
 import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
-import { handleReview, reviewModel } from "./review.ts";
+import { handleReview, reviewCapturePage, reviewModel } from "./review.ts";
 import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
 import * as captureInventory from "../capture-inventory.ts";
 import { referenceCaptureInputs } from "./local-comparison.ts";
-import { parseReviewModel } from "../review/client.ts";
+import { parseCapturePage, parseReviewModel } from "../review/client.ts";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -1770,6 +1771,139 @@ describe("trusted local Submit", () => {
     expect(large).toBeLessThan(400);
   }, 120_000);
 
+  it("returns the captures of a run as unchanged variants in pages of 2,000, in the order of the protocol", async () => {
+    const captureCount = 4_000;
+    const { test, run } = await changedRun(captureCount);
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const variantKey = test.manifest.captures[0]?.variant.key ?? "";
+    // The order of the capture pages: the item key, then the variant key.
+    const ordered = test.manifest.captures
+      .map((capture) => capture.itemKey)
+      .sort((first, second) => compareCaptureIdentity([first, variantKey], [second, variantKey]));
+    const unchanged = (keys: string[]) => keys.filter((key) => key.startsWith("dialog/same-"));
+    const read = async (query: string) => {
+      const response = await handleReview(
+        new Request(`https://preview.example/api/runs/${run.id}/captures?${query}`),
+        privateContext,
+      );
+      if (!response) {
+        throw new Error("Expected the capture page route.");
+      }
+      return parseCapturePage(await response.json());
+    };
+    const get = vi.spyOn(test.context.images, "get");
+    let first: Awaited<ReturnType<typeof read>>;
+    try {
+      first = await read("page=0");
+      // The reader of today reads the run list and the reference list for each page.
+      expect(get).toHaveBeenCalledTimes(2);
+    } finally {
+      get.mockRestore();
+    }
+    // One batch has the policy and the identities of the 4 stored rows.
+    const costs = measureD1(nativeDatabase);
+    await reviewCapturePage(
+      { ...privateContext, database: costs.database, service: new Service(costs.database) },
+      run.id,
+      { page: 0 },
+    );
+    const identityReads = costs.costs
+      .filter((cost) => cost.sql.includes("FROM visonaut_comparison_rows"))
+      .map((cost) => cost.rows_read);
+    // D1 counts the 4 rows, and one more when the seek reads past the last row.
+    expect(identityReads).toHaveLength(1);
+    expect(identityReads[0]).toBeGreaterThanOrEqual(4);
+    expect(identityReads[0]).toBeLessThanOrEqual(5);
+    expect({
+      statements: costs.costs.length,
+      roundTrips: costs.roundTrips(),
+      rowsWritten: costs.totals().rows_written,
+    }).toEqual({ statements: 6, roundTrips: 5, rowsWritten: 0 });
+    // The 4 changed captures are in the first page, and the answer leaves them out.
+    expect(first).toMatchObject({ page: 0, pages: 2 });
+    expect(first.items.map((item) => item.key)).toEqual(unchanged(ordered.slice(0, 2_000)));
+    expect(first.items).toHaveLength(1_996);
+    const second = await read("page=1");
+    expect(second).toMatchObject({ page: 1, pages: 2 });
+    expect(second.items.map((item) => item.key)).toEqual(ordered.slice(2_000));
+    expect(second.items[0]).toMatchObject({
+      name: `Dialog ${ordered[2_000]?.slice("dialog/".length)}`,
+      variants: [
+        {
+          id: expect.stringContaining(`${run.comparison_id}:`),
+          key: variantKey,
+          kind: "unchanged",
+          revision: 0,
+          verdict: null,
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: image.digest },
+          diff: null,
+        },
+      ],
+    });
+    // A link names a capture, and the answer is the page that holds it.
+    const located = await read(
+      `item=${encodeURIComponent(ordered[3_000] ?? "")}&variant=${encodeURIComponent(variantKey)}`,
+    );
+    expect(located.page).toBe(1);
+    expect(located.items.map((item) => item.key)).toEqual(second.items.map((item) => item.key));
+    for (const query of [
+      "page=2",
+      "page=-1",
+      "page=1.5",
+      `item=dialog%2Fnone&variant=${variantKey}`,
+    ]) {
+      await expect(read(query)).rejects.toMatchObject({ status: 404 });
+    }
+    // The first response and the pages have each capture of the run one time.
+    const model = parseReviewModel(await reviewModel(privateContext, run.id));
+    expect(model.unchanged).toEqual({ count: first.items.length + second.items.length, pages: 2 });
+    expect(
+      [...model.items, ...first.items, ...second.items].map((item) => item.key).sort(),
+    ).toEqual([...ordered].sort());
+  }, 120_000);
+
+  it("fails a page that has a changed capture with no stored review row", async () => {
+    const { test, run } = await changedRun(6);
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    await expect(reviewCapturePage(privateContext, run.id, { page: 0 })).resolves.toMatchObject({
+      page: 0,
+    });
+    // The capture list still has the change, and D1 has no row for it.
+    await database
+      .prepare("DELETE FROM visonaut_comparison_rows WHERE comparison_id=? AND item_key=?")
+      .bind(run.comparison_id, "dialog/changed-1")
+      .run();
+    const failure = reviewCapturePage(privateContext, run.id, { page: 0 });
+    await expect(failure).rejects.toBeInstanceOf(IncompleteError);
+    await expect(failure).rejects.toMatchObject({
+      code: "INCOMPLETE",
+      message: "A changed capture is missing its persisted review row.",
+    });
+  });
+
   it("reads the baseline of a run from before the stored baseline from its capture lists", async () => {
     const { test, run } = await changedRun(6);
     await database
@@ -2996,6 +3130,13 @@ describe("trusted local Submit", () => {
     const model = parseReviewModel(await reviewModel(privateContext, run.id));
     expect(model.items).toEqual([]);
     expect(model.unchanged).toEqual({ count: 1, pages: 1 });
+    // The candidate differs from the baseline inside the limit, and Submit did not store it.
+    const page = parseCapturePage(await reviewCapturePage(privateContext, run.id, { page: 0 }));
+    expect(page.items[0]?.variants[0]).toMatchObject({
+      candidate: null,
+      candidateOmitted: true,
+      kind: "unchanged",
+    });
     expect(model.recompareAllowed).toBe(false);
     await expect(
       handleReview(
