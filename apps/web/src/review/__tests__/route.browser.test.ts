@@ -139,6 +139,53 @@ test("a save that cannot reach the service says No connection and offers Retry",
   await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
 });
 
+test("a decision that lost the race with another write says so and shows the current state", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  // The state after the other write: another reviewer rejected the third variant.
+  const current = structuredClone(initial);
+  current.comparisonRevision += 1;
+  const other = current.items[0]?.variants[2];
+  if (!other) throw new Error("Missing review variant");
+  Object.assign(other, { verdict: "rejected", source: "human", revision: 1 });
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-race" } });
+    }
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON();
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/queued")) {
+      return route.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: "concurrent_change",
+            message: "Another change was saved at the same time. Decide again.",
+          },
+          model: compactReviewModel(current),
+        },
+      });
+    }
+    return route.fulfill({ json: compactReviewModel(initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Conflict. Another change was saved at the same time. Check the current state and decide again.",
+  );
+  // The decision is not saved, and the page has the state of the answer.
+  await expect(page.getByRole("link", { name: /React.*Needs review/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  // A conflict has no retry of the same command: the reviewer decides again.
+  await expect(page.getByRole("button", { name: "Retry same command" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+});
+
 test("dashboard loads its protected run list without a separate identity request", async ({
   page,
 }) => {

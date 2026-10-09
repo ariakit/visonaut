@@ -17,7 +17,7 @@ import {
 } from "@visonaut/protocol";
 import * as security from "@visonaut/security";
 import { createAuth, issueIngestCapability } from "@visonaut/security";
-import { Service } from "@visonaut/service";
+import { maximumReviewTargets, Service } from "@visonaut/service";
 import { exportPKCS8, generateKeyPair } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -2396,6 +2396,317 @@ describe("the receipt of a saved decision", () => {
     const last = await receipts.at(-1);
     expect(last?.currentRunRevision).toBe(last?.runRevision);
     expect(page).toEqual(await commands.refresh());
+  });
+});
+
+describe("two writes at the same time, and the limits of one command", () => {
+  const prepared = async (options?: FixtureOptions) => {
+    const test = await fixture(options);
+    await test.complete();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const comparisonId = string(model.comparisonId);
+    /** The body of a decision for one variant of the item. */
+    const decision = (index: number, verdict: "approved" | "rejected") => {
+      const variant = objects(item?.variants)[index];
+      return {
+        reviewSessionId: session.reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict,
+        targets: [{ id: string(variant?.id), expectedRevision: Number(variant?.revision) }],
+        selection: { itemKey: string(item?.key), variantKey: string(variant?.key) },
+        expectedBaselineRevision: model.baselineRevision,
+      };
+    };
+    const post = (body: object) =>
+      test.send(`/api/comparisons/${comparisonId}/commands`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+    /** The rows that the service holds for the decisions of the comparison. */
+    const stored = async () => {
+      const rows = await database
+        .prepare(
+          "SELECT id, decision_revision AS revision FROM visonaut_comparison_rows WHERE comparison_id = ? ORDER BY ordinal, id",
+        )
+        .bind(comparisonId)
+        .all<{ id: string; revision: number }>();
+      const decisions = await database
+        .prepare(
+          "SELECT decision.row_id AS rowId, decision.revision, decision.verdict, decision.command_id AS commandId, decision.revoked, row.decision_id = decision.id AS current FROM visonaut_decisions decision JOIN visonaut_comparison_rows row ON row.id = decision.row_id WHERE row.comparison_id = ? AND decision.kind = 'human' ORDER BY decision.created_at, decision.id",
+        )
+        .bind(comparisonId)
+        .all();
+      const commands = await database
+        .prepare("SELECT id FROM visonaut_commands WHERE comparison_id = ? ORDER BY created_at, id")
+        .bind(comparisonId)
+        .all<{ id: string }>();
+      return {
+        rows: rows.results,
+        decisions: decisions.results,
+        commands: commands.results.map((command) => command.id),
+        runRevision: (await test.service.run(test.runId)).revision,
+      };
+    };
+    /** Makes `other` run one time, after the read of a decision and right before its write. */
+    const beforeDecisionWrite = (other: () => Promise<unknown>) => {
+      let waiting = true;
+      test.bindings.database = measureD1(database, {
+        async beforeBatch(sql) {
+          if (!waiting) return;
+          if (!sql.some((text) => text.startsWith("INSERT INTO visonaut_commands"))) return;
+          waiting = false;
+          await other();
+        },
+      }).database;
+    };
+    return { test, headers, model, comparisonId, decision, post, stored, beforeDecisionWrite };
+  };
+  const concurrentChange = {
+    code: "concurrent_change",
+    message: "Another change was saved at the same time. Decide again.",
+  };
+
+  it("answers 409 with the current state to the decision that loses the race with a decision of another reviewer, and stores nothing of it", async () => {
+    const state = await prepared({ duplicateOriginal: true });
+    const before = await state.stored();
+    const mine = state.decision(0, "rejected");
+    const theirs = state.decision(1, "rejected");
+    const initial = objects(objects(state.model.items)[0]?.variants);
+    state.beforeDecisionWrite(() =>
+      state.test.service.review({
+        commandId: theirs.commandId,
+        actorId: "other-reviewer",
+        sessionId: "other-session",
+        comparisonId: state.comparisonId,
+        verdict: theirs.verdict,
+        targets: theirs.targets,
+        selection: theirs.selection,
+        now: Date.now(),
+      }),
+    );
+    const response = await state.post(mine);
+    expect(response.status).toBe(409);
+    const answer = await objectResponse(response);
+    expect(answer.error).toEqual(concurrentChange);
+    // The current state: the decision of the other reviewer, and not this one.
+    const variants = objects(objects(object(answer.model).items)[0]?.variants);
+    expect(variants[0]).toEqual(initial[0]);
+    expect(variants[1]).toMatchObject({
+      id: theirs.targets[0]?.id,
+      revision: Number(theirs.targets[0]?.expectedRevision) + 1,
+      verdict: "rejected",
+      reviewer: "other-reviewer",
+    });
+    expect(object(answer.model).comparisonRevision).toBe(before.runRevision + 1);
+    const after = await state.stored();
+    expect(after.commands).toEqual([theirs.commandId]);
+    expect(after.decisions).toEqual([
+      {
+        rowId: theirs.targets[0]?.id,
+        revision: Number(theirs.targets[0]?.expectedRevision) + 1,
+        verdict: "rejected",
+        commandId: theirs.commandId,
+        revoked: 0,
+        current: 1,
+      },
+    ]);
+    expect(after.rows).toEqual(
+      before.rows.map((row) =>
+        row.id === theirs.targets[0]?.id ? { ...row, revision: row.revision + 1 } : row,
+      ),
+    );
+    expect(after.runRevision).toBe(before.runRevision + 1);
+    // The reviewer decides again, and that decision is the one that is stored.
+    const again = await state.post({ ...mine, commandId: crypto.randomUUID() });
+    expect(again.status).toBe(200);
+    expect((await state.stored()).decisions).toHaveLength(2);
+  });
+
+  it("answers 409 to the decision that loses the race with another write of the project, in the queue too", async () => {
+    const state = await prepared();
+    const before = await state.stored();
+    const otherWrite = () =>
+      database
+        .prepare("UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?")
+        .bind(state.test.bindings.configuration.projectId)
+        .run();
+    state.beforeDecisionWrite(otherWrite);
+    const direct = await state.post(state.decision(0, "approved"));
+    expect(direct.status).toBe(409);
+    const directAnswer = await objectResponse(direct);
+    expect(directAnswer.error).toEqual(concurrentChange);
+    expect(object(directAnswer.model).comparisonId).toBe(state.comparisonId);
+    expect(await state.stored()).toEqual(before);
+    const queued = { ...state.decision(0, "approved"), queued: true };
+    state.beforeDecisionWrite(otherWrite);
+    expect((await state.post(queued)).status).toBe(202);
+    await state.test.flushBackground();
+    const receipt = await state.test.send(`/api/commands/${queued.commandId}/queued`, {
+      headers: state.headers,
+    });
+    expect(receipt.status).toBe(409);
+    const receiptAnswer = await objectResponse(receipt);
+    expect(receiptAnswer.error).toEqual(concurrentChange);
+    expect(object(receiptAnswer.model).comparisonId).toBe(state.comparisonId);
+    expect(await state.stored()).toEqual(before);
+    expect(
+      await database
+        .prepare("SELECT state, attempts FROM work_tasks WHERE id = ?")
+        .bind(`review:${queued.commandId}`)
+        .first(),
+    ).toEqual({ state: "complete", attempts: 1 });
+  });
+
+  it("keeps the code of a conflict for a decision that no other write raced", async () => {
+    const state = await prepared();
+    const before = await state.stored();
+    // A target with a revision that the service does not have.
+    const stale = state.decision(0, "approved");
+    const response = await state.post({
+      ...stale,
+      targets: [{ id: stale.targets[0]?.id, expectedRevision: 99 }],
+    });
+    expect(response.status).toBe(409);
+    expect(object((await objectResponse(response)).error).code).toBe("conflict");
+    // A run that is not active takes no decision in the queue.
+    await database
+      .prepare("UPDATE visonaut_runs SET active = 0 WHERE id = ?")
+      .bind(state.test.runId)
+      .run();
+    const closed = await state.post({ ...state.decision(0, "approved"), queued: true });
+    expect(closed.status).toBe(409);
+    expect(object((await objectResponse(closed)).error).code).toBe("conflict");
+    expect((await state.stored()).decisions).toEqual(before.decisions);
+  });
+
+  it("names a race for an Undo only when another write came after its read", async () => {
+    const state = await prepared();
+    const saved = state.decision(0, "rejected");
+    expect((await state.post(saved)).status).toBe(200);
+    const undo = () =>
+      state.test.send(`/api/commands/${saved.commandId}/undo`, {
+        method: "POST",
+        headers: state.headers,
+        body: JSON.stringify({
+          reviewSessionId: saved.reviewSessionId,
+          undoCommandId: crypto.randomUUID(),
+          expectedBaselineRevision: state.model.baselineRevision,
+        }),
+      });
+    const before = await state.stored();
+    // Another write of the project lands right before the write of the Undo.
+    state.beforeDecisionWrite(() =>
+      database
+        .prepare("UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?")
+        .bind(state.test.bindings.configuration.projectId)
+        .run(),
+    );
+    const raced = await undo();
+    expect(raced.status).toBe(409);
+    expect((await objectResponse(raced)).error).toEqual(concurrentChange);
+    expect(await state.stored()).toEqual(before);
+    // Another reviewer decided for the same variant before the Undo started.
+    // A guard of the Undo fails, and no write came after its read: a conflict.
+    await state.test.service.review({
+      commandId: crypto.randomUUID(),
+      actorId: "other-reviewer",
+      sessionId: "other-session",
+      comparisonId: state.comparisonId,
+      verdict: "approved",
+      targets: saved.targets.map((target) => ({
+        id: target.id,
+        expectedRevision: target.expectedRevision + 1,
+      })),
+      selection: saved.selection,
+      now: Date.now(),
+    });
+    const afterOther = await state.stored();
+    const stale = await undo();
+    expect(stale.status).toBe(409);
+    expect(object((await objectResponse(stale)).error).code).toBe("conflict");
+    expect(await state.stored()).toEqual(afterOther);
+  });
+
+  it("stores one decision when two decisions for one variant arrive at the same time", async () => {
+    const state = await prepared();
+    const before = await state.stored();
+    const decisions = [state.decision(0, "approved"), state.decision(0, "rejected")];
+    const responses = await Promise.all(decisions.map((decision) => state.post(decision)));
+    const statuses = responses.map((response) => response.status);
+    expect([...statuses].sort()).toEqual([200, 409]);
+    const winner = decisions[statuses.indexOf(200)];
+    const loser = await objectResponse(responses[statuses.indexOf(409)] ?? new Response("{}"));
+    expect(["conflict", "concurrent_change"]).toContain(object(loser.error).code);
+    expect(objects(objects(object(loser.model).items)[0]?.variants)[0]).toMatchObject({
+      verdict: winner?.verdict,
+      revision: Number(winner?.targets[0]?.expectedRevision) + 1,
+    });
+    const after = await state.stored();
+    expect(after.commands).toEqual([winner?.commandId]);
+    expect(after.decisions).toEqual([
+      {
+        rowId: winner?.targets[0]?.id,
+        revision: Number(winner?.targets[0]?.expectedRevision) + 1,
+        verdict: winner?.verdict,
+        commandId: winner?.commandId,
+        revoked: 0,
+        current: 1,
+      },
+    ]);
+    expect(after.rows).toEqual(before.rows.map((row) => ({ ...row, revision: row.revision + 1 })));
+    expect(after.runRevision).toBe(before.runRevision + 1);
+  });
+
+  it("answers 400 to a command with one target more than one D1 batch can hold, and saves a command at the limit", async () => {
+    const state = await prepared();
+    // As in production, where the capture limit is far above the batch limit.
+    state.test.bindings.configuration.limits.maximumCaptures = 40_000;
+    expect(maximumReviewTargets).toBe(200);
+    const first = state.decision(0, "approved");
+    await database
+      .prepare(
+        `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?)
+        INSERT INTO visonaut_comparison_rows
+          (id, comparison_id, item_key, variant_key, ordinal, tuple_json, outcome, result_json)
+        SELECT row.id || ':' || i, row.comparison_id, row.item_key, row.variant_key || '-' || i,
+          row.ordinal + i, row.tuple_json, 'changed', row.result_json
+        FROM visonaut_comparison_rows row, n WHERE row.id = ?`,
+      )
+      .bind(maximumReviewTargets, first.targets[0]?.id)
+      .run();
+    const before = await state.stored();
+    expect(before.rows).toHaveLength(maximumReviewTargets + 1);
+    const targets = before.rows.map((row) => ({ id: row.id, expectedRevision: row.revision }));
+    const tooMany = await state.post({ ...first, targets });
+    expect(tooMany.status).toBe(400);
+    expect(await objectResponse(tooMany)).toMatchObject({
+      error: {
+        code: "too_many_targets",
+        message: "A review command can have 200 targets at most.",
+      },
+    });
+    expect(await state.stored()).toEqual(before);
+    const atLimit = await state.post({ ...first, targets: targets.slice(0, maximumReviewTargets) });
+    expect(atLimit.status).toBe(200);
+    expect(objects((await objectResponse(atLimit)).revisions)).toHaveLength(maximumReviewTargets);
+    const after = await state.stored();
+    expect(after.decisions).toHaveLength(maximumReviewTargets);
+    // Each target has one more revision, and the row after the limit has none.
+    expect(after.rows).toEqual(
+      before.rows.map((row, index) =>
+        index < maximumReviewTargets ? { ...row, revision: row.revision + 1 } : row,
+      ),
+    );
   });
 });
 

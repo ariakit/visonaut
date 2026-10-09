@@ -2,6 +2,7 @@ import {
   ArchivedCommandResultError,
   claimWork,
   completeWork,
+  ConcurrentWriteError,
   ConflictError,
   enqueueWorkStatement,
   assertion,
@@ -54,6 +55,15 @@ const reviewLeaseMilliseconds = 30_000;
 // once, as before. The later waits give a storage fault time to end before the
 // last attempt, after which the command ID cannot run again.
 const retryWaitMilliseconds = [0, 5_000, 30_000, 180_000];
+
+/**
+ * The answer for a decision that lost the race with another write of the
+ * project. Nothing of the decision is stored, and the reviewer decides again.
+ */
+export const concurrentChange = {
+  code: "concurrent_change",
+  message: "Another change was saved at the same time. Decide again.",
+} as const;
 
 export function reviewTaskId(commandId: string) {
   return `review:${commandId}`;
@@ -184,7 +194,11 @@ export async function processReviewQueue(
           id: task.id,
           token,
           now: context.now(),
-          result: JSON.stringify({ error: error.message }),
+          result: JSON.stringify(
+            error instanceof ConcurrentWriteError
+              ? { error: concurrentChange.message, code: concurrentChange.code }
+              : { error: error.message },
+          ),
         });
         report.attention.push(task.id);
       } else {

@@ -63,3 +63,41 @@ it("reads only open tasks in the poll and writes one row less for each task stat
   // With no state list, each poll read the 2,000 complete tasks too: 2,002 rows.
   expect(polls.map((cost) => cost.rows_read)).toEqual([4, 3]);
 });
+
+it("reads the targets of a decision by their key, not each row of the comparison", async () => {
+  using sqlite = new TestDatabase();
+  const fixture = context(sqlite);
+  const pass = { ...fixture.context, database: measured.database };
+  const service = await captured(pass, "wide");
+  const row = (await service.comparisonRows("comparison-wide"))[0];
+  if (!row) throw new Error("Missing comparison");
+  await native
+    .prepare(`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<800)
+      INSERT INTO visonaut_comparison_rows
+        (id, comparison_id, item_key, variant_key, ordinal, tuple_json, outcome, result_json)
+      SELECT row.id||':'||i, row.comparison_id, 'item-'||i, row.variant_key, row.ordinal+i,
+        row.tuple_json, 'unchanged', row.result_json
+      FROM visonaut_comparison_rows row, n WHERE row.id = ?`)
+    .bind(row.id)
+    .run();
+  measured.reset();
+  await service.review({
+    commandId: "one-target",
+    actorId: "actor",
+    sessionId: "session",
+    comparisonId: "comparison-wide",
+    verdict: "rejected",
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: row.item_key, variantKey: row.variant_key },
+    now: fixture.context.now(),
+  });
+  const targetRead = measured.costs.filter(
+    (cost) => cost.sql.includes("FROM visonaut_comparison_rows") && cost.sql.includes("json_each"),
+  );
+  measured.report("decision: read of one target in a comparison of 801 rows");
+  // With the comparison index in the plan, this statement read 802 rows.
+  expect(targetRead.map((cost) => cost.rows_read)).toEqual([3]);
+  expect(
+    (await service.comparisonRows("comparison-wide")).find((entry) => entry.id === row.id),
+  ).toMatchObject({ decision_revision: row.decision_revision + 1 });
+});

@@ -9,3 +9,4 @@ export * from "./retention.ts";
 export * from "./lineage.ts";
 export * from "./historical.ts";
 export * from "./review-status.ts";
+export { maximumReviewTargets } from "./review-commands.ts";
