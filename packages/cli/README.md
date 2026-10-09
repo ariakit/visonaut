@@ -28,6 +28,8 @@ The pinned capture workflow supplies `GH_TOKEN`, GitHub Actions OIDC, `VISONAUT_
 
 The native CI workflow owns the successful Plan result and the no-visual report. The App workflow owns the capture jobs, required shard set, Submit commands, package pin, and receipt upload. The service pins both exact Git blobs. The server verifies signed identity and REST evidence independently.
 
+When the service is at its limit of active runs, `submit --shard` waits and asks the service for a run again, before it stages any image. Each try uses a new GitHub OIDC token. Before each wait, the CLI prints a line on standard error, such as `Visonaut is at its capacity limit (try 1 of 20)`. Each wait is 30 seconds. After 20 tries the CLI fails with exit code `1`, and the job can run again. The 19 waits take 9 minutes 30 seconds, and the time of the requests comes on top. The answers `database_size_exceeded` and `capture_limit_exceeded` need a person, so the CLI does not wait for them.
+
 `status` requires `VISONAUT_TOKEN` with a valid maintainer session. Capture capabilities cannot read private review state. Exit codes are `0` for command success, `1` for operation failure, `2` for invalid arguments, `3` for a run that has not passed, and `4` for authentication or trust failure. A successful submission is not visual approval.
 
 The old `pack`, `upload`, `upload --bundle`, `submit --bundle`, `submit --dir`, and `submit --run` commands are removed. Transfer encryption and key exchange are removed. The CLI no longer depends on the Playwright adapter or its exact peer runtime.

@@ -4505,6 +4505,7 @@ describe("workflow-owned upload staging", () => {
     expect(await expiredRun.context.service.run(expiredRun.runId)).toMatchObject({
       active: 0,
       state: "failed",
+      closed_reason: "expired",
     });
     const undeliveredCheck = await database
       .prepare(
