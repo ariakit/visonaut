@@ -47,6 +47,41 @@ for (const migration of readTestMigrations({ through: "0013_promotion_scans" }))
 
 The brand migration test starts at `0013_promotion_scans`, inserts old-brand rows, and applies `0014_visonaut_brand`. The Worker handler fixture in `runtime.test.ts` is deliberately partial: it tests handler routing with a mocked app renderer and capacity rows. The isolated security fixture also uses `applyTestMigrations` with the complete auth-D1 schema. It exercises the same Better Auth tables and current repository migrations.
 
+## Local backend
+
+`pnpm dev` shows the read-only fixture demo of the preview. To run the real app with data and saves, use the local backend:
+
+```sh
+pnpm dev:local
+```
+
+The command builds the app and serves the built Worker at `http://127.0.0.1:4184`. Open the address that it prints, `http://127.0.0.1:4184/local/sign-in`: this local route gives the browser a signed session of the local maintainer and goes to the Queue. Open it again after a sign-out in the app. Stop the command with Ctrl+C. pnpm then prints error lines for the interrupted command, which is normal. Run the command again after a source change, because it serves a build.
+
+| Part          | What runs                                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1 database   | A local database with the numbered migrations, applied with `wrangler d1 migrations apply DB --local --env local`.                                                                                                 |
+| R2 storage    | Local IMAGES and QUARANTINE buckets.                                                                                                                                                                               |
+| Seed data     | One project, an accepted main baseline, and two pull requests that wait for review. The seed runs only when the database has no project.                                                                           |
+| Session       | A signed Better Auth session of `local-maintainer`. Each start makes a new signing secret, and each visit of the local sign-in route stores the session again.                                                     |
+| GitHub        | A stub answers the installation token, the maintainer, the permission of the maintainer, and the check runs of the service. It keeps the check runs in the data folder. Each other GitHub request gets status 404. |
+| Queue         | A local OPERATIONS queue with a consumer, so a review decision is saved as in production. No cron trigger runs.                                                                                                    |
+| Compare       | The comparator service answers 503. The seed runs have their results already.                                                                                                                                      |
+| Other network | Each other request that the Worker sends gets status 502.                                                                                                                                                          |
+
+The data stays in `apps/web/.wrangler/state` between starts. Delete that folder to start again from the seed. The same folder holds the data of each other Wrangler command with `--local` in `apps/web`.
+
+`VISONAUT_LOCAL_PORT` selects another port. Use it when two checkouts run at the same time:
+
+```sh
+VISONAUT_LOCAL_PORT=4185 pnpm dev:local
+```
+
+The command uses the Wrangler environment `local` of `apps/web/wrangler.jsonc`. That environment never deploys: it declares no route and no remote resource, and `pnpm test:release-guards` fails if it gets one. The local runner adds the R2 buckets, the queue, and the secret values only to the local runtime. It needs no cloud login. The Worker has no network access: the stub answers each request that it sends. The runner also turns off the requests that Wrangler and Miniflare send with no login (the update check, the usage events, and the request metadata).
+
+The seed is in `apps/web/tooling/local-backend/seed.ts`. It writes each run in the form of a trusted local Submit: the complete inventory in R2, and D1 rows only for the captures that differ from the baseline. This is the data that the Queue, the review page, and a decision read. The seed does not write the upload records of the Submit route (the `ingest_` tables). Keep the seed in the form of production when the storage form of production changes.
+
+This is not the [built-app check](#built-app-check) record and not a performance measurement. For timing, use the [review-scale harness](../apps/web/tooling/review-scale/README.md).
+
 ## Built-app check
 
 After framework, route, build, or deployment changes, build and serve the actual app with local bindings. Use an isolated local fixture. Do not use production credentials or production data. D12 retains this on-demand manual check under Q04. Do not add a second permanent browser project.

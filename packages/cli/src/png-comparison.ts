@@ -2,16 +2,44 @@ import { imageLimits, validateImage } from "@visonaut/compare";
 import type { Capture, CaptureComparison } from "@visonaut/protocol";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
-import { CliError } from "./errors.js";
+import { CliError, cliError, nameFile } from "./errors.js";
 
 export type ImageMetadata = Omit<Capture["image"], "path">;
 
-/** Apply the same encoded, decoded, and color-profile bounds as image admission. */
-export async function decodePng(bytes: Buffer, metadata: ImageMetadata) {
-  if (metadata.mediaType !== "image/png") {
-    throw new CliError("Local comparison supports PNG only. Capture PNG images before Submit.");
+function count(value: number) {
+  return value.toLocaleString("en-US");
+}
+
+/** The declared size is known before the decode, so the message can show the numbers. */
+function assertSizeLimits({ width, height, bytes }: ImageMetadata) {
+  const pixels = width * height;
+  if (pixels > imageLimits.maxPixels) {
+    throw new CliError(
+      `${width}x${height} is ${count(pixels)} pixels. The limit is ${count(imageLimits.maxPixels)}.`,
+    );
   }
+  if (width > imageLimits.maxDimension || height > imageLimits.maxDimension) {
+    throw new CliError(
+      `${width}x${height} has a side above ${count(imageLimits.maxDimension)} pixels.`,
+    );
+  }
+  if (bytes > imageLimits.maxEncodedBytes) {
+    throw new CliError(
+      `${count(bytes)} bytes is above the limit of ${count(imageLimits.maxEncodedBytes)} bytes.`,
+    );
+  }
+}
+
+/**
+ * Apply the same encoded, decoded, and color-profile bounds as image admission.
+ * A failure starts with `label`, the name of the screenshot.
+ */
+export async function decodePng(bytes: Buffer, metadata: ImageMetadata, label: string) {
   try {
+    if (metadata.mediaType !== "image/png") {
+      throw new CliError("Local comparison supports PNG only. Capture PNG images before Submit.");
+    }
+    assertSizeLimits(metadata);
     const validated = await validateImage(bytes);
     if (
       validated.format !== "png" ||
@@ -32,10 +60,10 @@ export async function decodePng(bytes: Buffer, metadata: ImageMetadata) {
     }
     return decoded;
   } catch (error) {
-    if (error instanceof CliError) {
-      throw error;
-    }
-    throw new CliError("An image is not a supported, bounded PNG. Capture the image again.");
+    throw nameFile(
+      label,
+      cliError(error, "An image is not a supported, bounded PNG. Capture the image again."),
+    );
   }
 }
 

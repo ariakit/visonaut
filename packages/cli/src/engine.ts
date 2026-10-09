@@ -16,7 +16,7 @@ import type {
 import { beginSubmission } from "./bundle-submit.js";
 import { CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
-import { loadCapture, readImageFile, validateImages } from "./files.js";
+import { imageLabeller, loadCapture, readImageFile, validateImages } from "./files.js";
 import type { LocalManifest } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
 import { compareLocally, readReference, validateLocalImages } from "./local-comparison.js";
@@ -457,6 +457,7 @@ async function uploadShard({
   const started = performance.now();
   const runId = reservation.runId;
   const images = uploadImages(manifest);
+  const labelOf = imageLabeller(manifest);
   // Tickets contain ASCII only. Allow each bounded ticket plus its digest,
   // byte count, JSON syntax, and a separate bounded response envelope.
   const maximumResponseBytes = 8192 + images.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
@@ -521,7 +522,7 @@ async function uploadShard({
         for (const upload of entries) {
           const image = images.get(upload.imageDigest);
           if (!image) throw new CliError("A reuse challenge refers to an unknown image.");
-          const bytes = await readImageFile(local.directory, image);
+          const bytes = await readImageFile(local.directory, image, labelOf(image));
           proofs.push({
             imageDigest: upload.imageDigest,
             proof: createHmac("sha256", Buffer.from(reuse.nonce, "hex"))
@@ -602,7 +603,7 @@ async function uploadShard({
           if (!image) {
             throw new CliError("An upload ticket refers to an unknown image.");
           }
-          const bytes = await readImageFile(local.directory, image);
+          const bytes = await readImageFile(local.directory, image, labelOf(image));
           if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
             return false;
           }
