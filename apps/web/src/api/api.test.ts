@@ -20,12 +20,14 @@ import { createAuth, issueIngestCapability } from "@visonaut/security";
 import { Service } from "@visonaut/service";
 import { exportPKCS8, generateKeyPair } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { finalizeSubmittedComparison } from "./ingest.js";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.js";
 import { handleApi, apiContext, type ApiBindings } from "./index.js";
+import { createReviewCommands, parseReviewModel, parseSaveResult } from "../review/client.ts";
+import { applySavedReview } from "../review/navigation.ts";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -1273,7 +1275,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
   });
 
   it.each([false, true])(
-    "returns the authoritative model after another review (queued: %s)",
+    "answers a save after another review with the receipt, and the page reads the model again (queued: %s)",
     async (queued) => {
       const test = await fixture({ duplicateOriginal: true });
       await test.upload();
@@ -1287,6 +1289,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
         await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
       );
       const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+      const pageModel = parseReviewModel(model);
       const item = objects(model.items)[0];
       const [first, second] = objects(item?.variants);
       expect(second).toBeDefined();
@@ -1299,30 +1302,34 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
         expectedBaselineRevision: model.baselineRevision,
         expectedRunRevision: model.comparisonRevision,
       };
-      const otherResponse = await test.send(
-        `/api/comparisons/${string(model.comparisonId)}/commands`,
-        { method: "POST", headers, body: JSON.stringify(otherRequest) },
-      );
+      const commandPath = `/api/comparisons/${string(model.comparisonId)}/commands`;
+      const otherResponse = await test.send(commandPath, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(otherRequest),
+      });
       expect(otherResponse.status).toBe(200);
-      expect(await objectResponse(otherResponse)).not.toHaveProperty("model");
-      const commandId = crypto.randomUUID();
-      let staleResponse = await test.send(
-        `/api/comparisons/${string(model.comparisonId)}/commands`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            reviewSessionId: session.reviewSessionId,
-            commandId,
-            queued,
-            verdict: "rejected",
-            targets: [{ id: first?.id, expectedRevision: first?.revision }],
-            selection: { itemKey: item?.key, variantKey: first?.key },
-            expectedBaselineRevision: model.baselineRevision,
-            expectedRunRevision: model.comparisonRevision,
-          }),
-        },
-      );
+      const otherResult = await objectResponse(otherResponse);
+      expect(otherResult).not.toHaveProperty("model");
+      expect(otherResult).toMatchObject({
+        previousRunRevision: model.comparisonRevision,
+        runRevision: Number(model.comparisonRevision) + 1,
+        currentRunRevision: Number(model.comparisonRevision) + 1,
+      });
+      const command = {
+        commandId: crypto.randomUUID(),
+        comparisonId: string(model.comparisonId),
+        verdict: "rejected" as const,
+        targets: [{ id: string(first?.id), expectedRevision: Number(first?.revision) }],
+        selection: { itemKey: string(item?.key), variantKey: string(first?.key) },
+        expectedBaselineRevision: Number(model.baselineRevision),
+        expectedRunRevision: Number(model.comparisonRevision),
+      };
+      let staleResponse = await test.send(commandPath, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ ...command, reviewSessionId: session.reviewSessionId, queued }),
+      });
       if (queued) {
         expect(staleResponse.status).toBe(202);
         await test.flushBackground();
@@ -1331,24 +1338,38 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
           budget: { tasksPerStep: 10 },
           now: Date.now,
         });
-        staleResponse = await test.send(`/api/commands/${commandId}/queued`, { headers });
+        staleResponse = await test.send(`/api/commands/${command.commandId}/queued`, { headers });
       }
       expect(staleResponse.status).toBe(200);
       const staleResult = await objectResponse(staleResponse);
-      expect(staleResult).toHaveProperty("model");
-      expect(objects(objects(object(staleResult.model).items)[0]?.variants)).toMatchObject([
-        { verdict: "rejected", source: "human" },
-        { verdict: "rejected", source: "human" },
-      ]);
+      expect(staleResult).not.toHaveProperty("model");
+      // The receipt starts from the revision of the other review, which the
+      // page does not have. So the page cannot apply it to its model.
+      expect(staleResult).toMatchObject({
+        previousRunRevision: Number(model.comparisonRevision) + 1,
+        runRevision: Number(model.comparisonRevision) + 2,
+        currentRunRevision: Number(model.comparisonRevision) + 2,
+        reviewer: "42",
+        runStatus: "rejected",
+        counts: { pending: 2, rejected: 2, approved: 0 },
+      });
+      expect(applySavedReview(pageModel, command, parseSaveResult(staleResult))).toBeNull();
       const currentRevision = (await test.service.run(test.runId)).revision;
-      const replayResponse = await test.send(
-        `/api/comparisons/${string(model.comparisonId)}/commands`,
-        { method: "POST", headers, body: JSON.stringify(otherRequest) },
-      );
+      const replayResponse = await test.send(commandPath, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(otherRequest),
+      });
       expect(replayResponse.status).toBe(200);
       const replayResult = await objectResponse(replayResponse);
-      expect(replayResult).toHaveProperty("model");
-      expect(replayResult.model).toEqual(staleResult.model);
+      expect(replayResult).not.toHaveProperty("model");
+      // A replay returns the stored receipt. The run revision of this moment
+      // shows that the receipt is not the newest state.
+      expect(replayResult).toMatchObject({
+        commandId: otherRequest.commandId,
+        runRevision: Number(model.comparisonRevision) + 1,
+        currentRunRevision: currentRevision,
+      });
       expect((await test.service.run(test.runId)).revision).toBe(currentRevision);
       if (queued) {
         await test.service.review({
@@ -1362,43 +1383,9 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
           now: Date.now(),
         });
         const delayed = await objectResponse(
-          await test.send(`/api/commands/${commandId}/queued`, { headers }),
+          await test.send(`/api/commands/${command.commandId}/queued`, { headers }),
         );
-        expect(objects(objects(object(delayed.model).items)[0]?.variants)).toMatchObject([
-          { verdict: "rejected", source: "human" },
-          { verdict: "approved", source: "human", reviewer: "other-reviewer" },
-        ]);
-        const readRows = Service.prototype.reviewRows;
-        const changedDuringRead = vi
-          .spyOn(Service.prototype, "reviewRows")
-          .mockImplementationOnce(async function (this: Service, comparisonId) {
-            await test.service.review({
-              commandId: crypto.randomUUID(),
-              actorId: "other-reviewer",
-              sessionId: "other-session",
-              comparisonId,
-              verdict: "rejected",
-              targets: [{ id: string(second?.id), expectedRevision: Number(second?.revision) + 2 }],
-              selection: { itemKey: string(item?.key), variantKey: string(second?.key) },
-              now: Date.now(),
-            });
-            return readRows.call(this, comparisonId);
-          });
-        try {
-          const interrupted = await test.send(`/api/commands/${commandId}/queued`, { headers });
-          expect(changedDuringRead).toHaveBeenCalledOnce();
-          expect(interrupted.status).toBe(202);
-        } finally {
-          changedDuringRead.mockRestore();
-        }
-        const stableResponse = await test.send(`/api/commands/${commandId}/queued`, { headers });
-        expect(stableResponse.status).toBe(200);
-        const stable = object((await objectResponse(stableResponse)).model);
-        expect(stable.comparisonRevision).toBe((await test.service.run(test.runId)).revision);
-        expect(objects(objects(stable.items)[0]?.variants)).toMatchObject([
-          { verdict: "rejected", source: "human" },
-          { verdict: "rejected", source: "human", reviewer: "other-reviewer" },
-        ]);
+        expect(delayed).toEqual({ ...staleResult, currentRunRevision: currentRevision + 1 });
       }
     },
   );
@@ -2262,6 +2249,154 @@ it("starts a saved approval without waiting for the shared operations consumer",
       .first(),
   ).toEqual({ verdict: "approved" });
   expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
+});
+
+describe("the receipt of a saved decision", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** The review client of a page, with the API of a fixture as its server. */
+  const reviewPage = (test: Awaited<ReturnType<typeof fixture>>) => {
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: test.bindings.configuration.origin,
+      "content-type": "application/json",
+    };
+    vi.stubGlobal("fetch", async (path: string, init: RequestInit = {}) => {
+      const response = await test.send(path, { method: init.method, body: init.body, headers });
+      // The wake of an admitted decision runs it, as in the Worker.
+      await test.flushBackground();
+      return response;
+    });
+    return createReviewCommands(test.runId);
+  };
+
+  it("answers a clean save with the stored receipt: no model, no R2 read, and 9 D1 round trips or fewer", async () => {
+    const test = await fixture();
+    await test.complete();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const item = objects(model.items)[0];
+    const variant = objects(item?.variants)[0];
+    const commandId = crypto.randomUUID();
+    const costs = measureD1(database);
+    let objectReads = 0;
+    const store = test.bindings.images;
+    test.bindings.database = costs.database;
+    test.bindings.images = {
+      ...store,
+      get(key) {
+        objectReads += 1;
+        return store.get(key);
+      },
+      head(key) {
+        objectReads += 1;
+        return store.head(key);
+      },
+      list(options) {
+        objectReads += 1;
+        return store.list(options);
+      },
+    };
+    const admission = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        queued: true,
+        reviewSessionId: session.reviewSessionId,
+        commandId,
+        verdict: "approved",
+        targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+        selection: { itemKey: item?.key, variantKey: variant?.key },
+        expectedBaselineRevision: model.baselineRevision,
+      }),
+    });
+    expect(admission.status).toBe(202);
+    await test.flushBackground();
+    costs.report(`decision: admission and processing, ${costs.roundTrips()} round trips`);
+    costs.reset();
+    const response = await test.send(`/api/commands/${commandId}/queued`, { headers });
+    const body = await response.text();
+    const bytes = new TextEncoder().encode(body).byteLength;
+    costs.report(
+      `decision: receipt read, ${costs.roundTrips()} round trips, ${objectReads} R2 reads, ${bytes} bytes`,
+    );
+    expect(response.status).toBe(200);
+    const receipt = object(JSON.parse(body));
+    expect(receipt).not.toHaveProperty("model");
+    expect(receipt).toEqual({
+      commandId,
+      revisions: [{ id: variant?.id, expectedRevision: Number(variant?.revision) + 1 }],
+      selection: { itemKey: item?.key, variantKey: variant?.key },
+      baselineRevision: model.baselineRevision,
+      promotionId: model.promotionId,
+      previousRunRevision: model.comparisonRevision,
+      runRevision: Number(model.comparisonRevision) + 1,
+      reviewer: "42",
+      runStatus: "passed",
+      counts: { pending: 0, rejected: 0, approved: 1 },
+      currentRunRevision: Number(model.comparisonRevision) + 1,
+    });
+    expect(bytes).toBeLessThan(1024);
+    expect(costs.roundTrips()).toBeLessThanOrEqual(9);
+    expect(costs.totals().rows_written).toBe(0);
+    expect(objectReads).toBe(0);
+  });
+
+  it.each([
+    ["an approval", ["approved"]],
+    ["a rejection", ["rejected"]],
+    ["a chain of four approvals", ["approved", "approved", "approved", "approved"]],
+  ] as const)("gives the page the model of a new server read after %s", async (_name, verdicts) => {
+    const test = await fixture({ duplicateOriginal: true });
+    await test.complete();
+    const commands = reviewPage(test);
+    let page = await commands.refresh();
+    const item = page.items[0];
+    const variants = item?.variants ?? [];
+    expect(variants).toHaveLength(2);
+    // The page sends each decision at once, and each one names the one before it.
+    const sent = verdicts.map((verdict, index) => {
+      const variant = variants[index % variants.length];
+      if (!item || !variant) throw new Error("Expected a review variant.");
+      return {
+        commandId: crypto.randomUUID(),
+        comparisonId: page.comparisonId,
+        verdict,
+        targets: [
+          {
+            id: variant.id,
+            expectedRevision: variant.revision + Math.floor(index / variants.length),
+          },
+        ],
+        expectedPromotionId: page.promotionId ?? undefined,
+        expectedBaselineRevision: page.baselineRevision,
+        expectedRunRevision: page.comparisonRevision,
+        selection: { itemKey: item.key, variantKey: variant.key },
+      };
+    });
+    const receipts = sent.map((command, index) =>
+      commands.save({ ...command, previousCommandId: sent[index - 1]?.commandId }),
+    );
+    for (const [index, command] of sent.entries()) {
+      const receipt = await receipts[index];
+      if (!receipt) throw new Error("Expected a receipt.");
+      const next = applySavedReview(page, command, receipt);
+      if (!next) throw new Error("The receipt does not continue from the model of the page.");
+      page = next;
+    }
+    const last = await receipts.at(-1);
+    expect(last?.currentRunRevision).toBe(last?.runRevision);
+    expect(page).toEqual(await commands.refresh());
+  });
 });
 
 describe("credential checks before other work", () => {

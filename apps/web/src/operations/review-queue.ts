@@ -11,7 +11,7 @@ import {
   IncompleteError,
   Service,
 } from "@visonaut/service";
-import type { Database, ReviewParams } from "@visonaut/service";
+import type { CommandResult, Database, ReviewCounts, ReviewParams } from "@visonaut/service";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 export interface QueuedReviewInput extends Omit<ReviewParams, "now"> {
@@ -27,6 +27,23 @@ export const failedDecision = {
   message:
     "This decision failed too many times and cannot run again. Review the current evidence and decide again.",
 } as const;
+
+/**
+ * The receipt of a saved decision: the stored result of its command, with the
+ * reviewer and the review state of the run after it.
+ */
+export function decisionReceipt(
+  result: CommandResult,
+  reviewer: string,
+  state: ReviewCounts & { status: string },
+) {
+  return {
+    ...result,
+    reviewer,
+    runStatus: state.status,
+    counts: { pending: state.pending, rejected: state.rejected, approved: state.approved },
+  };
+}
 
 // A decision is a few D1 batches. A short lease returns the decision of a
 // stopped consumer to the queue fast. Command replay keeps a second consumer
@@ -150,7 +167,7 @@ export async function processReviewQueue(
         id: task.id,
         token,
         now: context.now(),
-        result: JSON.stringify({ ...result, reviewer: input.actorId, runStatus: status.status }),
+        result: JSON.stringify(decisionReceipt(result, input.actorId, status)),
       });
       if (completed) {
         report.completed.push(task.id);

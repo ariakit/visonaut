@@ -4,6 +4,7 @@ import type {
   ReviewCapturePage,
   ReviewCommandResult,
   ReviewCommands,
+  ReviewCounts,
   ReviewImage,
   ReviewItem,
   ReviewModel,
@@ -181,7 +182,6 @@ export function parseReviewModel(value: unknown): ReviewModel {
   }
   const run = record(data.run);
   const settings = run.comparisonSettings == null ? null : record(run.comparisonSettings);
-  const counts = record(data.counts);
   const unchanged = record(data.unchanged);
   return {
     preview: data.preview == null ? undefined : boolean(data.preview),
@@ -231,11 +231,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
     readOnlyReason: optionalString(data.readOnlyReason),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
-    counts: {
-      pending: number(counts.pending),
-      rejected: number(counts.rejected),
-      approved: number(counts.approved),
-    },
+    counts: reviewCounts(data.counts),
     unchanged: { count: number(unchanged.count), pages: number(unchanged.pages) },
     items: items(data),
   };
@@ -267,7 +263,16 @@ function commandResult(value: unknown): ReviewCommandResult {
   };
 }
 
-function saveResult(value: unknown): ReviewSaveResult {
+function reviewCounts(value: unknown): ReviewCounts {
+  const counts = record(value);
+  return {
+    pending: number(counts.pending),
+    rejected: number(counts.rejected),
+    approved: number(counts.approved),
+  };
+}
+
+export function parseSaveResult(value: unknown): ReviewSaveResult {
   const data = record(value);
   return {
     commandId: string(data.commandId),
@@ -278,11 +283,13 @@ function saveResult(value: unknown): ReviewSaveResult {
     }),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
-    runRevision: data.runRevision == null ? undefined : number(data.runRevision),
+    previousRunRevision: optionalNumber(data.previousRunRevision),
+    runRevision: optionalNumber(data.runRevision),
+    currentRunRevision: optionalNumber(data.currentRunRevision),
     reviewer: optionalString(data.reviewer),
     runStatus: optionalString(data.runStatus),
+    counts: data.counts == null ? undefined : reviewCounts(data.counts),
     noop: data.noop == null ? undefined : boolean(data.noop),
-    model: data.model == null ? undefined : parseReviewModel(data.model),
   };
 }
 
@@ -371,7 +378,7 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
           ),
         );
       }
-      return saveResult(result);
+      return parseSaveResult(result);
     },
     async undo(command) {
       const reviewSessionId = await reviewSession();

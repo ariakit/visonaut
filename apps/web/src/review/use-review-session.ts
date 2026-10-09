@@ -322,6 +322,8 @@ export function useReviewSession({
     if (session.saving) return;
     session.saving = true;
     let currentModel = savedModel;
+    // The newest run revision that a receipt of this loop named.
+    let newestRunRevision = 0;
     try {
       while (session.queue.length) {
         const entry = session.queue[0];
@@ -337,7 +339,15 @@ export function useReviewSession({
           }
           const result = response.result;
           if (session.queue[0] !== entry) return;
-          const confirmed = applySavedReview(currentModel, currentCommand, result);
+          newestRunRevision = Math.max(newestRunRevision, result.currentRunRevision ?? 0);
+          const applied = applySavedReview(currentModel, currentCommand, result);
+          // A later decision of this page explains a newer run revision. The
+          // receipt of the last decision must be the newest state of the run
+          // that a receipt of this loop named: the receipt reads can end in
+          // another order than the decisions.
+          const current = session.queue.length > 1 || newestRunRevision === result.runRevision;
+          const confirmed = applied && current ? applied : await commands.refresh();
+          if (session.queue[0] !== entry) return;
           currentModel = confirmed;
           setModel((model) => latestReviewModel(model, confirmed));
           session.queue.shift();
@@ -395,6 +405,18 @@ export function useReviewSession({
               ...state,
               message: `${state.message} Later queued decisions were not saved. Review them again.`,
             }));
+          }
+          const conflictModel = error instanceof ReviewCommandError ? error.model : undefined;
+          if (conflict && (conflictModel ?? currentModel).comparisonRevision < newestRunRevision) {
+            // A receipt before this conflict named a newer run than the state
+            // of the conflict. The alert stays, and it has the manual read.
+            void commands.refresh().then(
+              (current) => {
+                if (session !== commandSession.current) return;
+                setModel((model) => latestReviewModel(model, current));
+              },
+              () => {},
+            );
           }
           return;
         }
