@@ -4,7 +4,7 @@ import { lstat, open, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { parseManifest, validateManifestProfiles } from "@visonaut/protocol";
 import type { Capture, Manifest } from "@visonaut/protocol";
-import { CliError } from "./errors.js";
+import { captureLabel, CliError, cliError, nameFile } from "./errors.js";
 
 const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -35,7 +35,7 @@ export async function readBounded(file: string, maximum: number): Promise<Buffer
     length += result.bytesRead;
   }
   if (length !== details.size) {
-    throw new CliError("A capture file changed while it was read. Run capture again.");
+    throw new CliError("A capture file was modified while it was read. Run capture again.");
   }
   return bytes.subarray(0, length);
 }
@@ -58,12 +58,31 @@ export async function loadCapture(directory: string): Promise<LocalManifest> {
 }
 
 export async function readImage(directory: string, capture: Capture): Promise<Buffer<ArrayBuffer>> {
-  return readImageFile(directory, capture.image);
+  return readImageFile(
+    directory,
+    capture.image,
+    captureLabel(capture.itemKey, capture.variant.key),
+  );
 }
 
+/**
+ * Names an image by its first capture. A comparison mask is not a screenshot,
+ * and naming it would show that a capture changed, so it has no name.
+ */
+export function imageLabeller(manifest: Manifest): (image: Capture["image"]) => string | undefined {
+  const labels = new Map<string, string>();
+  for (const capture of manifest.captures) {
+    if (labels.has(capture.image.digest)) continue;
+    labels.set(capture.image.digest, captureLabel(capture.itemKey, capture.variant.key));
+  }
+  return (image) => labels.get(image.digest);
+}
+
+/** A failure starts with `label`, the name of the screenshot, when there is one. */
 export async function readImageFile(
   directory: string,
   image: Capture["image"],
+  label: string | undefined,
 ): Promise<Buffer<ArrayBuffer>> {
   try {
     const imagePath = image.path;
@@ -100,11 +119,12 @@ export async function readImageFile(
     }
     return bytes;
   } catch (error) {
-    if (error instanceof CliError) {
-      throw error;
-    }
-    throw new CliError(
-      "A capture image cannot be read. Check the manifest directory and image files.",
+    throw nameFile(
+      label,
+      cliError(
+        error,
+        "A capture image cannot be read. Check the manifest directory and image files.",
+      ),
     );
   }
 }
