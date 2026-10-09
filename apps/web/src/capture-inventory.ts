@@ -14,6 +14,12 @@ import {
   type ProfileRecord,
 } from "@visonaut/protocol";
 import type { CaptureInput, CaptureInventoryPointer, ValidatedImage } from "@visonaut/service";
+import {
+  encodeCapturePages,
+  isCapturePagesKey,
+  readCapturePages,
+  type CapturePagesInput,
+} from "./capture-pages.ts";
 export type { CaptureInventoryPointer } from "@visonaut/service";
 
 export interface InventoryCapture extends CaptureInput {
@@ -183,7 +189,8 @@ function assertInventory(value: unknown): asserts value is CaptureInventory {
     assertCapture(capture);
   }
   const profiles = field(value, "profiles");
-  array(profiles, 10_000);
+  // Almost each capture has its own clip rectangle, and so its own profile.
+  array(profiles, 100_000);
   for (const profile of profiles) {
     record(profile);
     validateDigest(field(profile, "digest"));
@@ -485,6 +492,27 @@ export async function writeCaptureInventory(
   return { objectKey, digest, bytes: bytes.byteLength, captureCount: inventory.captures.length };
 }
 
+/**
+ * Store the capture list of a run as pages of rows and one index. The pointer
+ * names the index, and it has the same four values as a pointer of the earlier
+ * form, so D1 holds the same columns.
+ */
+export async function writeCapturePages(
+  store: Pick<InventoryStore, "put">,
+  input: CapturePagesInput,
+): Promise<CaptureInventoryPointer> {
+  const { objects, pointer, inventory } = await encodeCapturePages(input);
+  await validatedInventory(inventory);
+  // The index is the last object, so a pointer never names a missing page.
+  for (const { key, text, digest } of objects) {
+    await store.put(key, text, {
+      httpMetadata: { contentType: "application/json" },
+      sha256: digest,
+    });
+  }
+  return pointer;
+}
+
 async function readInventoryValue(
   body: ReadableStream<Uint8Array>,
   pointer: CaptureInventoryPointer,
@@ -517,7 +545,10 @@ async function readInventoryValue(
   return parsed;
 }
 
-/** Verify the original wire document as well as its complete capture facts. */
+/**
+ * Verify the original wire document as well as its complete capture facts. The
+ * document of a run that is stored as pages is its page index.
+ */
 export async function readCaptureInventoryDocument(
   store: Pick<InventoryStore, "get">,
   pointer: CaptureInventoryPointer,
@@ -529,6 +560,15 @@ export async function readCaptureInventoryDocument(
   validateKey(field(pointer, "objectKey"));
   integer(field(pointer, "bytes"), maximumBytes, 1);
   integer(field(pointer, "captureCount"), 100_000);
+  // The key says which form the run has: a page index, or one complete object.
+  if (isCapturePagesKey(pointer.objectKey)) {
+    const pages = await readCapturePages(store, pointer);
+    const inventory = await validatedInventory(pages.inventory);
+    if (inventory.captures.length !== pointer.captureCount) {
+      throw new Error("Capture inventory pointer content differs.");
+    }
+    return { inventory, document: pages.document };
+  }
   if (!pointer.objectKey.endsWith(`/inventory/${pointer.digest}.json`)) {
     throw new Error("Capture inventory pointer identity differs.");
   }
@@ -565,7 +605,10 @@ export async function readCaptureInventoryDocument(
   return { inventory, document };
 }
 
-/** Resolve one complete object, with no reads of predecessor inventories. */
+/**
+ * Resolve the complete capture list of one run, with no reads of predecessor
+ * inventories. A run has one complete object, or pages of rows and one index.
+ */
 export async function readCaptureInventory(
   store: Pick<InventoryStore, "get">,
   pointer: CaptureInventoryPointer,
