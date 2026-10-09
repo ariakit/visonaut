@@ -1,352 +1,176 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, writeFile } from "node:fs/promises";
-import { join, relative } from "node:path";
-import { imageLimits } from "@visonaut/compare";
+import { join } from "node:path";
 import {
-  captureManifestDigest,
-  digestJson,
-  identityKey,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_MODE,
-  SCHEMA_VERSION,
-  validateCaptureComparison,
-  validateDigest,
-  validateKey,
-  validateLocalReference,
+  CAPTURE_PAGE_MAX_BYTES,
+  captureRowView,
+  compareCaptureIdentity,
+  parseCapturePage,
+  TRANSPORT,
 } from "@visonaut/protocol";
-import type {
-  LocalComparisonReceipt,
-  LocalReferenceCapture,
-  LocalReferencePage,
-  Manifest,
-  ReserveRunResponse,
-} from "@visonaut/protocol";
-import { captureLabel, CliError, nameFile, protocolVersion, record, text } from "./errors.js";
-import { readImage, validateImages } from "./files.js";
-import type { LocalManifest } from "./files.js";
+import type { CapturePage, CaptureRowResult, CaptureRowView } from "@visonaut/protocol";
+import { captureLabel, CliError, protocolVersion, record } from "./errors.js";
+import { readImageFile } from "./files.js";
 import { request } from "./http.js";
 import { comparePixels, decodePng } from "./png-comparison.js";
+import type { Session } from "./session.js";
+import { imagePath } from "./submission.js";
+import type { CaptureRecord } from "./submission.js";
 
-/** Reject malformed local bytes and candidate-provided verdicts before reservation. */
-export async function validateLocalImages(local: LocalManifest) {
-  if (local.manifest.localComparison) {
-    throw new CliError("Capture artifacts cannot supply a local comparison result.");
-  }
-  await validateImages(local);
-  for (const capture of local.manifest.captures) {
-    if (!capture.comparison) {
-      throw new CliError(
-        "Local Submit requires recorded consumer screenshot settings. Capture again with the current adapter.",
-      );
-    }
-    validateCaptureComparison(capture.comparison);
-    await decodePng(
-      await readImage(local.directory, capture),
-      capture.image,
-      captureLabel(capture.itemKey, capture.variant.key),
-    );
-  }
+export const MASK_DIRECTORY = "local-masks";
+
+export function maskPath(digest: string): string {
+  return `${MASK_DIRECTORY}/${digest}.png`;
 }
 
-function referenceCapture(value: unknown): LocalReferenceCapture {
-  if (!record(value) || !record(value.image)) {
-    throw new CliError("The service returned invalid reference image metadata.");
-  }
-  for (const key of ["itemKey", "variantKey", "imageId"]) {
-    validateKey(value[key], key);
-  }
-  validateDigest(value.profileDigest);
-  validateDigest(value.image.digest);
-  const { itemKey, variantKey, captureId, imageId, path, profileDigest } = value;
-  const { digest, mediaType, bytes, width, height } = value.image;
-  // Stored capture IDs are opaque and include colon-separated source IDs.
-  if (
-    typeof itemKey !== "string" ||
-    typeof variantKey !== "string" ||
-    !text(captureId) ||
-    typeof imageId !== "string" ||
-    typeof path !== "string" ||
-    typeof profileDigest !== "string" ||
-    typeof digest !== "string" ||
-    (mediaType !== "image/png" && mediaType !== "image/webp") ||
-    typeof bytes !== "number" ||
-    !Number.isSafeInteger(bytes) ||
-    bytes < 1 ||
-    bytes > imageLimits.maxEncodedBytes ||
-    typeof width !== "number" ||
-    !Number.isSafeInteger(width) ||
-    width < 1 ||
-    width > imageLimits.maxDimension ||
-    typeof height !== "number" ||
-    !Number.isSafeInteger(height) ||
-    height < 1 ||
-    height > imageLimits.maxDimension ||
-    width * height > imageLimits.maxPixels
-  ) {
-    throw new CliError("A reference image exceeds the supported metadata bounds.");
-  }
-  return {
-    itemKey,
-    variantKey,
-    captureId,
-    imageId,
-    path,
-    profileDigest,
-    image: { digest, mediaType, bytes, width, height },
-  };
+type Identity = [itemKey: string, variantKey: string];
+
+function identityOf(view: CaptureRowView): Identity {
+  return [view.itemKey, view.variantKey];
 }
 
-function referencePage(value: unknown): LocalReferencePage {
-  protocolVersion(value);
-  if (!record(value)) {
+async function referencePage(session: Session, number: number): Promise<CaptureRowView[]> {
+  const { digest } = session.reference;
+  if (digest === null) {
+    throw new CliError("The run has no reference page.");
+  }
+  const response = await request({
+    url: new URL(TRANSPORT.referencePage(session.runId, digest, number), session.origin),
+    token: await session.capability(),
+    // The service can send the page with other spacing than the canonical bytes.
+    maximumResponseBytes: 2 * CAPTURE_PAGE_MAX_BYTES,
+    retryUnavailable: true,
+  });
+  protocolVersion(response);
+  let page: CapturePage;
+  try {
+    page = parseCapturePage(response);
+  } catch {
     throw new CliError("The service returned an invalid reference page.");
   }
-  validateLocalReference(value.reference);
-  if (
-    value.comparisonMode !== LOCAL_COMPARISON_MODE ||
-    !Array.isArray(value.captures) ||
-    value.captures.length > 200 ||
-    (value.nextCursor !== null && (!text(value.nextCursor) || value.nextCursor.length > 512)) ||
-    !text(value.capability) ||
-    value.capability.length > 64 * 1024 ||
-    !text(value.expiresAt) ||
-    !Number.isFinite(Date.parse(value.expiresAt)) ||
-    Date.parse(value.expiresAt) <= Date.now()
-  ) {
-    throw new CliError("The service returned an invalid local comparison capability.");
-  }
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    comparisonMode: LOCAL_COMPARISON_MODE,
-    reference: value.reference,
-    captures: value.captures.map(referenceCapture),
-    nextCursor: value.nextCursor,
-    capability: value.capability,
-    expiresAt: value.expiresAt,
-  };
-}
-
-interface ReferenceParams {
-  origin: URL;
-  manifest: Manifest;
-  reservation: ReserveRunResponse;
-  secrets: Set<string>;
-}
-
-export async function readReference({ origin, manifest, reservation, secrets }: ReferenceParams) {
-  const manifestDigest = await captureManifestDigest(manifest);
-  const captures: LocalReferenceCapture[] = [];
-  const cursors = new Set<string>();
-  let cursor: string | undefined;
-  let binding: LocalReferencePage["reference"] | undefined;
-  let previousCapture: LocalReferenceCapture | undefined;
-  for (let pageNumber = 0; pageNumber <= 100_000; pageNumber++) {
-    const page = referencePage(
-      await request({
-        url: new URL(`/v1/runs/${encodeURIComponent(reservation.runId)}/reference`, origin),
-        token: reservation.capability,
-        method: "POST",
-        mediaType: "application/json",
-        body: JSON.stringify({
-          schemaVersion: SCHEMA_VERSION,
-          manifestDigest,
-          ...(cursor ? { cursor } : {}),
-        }),
-      }),
-    );
-    if (
-      page.reference.manifestDigest !== manifestDigest ||
-      (binding && (await digestJson(binding)) !== (await digestJson(page.reference)))
-    ) {
-      throw new CliError("The accepted reference changed during Submit. Rerun local comparison.");
-    }
-    binding = page.reference;
-    secrets.add(page.capability);
-    reservation = { ...reservation, capability: page.capability, expiresAt: page.expiresAt };
-    for (const capture of page.captures) {
-      // Match SQLite BINARY ordering, including keys outside the ASCII range.
-      const itemOrder = previousCapture
-        ? Buffer.compare(Buffer.from(capture.itemKey), Buffer.from(previousCapture.itemKey))
-        : 1;
-      const variantOrder = previousCapture
-        ? Buffer.compare(Buffer.from(capture.variantKey), Buffer.from(previousCapture.variantKey))
-        : 1;
-      if (previousCapture && (itemOrder < 0 || (itemOrder === 0 && variantOrder <= 0))) {
-        throw new CliError("The reference inventory has duplicate or unordered captures.");
-      }
-      const expectedPath = `/v1/runs/${encodeURIComponent(reservation.runId)}/reference/images/${encodeURIComponent(capture.imageId)}`;
-      if (capture.path !== expectedPath) {
-        throw new CliError("A reference image path is outside the pinned run.");
-      }
-      previousCapture = capture;
-      captures.push(capture);
-    }
-    if (captures.length > binding.captureCount) {
-      throw new CliError("The reference inventory exceeds its declared count.");
-    }
-    if (page.nextCursor === null) {
-      if (
-        captures.length !== binding.captureCount ||
-        (await digestJson(captures)) !== binding.inventoryDigest
-      ) {
-        throw new CliError("The reference inventory is incomplete or has an invalid digest.");
-      }
-      return { captures, reference: binding, reservation };
-    }
-    if (!page.captures.length || cursors.has(page.nextCursor)) {
-      throw new CliError("The reference inventory pagination did not advance.");
-    }
-    cursors.add(page.nextCursor);
-    cursor = page.nextCursor;
-  }
-  throw new CliError("The reference inventory exceeds the supported page count.");
-}
-
-interface CompareLocalParams extends ReferenceParams {
-  local: LocalManifest;
-  selected: Awaited<ReturnType<typeof readReference>>;
-  renew?: () => Promise<ReserveRunResponse>;
+  // A reference row is read only by its keys, its profile, and its image.
+  return Promise.all(page.rows.map((row) => captureRowView(page, row)));
 }
 
 /**
- * Only one decoded candidate/reference pair and mask is retained at a time.
- * The caller must run validateLocalImages first: an unchanged or new capture is not decoded here.
+ * Walk the reference of a run one page at a time. The reference and the
+ * captures of the run have the same order, so each capture asks one time, in
+ * that order. A reference capture that no capture of the run asks for is a
+ * removal, which the service finds itself.
  */
-export async function compareLocally({
-  origin,
-  manifest,
-  local,
-  selected,
-  renew,
-}: CompareLocalParams): Promise<LocalComparisonReceipt> {
-  const reference = new Map(selected.captures.map((capture) => [identityKey(capture), capture]));
-  const captures: LocalComparisonReceipt["captures"] = [];
-  let maskDirectory: string | undefined;
-  for (const capture of manifest.captures) {
-    if (Date.parse(selected.reservation.expiresAt) - Date.now() <= 45_000) {
-      if (!renew) {
-        throw new CliError("The reference capability expired. Rerun Submit.", 4);
-      }
-      const renewed = await renew();
-      if (renewed.runId !== selected.reservation.runId) {
-        throw new CliError("The service changed the run identity during local comparison.");
-      }
-      selected.reservation = renewed;
-      if (Date.parse(selected.reservation.expiresAt) - Date.now() <= 45_000) {
-        throw new CliError("The renewed reference capability expires too soon.", 4);
+export function referenceCursor(session: Session) {
+  let rows: CaptureRowView[] = [];
+  let position = 0;
+  let nextPage = 1;
+  let last: Identity | undefined;
+  const current = async (): Promise<CaptureRowView | undefined> => {
+    while (position >= rows.length) {
+      if (nextPage > session.reference.pages) return;
+      rows = await referencePage(session, nextPage++);
+      position = 0;
+      for (const row of rows) {
+        const identity = identityOf(row);
+        // One page is in order. This also checks the order from page to page.
+        if (last && compareCaptureIdentity(last, identity) >= 0) {
+          throw new CliError("The reference inventory has duplicate or unordered captures.");
+        }
+        last = identity;
       }
     }
-    const identity = { itemKey: capture.itemKey, variantKey: capture.variant.key };
-    const accepted = reference.get(identityKey(identity));
-    reference.delete(identityKey(identity));
-    if (!capture.comparison) {
-      throw new CliError("The capture has no consumer comparison settings.");
-    }
-    const label = captureLabel(identity.itemKey, identity.variantKey);
-    const result = {
-      ...identity,
-      candidateDigest: capture.image.digest,
-      referenceDigest: accepted?.image.digest ?? null,
-    };
-    if (!accepted) {
-      captures.push({
-        ...result,
-        outcome: "changed",
-        // The decode of validateLocalImages already matched these dimensions.
-        changedPixels: capture.image.width * capture.image.height,
-        ratio: 1,
-        sizeChanged: false,
-      });
-      continue;
-    }
-    if (accepted.image.mediaType !== "image/png") {
-      throw nameFile(
-        label,
-        new CliError(
-          "The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.",
-        ),
-      );
-    }
+    return rows[position];
+  };
+  return {
+    /** The reference capture with this identity, or nothing when the capture is new. */
+    async take(identity: Identity): Promise<CaptureRowView | undefined> {
+      while (true) {
+        const row = await current();
+        if (!row) return;
+        const order = compareCaptureIdentity(identityOf(row), identity);
+        if (order > 0) return;
+        position++;
+        if (order === 0) return row;
+      }
+    },
+  };
+}
+
+interface CompareCaptureParams {
+  session: Session;
+  /** The prepared directory with the images of the run. */
+  directory: string;
+  capture: CaptureRecord;
+  accepted: CaptureRowView | undefined;
+}
+
+/**
+ * Compare one capture with its reference. Only one decoded pair and one mask
+ * are in memory. `combineBundles` already decoded the capture, so a new
+ * capture and a capture with the bytes of its reference are not decoded here.
+ */
+export async function compareCapture({
+  session,
+  directory,
+  capture,
+  accepted,
+}: CompareCaptureParams): Promise<CaptureRowResult> {
+  if (!accepted) return 1;
+  const label = captureLabel(capture.itemKey, capture.variant.key);
+  const { image } = capture;
+  if (accepted.image.digest === image.digest) {
     if (
-      accepted.image.digest === capture.image.digest &&
-      accepted.image.width === capture.image.width &&
-      accepted.image.height === capture.image.height &&
-      accepted.image.bytes === capture.image.bytes
+      accepted.image.bytes !== image.bytes ||
+      accepted.image.width !== image.width ||
+      accepted.image.height !== image.height
     ) {
-      captures.push({
-        ...result,
-        outcome: "unchanged",
-        changedPixels: 0,
-        ratio: 0,
-        sizeChanged: false,
-      });
-      continue;
+      throw new CliError("The service returned invalid reference image metadata.");
     }
-    // Equal images were validated in the first pass, so only a real comparison needs pixels again.
-    const candidate = await decodePng(
-      await readImage(local.directory, capture),
-      capture.image,
-      label,
-    );
-    const bytes = await request({
-      url: new URL(accepted.path, origin),
-      token: selected.reservation.capability,
-      responseMediaType: "image/png",
-      maximumResponseBytes: accepted.image.bytes,
-      retryUnavailable: true,
-    });
-    if (!Buffer.isBuffer(bytes)) {
-      throw new CliError("The service returned invalid reference bytes.");
+    return 0;
+  }
+  const candidate = await decodePng(
+    await readImageFile(directory, { ...image, path: imagePath(image.digest) }, label),
+    { ...image, mediaType: "image/png" },
+    label,
+  );
+  const bytes = await request({
+    url: new URL(TRANSPORT.referenceImage(session.runId, accepted.image.digest), session.origin),
+    token: await session.capability(),
+    responseMediaType: "image/png",
+    maximumResponseBytes: accepted.image.bytes,
+    retryUnavailable: true,
+  });
+  if (!Buffer.isBuffer(bytes)) {
+    throw new CliError("The service returned invalid reference bytes.");
+  }
+  // The decode also checks the bytes against the digest and the Submit bounds.
+  const reference = await decodePng(
+    Buffer.from(bytes),
+    { ...accepted.image, mediaType: "image/png" },
+    `reference of ${label}`,
+  );
+  const { mask, ...metrics } = comparePixels({
+    candidate,
+    reference,
+    comparison: capture.comparison,
+    profileChanged: capture.profileDigest !== accepted.profileDigest,
+  });
+  const result = { reference: accepted.image.digest, ...metrics };
+  if (!mask) return result;
+  const maskDirectory = join(directory, MASK_DIRECTORY);
+  await mkdir(maskDirectory, { mode: 0o700, recursive: true });
+  const details = await lstat(maskDirectory);
+  if (!details.isDirectory() || details.isSymbolicLink()) {
+    throw new CliError("The local mask directory is not a regular private directory.");
+  }
+  const digest = createHash("sha256").update(mask).digest("hex");
+  try {
+    await writeFile(join(directory, maskPath(digest)), mask, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if (!record(error) || error.code !== "EEXIST") {
+      throw error;
     }
-    const decoded = await decodePng(Buffer.from(bytes), accepted.image, `reference of ${label}`);
-    const compared = comparePixels({
-      candidate,
-      reference: decoded,
-      comparison: capture.comparison,
-      profileChanged: capture.profileDigest !== accepted.profileDigest,
-    });
-    const { mask, ...metrics } = compared;
-    if (!mask) {
-      captures.push({ ...result, ...metrics });
-      continue;
-    }
-    if (!maskDirectory) {
-      maskDirectory = join(local.directory, "local-masks");
-      await mkdir(maskDirectory, { mode: 0o700, recursive: true });
-      const details = await lstat(maskDirectory);
-      if (!details.isDirectory() || details.isSymbolicLink()) {
-        throw new CliError("The local mask directory is not a regular private directory.");
-      }
-    }
-    const digest = createHash("sha256").update(mask).digest("hex");
-    const path = join(maskDirectory, `${digest}.png`);
-    try {
-      await writeFile(path, mask, { flag: "wx", mode: 0o600 });
-    } catch (error) {
-      if (!record(error) || error.code !== "EEXIST") {
-        throw error;
-      }
-    }
-    captures.push({
-      ...result,
-      ...metrics,
-      mask: {
-        digest,
-        mediaType: "image/png",
-        bytes: mask.length,
-        width: candidate.width,
-        height: candidate.height,
-        path: relative(local.directory, path).split("\\").join("/"),
-      },
-    });
   }
   return {
-    mode: LOCAL_COMPARISON_MODE,
-    reference: selected.reference,
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
-    captures,
-    removals: [...reference.values()].map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+    ...result,
+    mask: { digest, bytes: mask.length, width: candidate.width, height: candidate.height },
   };
 }

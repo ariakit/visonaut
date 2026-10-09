@@ -76,7 +76,6 @@ export async function downloadCaptures({
     !Number.isSafeInteger(attempt) ||
     attempt < 1 ||
     shards.length < 1 ||
-    shards.length > 16 ||
     new Set(shards).size !== shards.length
   ) {
     throw new CliError("The required capture job set is invalid.", 4);

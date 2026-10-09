@@ -6,10 +6,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MockInstance } from "vitest";
 import { runCli } from "../src/index.js";
 import { fixture } from "./fixture.js";
+import type { Prepared } from "./page-service.js";
 
-const prepared = vi.hoisted(() => ({ directory: "", server: "https://visonaut.example" }));
-// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
-vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
+const prepared = vi.hoisted((): Prepared => ({
+  server: "https://visonaut.example",
+  bundles: [],
+  directory: "",
+  directories: [],
+}));
+// Workflow tests cover artifact and job provenance. These cases start at the verified bundle.
+vi.mock("../src/workflow.js", async () =>
+  (await import("./page-service.js")).workflowMock(prepared),
+);
 
 const environment = {
   VISONAUT_SERVER: prepared.server,
@@ -20,7 +28,7 @@ const environment = {
 };
 
 const WAIT_MS = 30_000;
-const directories: string[] = [];
+const directories: string[] = prepared.directories;
 
 let timeouts: MockInstance<typeof setTimeout>;
 
@@ -43,12 +51,12 @@ afterEach(async () => {
 /**
  * Serve the reserve call. The service sends `Retry-After: 1` with each 503. A call that `refuse`
  * answers with a code is refused. The first call that it leaves alone is accepted, and the next
- * request (the reference page) ends the run with a service failure.
+ * request (the capture page) ends the run with a service failure.
  */
 async function serve(refuse: (call: number) => string | undefined) {
   const local = await fixture();
   directories.push(local.directory);
-  prepared.directory = local.directory;
+  prepared.bundles = [local];
   const [capture] = local.manifest.captures;
   if (!capture) {
     throw new Error("The fixture has no capture.");
@@ -96,7 +104,8 @@ async function serve(refuse: (call: number) => string | undefined) {
         runId: "run-1",
         capability: "run-capability",
         expiresAt: new Date(Date.now() + 600_000).toISOString(),
-        comparisonMode: "local-v1",
+        comparisonMode: "local-pages-v1",
+        reference: { snapshotId: null, baselineRevision: 0, digest: null, pages: 0 },
       });
     }),
   );
@@ -108,7 +117,10 @@ function submit() {
   let stderr = "";
   const running = runCli({
     argv: ["submit", "--shard", "chrome-1"],
-    environment,
+    environment: {
+      ...environment,
+      GITHUB_OUTPUT: join(prepared.bundles[0]?.directory ?? "", "output.txt"),
+    },
     stdout: (value) => {
       stdout += value;
     },
@@ -135,13 +147,13 @@ describe("a reserve call that the service refuses at its capacity limit", () => 
   it("waits, asks for a new token for each try, and goes on after 3 refusals", async () => {
     const service = await serve((call) => (call <= 3 ? "capacity_exceeded" : undefined));
     const result = await submit().finish();
-    // The run goes on to the reference page, which the stub fails.
+    // The run goes on to the capture page, which the stub fails.
     expect(service.paths).toEqual([
       "/v1/runs",
       "/v1/runs",
       "/v1/runs",
       "/v1/runs",
-      "/v1/runs/run-1/reference",
+      "/v1/runs/run-1/pages",
     ]);
     // Each reserve call carries the token that was requested just before it.
     expect(service.tokenRequests).toHaveLength(4);

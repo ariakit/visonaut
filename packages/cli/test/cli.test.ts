@@ -2,22 +2,24 @@ import { mkdtemp, mkdir, rm, symlink, truncate, writeFile } from "node:fs/promis
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { digestJson } from "@visonaut/protocol";
+import { captureRowView } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
-import {
-  emptyReferencePage,
-  expectLocalReserve,
-  imagePutNumbers,
-  reserveAnswer,
-  stagedCounts,
-  submitShard,
-} from "./trusted.js";
+import { json, pageService } from "./page-service.js";
+import type { Prepared } from "./page-service.js";
+import { imagePutNumbers, stagedCounts, submitShard } from "./trusted.js";
 
-const prepared = vi.hoisted(() => ({ directory: "", server: "https://review.example.test" }));
-// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
-vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
+const prepared = vi.hoisted((): Prepared => ({
+  server: "https://review.example.test",
+  bundles: [],
+  directory: "",
+  directories: [],
+}));
+// Workflow tests cover artifact and job provenance. These cases start at the verified bundles.
+vi.mock("../src/workflow.js", async () =>
+  (await import("./page-service.js")).workflowMock(prepared),
+);
 
 const environment = {
   VISONAUT_SERVER: "https://review.example.test",
@@ -27,19 +29,7 @@ const environment = {
     "https://run.actions.githubusercontent.com/id-token?api-version=2.0",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
 };
-const directories: string[] = [];
-
-/** The requests of one staged shard: reserve, reference, declaration, PUT, finalize, and submit. */
-const stagedPaths = [
-  "/id-token",
-  "/v1/runs",
-  "/v1/runs/run-123/reference",
-  "/v1/runs/run-123/shards/chrome-1",
-  "/v1/uploads/ticket-1",
-  "/v1/runs/run-123/finalize",
-  "/id-token",
-  "/v1/runs/456/submit",
-];
+const directories: string[] = prepared.directories;
 
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -47,13 +37,6 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
-
-function json(value: unknown, status = 200): Response {
-  return new Response(JSON.stringify(value), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 async function execute(argv: string[], overrides: NodeJS.ProcessEnv = {}) {
   let stdout = "";
@@ -81,118 +64,35 @@ type Local = Awaited<ReturnType<typeof localFixture>>;
 
 /** Run `submit --shard` on the capture of `local`. */
 function submit(local: Local, overrides: NodeJS.ProcessEnv = {}) {
-  return submitShard(prepared, local.directory, { ...environment, ...overrides });
+  return submitShard(prepared, [local], { ...environment, ...overrides });
 }
 
-interface MockServiceOptions {
-  local: Local;
-  change?: (url: URL, response: Record<string, unknown>) => unknown;
-  requestToken?: string;
-  oidcToken?: string;
-  /** The workflow attempt that the submit request must carry. */
-  attempt?: number;
+/** The requests of one staged run: reserve, one page, one PUT, the index, and submit. */
+function stagedPaths(local: Local) {
+  return [
+    "/id-token",
+    "/v1/runs",
+    "/v1/runs/run-123/pages",
+    `/v1/uploads/ticket-${local.capture.image.digest}.`,
+    "/v1/runs/run-123/index",
+    "/id-token",
+    "/v1/runs/456/submit",
+  ];
 }
 
-async function mockService({
-  local,
-  change,
-  requestToken = "github-request-secret",
-  oidcToken = "oidc-secret",
-  attempt = 1,
-}: MockServiceOptions) {
-  const requests: { url: URL; options: RequestInit | undefined }[] = [];
-  // Submit adds the result of the local comparison to the manifest. The declaration digest is
-  // the digest of the posted manifest.
-  let declared: Record<string, unknown> | undefined;
-  let manifestDigest = "";
-  let reservation = { capability: "capability-secret", expiresAt: "" };
-  const fetch = vi.fn(async (input: string | URL | Request, options?: RequestInit) => {
-    const url = new URL(input instanceof Request ? input.url : input);
-    requests.push({ url, options });
-    let response: Record<string, unknown>;
-    if (url.hostname.endsWith(".actions.githubusercontent.com")) {
-      expect([environment.VISONAUT_SERVER, `${environment.VISONAUT_SERVER}/submit`]).toContain(
-        url.searchParams.get("audience"),
-      );
-      expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${requestToken}`);
-      response = { value: oidcToken };
-    } else if (url.pathname === "/v1/runs") {
-      expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
-      expectLocalReserve(options);
-      reservation = {
-        capability: "capability-secret",
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
-      };
-      response = reserveAnswer({ schemaVersion: "1.0", runId: "run-123", ...reservation });
-    } else if (url.pathname === "/v1/runs/run-123/reference") {
-      expect(new Headers(options?.headers).get("Authorization")).toBe("Bearer capability-secret");
-      response = await emptyReferencePage(options, reservation);
-    } else if (url.pathname.endsWith("/shards/chrome-1")) {
-      expect(new Headers(options?.headers).get("Authorization")).toBe("Bearer capability-secret");
-      declared = JSON.parse(String(options?.body));
-      manifestDigest = await digestJson(declared);
-      response = {
-        schemaVersion: "1.0",
-        manifestDigest,
-        uploads: [
-          {
-            imageDigest: local.capture.image.digest,
-            ticket: "ticket-1",
-            maxBytes: imageBytes.length,
-          },
-        ],
-      };
-    } else if (url.pathname === "/v1/uploads/ticket-1") {
-      expect(options?.body).toEqual(imageBytes);
-      expect(options?.method).toBe("PUT");
-      expect(new Headers(options?.headers).get("Content-Type")).toBe("image/png");
-      return new Response(null, { status: 204 });
-    } else if (url.pathname.endsWith("/finalize")) {
-      expect(options?.method).toBe("POST");
-      expect(JSON.parse(String(options?.body))).toEqual({
-        schemaVersion: "1.0",
-        shardKey: "chrome-1",
-        manifestDigest,
-      });
-      response = {
-        schemaVersion: "1.0",
-        runId: "run-123",
-        shardKey: "chrome-1",
-        manifestDigest,
-        state: "staged",
-      };
-    } else if (url.pathname === "/v1/runs/456/submit") {
-      expect(options?.method).toBe("POST");
-      expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
-      expect(JSON.parse(String(options?.body))).toEqual({
-        schemaVersion: "1.0",
-        workflowAttempt: attempt,
-      });
-      response = {
-        schemaVersion: "1.0",
-        runId: "run-123",
-        state: "submitted",
-        submittedAt: 1790200000000,
-      };
-    } else {
-      throw new Error("Unexpected request");
-    }
-    return json(change ? await change(url, response) : response);
-  });
-  vi.stubGlobal("fetch", fetch);
-  return { requests, fetch, declared: () => declared };
-}
+// A service with no reference: the capture is new, so Submit stages its original.
+const mockService = pageService;
 
 describe("submit --shard transport", () => {
   it("stages with GitHub runner and OIDC credentials larger than ordinary text fields", async () => {
     const local = await localFixture();
     const requestToken = "request-" + "a".repeat(8192);
     const oidcToken = "oidc-" + "b".repeat(12288);
-    const { requests } = await mockService({ local, requestToken, oidcToken });
+    const service = mockService({ requestToken, oidcToken });
     const result = await submit(local, { ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken });
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("Shard chrome-1 staged and run run-123 submitted.");
-    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths);
+    expect(result.stdout).toContain("The captures are staged and run run-123 is submitted.");
+    expect(service.paths()).toEqual(stagedPaths(local));
     expect(result.stdout + result.stderr).not.toContain(requestToken);
     expect(result.stdout + result.stderr).not.toContain(oidcToken);
   });
@@ -201,7 +101,7 @@ describe("submit --shard transport", () => {
     "rejects oversized or malformed GitHub credentials before sending a request",
     async (requestToken) => {
       const local = await localFixture();
-      const { fetch } = await mockService({ local });
+      const { fetch } = mockService();
       const result = await submit(local, { ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken });
       expect(result.code).toBe(4);
       expect(fetch).not.toHaveBeenCalled();
@@ -212,7 +112,7 @@ describe("submit --shard transport", () => {
   it("rejects an oversized OIDC response before using it with the service", async () => {
     const local = await localFixture();
     const oidcToken = "b".repeat(65537);
-    const { fetch } = await mockService({ local, oidcToken });
+    const { fetch } = mockService({ oidcToken });
     const result = await submit(local);
     expect(result.code).toBe(4);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -221,74 +121,75 @@ describe("submit --shard transport", () => {
 
   it("stages exact bytes with a stable run identity and does not wait for review", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({ local });
+    const service = mockService();
     const result = await submit(local);
     expect(result.code).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain(
-      "Shard chrome-1 staged and run run-123 submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n",
+      "The captures are staged and run run-123 is submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n",
     );
     expect(stagedCounts(result.stdout)).toEqual({ originals: 1, reused: 0, uploaded: 1 });
     expect(imagePutNumbers(result.stdout)).toMatchObject({
       bytes: imageBytes.length,
       retryWaitMs: 0,
     });
-    expect(requests.map((item) => item.url.pathname)).toEqual(stagedPaths);
-    expect(requests.every((item) => item.options?.redirect === "error")).toBe(true);
+    expect(service.paths()).toEqual(stagedPaths(local));
+    expect(service.uploads.get(local.capture.image.digest)).toEqual(Uint8Array.from(imageBytes));
+    expect(service.requests.every((item) => item.options?.redirect === "error")).toBe(true);
     expect(result.stdout).not.toContain("secret");
   });
 
-  it("accepts the workflow-owned staged receipt without inventing expected shards", async () => {
+  it("sends the capture as one row with its name, its test, and its profile", async () => {
     const local = await localFixture();
-    await mockService({
-      local,
-      change: (url, response) =>
-        url.pathname.endsWith("/finalize")
-          ? {
-              schemaVersion: "1.0",
-              runId: "run-123",
-              shardKey: "chrome-1",
-              manifestDigest: response.manifestDigest,
-              state: "staged",
-            }
-          : response,
+    const service = mockService();
+    expect((await submit(local)).code).toBe(0);
+    const [page] = service.pages();
+    const [row] = page?.rows ?? [];
+    if (!page || !row) throw new Error("The CLI sent no row.");
+    expect(await captureRowView(page, row)).toEqual({
+      itemKey: "dialog/open",
+      variantKey: "react-light",
+      name: "Open dialog",
+      variant: local.capture.variant,
+      test: {
+        id: "chrome-1/test-1",
+        file: "dialog.test.ts",
+        titlePath: ["dialog", "open"],
+        retry: 1,
+      },
+      profile: local.manifest.profiles[0]?.profile,
+      profileDigest: local.capture.profileDigest,
+      comparison: { threshold: 0.2 },
+      image: {
+        digest: local.capture.image.digest,
+        bytes: imageBytes.length,
+        width: 1,
+        height: 1,
+      },
+      result: 1,
     });
-    const result = await submit(local);
-    expect(result.code).toBe(0);
-    expect(result.stdout).toContain("Shard chrome-1 staged and run run-123 submitted.");
   });
 
-  it("rejects a staged receipt for a different manifest", async () => {
+  it("rejects a staged receipt for a different manifest digest", async () => {
     const local = await localFixture();
-    await mockService({
-      local,
+    mockService({
       change: (url, response) =>
-        url.pathname.endsWith("/finalize")
+        url.pathname.endsWith("/index")
           ? { ...response, manifestDigest: "f".repeat(64) }
           : response,
     });
     expect((await submit(local)).code).toBe(1);
   });
 
-  it("keeps compatible optional manifest fields in the declared digest", async () => {
+  it("rejects a run-status response instead of treating it as a staged run", async () => {
     const local = await localFixture();
-    Object.assign(local.manifest, { schemaVersion: "1.4", futureMetadata: { text: "compatible" } });
-    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-    const service = await mockService({ local });
-    expect((await submit(local)).code).toBe(0);
-    // Submit adds only the result of the local comparison to the manifest.
-    expect(service.declared()).toEqual({ ...local.manifest, localComparison: expect.any(Object) });
-  });
-
-  it("rejects a legacy run-status response instead of treating it as a staged shard", async () => {
-    const local = await localFixture();
-    await mockService({
-      local,
+    mockService({
       change: (url, response) =>
-        url.pathname.endsWith("/finalize")
+        url.pathname.endsWith("/index")
           ? {
               schemaVersion: "1.0",
               runId: "run-123",
+              manifestDigest: response.manifestDigest,
               state: "passed",
               reviewUrl: "/runs/run-123",
               completedShards: 1,
@@ -300,67 +201,65 @@ describe("submit --shard transport", () => {
     expect((await submit(local)).code).toBe(1);
   });
 
-  it("refuses a mismatched declaration digest", async () => {
+  it("refuses a mismatched page digest", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: (url, response) =>
-        url.pathname.includes("/shards/")
-          ? { schemaVersion: "1.0", manifestDigest: "unused", uploads: [] }
+        url.pathname.endsWith("/pages")
+          ? { schemaVersion: "1.0", pageDigest: "unused", uploads: [] }
           : response,
     });
     const result = await submit(local);
     expect(result.code).toBe(1);
-    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
+    expect(service.paths()).toEqual(stagedPaths(local).slice(0, 3));
   });
 
-  it("replays an accepted shard without uploading its images again", async () => {
+  it("sends an accepted page again without uploading its images again", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: (url, response) =>
-        url.pathname.includes("/shards/") ? { ...response, uploads: [] } : response,
+        url.pathname.endsWith("/pages") ? { ...response, uploads: [] } : response,
     });
     const result = await submit(local);
     expect(result.code).toBe(0);
     expect(stagedCounts(result.stdout)).toMatchObject({ uploaded: 0 });
-    expect(requests.map(({ url }) => url.pathname)).toEqual(
-      stagedPaths.filter((path) => !path.startsWith("/v1/uploads/")),
+    expect(service.paths()).toEqual(
+      stagedPaths(local).filter((path) => !path.startsWith("/v1/uploads/")),
     );
   });
 
   it("checks the image again if it changes after preflight", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: async (url, response) => {
-        if (url.pathname.includes("/shards/")) {
-          await writeFile(join(local.directory, "capture.png"), Buffer.alloc(imageBytes.length));
+        if (url.pathname.endsWith("/pages")) {
+          const stored = join(prepared.directory, "images", `${local.capture.image.digest}.png`);
+          await writeFile(stored, Buffer.alloc(imageBytes.length));
         }
         return response;
       },
     });
-    expect((await submit(local)).code).toBe(1);
-    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
+    const result = await submit(local);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("dialog/open (react-light): An image does not match");
+    expect(service.paths()).toEqual(stagedPaths(local).slice(0, 3));
   });
 
   it("does not use an expired capability", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: (url, response) =>
         url.pathname === "/v1/runs" ? { ...response, expiresAt: "2000-01-01T00:00:00Z" } : response,
     });
     expect((await submit(local)).code).toBe(4);
-    expect(requests).toHaveLength(2);
+    expect(service.requests).toHaveLength(2);
   });
 
   it("refuses an upload ticket for a different image", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: (url, response) =>
-        url.pathname.includes("/shards/")
+        url.pathname.endsWith("/pages")
           ? {
               ...response,
               uploads: [
@@ -370,7 +269,7 @@ describe("submit --shard transport", () => {
           : response,
     });
     expect((await submit(local)).code).toBe(1);
-    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
+    expect(service.paths()).toEqual(stagedPaths(local).slice(0, 3));
   });
 
   it("fails refusals without printing a credential echoed by the service", async () => {
@@ -384,23 +283,55 @@ describe("submit --shard transport", () => {
     expect(result.stderr).toContain("HTTP 500");
     expect(result.stderr).not.toContain("secret");
   });
+
+  it("stops at the reserve call of a service that has no capture pages", async () => {
+    const local = await localFixture();
+    // The service of today refuses the comparison mode before it reserves a run.
+    const service = mockService({
+      respond: (url) =>
+        url.pathname === "/v1/runs"
+          ? json(
+              { schemaVersion: "1.0", error: { code: "comparison_mode", message: "private" } },
+              400,
+            )
+          : undefined,
+    });
+    const result = await submit(local);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(
+      "visonaut: The service refused the request (HTTP 400, comparison_mode). No visual approval was granted.\n",
+    );
+    expect(service.paths()).toEqual(["/id-token", "/v1/runs"]);
+  });
+
+  it("refuses a reserve answer with the comparison mode of the manifest requests", async () => {
+    const local = await localFixture();
+    const service = mockService({
+      change: (url, response) =>
+        url.pathname === "/v1/runs" ? { ...response, comparisonMode: "local-v1" } : response,
+    });
+    const result = await submit(local);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("The service does not support capture pages.");
+    expect(service.paths()).toEqual(["/id-token", "/v1/runs"]);
+  });
 });
 
 describe("submit step", () => {
   it("sends the signed workflow attempt with a token for the submit audience", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({ local });
+    const service = mockService();
     const result = await submit(local);
     expect(result.code).toBe(0);
     // The reserve call and the submit call each use their own token.
-    const audiences = requests
+    const audiences = service.requests
       .filter(({ url }) => url.pathname === "/id-token")
       .map(({ url }) => url.searchParams.get("audience"));
     expect(audiences).toEqual([
       "https://review.example.test/submit",
       "https://review.example.test/submit",
     ]);
-    const last = requests.at(-1);
+    const last = service.requests.at(-1);
     expect(last?.url.pathname).toBe("/v1/runs/456/submit");
     expect(JSON.parse(String(last?.options?.body))).toEqual({
       schemaVersion: "1.0",
@@ -408,16 +339,18 @@ describe("submit step", () => {
     });
   });
 
-  it("sends the attempt of a rerun in the submit request", async () => {
+  it("sends the attempt of a rerun in the reserve call, the index, and the submit request", async () => {
     const local = await localFixture();
-    // A submitted shard belongs to the attempt of its workflow run.
-    local.manifest.run.workflowAttempt = 2;
-    local.manifest.shard.sourceAttempt = 2;
-    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-    const { requests } = await mockService({ local, attempt: 2 });
+    // The capture job ran in attempt 1, and the signed Submit job runs in attempt 2.
+    prepared.attempt = 2;
+    const service = mockService();
     const result = await submit(local, { GITHUB_RUN_ATTEMPT: "2" });
+    prepared.attempt = undefined;
     expect(result.code).toBe(0);
-    expect(JSON.parse(String(requests.at(-1)?.options?.body))).toEqual({
+    expect(service.reserveBodies[0]).toMatchObject({ workflowRunId: "456", workflowAttempt: 2 });
+    expect(service.index()?.job).toEqual({ id: "789", attempt: 2 });
+    expect(service.index()?.sources[0]).toMatchObject({ shardKey: "chrome-1", workflowAttempt: 1 });
+    expect(JSON.parse(String(service.requests.at(-1)?.options?.body))).toEqual({
       schemaVersion: "1.0",
       workflowAttempt: 2,
     });
@@ -425,26 +358,28 @@ describe("submit step", () => {
 
   it("prints only aggregate image PUT measurements for a signed submit", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({ local });
+    const service = mockService();
     const result = await submit(local);
     expect(result.code).toBe(0);
-    expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
+    expect(result.stdout).toContain(
+      "Visonaut staged 1 originals (0 reused, 1 uploaded) and 1 capture pages",
+    );
     expect(result.stdout).toMatch(
       new RegExp(
         `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait\\.`,
       ),
     );
     expect(result.stdout).not.toContain(local.capture.name);
-    expect(result.stdout).not.toContain(local.capture.image.path);
+    expect(result.stdout).not.toContain(local.capture.image.digest);
     expect(result.stdout).not.toContain("secret");
-    expect(requests).toHaveLength(stagedPaths.length);
+    expect(service.requests).toHaveLength(stagedPaths(local).length);
   });
 
   it.each([{ GITHUB_RUN_ATTEMPT: "2" }, { GITHUB_RUN_ID: "457" }])(
     "rejects a capture from another run or attempt before staging: %j",
     async (overrides) => {
       const local = await localFixture();
-      const { fetch } = await mockService({ local });
+      const { fetch } = mockService();
       const result = await submit(local, overrides);
       expect(result.code).toBe(4);
       expect(fetch).not.toHaveBeenCalled();
@@ -453,14 +388,13 @@ describe("submit step", () => {
 
   it("rejects a submission receipt for a different internal run", async () => {
     const local = await localFixture();
-    const { requests } = await mockService({
-      local,
+    const service = mockService({
       change: (url, response) =>
         url.pathname.endsWith("/submit") ? { ...response, runId: "other-run" } : response,
     });
     const result = await submit(local);
     expect(result.code).toBe(1);
-    expect(requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
+    expect(service.requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
   });
 });
 
@@ -541,7 +475,8 @@ describe("local data validation before network access", () => {
     const file = join(directory, "manifest.json");
     await writeFile(file, "{}");
     await truncate(file, 8 * 1024 * 1024 + 1);
-    expect((await submitShard(prepared, directory, environment)).code).toBe(1);
+    const { manifest } = await localFixture();
+    expect((await submitShard(prepared, [{ directory, manifest }], environment)).code).toBe(1);
   });
 });
 
