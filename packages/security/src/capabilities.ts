@@ -89,6 +89,30 @@ function parseCapability(value: unknown): IngestCapability {
   };
 }
 
+/** The two times are in seconds since the epoch, as in the `iat` and `exp` claims. */
+interface SignTokenParams {
+  configuration: CapabilityConfiguration;
+  kind: "ingest" | "upload" | "reuse";
+  claims: object;
+  issuedAt: number;
+  expiresAt: number;
+}
+
+function signToken({ configuration, kind, claims, issuedAt, expiresAt }: SignTokenParams) {
+  return new SignJWT({ ...claims, kind, environment: configuration.environment })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setIssuer(configuration.issuer)
+    .setAudience(`visonaut:${kind}:${configuration.environment}`)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt(issuedAt)
+    .setExpirationTime(expiresAt)
+    .sign(signingKey(configuration));
+}
+
+function secondsSinceEpoch() {
+  return Math.floor(Date.now() / 1000);
+}
+
 async function issueToken(
   configuration: CapabilityConfiguration,
   kind: "ingest" | "upload" | "reuse",
@@ -98,14 +122,16 @@ async function issueToken(
   if (!Number.isSafeInteger(expiresIn) || expiresIn < 1 || expiresIn > 900) {
     throw new Error("Ingest credentials must expire within 15 minutes.");
   }
-  return new SignJWT({ ...claims, kind, environment: configuration.environment })
-    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setIssuer(configuration.issuer)
-    .setAudience(`visonaut:${kind}:${configuration.environment}`)
-    .setJti(crypto.randomUUID())
-    .setIssuedAt()
-    .setExpirationTime(`${expiresIn}s`)
-    .sign(signingKey(configuration));
+  const issuedAt = secondsSinceEpoch();
+  return signToken({ configuration, kind, claims, issuedAt, expiresAt: issuedAt + expiresIn });
+}
+
+function invalidCapability() {
+  return new SecurityError(
+    "invalid_capability",
+    401,
+    "The ingest credential is invalid or expired.",
+  );
 }
 
 async function verifyToken(
@@ -127,11 +153,7 @@ async function verifyToken(
     }
     return result.payload;
   } catch {
-    throw new SecurityError(
-      "invalid_capability",
-      401,
-      "The ingest credential is invalid or expired.",
-    );
+    throw invalidCapability();
   }
 }
 
@@ -141,6 +163,36 @@ export function issueIngestCapability(
   expiresIn = 600,
 ): Promise<string> {
   return issueToken(configuration, "ingest", parseCapability(capability), expiresIn);
+}
+
+/**
+ * Bind a reference to the verified ingest credential `token`. The new
+ * credential has the claims and the end of `token`. Only
+ * `issueIngestCapability`, after an identity check, starts a new life.
+ * `expiresAt` is the end of both credentials, as an ISO date string.
+ */
+export async function bindIngestReference(
+  configuration: CapabilityConfiguration,
+  token: string,
+  reference: LocalReferenceBinding,
+): Promise<{ token: string; expiresAt: string }> {
+  const payload = await verifyToken(configuration, "ingest", token);
+  const issuedAt = secondsSinceEpoch();
+  // The credential can end between its verification and this step.
+  if (payload.exp === undefined || payload.exp <= issuedAt) {
+    throw invalidCapability();
+  }
+  const claims = parseCapability({ ...payload, reference });
+  return {
+    token: await signToken({
+      configuration,
+      kind: "ingest",
+      claims,
+      issuedAt,
+      expiresAt: payload.exp,
+    }),
+    expiresAt: new Date(payload.exp * 1000).toISOString(),
+  };
 }
 
 /** Only ingest routes call this function; it grants no private read/review access. */
