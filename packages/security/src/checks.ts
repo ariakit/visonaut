@@ -1,5 +1,5 @@
 import { numericId, record, SecurityError } from "./errors.js";
-import type { GitHubClient } from "./github.js";
+import { GitHubUnavailableError, type GitHubClient } from "./github.js";
 
 export const CHECK_NAME = "Visonaut";
 export const REVIEW_LINK_CHECK_NAME = "Open Visonaut review";
@@ -23,6 +23,33 @@ export interface StatusDelivery {
   details_url: string;
   attempts: number;
   max_attempts: number;
+}
+
+/** Structural match for the sender result that the service retries with no lock. */
+export interface StatusReadFailure {
+  readError: string;
+}
+
+/**
+ * The result of a sender whose GitHub read failed before its write request.
+ * The text has the HTTP status of GitHub. A failure with no answer has none.
+ */
+export function statusReadFailure(error: unknown): StatusReadFailure {
+  const status = error instanceof GitHubUnavailableError ? error.upstreamStatus : undefined;
+  return { readError: status ? `${String(error)} GitHub status: ${status}.` : String(error) };
+}
+
+/**
+ * The end time that GitHub stores for a completed check with this conclusion.
+ * A PATCH that sends it again keeps the duration that the check shows.
+ */
+export function storedEndTime(
+  check: Record<string, unknown>,
+  conclusion: StatusDelivery["conclusion"],
+): string | undefined {
+  if (check.status !== "completed") return undefined;
+  if (check.conclusion !== conclusion) return undefined;
+  return typeof check.completed_at === "string" ? check.completed_at : undefined;
 }
 
 function reviewUrl(url: string, origin: string): string {
@@ -159,6 +186,32 @@ interface SendCheckParams {
   isCurrent: () => Promise<boolean>;
 }
 
+interface ShownResultParams {
+  existing: Record<string, unknown>;
+  href: string;
+  conclusion: StatusDelivery["conclusion"];
+  output: ReturnType<typeof genericCheckOutput>;
+}
+
+/**
+ * True when the check on GitHub already shows this completed result.
+ * A check that is not completed has no conclusion, so "pending" never matches.
+ */
+function showsCompletedResult({ existing, href, conclusion, output }: ShownResultParams) {
+  const shown =
+    typeof existing.output === "object" && existing.output !== null ? existing.output : {};
+  return (
+    existing.name === CHECK_NAME &&
+    existing.details_url === href &&
+    existing.status === "completed" &&
+    existing.conclusion === conclusion &&
+    "title" in shown &&
+    shown.title === output.title &&
+    "summary" in shown &&
+    shown.summary === output.summary
+  );
+}
+
 /** Use only as deliverStatus's callback; its persistent lock owns serialization. */
 export async function sendGitHubCheck({
   github,
@@ -167,10 +220,17 @@ export async function sendGitHubCheck({
   checkIdentity,
   origin,
   isCurrent,
-}: SendCheckParams): Promise<void | "not-sent"> {
+}: SendCheckParams): Promise<void | "not-sent" | StatusReadFailure> {
   const checkId = numericId(intent.check_id);
   const path = `/repos/${github.repository}/check-runs/${checkId}`;
-  const existing = record(await github.request(path));
+  let existing: Record<string, unknown>;
+  try {
+    existing = record(await github.request(path));
+  } catch (error) {
+    // A failed read proves that this invocation started no write request.
+    // Keep the PATCH outside this block: a failed PATCH can still write.
+    return statusReadFailure(error);
+  }
   const legacyCheck =
     existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
   if (
@@ -188,6 +248,8 @@ export async function sendGitHubCheck({
   const href = reviewUrl(intent.details_url, origin);
   const output = genericCheckOutput(intent.conclusion, href);
   if (!(await isCurrent())) return "not-sent";
+  // Each PATCH of a completed check writes its end time. Send none for the same result.
+  if (showsCompletedResult({ existing, href, conclusion: intent.conclusion, output })) return;
   await github.request(path, {
     method: "PATCH",
     body: JSON.stringify({
@@ -197,7 +259,11 @@ export async function sendGitHubCheck({
       status: intent.conclusion === "pending" ? "in_progress" : "completed",
       ...(intent.conclusion === "pending"
         ? {}
-        : { conclusion: intent.conclusion, completed_at: new Date().toISOString() }),
+        : {
+            conclusion: intent.conclusion,
+            // Keep the first end time while the conclusion stays the same.
+            completed_at: storedEndTime(existing, intent.conclusion) ?? new Date().toISOString(),
+          }),
     }),
   });
 }
