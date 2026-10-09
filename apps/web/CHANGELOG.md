@@ -107,7 +107,7 @@
   await service.createComparison({ ...comparison, localComparison: verifiedReceipt });
   ```
 
-  The private image validation endpoint still supports PNG and WebP. Remove the retired `comparisonMaxAttempts` field from selected `VISONAUT_API_LIMITS` overrides before deployment. Remaining numeric bounds keep their existing values. Operators must detach the existing comparison and comparison dead-letter consumers before they deploy the fetch-only validation Worker. Queue resources and stored records remain in place. Follow the [retirement runbook](https://github.com/ariakit/visonaut/blob/main/docs/operations/retire-server-comparison.md).
+  The private image validation endpoint still supports PNG and WebP. Remove the retired `comparisonMaxAttempts` field from selected `VISONAUT_API_LIMITS` overrides before deployment. Remaining numeric bounds keep their existing values. Operators must detach the existing comparison and comparison dead-letter consumers before they deploy the fetch-only validation Worker. Queue resources and stored records remain in place. Follow the [retirement runbook](https://github.com/ariakit/visonaut/blob/main/docs/history/operations/retire-server-comparison.md).
 
 ### Patch Changes
 

@@ -2,7 +2,7 @@
 
 This directory preserves the 2026-09-22 isolated v2 recovery experiment. It does not test the later v3 grouped inventory or archive lifecycle. Use the current production backup code for those checks. The frozen Worker bundles contain only code and synthetic diagnostic identifiers. The SQL export, corpus, and credentials are not included.
 
-`recorded-backup-worker.js.gz` is the exact bundle deployed for the complete backup. `recorded-worker.js.gz` is the later bundle used for restore and the separate page-size probe. The later bundle adds diagnostic routes and retains the same frozen backup and copy implementation. The source hashes and measured result are in `docs/evidence/backup-restore-v2.json`.
+`recorded-backup-worker.js.gz` is the exact bundle deployed for the complete backup. `recorded-worker.js.gz` is the later bundle used for restore and the separate page-size probe. The later bundle adds diagnostic routes and retains the same frozen backup and copy implementation. The source hashes and measured result are in `docs/history/evidence/backup-restore-v2.json`.
 
 The controller is adapted only to read new resource names, local paths, and credentials from configuration. The frozen schema and fixture generator reproduce the synthetic data shape. New measurements will differ with the chosen corpus, service location, and runtime. Do not call repeated image bytes new browser captures.
 

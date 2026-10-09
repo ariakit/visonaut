@@ -26,7 +26,7 @@ frozen-package/originals/cost-model/cadence-sensitivity/projection.json
 frozen-package/originals/cost-model/large-backup/metrics-01/SUMMARY.json
 ```
 
-Those files retain historical paths, commands, formatting, and review scope. Their original commands are provenance, not portable hosted replay instructions. Use the wrapper above for the local check. The [evidence summary](../../../docs/evidence/v3-large-numeric/README.md) states the measurement and recovery limits.
+Those files retain historical paths, commands, formatting, and review scope. Their original commands are provenance, not portable hosted replay instructions. Use the wrapper above for the local check. The [evidence summary](../../../docs/history/evidence/v3-large-numeric/README.md) states the measurement and recovery limits.
 
 The four backup SQL bodies, private image corpus, live credentials, fresh resources, runtime dependencies, and some historical cost-model bodies remain omitted. The saved SQL identities agree across the retained receipts, but the local check cannot rehash omitted SQL bytes. The frozen drill uses migrations through 0012 and earlier packing and daily backup identities. A successful local check does not establish final-source performance, large RTO, sustained capacity, or launch readiness.
 
