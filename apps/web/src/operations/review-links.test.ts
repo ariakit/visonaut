@@ -1,7 +1,7 @@
 import { GitHubUnavailableError } from "@visonaut/security";
 import { expect, it, vi } from "vitest";
 import { Service } from "@visonaut/service";
-import { captured, context, TestDatabase } from "./test-fixtures.ts";
+import { addUndecidedChange, captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { publishReviewLinks } from "./review-links.ts";
@@ -226,11 +226,11 @@ it("stores no review state in the update of a mirror check that has no run statu
   using database = new TestDatabase();
   const fixture = reviewContext(database);
   await createProject(database);
-  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  await addCandidate(database, firstMergeSha, 1, { state: "active", visualRequired: 0 });
   await publishReviewLinks(fixture.context);
   expect(storedReviews(database)).toEqual([
     {
-      conclusion: "failure",
+      conclusion: "pending",
       review_state: null,
       review_pending: null,
       review_rejected: null,
@@ -238,6 +238,227 @@ it("stores no review state in the update of a mirror check that has no run statu
     },
   ]);
 });
+
+async function rejectChange(service: Service, index: number, now: number) {
+  const row = (await service.comparisonRows("comparison-run"))[index];
+  if (!row) {
+    throw new Error("Missing review row.");
+  }
+  return service.review({
+    commandId: `reject-run-${index}`,
+    actorId: "reviewer",
+    sessionId: "session",
+    comparisonId: "comparison-run",
+    verdict: "rejected",
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: row.item_key, variantKey: row.variant_key },
+    now,
+  });
+}
+
+it("sends the mirror check a new update for a decision that changes only a count", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await addUndecidedChange(database, "comparison-run");
+
+  await publishReviewLinks(fixture.context);
+  await rejectChange(service, 0, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  // The second Reject changes no state and no conclusion: only two counts.
+  await rejectChange(service, 1, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  // A pass with no decision sends nothing.
+  await publishReviewLinks(fixture.context);
+
+  expect(fixture.patches.map((patch) => patch.body)).toEqual([
+    expect.objectContaining({
+      conclusion: "failure",
+      output: expect.objectContaining({ title: "1 change needs review" }),
+    }),
+    expect.objectContaining({
+      conclusion: "failure",
+      output: expect.objectContaining({ title: "1 change rejected" }),
+    }),
+    expect.objectContaining({
+      conclusion: "failure",
+      output: expect.objectContaining({ title: "2 changes rejected" }),
+    }),
+  ]);
+  expect(headChecks(fixture)).toHaveLength(1);
+});
+
+it("shows the state of a run that exists at the first update of the mirror check", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await reserve(fixture.context);
+  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
+  await addCandidate(database);
+
+  await publishReviewLinks(fixture.context);
+
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({
+      status: "in_progress",
+      output: expect.objectContaining({ title: "Capturing screenshots" }),
+    }),
+  ]);
+});
+
+// A sent update with no review state is not compared, so a pass sends no
+// request for it. The mirror gets the state when its result or its comparison
+// changes.
+it("keeps the start text of a sent mirror update while its new run captures", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database);
+  await publishReviewLinks(fixture.context);
+  await reserve(fixture.context);
+  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
+  const requests = laterRequests(fixture);
+
+  await publishReviewLinks(fixture.context);
+
+  expect(requests).toEqual([]);
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({
+      status: "in_progress",
+      output: expect.objectContaining({ title: "Checking visual coverage" }),
+    }),
+  ]);
+});
+
+/** Give each stored update the form of the time before the review columns. */
+function removeStoredReviews(database: TestDatabase) {
+  database.connection.exec(`UPDATE work_status_outbox SET review_state = NULL,
+    review_pending = NULL, review_rejected = NULL, review_approved = NULL`);
+}
+
+/** The GitHub requests of the passes after this call. */
+function laterRequests(fixture: ReturnType<typeof reviewContext>) {
+  const requests: string[] = [];
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    requests.push(`${init?.method ?? "GET"} ${path}`);
+    return request(path, init);
+  };
+  return requests;
+}
+
+// A closed pull request can get no update, so a difference that the pass
+// finds again in each pass would ask GitHub with no end.
+it("asks GitHub nothing for a completed mirror update from before the review columns", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  await publishReviewLinks(fixture.context);
+  removeStoredReviews(database);
+  fixture.pull.state = "closed";
+  const requests = laterRequests(fixture);
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    expect(await publishReviewLinks(fixture.context)).toMatchObject({
+      deferred: [],
+      attention: [],
+    });
+  }
+
+  expect(requests).toEqual([]);
+});
+
+// The same case as on the direct path: an update from before the review
+// columns that waits after a failed read. It must not get the start text.
+it("gives a mirror update with no review state that is not sent yet a new update with the state", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  let failedReads = 0;
+  fixture.context.github.request = async (path, init) => {
+    if (path.includes("/check-runs/") && !init?.method && failedReads === 0) {
+      failedReads += 1;
+      throw new GitHubUnavailableError(502);
+    }
+    return request(path, init);
+  };
+  await publishReviewLinks(fixture.context);
+  expect(fixture.patches).toEqual([]);
+  removeStoredReviews(database);
+
+  fixture.state.time += 30_000;
+  await publishReviewLinks(fixture.context);
+
+  expect(fixture.patches.map((patch) => patch.body)).toEqual([
+    expect.objectContaining({
+      status: "completed",
+      conclusion: "failure",
+      output: expect.objectContaining({ title: "Capture or comparison failed" }),
+    }),
+  ]);
+  expect(storedReviews(database).at(-1)).toMatchObject({ review_state: "failed" });
+});
+
+it("keeps the text of a completed mirror update from before the review columns until its result changes", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time, "rejected");
+  await publishReviewLinks(fixture.context);
+  removeStoredReviews(database);
+  const requests = laterRequests(fixture);
+
+  await publishReviewLinks(fixture.context);
+  expect(requests).toEqual([]);
+
+  // The approval changes the conclusion, so the mirror gets the new text.
+  await saveReview(service, fixture.state.time);
+  await publishReviewLinks(fixture.context);
+  expect(fixture.patches.at(-1)?.body).toMatchObject({
+    conclusion: "success",
+    output: { title: "1 change approved" },
+  });
+});
+
+/** The text that a check shows, with its own review link removed. */
+function shownText(check?: Record<string, unknown>): unknown {
+  return JSON.parse(
+    JSON.stringify(check?.output ?? null).replaceAll(String(check?.details_url), "LINK"),
+  );
+}
+
+it.each([
+  ["needs-review", "1 change needs review"],
+  ["rejected", "1 change rejected"],
+  ["passed", "1 change approved"],
+] as const)(
+  "gives the mirror check and the check of the run the same text for the state %s",
+  async (state, title) => {
+    using database = new TestDatabase();
+    const fixture = reviewContext(database);
+    const { service } = await readyRun(database, fixture);
+    if (state !== "passed") {
+      await addUndecidedChange(database, "comparison-run");
+    }
+    if (state === "rejected") {
+      await rejectChange(service, 0, fixture.state.time);
+    }
+
+    await deliverGitHubStatuses(fixture.context);
+    await publishReviewLinks(fixture.context);
+
+    const [mirror] = headChecks(fixture);
+    const direct = [...fixture.state.checks.values()].find(
+      (check) => check.head_sha === firstMergeSha,
+    );
+    expect(mirror?.details_url).not.toBe(direct?.details_url);
+    expect(shownText(mirror)).toMatchObject({ title });
+    expect(shownText(mirror)).toEqual(shownText(direct));
+    expect([mirror?.status, mirror?.conclusion]).toEqual([direct?.status, direct?.conclusion]);
+  },
+);
 
 it("upgrades an existing neutral PR-head link without replacing its check or tested merge", async () => {
   using database = new TestDatabase();
@@ -361,13 +582,33 @@ it("serializes a new attempt behind an already-started PR-head PATCH", async () 
   expect(fixture.state.posts).toBe(1);
 });
 
+// A result with no run has no review state. Its text names no state of a run,
+// except a failed pre-run check: its capture did not complete.
 it.each([
-  { state: "active", visualRequired: 0, status: "in_progress", conclusion: null },
-  { state: "docs_complete", visualRequired: 0, status: "completed", conclusion: "success" },
-  { state: "failed", visualRequired: 1, status: "completed", conclusion: "failure" },
+  {
+    state: "active",
+    visualRequired: 0,
+    status: "in_progress",
+    conclusion: null,
+    title: "Checking visual coverage",
+  },
+  {
+    state: "docs_complete",
+    visualRequired: 0,
+    status: "completed",
+    conclusion: "success",
+    title: "Visual capture is not required",
+  },
+  {
+    state: "failed",
+    visualRequired: 1,
+    status: "completed",
+    conclusion: "failure",
+    title: "Capture or comparison failed",
+  },
 ] as const)(
   "publishes the signed $state Plan result on the PR head without a materialized run",
-  async ({ state, visualRequired, status, conclusion }) => {
+  async ({ state, visualRequired, status, conclusion, title }) => {
     using database = new TestDatabase();
     const fixture = reviewContext(database);
     await createProject(database);
@@ -376,7 +617,12 @@ it.each([
     await publishReviewLinks(fixture.context);
 
     expect(headChecks(fixture)).toEqual([
-      expect.objectContaining({ head_sha: sourceSha, status, conclusion }),
+      expect.objectContaining({
+        head_sha: sourceSha,
+        status,
+        conclusion,
+        output: expect.objectContaining({ title }),
+      }),
     ]);
     expect(await database.prepare("SELECT id FROM visonaut_runs").first()).toBeNull();
     expect(await database.prepare("SELECT tested_sha FROM pre_run_checks").first()).toEqual({

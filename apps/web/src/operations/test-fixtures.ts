@@ -319,6 +319,21 @@ export async function captured(
   return service;
 }
 
+/**
+ * Add one changed screenshot with no decision to a comparison. Call it before
+ * the first status update of the run: it changes a count with no new revision.
+ */
+export async function addUndecidedChange(database: Database, comparisonId: string) {
+  await database
+    .prepare(`INSERT INTO visonaut_comparison_rows
+      (id, comparison_id, item_key, variant_key, ordinal, tuple_json, outcome, result_json)
+      SELECT comparison_id || ':menu', comparison_id, 'menu', variant_key, ordinal + 1,
+        tuple_json, 'changed', result_json
+      FROM visonaut_comparison_rows WHERE comparison_id = ? ORDER BY ordinal LIMIT 1`)
+    .bind(comparisonId)
+    .run();
+}
+
 export async function ingestRecords(context: OperationsContext, runId: string) {
   const image = await context.database
     .prepare("SELECT * FROM visonaut_images WHERE run_id=? AND role='original' LIMIT 1")
