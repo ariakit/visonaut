@@ -37,6 +37,14 @@ const servedAuthRoutes: ReadonlySet<string> = new Set([
   "GET /api/auth/error",
 ]);
 
+const loopbackHostnames = new Set(["127.0.0.1", "localhost", "[::1]"]);
+
+// `pnpm dev` runs the preview configuration on a loopback origin, which differs
+// from the deployed `VISONAUT_ORIGIN`. A deployed Worker never receives it.
+function isLoopbackOrigin(url: URL) {
+  return url.protocol === "http:" && loopbackHostnames.has(url.hostname);
+}
+
 function launchEnabled(value: string) {
   return value === "true";
 }
@@ -81,7 +89,7 @@ export default {
     }
     try {
       if (env.VISONAUT_ENVIRONMENT === "preview") {
-        if (url.origin !== env.VISONAUT_ORIGIN) {
+        if (url.origin !== env.VISONAUT_ORIGIN && !isLoopbackOrigin(url)) {
           return securePrivateResponse(new Response(null, { status: 403 }));
         }
         const fixture = previewFixtureResponse(request);

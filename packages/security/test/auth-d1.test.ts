@@ -10,7 +10,7 @@ const runtime = new Miniflare(
   convertV4MiniflareOptions({
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
-    compatibilityDate: "2026-09-21",
+    compatibilityDate: "2026-09-22",
     d1Databases: ["DB", "PREVIEW_DB"],
   }),
 );
