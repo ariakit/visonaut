@@ -767,6 +767,30 @@ async function expectSamePrefixRule(fixture: Fixture, cases: PrefixCase[]) {
   expect(events.results).toEqual([]);
 }
 
+it("closes the alert of a failed image deletion in the pass that deletes the images", async () => {
+  using database = new TestDatabase();
+  const fixture = productionFixture(database);
+  await inventoryRun(fixture.context, { id: "baseline", kind: "main", items: { x: "baseline" } });
+  await runUntilIdle(fixture);
+  const closed = await inventoryRun(fixture.context, {
+    id: "closed",
+    kind: "pull_request",
+    items: { x: "baseline", y: "closed" },
+  });
+  await closed.service.retireRun({ runId: "closed", now: fixture.state.time });
+  fixture.state.time += afterRetention;
+  const remove = vi.spyOn(fixture.images, "delete").mockRejectedValue(new Error("Unavailable."));
+  expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: ["closed"] });
+  expect(await openEvents(database)).toEqual(["retention:closed:delete-failed"]);
+  expect(imageKeys(fixture)).toContain("runs/closed/images/y.png");
+  remove.mockRestore();
+  // The failed deletion keeps its lease until the lease time ends.
+  fixture.state.time += fixture.context.budget.leaseMilliseconds + 1;
+  expect(await runUntilIdle(fixture)).toEqual({ deleted: ["closed"], attention: [] });
+  expect(imageKeys(fixture)).toEqual(["runs/baseline/images/x.png"]);
+  expect(await openEvents(database)).toEqual([]);
+});
+
 describe("the prefix rule of the image collector", () => {
   const runtime = new Miniflare(
     convertV4MiniflareOptions({

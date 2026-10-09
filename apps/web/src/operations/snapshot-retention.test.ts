@@ -172,6 +172,26 @@ it("recovers a failed bounded protected-copy deletion", async () => {
   ).toBe(fixture.state.time);
 });
 
+it("closes the alert of a failed reference release in the pass that releases the references", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const service = await reserve(fixture.context, "closed");
+  await service.retireRun({ runId: "closed", now: fixture.state.time });
+  fixture.state.time += closedRunRetentionMs + 1;
+  const openAlerts = () =>
+    database.connection
+      .prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL")
+      .all()
+      .map((row) => row.id);
+  const batch = vi.spyOn(database, "batch").mockRejectedValueOnce(new Error("Unavailable."));
+  expect((await expireComparisonReferences(fixture.context)).attention).toEqual(["closed"]);
+  expect(openAlerts()).toEqual(["reference-retention:closed:release-failed"]);
+  batch.mockRestore();
+  fixture.state.time++;
+  expect((await expireComparisonReferences(fixture.context)).completed).toEqual(["closed"]);
+  expect(openAlerts()).toEqual([]);
+});
+
 it("pages past pinned closed runs without releasing their comparison evidence", async () => {
   using database = new TestDatabase();
   const fixture = context(database);

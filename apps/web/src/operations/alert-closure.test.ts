@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { closedRunRetentionMs } from "@visonaut/service";
+import { summarizeClosedRuns } from "./closed-summary.ts";
 import { recordEvent } from "./common.ts";
 import { runOperations } from "./index.ts";
 import { promoteBaselines } from "./promotions.ts";
@@ -178,20 +180,92 @@ describe("promotion alerts", () => {
   it("closes the alert of an accepted run and of a run that has no row", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
-    await reserve(fixture.context, "accepted", "main");
-    for (const subject of ["accepted", "missing"]) {
-      await recordEvent(database, {
-        kind: "promotion",
-        subject,
-        code: "state-changed",
-        now: fixture.state.time,
-      });
-    }
+    await captured(fixture.context, "accepted", "main");
+    await fixture.images.put("runs/accepted/original", "corrupt");
     await promoteBaselines(fixture.context);
-    expect(openAlerts(database)).toEqual(["promotion:accepted:state-changed"]);
+    await recordEvent(database, {
+      kind: "promotion",
+      subject: "missing",
+      code: "state-changed",
+      now: fixture.state.time,
+    });
+    await promoteBaselines(fixture.context);
+    expect(openAlerts(database)).toEqual(["promotion:accepted:source-verification-failed"]);
     // The run stays active. Only its state changes.
     database.connection.prepare("UPDATE visonaut_runs SET state='accepted'").run();
     await promoteBaselines(fixture.context);
+    expect(openAlerts(database)).toEqual([]);
+  });
+
+  it("closes the alerts of a run whose comparison is no longer ready", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await captured(fixture.context, "seed", "main");
+    await fixture.images.put("runs/seed/original", "corrupt");
+    await promoteBaselines(fixture.context);
+    expect(openAlerts(database)).toEqual(["promotion:seed:source-verification-failed"]);
+    database.connection.prepare("UPDATE visonaut_comparisons SET state='invalidated'").run();
+    fixture.state.time++;
+    await promoteBaselines(fixture.context);
+    expect(openAlerts(database)).toEqual([]);
+  });
+
+  it("closes each alert of a candidate that no longer has the status passed", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const service = await captured(fixture.context, "seed", "main");
+    await fixture.images.put("runs/seed/original", "corrupt");
+    await promoteBaselines(fixture.context);
+    await recordEvent(database, {
+      kind: "promotion",
+      subject: "seed",
+      code: "state-changed",
+      now: fixture.state.time,
+    });
+    expect(openAlerts(database)).toEqual([
+      "promotion:seed:source-verification-failed",
+      "promotion:seed:state-changed",
+    ]);
+    const row = (await service.comparisonRows("comparison-seed"))[0];
+    if (!row) {
+      throw new Error("Missing fixture comparison row.");
+    }
+    await service.review({
+      commandId: "seed-rejected",
+      actorId: "actor",
+      sessionId: "session",
+      comparisonId: "comparison-seed",
+      verdict: "rejected",
+      targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+      selection: { itemKey: "dialog", variantKey: "light" },
+      now: fixture.state.time,
+    });
+    expect((await service.status("seed")).status).not.toBe("passed");
+    fixture.state.time++;
+    await promoteBaselines(fixture.context);
+    expect(openAlerts(database)).toEqual([]);
+    expect(
+      database.connection
+        .prepare("SELECT resolved_at FROM operations_events WHERE subject_id='seed'")
+        .all(),
+    ).toEqual([{ resolved_at: fixture.state.time }, { resolved_at: fixture.state.time }]);
+  });
+});
+
+describe("history alerts", () => {
+  it("closes the alert of a failed summary in the pass that writes the summary", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const service = await captured(fixture.context, "closed");
+    await service.retireRun({ runId: "closed", now: fixture.state.time });
+    fixture.state.time += closedRunRetentionMs + 1;
+    const batch = vi.spyOn(database, "batch").mockRejectedValue(new Error("Unavailable."));
+    expect((await summarizeClosedRuns(fixture.context)).attention).toEqual(["closed"]);
+    expect(openAlerts(database)).toEqual(["history:closed:summary-conversion-failed"]);
+    batch.mockRestore();
+    // The step tries a failed run again after the lease time.
+    fixture.state.time += fixture.context.budget.leaseMilliseconds + 1;
+    expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["closed"]);
     expect(openAlerts(database)).toEqual([]);
   });
 });

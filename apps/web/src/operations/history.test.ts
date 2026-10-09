@@ -451,6 +451,54 @@ describe("verified closed history with native D1 and R2", () => {
     ).toBeNull();
   });
 
+  it.each([
+    ["history", "run"],
+    ["historical-archive", "historical"],
+  ] as const)(
+    "closes the alert %s of a failed archive in the call that writes the archive",
+    async (kind, subject) => {
+      if (kind === "history") {
+        await closed();
+      } else {
+        await historical();
+      }
+      const archive = () =>
+        kind === "history"
+          ? archiveClosedRuns(operations)
+          : archiveHistoricalComparisons(operations);
+      const openAlerts = async () => {
+        const rows = await operations.database
+          .prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL")
+          .all<{ id: string }>();
+        return (rows.results ?? []).map((row) => row.id);
+      };
+      const images = operations.images;
+      // R2 accepts no write, so the archive cannot store its pages.
+      operations.images = {
+        get: (key) => images.get(key),
+        put: async () => {
+          throw new Error("Unavailable.");
+        },
+        delete: (keys) => images.delete(keys),
+        list: (options) => images.list(options),
+        createMultipartUpload: (key, options) => images.createMultipartUpload(key, options),
+      };
+      expect((await archive()).attention).toEqual([subject]);
+      expect(await openAlerts()).toEqual([`${kind}:${subject}:archive-failed`]);
+      operations.images = images;
+      // A failed archive waits one hour before its next attempt.
+      fixture.state.time += 60 * 60 * 1000 + 1;
+      let completed = false;
+      for (let step = 0; step < 50 && !completed; step++) {
+        const report = await archive();
+        expect(report.attention).toEqual([]);
+        completed = report.completed.includes(subject);
+      }
+      expect(completed).toBe(true);
+      expect(await openAlerts()).toEqual([]);
+    },
+  );
+
   it("keeps archive JSON outside the validated public image lookup", async () => {
     await closed();
     await finish();

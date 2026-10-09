@@ -1813,7 +1813,30 @@ describe("trusted local Submit", () => {
       .prepare("UPDATE ingest_staged_runs SET created_at=1 WHERE id=?")
       .bind(test.runId)
       .run();
-    expect((await expireStagedAttempts(retention(Date.now(), 10))).completed).toContain(test.runId);
+    // A deletion that fails raises the alert of the attempt, and the next
+    // deletion that completes closes it.
+    const stagedAlerts = async () =>
+      (
+        await database
+          .prepare(
+            "SELECT id FROM operations_events WHERE kind='staged-retention' AND resolved_at IS NULL",
+          )
+          .all<{ id: string }>()
+      ).results.map((row) => row.id);
+    const now = Date.now();
+    const failing = retention(now, 10);
+    const unavailable = async () => {
+      throw new Error("Unavailable.");
+    };
+    failing.images = { ...failing.images, list: unavailable };
+    failing.quarantine = { ...failing.quarantine, list: unavailable };
+    expect((await expireStagedAttempts(failing)).attention).toContain(test.runId);
+    expect(await stagedAlerts()).toEqual([`staged-retention:${test.runId}:delete-failed`]);
+    // The failed deletion keeps its lease of 30 seconds.
+    expect((await expireStagedAttempts(retention(now + 30_001, 10))).completed).toContain(
+      test.runId,
+    );
+    expect(await stagedAlerts()).toEqual([]);
     await retireSnapshot(database, { snapshotId: seed.snapshotId, now: Date.now() });
     expect(
       await database
