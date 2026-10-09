@@ -1,4 +1,12 @@
-import type { CaptureIdentity, CaptureProfile, DiscoveryReceipt, Json, Manifest } from "./types.js";
+import type {
+  CaptureIdentity,
+  CapturePageIndex,
+  CapturePagesReceipt,
+  CaptureProfile,
+  DiscoveryReceipt,
+  Json,
+  Manifest,
+} from "./types.js";
 
 /** JSON object keys are sorted; declared array order remains significant. */
 export function canonicalJson(value: unknown): string {
@@ -143,6 +151,41 @@ export async function createDiscoveryReceipt(manifest: Manifest): Promise<Discov
     ...manifest.discovery,
     workflowRunId: manifest.run.workflowRunId,
     testedSha: manifest.run.testedSha,
+    manifestDigest,
+    artifactName: `${discoveryArtifactPrefix(identity)}${manifestDigest}`,
+  };
+}
+
+/**
+ * The manifest digest of a run that sent pages. The index holds the digest of
+ * each page in the order of the pages, so this is a digest of the page digests.
+ * It also binds the Submit job, the capture jobs, and the reference.
+ */
+export function capturePagesDigest(index: CapturePageIndex): Promise<string> {
+  return digestJson(index);
+}
+
+interface CapturePagesReceiptParams {
+  index: CapturePageIndex;
+  workflowRunId: string;
+  testedSha: string;
+  shardKey: string;
+}
+
+/** The receipt names the index by its digest, so its size does not grow with the run. */
+export async function createCapturePagesReceipt({
+  index,
+  workflowRunId,
+  testedSha,
+  shardKey,
+}: CapturePagesReceiptParams): Promise<CapturePagesReceipt> {
+  const manifestDigest = await capturePagesDigest(index);
+  const identity = { workflowAttempt: index.job.attempt, jobId: index.job.id, shardKey };
+  return {
+    schemaVersion: "1.0",
+    ...identity,
+    workflowRunId,
+    testedSha,
     manifestDigest,
     artifactName: `${discoveryArtifactPrefix(identity)}${manifestDigest}`,
   };
