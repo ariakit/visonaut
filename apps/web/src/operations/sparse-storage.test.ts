@@ -29,9 +29,9 @@ import {
   type ResetContext,
 } from "../../tooling/baseline-reset/reset.ts";
 import { captured, context, digest, profile, TestDatabase } from "./test-fixtures.ts";
-import { reviewModel } from "../api/review.ts";
+import { reviewCapturePage, reviewModel } from "../api/review.ts";
 import type { PrivateContext } from "../api/context.ts";
-import { parseReviewModel } from "../review/client.ts";
+import { parseCapturePage, parseReviewModel } from "../review/client.ts";
 import type { ReviewItem } from "../review/model.ts";
 
 interface SparseFixtureParams {
@@ -684,6 +684,13 @@ describe("sparse inventory operations", () => {
     expect(after).toMatchObject({ archived: true, evidenceState: "summary", imagesExpired: true });
     expect(itemEvidence(after.items)).toEqual(itemEvidence(before.items));
     expect(after.unchanged).toEqual(before.unchanged);
+    // The rows of the summary keep their identities in D1, so the page of a
+    // closed run has the 2 unchanged captures and no error.
+    const page = parseCapturePage(await reviewCapturePage(api, "run", { page: 0 }));
+    expect(page.items.flatMap((item) => item.variants.map((variant) => variant.kind))).toEqual([
+      "unchanged",
+      "unchanged",
+    ]);
     for (const item of after.items) {
       expect(item.variants[0]?.approveDisabledReason).toBeTruthy();
       expect(item.variants[0]?.rejectDisabledReason).toBeTruthy();

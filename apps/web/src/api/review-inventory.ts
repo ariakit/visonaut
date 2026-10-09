@@ -98,25 +98,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * The review rows of the unchanged captures of one page. A capture with a
- * change has a stored row, and the first response of the run has it, so this
- * list leaves it out.
+ * stored row is left out, because the first response of the run has it. Each
+ * other capture must be unchanged: a capture with a change and no stored row
+ * would be on no page, so the request fails.
  */
 export function unchangedReviewRows(
   evidence: NonNullable<Awaited<ReturnType<typeof readReviewInventory>>>,
   captures: InventoryCapture[],
   comparisonId: string,
+  stored: ReadonlySet<string>,
 ): ReviewRow[] {
   const imageById = new Map(evidence.images.map((image) => [image.id, image]));
   const rows: ReviewRow[] = [];
   for (const capture of captures) {
-    const reference = evidence.referenceByIdentity.get(identityKey(capture));
-    const image = reference ? imageById.get(reference.image_id) : undefined;
+    const identity = identityKey(capture);
+    if (stored.has(identity)) continue;
+    const reference = evidence.referenceByIdentity.get(identity);
     const local = capture.metadata.localResult;
     const candidate = capture.metadata.observedImage;
-    if (!reference) continue;
-    if (!image) continue;
-    if (!isRecord(local)) continue;
-    if (!isRecord(candidate)) continue;
+    if (!reference || !isRecord(local) || !isRecord(candidate)) {
+      throw new IncompleteError("An omitted review row lacks verified unchanged evidence.");
+    }
+    const image = imageById.get(reference.image_id);
     // Submit stores no row for a change of zero pixels with an equal size.
     const unchanged =
       local.outcome === "unchanged" ||
@@ -125,9 +128,12 @@ export function unchangedReviewRows(
         local.ratio === 0 &&
         !local.maskImageId &&
         local.maskExpected !== true &&
+        image !== undefined &&
         image.width === candidate.width &&
         image.height === candidate.height);
-    if (!unchanged) continue;
+    if (!unchanged || !image) {
+      throw new IncompleteError("A changed capture is missing its persisted review row.");
+    }
     rows.push({
       id: `${comparisonId}:${capture.id}`,
       comparison_id: comparisonId,

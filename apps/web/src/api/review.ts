@@ -432,7 +432,8 @@ const capturePageNotFound = "The capture page was not found.";
  * request of a run page. A page is the `CAPTURE_PAGE_ROWS` captures at that
  * place in the order of the item key and then the variant key, which is the
  * order of the capture pages of the protocol. The answer leaves out a capture
- * with a change, because the first response has it.
+ * with a stored review row, because the first response has it. It fails for a
+ * capture that has a change and no stored row.
  */
 export async function reviewCapturePage(
   context: PrivateContext,
@@ -465,15 +466,28 @@ export async function reviewCapturePage(
     throw new SecurityError("not_found", 404, capturePageNotFound);
   }
   const page = Math.floor(index / CAPTURE_PAGE_ROWS);
-  const policy = await context.database
-    .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
-    .bind(comparison.policy_digest)
-    .first<{ policy_json: string }>();
+  // The identities of the stored rows: a capture of the page with a change
+  // must have one. The rows grow with the changes of the run, not its captures.
+  const [policies, identities] = await context.database.batch([
+    context.database
+      .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
+      .bind(comparison.policy_digest),
+    context.database
+      .prepare("SELECT item_key, variant_key FROM visonaut_comparison_rows WHERE comparison_id = ?")
+      .bind(comparison.id),
+  ]);
+  const policy = batchRows<{ policy_json: string }>(policies)[0];
+  const stored = new Set(
+    batchRows<{ item_key: string; variant_key: string }>(identities).map((row) =>
+      identityKey({ itemKey: row.item_key, variantKey: row.variant_key }),
+    ),
+  );
   const { items } = reviewItems({
     rows: unchangedReviewRows(
       evidence,
       captures.slice(page * CAPTURE_PAGE_ROWS, (page + 1) * CAPTURE_PAGE_ROWS),
       comparison.id,
+      stored,
     ),
     // Each capture and each baseline of a page comes from the capture lists.
     captures: new Map(),

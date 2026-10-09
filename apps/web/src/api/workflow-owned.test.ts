@@ -30,7 +30,7 @@ import {
   type Manifest,
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
-import { ConflictError, retireSnapshot, Service } from "@visonaut/service";
+import { ConflictError, IncompleteError, retireSnapshot, Service } from "@visonaut/service";
 import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -1811,6 +1811,25 @@ describe("trusted local Submit", () => {
     } finally {
       get.mockRestore();
     }
+    // One batch has the policy and the identities of the 4 stored rows.
+    const costs = measureD1(nativeDatabase);
+    await reviewCapturePage(
+      { ...privateContext, database: costs.database, service: new Service(costs.database) },
+      run.id,
+      { page: 0 },
+    );
+    const identityReads = costs.costs
+      .filter((cost) => cost.sql.includes("FROM visonaut_comparison_rows"))
+      .map((cost) => cost.rows_read);
+    // D1 counts the 4 rows, and one more when the seek reads past the last row.
+    expect(identityReads).toHaveLength(1);
+    expect(identityReads[0]).toBeGreaterThanOrEqual(4);
+    expect(identityReads[0]).toBeLessThanOrEqual(5);
+    expect({
+      statements: costs.costs.length,
+      roundTrips: costs.roundTrips(),
+      rowsWritten: costs.totals().rows_written,
+    }).toEqual({ statements: 6, roundTrips: 5, rowsWritten: 0 });
     // The 4 changed captures are in the first page, and the answer leaves them out.
     expect(first).toMatchObject({ page: 0, pages: 2 });
     expect(first.items.map((item) => item.key)).toEqual(unchanged(ordered.slice(0, 2_000)));
@@ -1854,6 +1873,36 @@ describe("trusted local Submit", () => {
       [...model.items, ...first.items, ...second.items].map((item) => item.key).sort(),
     ).toEqual([...ordered].sort());
   }, 120_000);
+
+  it("fails a page that has a changed capture with no stored review row", async () => {
+    const { test, run } = await changedRun(6);
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    await expect(reviewCapturePage(privateContext, run.id, { page: 0 })).resolves.toMatchObject({
+      page: 0,
+    });
+    // The capture list still has the change, and D1 has no row for it.
+    await database
+      .prepare("DELETE FROM visonaut_comparison_rows WHERE comparison_id=? AND item_key=?")
+      .bind(run.comparison_id, "dialog/changed-1")
+      .run();
+    const failure = reviewCapturePage(privateContext, run.id, { page: 0 });
+    await expect(failure).rejects.toBeInstanceOf(IncompleteError);
+    await expect(failure).rejects.toMatchObject({
+      code: "INCOMPLETE",
+      message: "A changed capture is missing its persisted review row.",
+    });
+  });
 
   it("reads the baseline of a run from before the stored baseline from its capture lists", async () => {
     const { test, run } = await changedRun(6);

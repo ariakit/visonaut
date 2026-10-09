@@ -862,7 +862,16 @@ async function unchangedRun(
     running -= 1;
     // `failing` has the numbers of the page requests that fail, from 1.
     if (failing.includes(requests.length)) {
-      return route.fulfill({ status: 500, json: { error: { code: "internal" } } });
+      // The answer of the service for a capture list that does not agree with the stored rows.
+      return route.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: "incomplete",
+            message: "A changed capture is missing its persisted review row.",
+          },
+        },
+      });
     }
     // A request with no page number names one screenshot.
     const number = query.has("page")
