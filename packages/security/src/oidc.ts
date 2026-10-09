@@ -25,17 +25,10 @@ export interface OidcConfiguration {
   audience: string;
   /** Restored targets reject tokens issued at or before this millisecond cutoff. */
   issuedAfter?: number;
-  /** Preview diagnostics only; still requires main and the immutable executor. */
+  /** Preview diagnostics only; still requires the main ref. */
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
   workflowPath: string;
-  reusableWorkflowRef: string;
-  reusableWorkflowSha: string;
-  /** Approved Git blob for direct jobs in this repository's app workflow. */
-  trustedWorkflowPath?: string;
-  /** Approved caller blob; native Plan and App Submit keep distinct source pins. */
-  callerWorkflowBlobSha?: string;
-  planDigest: string;
   shards: readonly TrustedShardIdentity[];
   /** Read only records stored after successful webhook signature verification. */
   loadMergeGroup: (testedSha: string) => Promise<MergeGroupIdentity | null>;
@@ -47,7 +40,8 @@ export interface RunReservation {
   workflowRunId: string;
   workflowAttempt: number;
   testedSha: string;
-  planDigest: string;
+  /** The digest of the request. The service stores it and compares it with no setting. */
+  planDigest?: string;
   shardKey: string;
 }
 
@@ -88,13 +82,6 @@ async function isMainAncestor(github: GitHubClient, baseSha: string, mainSha: st
     await github.request(`/repos/${github.repository}/compare/${baseSha}...${mainSha}?per_page=1`),
   );
   return comparison.status === "ahead";
-}
-
-export function isTrustedWorkflowBlob(
-  blob: unknown,
-  configuration: Pick<OidcConfiguration, "reusableWorkflowSha">,
-): boolean {
-  return blob === configuration.reusableWorkflowSha;
 }
 
 function attemptNumber(value: unknown): number {
@@ -168,59 +155,8 @@ export async function verifyGitHubOidc({
     configuration.repositoryOwnerId,
     "claim.repository_owner_id",
   );
-  if (configuration.callerWorkflowBlobSha !== undefined) {
-    requireEqual(
-      typeof claims.workflow_sha === "string" && /^[a-f0-9]{40}$/.test(claims.workflow_sha),
-      true,
-      "claim.caller_workflow_sha_format",
-    );
-    requireEqual(claims.workflow_sha, sha(claims.sha), "claim.caller_workflow_sha");
-    const file = record(
-      await github.request(
-        `/repos/${github.repository}/contents/${configuration.workflowPath}?ref=${claims.workflow_sha}`,
-      ),
-    );
-    requireEqual(file.type, "file", "rest.caller_workflow_type");
-    requireEqual(file.path, configuration.workflowPath, "rest.caller_workflow_path");
-    requireEqual(file.sha, sha(configuration.callerWorkflowBlobSha), "rest.caller_workflow_blob");
-  }
-  if (configuration.trustedWorkflowPath === configuration.workflowPath) {
-    if (!configuration.callerWorkflowBlobSha) {
-      throw new SecurityError("untrusted_run", 403, "The native workflow is not configured.");
-    }
-    // Native jobs may identify their own workflow; a different source is not trusted.
-    if (claims.job_workflow_ref !== undefined || claims.job_workflow_sha !== undefined) {
-      requireEqual(claims.job_workflow_ref, claims.workflow_ref, "claim.native_workflow_ref");
-      requireEqual(claims.job_workflow_sha, claims.workflow_sha, "claim.native_workflow_sha");
-    }
-  } else if (configuration.trustedWorkflowPath) {
-    const source = configuration.trustedWorkflowPath;
-    const claimedSource = claims.job_workflow_sha;
-    requireEqual(sha(claimedSource), sha(claims.sha), "claim.direct_workflow_sha");
-    if (!String(claims.job_workflow_ref ?? "").startsWith(`${github.repository}/${source}@`)) {
-      throw new SecurityError("untrusted_run", 403, "The workflow source is not trusted.");
-    }
-    const file = record(
-      await github.request(`/repos/${github.repository}/contents/${source}?ref=${claimedSource}`),
-    );
-    requireEqual(file.type, "file", "rest.direct_workflow_type");
-    requireEqual(file.path, source, "rest.direct_workflow_path");
-    requireEqual(isTrustedWorkflowBlob(file.sha, configuration), true, "rest.direct_workflow_blob");
-  } else {
-    requireEqual(
-      claims.job_workflow_ref,
-      configuration.reusableWorkflowRef,
-      "claim.job_workflow_ref",
-    );
-    requireEqual(
-      claims.job_workflow_sha,
-      configuration.reusableWorkflowSha,
-      "claim.job_workflow_sha",
-    );
-  }
   requireEqual(request.repositoryId, github.repositoryId, "request.repository_id");
   requireEqual(request.repository, github.repository, "request.repository");
-  requireEqual(request.planDigest, configuration.planDigest, "request.plan_digest");
   requireEqual(numericId(claims.run_id), request.workflowRunId, "claim.run_id");
   requireEqual(attemptNumber(claims.run_attempt), request.workflowAttempt, "claim.run_attempt");
   requireEqual(sha(claims.sha), sha(request.testedSha), "claim.sha");
@@ -398,28 +334,4 @@ async function findSignedJob(github: GitHubClient, run: RunReservation, checkRun
     if (result.jobs.length < 100) break;
   }
   throw new SecurityError("untrusted_job", 403, "The signed job is not in this workflow attempt.");
-}
-
-/** Fetch the plan at a resolved main commit, never at a PR-controlled ref. */
-export async function loadTrustedMainFile(github: GitHubClient, path: string) {
-  if (!/^[A-Za-z0-9_./-]+$/.test(path) || path.includes("..")) {
-    throw new Error("Invalid trusted plan path.");
-  }
-  const branch = record(await github.request(`/repos/${github.repository}/git/ref/heads/main`));
-  const mainSha = sha(record(branch.object).sha);
-  const result = record(
-    await github.request(`/repos/${github.repository}/contents/${path}?ref=${mainSha}`),
-  );
-  requireEqual(result.type, "file", "plan.file_type");
-  requireEqual(result.encoding, "base64", "plan.encoding");
-  const content = textField(result.content).replace(/\n/g, "");
-  if (content.length > 2 * 1024 * 1024) {
-    throw new SecurityError(
-      "plan_too_large",
-      503,
-      "The trusted capture plan exceeds its size limit.",
-    );
-  }
-  const bytes = Uint8Array.from(atob(content), (character) => character.charCodeAt(0));
-  return { mainSha, content: new TextDecoder("utf-8", { fatal: true }).decode(bytes) };
 }

@@ -39,7 +39,7 @@ Ariakit configures its reporter explicitly and uploads ordinary one-day capture 
 pnpm exec visonaut submit --shard linux --shard safari
 ```
 
-The service verifies both workflow Git blobs, the exact tested commit and attempt, and the complete source-attempt capture set. The visual path has no separate signed Plan report. The Visonaut check from App `5028451` is required beside Gate. Gate polling is removed, and the service trusts the matching caller pin. Native Gate still verifies the other selected CI jobs. The service accepts validated PNG and lossless WebP originals; local Submit requires PNG captures and references. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
+The service accepts a run from the signed GitHub Actions identity alone. It verifies the exact tested commit and attempt, and the complete source-attempt capture set, and it compares no workflow Git blob. The visual path has no separate signed Plan report. The Visonaut check from App `5028451` is required beside Gate. Gate polling is removed. Native Gate still verifies the other selected CI jobs. The service accepts validated PNG and lossless WebP originals; local Submit requires PNG captures and references. Human decisions bind to the exact comparison and revision. A full main run promotes a baseline only when all acceptance conditions pass.
 
 ## Work on the repository
 

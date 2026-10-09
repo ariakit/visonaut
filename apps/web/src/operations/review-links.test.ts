@@ -36,7 +36,7 @@ async function addCandidate(
   const externalId = "visonaut:pre:" + testedSha + (generation ? ":" + generation : "");
   await database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha,created_at,updated_at) VALUES (?,?,'123',?,'d','pull_request',?,?,0,?,?,?,?,?,1,'plan-job','caller',?,?)",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,plan_job_id,created_at,updated_at) VALUES (?,?,'123',?,'d','pull_request',?,?,0,?,?,?,?,?,1,'plan-job',?,?)",
     )
     .bind(
       testedSha,
@@ -577,6 +577,8 @@ it("updates one PR-head attempt check through review and Undo without a mirror",
   const service = await captured(fixture.context);
   await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
   const externalId = `visonaut:pre:${firstMergeSha}`;
+  // This row has the form of the time before D-OPS-04: it holds the pinned
+  // blob of the caller workflow. Its verdict must stay the same.
   await database
     .prepare(`INSERT INTO pre_run_checks(
     tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,

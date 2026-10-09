@@ -336,7 +336,6 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
         sourceHead: manifest.run.testedSha,
         targetHead: manifest.run.testedSha,
         reusableWorkflowRef: "ariakit/ariakit/.github/workflows/visual.yml@" + "f".repeat(40),
-        reusableWorkflowSha: "f".repeat(40),
       }),
       `plans/${planDigest}.json`,
       Date.now(),

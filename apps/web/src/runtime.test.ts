@@ -115,14 +115,46 @@ it("keeps live workflow and authentication configuration only in production", ()
   expect(preview.queues.consumers).toEqual([]);
   const workflow = apiBindings(env).configuration.workflowOwned;
   expect(workflow).toBeDefined();
-  expect(workflow?.callerWorkflowPath).toBe(".github/workflows/ci.yml");
-  expect(workflow?.callerWorkflowBlobSha).toMatch(/^[a-f0-9]{40}$/);
-  expect(workflow?.trustedWorkflowPath).toMatch(/^\.github\/workflows\/[^/]+\.yml$/);
-  expect(workflow?.reusableWorkflowSha).toMatch(/^[a-f0-9]{40}$/);
-  expect(workflow).not.toHaveProperty("additionalTrustedWorkflowBlobSha");
-  expect(workflow).not.toHaveProperty("transitionTrustedWorkflowBlobSha");
-  expect(workflow).not.toHaveProperty("additionalTrustedExecutorDigest");
-  expect(apiBindings(env).configuration.trustedExecutorDigest).toMatch(/^[a-f0-9]{64}$/);
+  // D-OPS-04: production holds no workflow blob, no workflow ref, and no adapter digest.
+  expect(workflow).toEqual({
+    callerWorkflowPath: ".github/workflows/ci.yml",
+    reusableWorkflowPath: ".github/workflows/app.yml",
+    captureJobName: "App / Visual Capture ({shard})",
+    submitJobName: "App / Visual Submit",
+  });
+  expect(JSON.parse(String(env.VISONAUT_WORKFLOW_OWNED))).toEqual(workflow);
+  const production = unstable_readConfig({
+    config: fileURLToPath(new URL("../wrangler.jsonc", import.meta.url)),
+    env: "production",
+  });
+  expect(Object.keys(production.vars ?? {}).sort()).toEqual([
+    "GITHUB_APP_ID",
+    "GITHUB_CLIENT_ID",
+    "GITHUB_INSTALLATION_ID",
+    "GITHUB_OWNER_ID",
+    "GITHUB_REPOSITORY_ID",
+    "VISONAUT_ALLOW_MAIN_DISPATCH",
+    "VISONAUT_API_LIMITS",
+    "VISONAUT_ENVIRONMENT",
+    "VISONAUT_LAUNCH_ENABLED",
+    "VISONAUT_OPERATIONS_BUDGET",
+    "VISONAUT_ORIGIN",
+    "VISONAUT_PROJECT_ID",
+    "VISONAUT_REPOSITORY",
+    "VISONAUT_WORKFLOW_OWNED",
+  ]);
+  expect(Object.keys(apiBindings(env).configuration).sort()).toEqual([
+    "allowMainDispatch",
+    "auth",
+    "capability",
+    "github",
+    "limits",
+    "origin",
+    "projectId",
+    "repositoryOwnerId",
+    "webhookSecret",
+    "workflowOwned",
+  ]);
 });
 
 beforeEach(async () => {
@@ -150,7 +182,6 @@ beforeEach(async () => {
     errors: [],
     progressed: 0,
   });
-  vi.spyOn(preRun, "retireUnpinnedMainChecks").mockResolvedValue({ checked: 0, pending: [] });
   vi.spyOn(preRun, "reconcileEquivalentPullRequestChecks").mockResolvedValue({
     checked: 0,
     pending: [],
@@ -372,7 +403,6 @@ it.each([
   expect(deliveries.recoverGitHubDeliveries).not.toHaveBeenCalled();
   expect(capacity.monitorDatabaseCapacity).not.toHaveBeenCalled();
   expect(api.reconcileWebhooks).not.toHaveBeenCalled();
-  expect(preRun.retireUnpinnedMainChecks).not.toHaveBeenCalled();
   expect(preRun.reconcileEquivalentPullRequestChecks).not.toHaveBeenCalled();
   expect(api.reconcileStagedWorkflows).toHaveBeenCalledTimes(message.kind === "ingest" ? 1 : 0);
   expect(workflowRetention.expireStagedAttempts).toHaveBeenCalledTimes(

@@ -710,14 +710,14 @@ describe("verified closed history with native D1 and R2", () => {
     };
     const workflowOwned = {
       callerWorkflowPath: ".github/workflows/app.yml",
-      callerWorkflowBlobSha: "e".repeat(40),
-      trustedWorkflowPath: ".github/workflows/visual.yml",
+      reusableWorkflowPath: ".github/workflows/visual.yml",
       captureJobName: "App / Visual / Capture / {shard}",
       submitJobName: "App / Visual / Submit",
-      reusableWorkflowRef: `owner/repo/.github/workflows/visual.yml@${"b".repeat(40)}`,
-      reusableWorkflowSha: "b".repeat(40),
     };
-    const sourceDigest = await workflowSourceDigest(workflowOwned.reusableWorkflowSha);
+    // The stored rows keep the values that the pins fixed before D-OPS-04.
+    const earlierCallerPin = "e".repeat(40);
+    const earlierWorkflowPin = "b".repeat(40);
+    const sourceDigest = await workflowSourceDigest(earlierWorkflowPin);
     // The completed signed stage can outlive its service detail during a retry.
     await operations.database
       .prepare(
@@ -728,7 +728,7 @@ describe("verified closed history with native D1 and R2", () => {
         "a".repeat(40),
         sourceDigest,
         workflowOwned.callerWorkflowPath,
-        workflowOwned.reusableWorkflowRef,
+        `owner/repo/${workflowOwned.reusableWorkflowPath}@${earlierWorkflowPin}`,
         workflowOwned.captureJobName,
         workflowOwned.submitJobName,
         operations.now(),
@@ -850,7 +850,7 @@ describe("verified closed history with native D1 and R2", () => {
         operations.now(),
         operations.now(),
         operations.now(),
-        workflowOwned.callerWorkflowBlobSha,
+        earlierCallerPin,
       )
       .run();
     expect(await materializeWorkflowRun(api, runId)).toEqual(before);

@@ -6,24 +6,21 @@ import {
   type GitHubClient,
   type VerifiedWebhook,
 } from "@visonaut/security";
-import { digestJson } from "@visonaut/protocol";
 import { assertConfiguredProject, loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { jobExecutedInAttempt } from "./jobs.js";
 import { ensureSignedAttemptCheck } from "./pre-run-attempts.js";
 import { candidateForWebhook } from "./pre-run-candidates.js";
 import { attemptCheck, storeCandidateCheck, type Candidate } from "./pre-run-checks.js";
-import { callerPlanBlob, completeNoVisualPlan, nativePlanJob } from "./pre-run-plan.js";
+import { completeNoVisualPlan, nativePlanJob } from "./pre-run-plan.js";
 import { readRestoreCutoff } from "../operations/recovery.ts";
 
 export { ensureSignedAttemptCheck, settlePreRunWorkflow } from "./pre-run-attempts.js";
 export { candidateForWebhook } from "./pre-run-candidates.js";
 export {
   findPreRunCheck,
-  hasPinnedMainWorkflow,
   reconcileEquivalentPullRequestChecks,
   recordPreRunCandidate,
-  retireUnpinnedMainChecks,
 } from "./pre-run-checks.js";
 export { recordRequiredVisualPlan, requireVisualPlan } from "./pre-run-plan.js";
 
@@ -68,8 +65,6 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
   if (!header?.startsWith("Bearer "))
     throw new SecurityError("invalid_oidc", 401, "A signed Plan report is required.");
   const github = await createGitHubClient(context.configuration.github);
-  const callerBlob = callerPlanBlob(context);
-  const planDigest = await digestJson(body);
   const identity = await verifyGitHubOidc({
     token: header.slice(7),
     github,
@@ -79,7 +74,6 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
       workflowRunId,
       workflowAttempt,
       testedSha,
-      planDigest,
       shardKey: "plan-report",
     },
     configuration: {
@@ -87,11 +81,6 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
       issuedAfter: await readRestoreCutoff(context.database),
       repositoryOwnerId: context.configuration.repositoryOwnerId,
       workflowPath: configuration.callerWorkflowPath,
-      reusableWorkflowRef: configuration.reusableWorkflowRef,
-      reusableWorkflowSha: configuration.reusableWorkflowSha,
-      trustedWorkflowPath: configuration.callerWorkflowPath,
-      callerWorkflowBlobSha: callerBlob,
-      planDigest,
       shards: [{ key: "plan-report", jobName: "Plan" }],
       loadMergeGroup: (commit) => loadVerifiedMergeGroup(context, commit),
     },
@@ -117,7 +106,6 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
   if (existing?.plan_visual_required !== null && existing?.plan_visual_required !== undefined) {
     if (
       existing.tested_sha !== testedSha ||
-      existing.plan_workflow_sha !== callerBlob ||
       existing.plan_visual_required !== Number(body.visualRequired)
     ) {
       throw new SecurityError(
@@ -138,14 +126,13 @@ export async function reportVisualPlan(request: Request, context: ApiContext) {
   if (!row?.check_id || row.state !== "active")
     throw new SecurityError("check_pending", 503, "The current App check is not ready.");
   const recorded = await context.database
-    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,updated_at=?,plan_job_id=?,plan_workflow_sha=?
+    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,updated_at=?,plan_job_id=?
     WHERE external_id=? AND state='active' AND (plan_visual_required IS NULL OR plan_visual_required=?) RETURNING external_id`)
     .bind(
       Number(body.visualRequired),
       Date.now(),
       Date.now(),
       numericId(plan.id),
-      callerBlob,
       row.external_id,
       Number(body.visualRequired),
     )

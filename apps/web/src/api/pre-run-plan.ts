@@ -22,7 +22,6 @@ export async function requireVisualPlan(
     !row ||
     row.tested_sha !== identity.testedSha ||
     row.plan_visual_required !== 1 ||
-    row.plan_workflow_sha !== context.configuration.workflowOwned?.callerWorkflowBlobSha ||
     row.state !== "active"
   ) {
     throw new SecurityError(
@@ -31,18 +30,6 @@ export async function requireVisualPlan(
       "The current trusted Plan must select app=true.",
     );
   }
-}
-
-export function callerPlanBlob(context: ApiContext) {
-  const pin = context.configuration.workflowOwned?.callerWorkflowBlobSha;
-  if (!pin || !/^[a-f0-9]{40}$/.test(pin)) {
-    throw new SecurityError(
-      "workflow_configuration",
-      503,
-      "The trusted Plan source is unavailable.",
-    );
-  }
-  return pin;
 }
 
 function successfulPlanStep(plan: Record<string, unknown>) {
@@ -80,13 +67,12 @@ export async function nativePlanJob(
   return plan;
 }
 
-/** Signed Submit proves the true branch of the pinned caller after Plan succeeds. */
+/** Signed Submit proves the true branch of the caller after Plan succeeds. */
 export async function recordRequiredVisualPlan(
   context: ApiContext,
   github: GitHubClient,
   identity: VerifiedRun,
 ) {
-  const pin = callerPlanBlob(context);
   const row = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
   if (
     !row ||
@@ -100,7 +86,7 @@ export async function recordRequiredVisualPlan(
       "The current attempt cannot require visual work.",
     );
   }
-  if (row.plan_visual_required === 1 && row.plan_workflow_sha === pin && row.plan_job_id) return;
+  if (row.plan_visual_required === 1 && row.plan_job_id) return;
   const plan = await nativePlanJob(github, identity);
   if (plan.status !== "completed" || plan.conclusion !== "success") {
     throw new SecurityError("plan_unverified", 409, "The native Plan job did not succeed.");
@@ -152,10 +138,10 @@ export async function recordRequiredVisualPlan(
   }
   const recorded = await context.database
     .prepare(
-      `UPDATE pre_run_checks SET plan_visual_required=1,plan_reported_at=?,updated_at=?,plan_job_id=?,plan_workflow_sha=?
+      `UPDATE pre_run_checks SET plan_visual_required=1,plan_reported_at=?,updated_at=?,plan_job_id=?
     WHERE external_id=? AND state='active' AND plan_visual_required IS NULL RETURNING external_id`,
     )
-    .bind(Date.now(), Date.now(), originalId, pin, row.external_id)
+    .bind(Date.now(), Date.now(), originalId, row.external_id)
     .first();
   if (!recorded) {
     throw new SecurityError("plan_conflict", 409, "The current Plan result changed.");
@@ -169,7 +155,6 @@ export async function completeNoVisualPlan(
 ) {
   const current = await storedExternalId(context, row.external_id);
   if (!current || current.plan_visual_required !== 0 || !current.check_id) return;
-  if (current.plan_workflow_sha !== callerPlanBlob(context)) return;
   if (current.state === "docs_complete") return;
   await verifiedCheck(github, row, current.check_id);
   const latest = await storedCheck(context, row.tested_sha);
@@ -214,9 +199,9 @@ export async function inheritVisualPlan(
   const prior = await context.database
     .prepare(`SELECT * FROM pre_run_checks WHERE tested_sha=? AND workflow_run_id=?
     AND ${afterRestoreSql("pre_run_checks.created_at")}
-    AND workflow_attempt<? AND plan_visual_required IS NOT NULL AND plan_job_id IS NOT NULL AND plan_workflow_sha=?
+    AND workflow_attempt<? AND plan_visual_required IS NOT NULL AND plan_job_id IS NOT NULL
     ORDER BY workflow_attempt DESC LIMIT 1`)
-    .bind(row.tested_sha, row.workflow_run_id, row.workflow_attempt, callerPlanBlob(context))
+    .bind(row.tested_sha, row.workflow_run_id, row.workflow_attempt)
     .first<PreRunCheck>();
   if (
     !prior ||
@@ -250,15 +235,9 @@ export async function inheritVisualPlan(
     attemptStartedAt: run.run_started_at,
   });
   const inherited = await context.database
-    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,plan_job_id=?,plan_workflow_sha=?
+    .prepare(`UPDATE pre_run_checks SET plan_visual_required=?,plan_reported_at=?,plan_job_id=?
     WHERE external_id=? AND state='active' AND plan_visual_required IS NULL RETURNING external_id`)
-    .bind(
-      prior.plan_visual_required,
-      Date.now(),
-      prior.plan_job_id,
-      prior.plan_workflow_sha,
-      row.external_id,
-    )
+    .bind(prior.plan_visual_required, Date.now(), prior.plan_job_id, row.external_id)
     .first();
   if (inherited && prior.plan_visual_required === 0)
     await completeNoVisualPlan(context, github, row);

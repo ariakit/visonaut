@@ -35,7 +35,7 @@ import {
 } from "./capacity.ts";
 import { recordEvent, validateBudget } from "./operations/common.ts";
 import { expireStagedAttempts } from "./api/workflow-retention.ts";
-import { reconcileEquivalentPullRequestChecks, retireUnpinnedMainChecks } from "./api/pre-run.ts";
+import { reconcileEquivalentPullRequestChecks } from "./api/pre-run.ts";
 
 export interface BackendEnv extends Env {
   DB: D1Database;
@@ -205,26 +205,14 @@ export function apiBindings(env: BackendEnv): ApiBindings {
       workflowOwned.callerWorkflowPath,
       "VISONAUT_WORKFLOW_OWNED.callerWorkflowPath",
     ),
-    callerWorkflowBlobSha: required(
-      workflowOwned.callerWorkflowBlobSha,
-      "VISONAUT_WORKFLOW_OWNED.callerWorkflowBlobSha",
-    ),
     captureJobName: required(
       workflowOwned.captureJobName,
       "VISONAUT_WORKFLOW_OWNED.captureJobName",
     ),
     submitJobName: required(workflowOwned.submitJobName, "VISONAUT_WORKFLOW_OWNED.submitJobName"),
-    reusableWorkflowRef: required(
-      workflowOwned.reusableWorkflowRef,
-      "VISONAUT_WORKFLOW_OWNED.reusableWorkflowRef",
-    ),
-    reusableWorkflowSha: required(
-      workflowOwned.reusableWorkflowSha,
-      "VISONAUT_WORKFLOW_OWNED.reusableWorkflowSha",
-    ),
-    trustedWorkflowPath: required(
-      workflowOwned.trustedWorkflowPath,
-      "VISONAUT_WORKFLOW_OWNED.trustedWorkflowPath",
+    reusableWorkflowPath: required(
+      workflowOwned.reusableWorkflowPath,
+      "VISONAUT_WORKFLOW_OWNED.reusableWorkflowPath",
     ),
   };
   const configuration: ApiConfiguration = {
@@ -242,10 +230,6 @@ export function apiBindings(env: BackendEnv): ApiBindings {
       enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
     workflowOwned: workflowOwnedConfiguration,
-    trustedExecutorDigest: required(
-      env.VISONAUT_TRUSTED_EXECUTOR_DIGEST,
-      "VISONAUT_TRUSTED_EXECUTOR_DIGEST",
-    ),
     limits: {
       maximumImageBytes: limits.maximumImageBytes,
       maximumShardBytes: limits.maximumShardBytes,
@@ -367,7 +351,6 @@ export async function runScheduledOperations(
   for (const [kind, reconcile] of message.kind === "recovery"
     ? ([
         ["webhooks", reconcileWebhooks],
-        ["checks", retireUnpinnedMainChecks],
         ["check-aliases", reconcileEquivalentPullRequestChecks],
         ["staged", reconcileStagedWorkflows],
       ] as const)
