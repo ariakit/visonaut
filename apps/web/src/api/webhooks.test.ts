@@ -3,7 +3,7 @@ import { beginStaged } from "./workflow-owned.js";
 import { readFile } from "node:fs/promises";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { exportPKCS8, generateKeyPair } from "jose";
-import { workflowSourceDigest } from "@visonaut/protocol";
+import { sha256, workflowSourceDigest } from "@visonaut/protocol";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import * as security from "@visonaut/security";
@@ -20,10 +20,8 @@ import {
   ensurePreRunCheck,
   ensureSignedAttemptCheck,
   findPreRunCheck,
-  hasPinnedMainWorkflow,
   recordPreRunCandidate,
   reconcileEquivalentPullRequestChecks,
-  retireUnpinnedMainChecks,
   reportVisualPlan,
   requireVisualPlan,
   settlePreRunWorkflow,
@@ -147,12 +145,15 @@ const mergeSha = "c".repeat(40);
 
 const preRunConfiguration = {
   callerWorkflowPath: ".github/workflows/visonaut.yml",
-  callerWorkflowBlobSha: "e".repeat(40),
   captureJobName: "Visonaut / capture / {shard}",
   submitJobName: "Visonaut / submit",
-  reusableWorkflowRef: `ariakit/ariakit/.github/workflows/visonaut-reusable.yml@${"d".repeat(40)}`,
-  reusableWorkflowSha: "d".repeat(40),
+  reusableWorkflowPath: ".github/workflows/visonaut-reusable.yml",
 };
+// A staged attempt stores the repository and the path of the reusable workflow.
+const storedWorkflowRef = `ariakit/ariakit/${preRunConfiguration.reusableWorkflowPath}`;
+// The values that a pin fixed before D-OPS-04. Stored rows can still hold them.
+const earlierWorkflowPin = "d".repeat(40);
+const earlierWorkflowRef = `${storedWorkflowRef}@${earlierWorkflowPin}`;
 const preRunBindings: ApiBindings = {
   ...bindings,
   configuration: {
@@ -173,8 +174,6 @@ function preRunFixture() {
     currentMergeBase: baseSha,
     currentMergeHead: sourceSha,
     mergeTrees: new Map<string, string>(),
-    workflowSha: "e".repeat(40),
-    workflowShas: new Map<string, string>(),
     pullBaseSha: baseSha,
     pullBaseRef: "main",
     pullState: "open" as "open" | "closed",
@@ -251,9 +250,8 @@ function preRunFixture() {
       if (path.endsWith("/git/ref/heads/main")) {
         return { object: { sha: state.mainSha } };
       }
-      if (path.includes("/contents/.github/workflows/app.yml?ref=")) {
-        const ref = path.split("?ref=")[1] ?? "";
-        return { type: "file", sha: state.workflowShas.get(ref) ?? state.workflowSha };
+      if (path.includes("/contents/")) {
+        throw new Error("The service must read no workflow file.");
       }
       if (path.includes("/git/ref/heads/gh-readonly-queue/main/")) {
         return { object: { sha: state.refSha } };
@@ -797,29 +795,9 @@ describe("pre-run App checks", () => {
     },
   );
 
-  it.each([
-    ["old", "01b78334223b47515b41f63f587308050a5dcdad", true],
-    ["new", "c86f2dc5370fe07030a27af87979072f86afa8de", false],
-    ["successor", "4aac43e3039b578913e8a603c10ca47009493ef5", false],
-    ["unlisted", "f".repeat(40), false],
-  ])("%s app workflow blob has the expected main check result", async (_name, blob, allowed) => {
-    const fixture = preRunFixture();
-    fixture.state.workflowSha = blob;
-    const context = apiContext({
-      ...preRunBindings,
-      configuration: {
-        ...preRunBindings.configuration,
-        workflowOwned: {
-          ...preRunConfiguration,
-          trustedWorkflowPath: ".github/workflows/app.yml",
-          reusableWorkflowSha: "01b78334223b47515b41f63f587308050a5dcdad",
-        },
-      },
-    });
-    await expect(hasPinnedMainWorkflow(context, fixture.github, mergeSha)).resolves.toBe(allowed);
-  });
-
-  it("waits for the pinned main workflow and retires checks left by the old workflow", async () => {
+  it("records a main candidate and reads no workflow file", async () => {
+    // Before D-OPS-04 a main push got a candidate only when the App workflow
+    // at that commit had the pinned blob. The mock client throws on a file read.
     const fixture = preRunFixture();
     fixture.state.mainSha = mergeSha;
     fixture.webhook.event = "push";
@@ -833,14 +811,10 @@ describe("pre-run App checks", () => {
     };
     const { privateKey } = await generateKeyPair("RS256", { extractable: true });
     const privateKeyPem = await exportPKCS8(privateKey);
-    const scoped: ApiBindings = {
+    const context = apiContext({
       ...preRunBindings,
       configuration: {
         ...preRunBindings.configuration,
-        workflowOwned: {
-          ...preRunConfiguration,
-          trustedWorkflowPath: ".github/workflows/app.yml",
-        },
         github: {
           ...preRunBindings.configuration.github,
           privateKey: privateKeyPem,
@@ -857,138 +831,14 @@ describe("pre-run App checks", () => {
           },
         },
       },
-    };
-    const context = apiContext(scoped);
+    });
     await processWebhook(context, fixture.webhook);
-    expect(await count("pre_run_checks")).toBe(0);
-
-    // This is the orphaned state left by the previously deployed push handler.
-    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
-    if (!candidate) throw new Error("Missing main candidate");
-    await ensurePreRunCheck(context, fixture.github, candidate, fixture.webhook);
-    await database.prepare("UPDATE pre_run_checks SET created_at=1").run();
-    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
-    expect(await retireUnpinnedMainChecks(context, 25, fixture.github)).toEqual({
-      checked: 1,
-      pending: [],
-    });
-    expect(fixture.state.checks.get("1")).toMatchObject({
-      status: "completed",
-      conclusion: "neutral",
-    });
-    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
-      state: "docs_complete",
-    });
-
-    fixture.state.workflowSha = preRunConfiguration.reusableWorkflowSha;
-    fixture.state.mainSha = sourceSha;
-    fixture.webhook.payload = {
-      ...fixture.webhook.payload,
-      before: mergeSha,
-      after: sourceSha,
-    };
-    await processWebhook(context, fixture.webhook);
-    expect(fixture.state.posts).toBe(1);
     expect(
       await database
-        .prepare("SELECT state FROM pre_run_checks WHERE tested_sha=?")
-        .bind(sourceSha)
-        .first(),
-    ).toEqual({ state: "pending" });
-  });
-
-  it("finds an ambiguous old check after a full page of pinned main rows", async () => {
-    const fixture = preRunFixture();
-    fixture.state.mainSha = mergeSha;
-    fixture.webhook.event = "push";
-    fixture.webhook.payload = { ref: "refs/heads/main", before: baseSha, after: mergeSha };
-    const scoped: ApiBindings = {
-      ...preRunBindings,
-      configuration: {
-        ...preRunBindings.configuration,
-        workflowOwned: {
-          ...preRunConfiguration,
-          trustedWorkflowPath: ".github/workflows/app.yml",
-        },
-      },
-    };
-    const context = apiContext(scoped);
-    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
-    if (!candidate) throw new Error("Missing main candidate");
-    fixture.state.losePost = true;
-    await expect(
-      ensurePreRunCheck(context, fixture.github, candidate, fixture.webhook),
-    ).rejects.toThrow("GitHub response was lost");
-    expect(await database.prepare("SELECT state,check_id FROM pre_run_checks").first()).toEqual({
-      state: "ambiguous",
-      check_id: null,
-    });
-    await database.prepare("UPDATE pre_run_checks SET created_at=100").run();
-
-    for (let index = 0; index < 25; index += 1) {
-      const testedSha = index.toString(16).padStart(40, "0");
-      fixture.state.workflowShas.set(testedSha, preRunConfiguration.reusableWorkflowSha);
-      await database
-        .prepare(
-          "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,check_id,state,created_at,updated_at) VALUES (?,0,'100',?,?,'main','refs/heads/main',0,?,?,'active',?,?)",
-        )
-        .bind(
-          testedSha,
-          testedSha,
-          baseSha,
-          `visonaut:pre:${testedSha}`,
-          String(index + 2),
-          index,
-          index,
-        )
-        .run();
-    }
-    expect(await retireUnpinnedMainChecks(context, 25, fixture.github)).toEqual({
-      checked: 1,
-      pending: [],
-    });
-    expect(fixture.state.checks.get("1")).toMatchObject({
-      status: "completed",
-      conclusion: "neutral",
-    });
-    expect(
-      await database
-        .prepare("SELECT state,check_id FROM pre_run_checks WHERE tested_sha=?")
+        .prepare("SELECT kind,state FROM pre_run_checks WHERE tested_sha=?")
         .bind(mergeSha)
         .first(),
-    ).toEqual({ state: "docs_complete", check_id: "1" });
-  });
-
-  it("bounds failed cleanup attempts and rotates them behind older work", async () => {
-    const fixture = preRunFixture();
-    const scoped: ApiBindings = {
-      ...preRunBindings,
-      configuration: {
-        ...preRunBindings.configuration,
-        workflowOwned: {
-          ...preRunConfiguration,
-          trustedWorkflowPath: ".github/workflows/app.yml",
-        },
-      },
-    };
-    for (let index = 0; index < 26; index += 1) {
-      const testedSha = index.toString(16).padStart(40, "0");
-      await database
-        .prepare(
-          "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,state,request_started,created_at,updated_at) VALUES (?,0,'100',?,?,'main','refs/heads/main',0,?,'ambiguous',1,?,?)",
-        )
-        .bind(testedSha, testedSha, baseSha, `visonaut:pre:${testedSha}`, index, index)
-        .run();
-    }
-    const context = apiContext(scoped);
-    const first = await retireUnpinnedMainChecks(context, 25, fixture.github);
-    expect(first.checked).toBe(25);
-    expect(first.pending).toHaveLength(25);
-    const lastExternalId = `visonaut:pre:${(25).toString(16).padStart(40, "0")}`;
-    expect(first.pending).not.toContain(lastExternalId);
-    const second = await retireUnpinnedMainChecks(context, 25, fixture.github);
-    expect(second.checked).toBe(25);
-    expect(second.pending).toContain(lastExternalId);
+    ).toEqual({ kind: "main", state: "pending" });
   });
 
   it("records a preview main dispatch until its signed submit begins", async () => {
@@ -1765,7 +1615,7 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(1);
   });
 
-  it("fails a pinned workflow without submit and ignores unrelated workflows", async () => {
+  it("fails a caller workflow without submit and ignores unrelated workflows", async () => {
     const fixture = preRunFixture();
     // GitHub run 35933292194 for Ariakit PR 7619 uses the source head in
     // workflow_run.head_sha, while the required App check uses the merge SHA.
@@ -2249,7 +2099,6 @@ describe("pre-run App checks", () => {
     { condition: "Plan-not-required", update: "plan_visual_required=0" },
     { condition: "Plan-time", update: "plan_reported_at=1" },
     { condition: "Plan-job", update: "plan_job_id='101'" },
-    { condition: "Plan-workflow", update: "plan_workflow_sha='workflow'" },
     { condition: "ambiguous", update: "state='ambiguous'" },
     { condition: "creating", update: "state='creating'" },
     { condition: "failed", update: "state='failed'" },
@@ -2588,7 +2437,7 @@ describe("pre-run App checks", () => {
       submitConclusion: "success",
       rowState: "active",
       retentionState: "live",
-      sourcePin: "current",
+      stored: "after the deploy",
       materializedState: "none",
       expectedStatus: "in_progress",
     },
@@ -2596,7 +2445,7 @@ describe("pre-run App checks", () => {
       submitConclusion: "cancelled",
       rowState: "active",
       retentionState: "live",
-      sourcePin: "current",
+      stored: "after the deploy",
       materializedState: "none",
       expectedStatus: "completed",
     },
@@ -2604,7 +2453,7 @@ describe("pre-run App checks", () => {
       submitConclusion: "success",
       rowState: "failed",
       retentionState: "live",
-      sourcePin: "current",
+      stored: "after the deploy",
       materializedState: "none",
       expectedStatus: "completed",
     },
@@ -2612,7 +2461,7 @@ describe("pre-run App checks", () => {
       submitConclusion: "success",
       rowState: "active",
       retentionState: "deleting",
-      sourcePin: "current",
+      stored: "after the deploy",
       materializedState: "none",
       expectedStatus: "completed",
     },
@@ -2620,25 +2469,26 @@ describe("pre-run App checks", () => {
       submitConclusion: "success",
       rowState: "active",
       retentionState: "live",
-      sourcePin: "old",
+      // The attempt holds the digest and the workflow ref of an earlier pin.
+      stored: "before the deploy",
       materializedState: "none",
-      expectedStatus: "completed",
+      expectedStatus: "in_progress",
     },
     {
       submitConclusion: "success",
       rowState: "active",
       retentionState: "live",
-      sourcePin: "current",
+      stored: "after the deploy",
       materializedState: "failed",
       expectedStatus: "completed",
     },
   ])(
-    "settles old main with Submit $submitConclusion, row $rowState, retention $retentionState, pin $sourcePin, and run $materializedState",
+    "settles old main with Submit $submitConclusion, row $rowState, retention $retentionState, a stage stored $stored, and run $materializedState",
     async ({
       submitConclusion,
       rowState,
       retentionState,
-      sourcePin,
+      stored,
       materializedState,
       expectedStatus,
     }) => {
@@ -2650,9 +2500,10 @@ describe("pre-run App checks", () => {
       );
       if (!submit) throw new Error("Missing Submit job");
       submit.conclusion = submitConclusion;
-      const digest = await workflowSourceDigest(
-        sourcePin === "current" ? preRunConfiguration.reusableWorkflowSha : "e".repeat(40),
-      );
+      const beforeDeploy = stored === "before the deploy";
+      const digest = beforeDeploy
+        ? await workflowSourceDigest(earlierWorkflowPin)
+        : await sha256(new Uint8Array());
       await database
         .prepare(
           "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,submit_job_id,submitted_at,submit_verified_json,retention_state,created_at,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json) VALUES('staged','100','77',1,?,'102',1,'{}',?,?,?,?,?,?,?,'{}')",
@@ -2663,7 +2514,7 @@ describe("pre-run App checks", () => {
           Date.now(),
           digest,
           preRunConfiguration.callerWorkflowPath,
-          preRunConfiguration.reusableWorkflowRef,
+          beforeDeploy ? earlierWorkflowRef : storedWorkflowRef,
           preRunConfiguration.captureJobName,
           preRunConfiguration.submitJobName,
         )
@@ -3037,22 +2888,18 @@ describe("pre-run App checks", () => {
     ).toEqual({ workflow_run_id: null });
   });
 
-  it("settles an unbound terminal PR check for a pinned reusable workflow", async () => {
+  it("settles an unbound terminal PR check when the run references only a workflow of another repository", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
     if (!candidate) throw new Error("Missing candidate");
-    const pinnedRef = `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${preRunConfiguration.reusableWorkflowSha}`;
-    const scoped = apiContext({
-      ...preRunBindings,
-      configuration: {
-        ...preRunBindings.configuration,
-        workflowOwned: { ...preRunConfiguration, reusableWorkflowRef: pinnedRef },
-      },
-    });
+    const scoped = apiContext(preRunBindings);
     await ensurePreRunCheck(scoped, fixture.github, candidate, fixture.webhook);
     fixture.state.run.referenced_workflows = [
-      { path: pinnedRef, sha: preRunConfiguration.reusableWorkflowSha },
+      {
+        path: `ariakit/visonaut-diagnostics/.github/workflows/visonaut-capture.yml@${earlierWorkflowPin}`,
+        sha: earlierWorkflowPin,
+      },
     ];
     const inProgress = fixture.workflowWebhook();
     inProgress.payload.action = "in_progress";
@@ -4953,41 +4800,6 @@ describe("restored workflow and delivery fencing", () => {
     expect(await count("auth_audit")).toBe(1);
   });
 
-  it.each(["active", "ambiguous", "creating"])(
-    "keeps a restored %s unbound main check read-only",
-    async (state) => {
-      const fixture = preRunFixture();
-      await database
-        .prepare(
-          "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,docs_only,external_id,state,lease_until,created_at,updated_at) VALUES(?,0,'100',?,?,'main','refs/heads/main',0,'old-main',?,0,1,1)",
-        )
-        .bind(mergeSha, mergeSha, mergeSha, state)
-        .run();
-      await sanitizeRestoredDatabase(database, Date.now());
-      const request = vi.spyOn(fixture.github, "request");
-      const context = apiContext({
-        ...preRunBindings,
-        configuration: {
-          ...preRunBindings.configuration,
-          workflowOwned: {
-            ...preRunConfiguration,
-            trustedWorkflowPath: ".github/workflows/app.yml",
-          },
-        },
-      });
-      expect(await retireUnpinnedMainChecks(context, 25, fixture.github)).toEqual({
-        checked: 0,
-        pending: [],
-      });
-      expect(request).not.toHaveBeenCalled();
-      expect(
-        await database
-          .prepare("SELECT state FROM pre_run_checks WHERE external_id='old-main'")
-          .first(),
-      ).toEqual({ state });
-    },
-  );
-
   it("does not lease or reconcile a submitted stage from before the restore", async () => {
     const createdAt = Date.now() - 1000;
     await database
@@ -4997,7 +4809,7 @@ describe("restored workflow and delivery fencing", () => {
       .bind(
         mergeSha,
         preRunConfiguration.callerWorkflowPath,
-        preRunConfiguration.reusableWorkflowRef,
+        storedWorkflowRef,
         preRunConfiguration.captureJobName,
         preRunConfiguration.submitJobName,
         createdAt,

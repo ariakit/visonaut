@@ -8,7 +8,6 @@ import {
   validateKey,
   validateManifestProfiles,
   validateVersion,
-  workflowSourceDigest,
   LOCAL_COMPARISON_MODE,
   uploadImages,
   type Manifest,
@@ -29,15 +28,11 @@ import {
   verifyUploadTicket,
   type GitHubClient,
   type IngestCapability,
+  type RunReservation,
   type VerifiedRun,
 } from "@visonaut/security";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "@visonaut/service";
-import {
-  isTrustedWorkflowExecutor,
-  loadVerifiedMergeGroup,
-  type ApiConfiguration,
-  type ApiContext,
-} from "./context.js";
+import { loadVerifiedMergeGroup, type ApiConfiguration, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import {
   ensureSignedAttemptCheck,
@@ -103,6 +98,7 @@ interface StagedImage {
 
 const maximumReusePage = 32;
 const maximumReusePageBytes = 8 * 1024 * 1024;
+const workflowPathPattern = /^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/;
 
 function hexBytes(value: string): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(value.match(/.{2}/g) ?? [], (pair) => Number.parseInt(pair, 16));
@@ -116,21 +112,10 @@ export function workflowConfiguration(context: ApiContext) {
     !Number.isSafeInteger(maximumStagedBytes) ||
     !maximumStagedBytes ||
     maximumStagedBytes < 1 ||
-    !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.callerWorkflowPath) ||
-    (configuration.callerWorkflowBlobSha !== undefined &&
-      !/^[a-f0-9]{40}$/.test(configuration.callerWorkflowBlobSha)) ||
-    (configuration.trustedWorkflowPath !== undefined &&
-      !/^\.github\/workflows\/[A-Za-z0-9._-]+\.ya?ml$/.test(configuration.trustedWorkflowPath)) ||
+    !workflowPathPattern.test(configuration.callerWorkflowPath) ||
+    !workflowPathPattern.test(configuration.reusableWorkflowPath) ||
     !configuration.submitJobName ||
-    configuration.submitJobName.length > 256 ||
-    !/^[a-f0-9]{40}$/.test(configuration.reusableWorkflowSha) ||
-    (configuration.trustedWorkflowPath !== undefined &&
-      configuration.reusableWorkflowRef !==
-        `${context.configuration.github.repository}/${configuration.trustedWorkflowPath}@${configuration.reusableWorkflowSha}`) ||
-    !configuration.reusableWorkflowRef.startsWith(
-      `${context.configuration.github.repository}/.github/workflows/`,
-    ) ||
-    !configuration.reusableWorkflowRef.endsWith(`@${configuration.reusableWorkflowSha}`)
+    configuration.submitJobName.length > 256
   ) {
     throw new SecurityError(
       "workflow_configuration",
@@ -198,11 +183,16 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
   };
 }
 
+/** The stored identity of a signed job keeps the schema version of its request. */
+interface WorkflowJobIdentity extends RunReservation {
+  schemaVersion: string;
+}
+
 async function verifyWorkflowJob(
   request: Request,
   context: ApiContext,
   github: GitHubClient,
-  identity: ReserveRunRequest,
+  identity: WorkflowJobIdentity,
   jobName: string,
   audience: string,
 ): Promise<VerifiedRun> {
@@ -219,11 +209,6 @@ async function verifyWorkflowJob(
         context.configuration.allowMainDispatch === true,
       repositoryOwnerId: context.configuration.repositoryOwnerId,
       workflowPath: configuration.callerWorkflowPath,
-      callerWorkflowBlobSha: configuration.callerWorkflowBlobSha,
-      reusableWorkflowRef: configuration.reusableWorkflowRef,
-      reusableWorkflowSha: configuration.reusableWorkflowSha,
-      trustedWorkflowPath: configuration.trustedWorkflowPath,
-      planDigest: identity.planDigest,
       shards: [{ key: identity.shardKey, jobName }],
       loadMergeGroup: (testedSha) => loadVerifiedMergeGroup(context, testedSha),
     },
@@ -294,15 +279,13 @@ export async function beginStaged(request: Request, context: ApiContext, externa
   const body = await jsonBody(request, 32_768);
   validateVersion(body.schemaVersion);
   const configuration = workflowConfiguration(context);
-  const sourceDigest = await workflowSourceDigest(configuration.reusableWorkflowSha);
-  const identity: ReserveRunRequest = {
+  const identity: WorkflowJobIdentity = {
     schemaVersion: SCHEMA_VERSION,
     repository: context.configuration.github.repository,
     repositoryId: context.configuration.github.repositoryId,
     workflowRunId: externalRunId,
     workflowAttempt: integer(body.workflowAttempt, 1),
     testedSha: string(body.testedSha, 40),
-    planDigest: sourceDigest,
     shardKey: "combined",
   };
   const github = await createGitHubClient(context.configuration.github);
@@ -327,10 +310,6 @@ export async function beginStaged(request: Request, context: ApiContext, externa
 export async function reserveStaged(request: Request, context: ApiContext) {
   const body = reserveRequest(await jsonBody(request, 32_768));
   const configuration = workflowConfiguration(context);
-  const sourceDigest = await workflowSourceDigest(configuration.reusableWorkflowSha);
-  if (body.planDigest !== sourceDigest) {
-    throw new SecurityError("wrong_workflow_source", 403, "The workflow source changed.");
-  }
   const github = await createGitHubClient(context.configuration.github);
   const jobName = workflowStagingJobName(configuration, body.shardKey);
   const verified = await verifyWorkflowJob(
@@ -341,7 +320,8 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     jobName,
     new URL("/submit", context.configuration.origin).href,
   );
-  const run = await reserveVerifiedStagedRun(context, verified, sourceDigest);
+  // The attempt keeps the digest of its first reserve call. No setting fixes it.
+  const run = await reserveVerifiedStagedRun(context, verified, body.planDigest);
   await context.database
     .prepare(
       "INSERT INTO ingest_staged_bundles (run_id, job_id, check_run_id, shard_key, job_name, verified_json, created_at) SELECT ?, ?, ?, ?, ?, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT DO NOTHING",
@@ -375,7 +355,7 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     workflowRunId: verified.workflowRunId,
     workflowAttempt: verified.workflowAttempt,
     testedSha: verified.testedSha,
-    planDigest: sourceDigest,
+    planDigest: body.planDigest,
     shardKey: body.shardKey,
     jobId: verified.jobId,
     maximumBytes: context.configuration.limits.maximumShardBytes,
@@ -443,7 +423,7 @@ export async function reserveVerifiedStagedRun(
         verified.testedSha,
         sourceDigest,
         configuration.callerWorkflowPath,
-        configuration.reusableWorkflowRef,
+        `${context.configuration.github.repository}/${configuration.reusableWorkflowPath}`,
         configuration.captureJobName,
         configuration.submitJobName,
         JSON.stringify(verified),
@@ -462,7 +442,6 @@ export async function reserveVerifiedStagedRun(
     run.tested_sha !== verified.testedSha ||
     run.workflow_source_digest !== sourceDigest ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
-    run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
     run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName ||
     run.submitted_at !== null ||
@@ -497,8 +476,6 @@ export async function declareStaged(
         Object.hasOwn(profile, "comparisonPolicyDigest") ||
         Object.hasOwn(profile, "comparisonEngineVersion"),
     ) ||
-    !context.configuration.trustedExecutorDigest ||
-    !isTrustedWorkflowExecutor(context.configuration, discovery.executorDigest) ||
     discovery.inventoryDigest !==
       (await digestJson(
         manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
@@ -1196,10 +1173,7 @@ export async function submitStaged(request: Request, context: ApiContext, extern
   }
   const configuration = workflowConfiguration(context);
   if (
-    seed.workflow_source_digest !==
-      (await workflowSourceDigest(configuration.reusableWorkflowSha)) ||
     seed.caller_workflow_path !== configuration.callerWorkflowPath ||
-    seed.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
     seed.capture_job_prefix !== configuration.captureJobName ||
     seed.submit_job_name !== configuration.submitJobName
   ) {
@@ -1238,7 +1212,6 @@ export async function submitStaged(request: Request, context: ApiContext, extern
     run.tested_sha !== verified.testedSha ||
     run.workflow_source_digest !== seed.workflow_source_digest ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
-    run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
     run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName ||
     run.retention_state !== "live"

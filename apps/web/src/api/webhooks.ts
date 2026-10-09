@@ -12,12 +12,7 @@ import { assertion, atomic, ConflictError } from "@visonaut/service";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { mergeBaseForHead } from "./merge.js";
-import {
-  candidateForWebhook,
-  hasPinnedMainWorkflow,
-  recordPreRunCandidate,
-  settlePreRunWorkflow,
-} from "./pre-run.js";
+import { candidateForWebhook, recordPreRunCandidate, settlePreRunWorkflow } from "./pre-run.js";
 import { materializeWorkflowRun } from "./workflow-materialize.js";
 import {
   afterRestoreSql,
@@ -187,7 +182,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
   if (webhook.event === "push" && context.configuration.workflowOwned) {
     const github = await createGitHubClient(context.configuration.github);
     const candidate = await candidateForWebhook(github, webhook);
-    if (candidate && (await hasPinnedMainWorkflow(context, github, candidate.testedSha))) {
+    if (candidate) {
       await recordPreRunCandidate(context, github, candidate);
     }
   }

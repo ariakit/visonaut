@@ -17,7 +17,7 @@ import {
 } from "@visonaut/service";
 import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
-import { assertConfiguredProject, isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
+import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import {
   validateAdmittedMainReference,
@@ -597,7 +597,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     shardCommitMs: 0,
   };
   await leaseStagedSources(context, stagedRunId);
-  // Stored reference staleness survives a later workflow or executor rollout.
+  // Stored reference staleness survives a later change of the configuration.
   if (
     previous?.kind === "main" &&
     previous.state === "uploading" &&
@@ -623,10 +623,10 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const proof = await digestJson({ submit, jobSetDigest, lineage: lineage.proof });
   const executorDigest = bundles[0]?.manifest.discovery?.executorDigest;
   if (
-    !isTrustedWorkflowExecutor(context.configuration, executorDigest) ||
+    !executorDigest ||
     bundles.some((bundle) => bundle.manifest.discovery?.executorDigest !== executorDigest)
   ) {
-    throw new IncompleteError("The trusted capture jobs must use one configured executor.");
+    throw new IncompleteError("The capture jobs must declare one executor.");
   }
   const local = bundles[0]?.manifest.localComparison;
   if (!local)
@@ -729,7 +729,6 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
         })),
         lineageProof: lineage.proof,
         reusableWorkflowRef: staged.reusable_workflow_ref,
-        reusableWorkflowSha: context.configuration.workflowOwned?.reusableWorkflowSha,
         executorDigest,
         jobSetDigest,
       }),
@@ -750,7 +749,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const materializedAt = performance.now();
   const current = await workflowAttempt(github, submit);
   if (current.path !== staged.caller_workflow_path) {
-    throw new IncompleteError("The pinned workflow changed before sealing.");
+    throw new IncompleteError("The workflow attempt changed before sealing.");
   }
   const checkedAt = performance.now();
   const sealTimestamp = Date.now();
