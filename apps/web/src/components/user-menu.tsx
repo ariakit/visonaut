@@ -20,7 +20,8 @@ export interface UserMenuProps {
 }
 
 export function UserMenu({ login, preview, signingOut, error, onSignOut }: UserMenuProps) {
-  const [menu, setMenu] = useState({ open: Boolean(error), error });
+  // A menu that mounts with an old error starts closed. A new error opens it.
+  const [menu, setMenu] = useState({ open: false, error });
   const accountLabel = preview ? "Preview account" : login ? `@${login}` : "Account";
 
   if (error !== menu.error) {

@@ -12,7 +12,7 @@ function History() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   return (
-    <DashboardPage page="history" path="/history">
+    <DashboardPage path="/history">
       {({ runs, repository, refresh }) => (
         <RunHistory
           runs={runs}

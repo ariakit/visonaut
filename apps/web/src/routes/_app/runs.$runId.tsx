@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useBlocker, useNavigate, useRouter } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { AppHeader } from "../../components/app-shell.tsx";
-import { UserMenu } from "../../components/user-menu.tsx";
+import { noAccessFacts, useSessionFacts } from "../../app-session.tsx";
+import { AppHeader, AppShell } from "../../components/kit/shell.tsx";
 import {
   ButtonLabel,
   ButtonSlot,
@@ -12,7 +12,6 @@ import { LogIn, RotateCcw } from "lucide-react";
 import { ControlButton as Button } from "../../components/control-button.tsx";
 import { Frame } from "../../components/ariakit/components/frame.ariakit.react.tsx";
 import {
-  Shell,
   ShellMain,
   ShellMainBody,
 } from "../../components/ariakit/components/shell.ariakit.react.tsx";
@@ -31,6 +30,8 @@ export const Route = createFileRoute("/_app/runs/$runId")({
     variant: typeof search.variant === "string" ? search.variant : undefined,
   }),
   ssr: false,
+  // The review workspace renders the shell root itself.
+  staticData: { shell: "page" },
   // Do not hold the hydrated loading shell after the model is ready.
   pendingMinMs: 0,
   loaderDeps: ({ search }) => ({ comparison: search.comparison }),
@@ -56,12 +57,11 @@ type RunState = { status: "guest" } | { status: "ready"; model: ReviewModel };
 
 function RunShell({ children }: { children: ReactNode }) {
   return (
-    <Shell $layer="canvas" className="text-sm [--shell-header-step:calc(48px/14)]">
-      <AppHeader />
+    <AppShell>
       <ShellMain>
         <ShellMainBody className="min-h-[60dvh] items-center">{children}</ShellMainBody>
       </ShellMain>
-    </Shell>
+    </AppShell>
   );
 }
 
@@ -77,12 +77,13 @@ function RunLoading() {
 
 function RunError({ error, reset }: { error: unknown; reset(): void }) {
   const router = useRouter();
-  const message =
-    error instanceof ReviewCommandError && error.status === 403
-      ? "Write access to this repository is required to open this run."
-      : error instanceof Error
-        ? error.message
-        : "The run could not be loaded. Please retry.";
+  const noAccess = error instanceof ReviewCommandError && error.status === 403;
+  useSessionFacts(noAccess ? noAccessFacts : undefined);
+  const message = noAccess
+    ? "Write access to this repository is required to open this run."
+    : error instanceof Error
+      ? error.message
+      : "The run could not be loaded. Please retry.";
   return (
     <RunShell>
       <Frame
@@ -161,7 +162,23 @@ function RunPage({
   state: RunState;
 }) {
   const commands = useMemo(() => createReviewCommands(runId, comparisonId), [runId, comparisonId]);
-  const [action, setAction] = useState<"sign-in" | "sign-out" | null>(null);
+  const [action, setAction] = useState<"sign-in" | null>(null);
+  useSessionFacts(
+    state.status === "ready"
+      ? { signedIn: true, preview: state.model.preview, repository: state.model.run.repository }
+      : { signedIn: false },
+  );
+  const [unsentDecisions, setUnsentDecisions] = useState(false);
+  // A router navigation does not fire `beforeunload`, so a link of the header
+  // asks here. A change of the selection keeps the path and does not ask.
+  useBlocker({
+    disabled: !unsentDecisions,
+    enableBeforeUnload: false,
+    shouldBlockFn: ({ current, next }) => {
+      if (current.pathname === next.pathname) return false;
+      return !window.confirm("A decision is not saved. Leave this run?");
+    },
+  });
   const [actionError, setActionError] = useState("");
 
   const signIn = async () => {
@@ -186,18 +203,6 @@ function RunPage({
       setAction(null);
     }
   };
-  const signOut = async () => {
-    setAction("sign-out");
-    setActionError("");
-    try {
-      const result = await createAuthClient().signOut();
-      if (result.error) throw new Error("Sign-out failed. Please try again.");
-      window.location.assign("/");
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "Sign-out failed. Please try again.");
-      setAction(null);
-    }
-  };
 
   if (state.status === "ready") {
     return (
@@ -205,14 +210,8 @@ function RunPage({
         model={state.model}
         commands={commands}
         route={route}
-        headerEnd={
-          <UserMenu
-            preview={state.model.preview}
-            signingOut={action === "sign-out"}
-            error={actionError}
-            onSignOut={() => void signOut()}
-          />
-        }
+        header={<AppHeader />}
+        onUnsentDecisionsChange={setUnsentDecisions}
       />
     );
   }

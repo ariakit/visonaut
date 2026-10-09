@@ -18,7 +18,7 @@ Only a pull request whose branch is in this repository gets a Visonaut check. A 
 
 Validated image URLs need no session. Anyone with a URL can view and copy those pixels. Run metadata, labels, decisions, export files, and quarantine remain private. The public route serves only validated image records, not arbitrary bucket paths. Preview uses isolated fixture runs without GitHub login or production data. It does not certify deployed authentication.
 
-The dashboard also shows unresolved service alerts. It refreshes them while open; no external notifications are sent.
+The Status page shows unresolved service alerts. It refreshes them while it is open and its tab is visible. No external notifications are sent.
 
 Use the [review guide](docs/review-guide.md) for image modes, keyboard controls, whole-item commands, Undo, and recovery from a failed save.
 

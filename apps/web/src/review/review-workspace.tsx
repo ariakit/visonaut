@@ -44,7 +44,6 @@ import {
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { AppHeader } from "../components/app-shell.tsx";
 import { Heading } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ReviewStatus } from "./review-status.tsx";
@@ -70,7 +69,10 @@ export interface ReviewWorkspaceProps {
   model: ReviewModel;
   commands: ReviewCommands;
   route?: ReviewRoute;
-  headerEnd?: ReactNode;
+  /** The header of the app, from the layout route. */
+  header?: ReactNode;
+  /** Tells the route when a decision is not sent or not saved. */
+  onUnsentDecisionsChange?(unsent: boolean): void;
 }
 
 export interface ReviewRoute {
@@ -204,7 +206,13 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
   return <ReviewSession key={props.model.run.id} {...props} />;
 }
 
-function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: ReviewWorkspaceProps) {
+function ReviewSession({
+  model: suppliedModel,
+  commands,
+  route,
+  header,
+  onUnsentDecisionsChange,
+}: ReviewWorkspaceProps) {
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const [mode, setMode] = useState<ReviewMode>("side");
   const [zoom, setZoom] = useState<ReviewZoom>("fit");
@@ -283,12 +291,16 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     pendingComparison,
     awaitingComparison,
     terminalComparison,
+    unsentDecisions,
     runStatus,
     save,
     undo,
     refresh,
     recompare,
   } = session;
+  useEffect(() => {
+    onUnsentDecisionsChange?.(unsentDecisions);
+  }, [onUnsentDecisionsChange, unsentDecisions]);
   const routedSelection = route?.selection;
   const onRouteSelect = route?.onSelect;
   const unchanged = useUnchangedScreenshots({
@@ -576,7 +588,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       aria-label="Review workspace"
       $layer="canvas"
     >
-      <AppHeader repository={model.run.repository} end={headerEnd} />
+      {header}
       <ShellSidebar
         id="review-screenshots"
         $show="5xl"

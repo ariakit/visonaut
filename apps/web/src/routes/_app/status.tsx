@@ -8,10 +8,8 @@ export const Route = createFileRoute("/_app/status")({
 
 function Status() {
   return (
-    <DashboardPage page="service" path="/status">
-      {({ onAccessDenied }) => (
-        <OperationsAttention onAccessDenied={onAccessDenied} layout="page" />
-      )}
+    <DashboardPage path="/status">
+      {({ onAccessDenied }) => <OperationsAttention onAccessDenied={onAccessDenied} />}
     </DashboardPage>
   );
 }

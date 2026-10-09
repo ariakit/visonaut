@@ -172,16 +172,20 @@ export function useReviewSession({
       session.queue = [];
     };
   }, [suppliedModel.comparisonId]);
+  // True while a decision is not sent or not saved. The browser then asks
+  // before it leaves the page.
+  const unsentDecisions =
+    (saveState.status === "saving" || saveState.status === "error") &&
+    !(pendingReviews.length && !sendingCount) &&
+    !saveState.durable;
   useEffect(() => {
-    if (saveState.status !== "saving" && saveState.status !== "error") return;
-    if (pendingReviews.length && !sendingCount) return;
-    if (saveState.durable) return;
+    if (!unsentDecisions) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [saveState.status, saveState.durable, pendingReviews.length, sendingCount]);
+  }, [unsentDecisions]);
   useEffect(() => {
     if (!awaitingComparison) return;
     let cancelled = false;
@@ -560,6 +564,7 @@ export function useReviewSession({
     pendingComparison,
     awaitingComparison,
     terminalComparison,
+    unsentDecisions,
     runStatus: runStatusLabel(model.run.status),
     save,
     review,
