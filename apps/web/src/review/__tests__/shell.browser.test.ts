@@ -33,7 +33,7 @@ test("a click on a header link changes the page with no new document and keeps t
   const history = page.getByRole("link", { name: "History", exact: true });
   await history.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   await expect(history).toHaveAttribute("aria-current", "page");
   // The keyboard focus stays on the link that the person used.
   await expect(history).toBeFocused();
@@ -123,7 +123,7 @@ test("a header link on the run page asks before it leaves while a decision is no
   await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
   accept = true;
   await history.click();
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   expect(messages).toHaveLength(2);
 });
 
@@ -149,7 +149,7 @@ test("a header link on the run page leaves with no question when each decision i
     void dialog.dismiss();
   });
   await page.getByRole("banner").getByRole("link", { name: "History" }).click();
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   expect(messages).toEqual([]);
 });
 
@@ -181,7 +181,7 @@ test("a header link on the run page asks before it leaves while a decision is be
   await command;
   await page.getByRole("banner").getByRole("link", { name: "History" }).click();
   await expect.poll(() => messages).toEqual(["A decision is not saved. Leave this run?"]);
-  await expect(page.getByRole("heading", { name: "Run history." })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toHaveCount(0);
 });
 
 test("the pull request page gives the header its repository", async ({ page }) => {

@@ -10,8 +10,9 @@ import { RunRow, RunRowList, RunRowSkeleton } from "../components/kit/run-row.ts
 import { getExternalLinkProps } from "../components/kit/shell.tsx";
 import { EmptyState } from "../components/kit/surfaces.tsx";
 import { tertiary } from "../components/kit/tokens.ts";
+import type { DashboardShape } from "./dashboard-page.tsx";
 import { NextRun, NextRunSkeleton } from "./next-run.tsx";
-import { awaitsReview, isInProgress, needsRecovery } from "./run-parts.tsx";
+import { awaitsReview, isInProgress, needsRecovery } from "./run-groups.ts";
 
 // The part of the README that says how a repository starts to capture.
 const setupGuide = "https://github.com/ariakit/visonaut#capture-and-submit";
@@ -78,15 +79,21 @@ export function Queue({ runs, baselineRevision, repository }: QueueProps) {
   );
 }
 
-/** The shape of the Queue before the runs load. */
-export function QueueSkeleton() {
-  return (
-    <>
-      <NextRunSkeleton />
-      <RunRowSkeleton count={3} />
-    </>
-  );
-}
+/** The name and the shape of the Queue while it has no run list. */
+export const queueShape: DashboardShape = {
+  heading: "Queue",
+  shape: (still) => {
+    if (still) {
+      return <RunRowSkeleton count={3} still />;
+    }
+    return (
+      <>
+        <NextRunSkeleton />
+        <RunRowSkeleton count={3} />
+      </>
+    );
+  },
+};
 
 interface RunGroupProps {
   /** The visible label above the sheet. */

@@ -37,10 +37,18 @@ export function formatDateTime(timestamp: number) {
   return new Date(timestamp).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
-/**
- * `now`, `12 min ago`, `3 h ago`, `2 d ago`, and from 7 days a date such as
- * `Sep 12`. A date of another year has its year.
- */
+/** A date such as `Sep 12`, in the locale of the machine. A date of another year has its year. */
+export function formatDate(timestamp: number, now = Date.now()) {
+  const date = new Date(timestamp);
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+  });
+}
+
+/** `now`, `12 min ago`, `3 h ago`, `2 d ago`, and from 7 days the date of `formatDate`. */
 export function formatRelativeTime(timestamp: number, now = Date.now()) {
   const elapsed = now - timestamp;
   if (elapsed < minute) return "now";
@@ -53,11 +61,5 @@ export function formatRelativeTime(timestamp: number, now = Date.now()) {
   if (elapsed < 7 * day) {
     return `${Math.floor(elapsed / day)} d ago`;
   }
-  const date = new Date(timestamp);
-  const sameYear = date.getFullYear() === new Date(now).getFullYear();
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: sameYear ? undefined : "numeric",
-  });
+  return formatDate(timestamp, now);
 }

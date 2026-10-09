@@ -29,6 +29,12 @@ const runs = [
   run("run-dialog-old", "Dialog backdrop", "passed", 106),
 ];
 
+/** Selects one option of the result select of History. */
+async function selectResult(page: Page, label: string) {
+  await page.getByRole("combobox", { name: "Result" }).click();
+  await page.getByRole("option", { name: new RegExp(`^${label}`) }).click();
+}
+
 async function signedIn(page: Page) {
   const requests: string[] = [];
   await page.route("**/api/**", (route) => {
@@ -57,7 +63,7 @@ test("each dashboard page has its own path below the layout route", async ({ pag
     "page",
   );
   await page.goto(entry("/history"));
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "History", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
@@ -66,7 +72,7 @@ test("each dashboard page has its own path below the layout route", async ({ pag
   await expect(page.getByRole("link", { name: "Queue 1 run to review" })).not.toHaveAttribute(
     "aria-current",
   );
-  await expect(page.getByRole("row")).toHaveCount(4);
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(3);
   await page.goto(entry("/status"));
   await expect(page.getByRole("heading", { name: "Service status", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Status", exact: true })).toHaveAttribute(
@@ -86,25 +92,23 @@ test("the header links to the page paths", async ({ page }) => {
   );
   await expect(navigation.getByRole("link", { name: "Status" })).toHaveAttribute("href", "/status");
   await navigation.getByRole("link", { name: "History" }).click();
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
 });
 
 test("the old view parameter has no redirect and shows the Queue", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/?view=history"));
   await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Run history." })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toHaveCount(0);
 });
 
 test("the History search and filter come from the search parameters", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/history?q=dialog&state=passed"));
-  await expect(page.getByRole("textbox", { name: "Search loaded history" })).toHaveValue("dialog");
-  await expect(page.getByRole("combobox", { name: "Filter history by result" })).toHaveValue(
-    "passed",
-  );
-  await expect(page.getByRole("rowheader")).toHaveCount(1);
-  await expect(page.getByRole("rowheader")).toContainText("Dialog backdrop");
+  await expect(page.getByRole("searchbox", { name: "Search runs" })).toHaveValue("dialog");
+  await expect(page.getByRole("combobox", { name: "Result" })).toHaveText("Passed");
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("link")).toContainText(["Dialog backdrop"]);
   // The search parameters do not take the current mark from the link.
   await expect(page.getByRole("link", { name: "History", exact: true })).toHaveAttribute(
     "aria-current",
@@ -117,21 +121,21 @@ test("a change of the History search and filter goes into the search parameters"
 }) => {
   await signedIn(page);
   await page.goto(entry("/history"));
-  const search = page.getByRole("textbox", { name: "Search loaded history" });
+  const search = page.getByRole("searchbox", { name: "Search runs" });
   // No wait between the keys: the field must keep each character.
   await search.pressSequentially("dialog");
   await expect(search).toHaveValue("dialog");
   await expect(search).toBeFocused();
-  await expect(page.getByRole("rowheader")).toHaveCount(2);
-  await page.getByRole("combobox", { name: "Filter history by result" }).selectOption("passed");
-  await expect(page.getByRole("rowheader")).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(2);
+  await selectResult(page, "Passed");
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(1);
   await expect
     .poll(() => page.evaluate(() => window.fixtureRouter.state.location.href))
     .toBe("/history?q=dialog&state=passed");
   // Each change replaces the entry: the history of the page has one entry.
   expect(await page.evaluate(() => window.fixtureRouter.history.length)).toBe(1);
   await search.fill("");
-  await page.getByRole("combobox", { name: "Filter history by result" }).selectOption("all");
+  await selectResult(page, "All results");
   await expect
     .poll(() => page.evaluate(() => window.fixtureRouter.state.location.href))
     .toBe("/history");
@@ -142,7 +146,7 @@ test("the History search field keeps the caret when a person types inside the te
 }) => {
   await signedIn(page);
   await page.goto(entry("/history?q=dig"));
-  const search = page.getByRole("textbox", { name: "Search loaded history" });
+  const search = page.getByRole("searchbox", { name: "Search runs" });
   await expect(search).toHaveValue("dig");
   await search.focus();
   await search.evaluate((element: HTMLInputElement) => element.setSelectionRange(1, 1));
@@ -157,18 +161,29 @@ test("the History search field keeps the caret when a person types inside the te
     window.fixtureRouter.navigate({ to: "/history", search: { q: "menu" } }),
   );
   await expect(search).toHaveValue("menu");
-  await expect(page.getByRole("rowheader")).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(1);
 });
 
 test("the History filter shows a state of the URL that no loaded run has", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/history?state=failed"));
-  const filter = page.getByRole("combobox", { name: "Filter history by result" });
-  await expect(filter).toHaveValue("failed");
-  await expect(page.getByRole("heading", { name: "No matching runs" })).toBeVisible();
-  await filter.selectOption("all");
-  await expect(page.getByRole("rowheader")).toHaveCount(3);
-  await expect(filter.getByRole("option")).toHaveText(["All results", "Needs review", "Passed"]);
+  const filter = page.getByRole("combobox", { name: "Result" });
+  await expect(filter).toHaveText("Failed");
+  await expect(page.getByRole("heading", { name: "No runs match" })).toBeVisible();
+  // The state of the URL is an option while it is selected, with no run.
+  await filter.click();
+  await expect(page.getByRole("option")).toHaveText([
+    "All results3",
+    "Needs review1",
+    "Failed0",
+    "Passed2",
+  ]);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Clear filter" }).click();
+  await expect(page.getByRole("main").getByRole("link")).toHaveCount(3);
+  await expect(page.getByRole("searchbox", { name: "Search runs" })).toBeFocused();
+  await filter.click();
+  await expect(page.getByRole("option")).toHaveText(["All results3", "Needs review1", "Passed2"]);
 });
 
 for (const path of ["/history", "/status"] as const) {

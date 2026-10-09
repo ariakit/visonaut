@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { DashboardPending } from "../../dashboard/dashboard-page.tsx";
-import { QueueSkeleton } from "../../dashboard/queue-page.tsx";
+import { historyShape } from "../../dashboard/history-page.tsx";
+import { queueShape } from "../../dashboard/queue-page.tsx";
 import { loadRunList } from "../../dashboard/run-list.ts";
 
 // The route of the run list. It has no URL segment. The Queue and History are
@@ -19,6 +20,9 @@ export const Route = createFileRoute("/_app/_runs")({
   component: Outlet,
 });
 
+// The route shows the pending state for the Queue and for History, so the
+// path selects the shape.
 function RunsPending() {
-  return <DashboardPending queue={<QueueSkeleton />} />;
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  return <DashboardPending {...(path === "/history" ? historyShape : queueShape)} />;
 }

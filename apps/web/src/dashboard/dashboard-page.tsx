@@ -1,39 +1,37 @@
 import { getRouteApi, useRouter, useRouterState } from "@tanstack/react-router";
-import { cx } from "clava";
 import { CloudOffIcon } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { useAccessDenied, useSessionFacts } from "../app-session.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ErrorBand, ErrorBandButton } from "../components/kit/error-band.tsx";
-import { RunRowSkeleton } from "../components/kit/run-row.tsx";
 import { PageMain } from "../components/kit/shell.tsx";
 import { tertiary } from "../components/kit/tokens.ts";
-import { AccessFrame } from "./access-frame.tsx";
 import {
   isRunListReadInFlight,
   rememberRunList,
   type RunList,
   type RunListResult,
 } from "./run-list.ts";
-import { awaitsReview, isInProgress } from "./run-parts.tsx";
+import { awaitsReview, isInProgress } from "./run-groups.ts";
 
 const runsRoute = getRouteApi("/_app/_runs");
 
-/** What the content of a run list page gets when the run list is ready. */
-export interface DashboardContent extends RunList {
-  /** Reads the run list again. The page keeps the list for that time. */
-  refresh(): void;
+/** The name and the shape of a run list page while it has no run list. */
+export interface DashboardShape {
+  /** The name of the page, as its hidden `h1`. */
+  heading: string;
+  /** The part above the list, with each control off: the toolbar of History. */
+  header?: ReactNode;
+  /**
+   * The shape of the list. It is still under the band of a failed read,
+   * because nothing loads then.
+   */
+  shape(still: boolean): ReactNode;
 }
 
-export interface DashboardPageProps {
-  /**
-   * The name of the page as its hidden `h1`. A page with it has the frame of
-   * the settled design. History has none until it moves to that design.
-   */
-  heading?: string;
-  /** The shape of the page before the runs load, for a page with `heading`. */
-  loading?: ReactNode;
-  children(content: DashboardContent): ReactNode;
+export interface DashboardPageProps extends DashboardShape {
+  /** The content of the page, for the run list of a read. */
+  children(list: RunList): ReactNode;
 }
 
 interface DashboardFrameProps extends DashboardPageProps {
@@ -92,21 +90,23 @@ function listAge(readAt: number) {
   return `list of ${hours} h ago`;
 }
 
-interface RunsLoadingProps {
-  /** The skeletons of the page. */
-  children: ReactNode;
-}
+// The blocks of a page are six steps apart.
+const pageStack = "grid min-w-0 gap-6";
 
-// The region of the skeletons while the first read of the run list runs.
-function RunsLoading({ children }: RunsLoadingProps) {
+// The page while the first read of the run list runs: the shape of the list,
+// in a region that says that it is busy.
+function RunsLoading({ header, shape }: Omit<DashboardShape, "heading">) {
   return (
-    <div aria-busy="true" aria-label="Loading runs" className="grid min-w-0 gap-6">
-      {children}
+    <div className={pageStack}>
+      {header}
+      <div aria-busy="true" aria-label="Loading runs" className={pageStack}>
+        {shape(false)}
+      </div>
     </div>
   );
 }
 
-interface LoadFailureProps {
+interface LoadFailureProps extends Omit<DashboardShape, "heading"> {
   /** The sentence of the cause. */
   cause: string;
   /** The reference of the failed request. */
@@ -118,9 +118,9 @@ interface LoadFailureProps {
 // The first read failed, so the page has no list. The list keeps its shape
 // under the band: a still skeleton, because nothing loads while the error
 // shows.
-function LoadFailure({ cause, reference, onRetry }: LoadFailureProps) {
+function LoadFailure({ header, shape, cause, reference, onRetry }: LoadFailureProps) {
   const reading = useRouterState({ select: (state) => state.isLoading });
-  return (
+  const failure = (
     <div className="grid min-w-0 gap-2">
       <ErrorBand
         icon={CloudOffIcon}
@@ -133,12 +133,21 @@ function LoadFailure({ cause, reference, onRetry }: LoadFailureProps) {
           </ErrorBandButton>
         }
       />
-      <RunRowSkeleton count={3} still />
+      {shape(true)}
+    </div>
+  );
+  if (!header) {
+    return failure;
+  }
+  return (
+    <div className={pageStack}>
+      {header}
+      {failure}
     </div>
   );
 }
 
-function DashboardFrame({ heading, loading, result, children }: DashboardFrameProps) {
+function DashboardFrame({ heading, header, shape, result, children }: DashboardFrameProps) {
   const router = useRouter();
   // The loader of the route reads again, and the route keeps its data until
   // the new data is there.
@@ -188,64 +197,46 @@ function DashboardFrame({ heading, loading, result, children }: DashboardFramePr
     result?.status === "guest" ? 401 : result?.status === "forbidden" ? 403 : undefined,
     result?.status === "forbidden" ? result.message : undefined,
   );
-  // The old frame has no gap between its parts, so each part has a margin.
-  const oldFrame = !heading;
-  const readyContent = result?.status === "ready" && (
-    <>
-      {result.list.preview && (
-        <Text render={<p />} className={cx("text-xs", tertiary, oldFrame && "mb-6")}>
-          Preview fixtures · GitHub login is disabled
-        </Text>
-      )}
-      {result.refreshFailure && (
-        <ErrorBand
-          tone="warning"
-          // The list is still on screen, so the band waits its turn.
-          role="status"
-          icon={CloudOffIcon}
-          title="Could not refresh runs"
-          detail={`${listAge(result.readAt)} · ${result.refreshFailure}`}
-          action={<ErrorBandButton onClick={tryAgain}>Try again</ErrorBandButton>}
-          className={cx(oldFrame && "mb-6")}
+  return (
+    <PageMain heading={heading}>
+      {result?.status === "error" && (
+        <LoadFailure
+          header={header}
+          shape={shape}
+          cause={result.cause ?? result.message}
+          reference={result.reference}
+          onRetry={tryAgain}
         />
       )}
-      <div ref={content} tabIndex={-1} className="min-w-0 outline-none">
-        {children({ ...result.list, refresh })}
-      </div>
-    </>
-  );
-  if (heading) {
-    return (
-      <PageMain heading={heading}>
-        {result?.status === "error" && (
-          <LoadFailure
-            cause={result.cause ?? result.message}
-            reference={result.reference}
-            onRetry={tryAgain}
-          />
-        )}
-        {/* A result with no access also has the shape: the layout route
-            replaces the page in the next render. */}
-        {result?.status !== "ready" && result?.status !== "error" && (
-          <RunsLoading>{loading}</RunsLoading>
-        )}
-        {readyContent}
-      </PageMain>
-    );
-  }
-  return (
-    <AccessFrame
-      state={
-        result?.status === "ready"
-          ? { status: "ready" }
-          : result?.status === "error"
-            ? { status: "error", message: result.message }
-            : { status: "loading" }
-      }
-      onRetry={refresh}
-    >
-      {readyContent}
-    </AccessFrame>
+      {/* A result with no access also has the shape: the layout route
+          replaces the page in the next render. */}
+      {result?.status !== "ready" && result?.status !== "error" && (
+        <RunsLoading header={header} shape={shape} />
+      )}
+      {result?.status === "ready" && (
+        <>
+          {result.list.preview && (
+            <Text render={<p />} className={`text-xs ${tertiary}`}>
+              Preview fixtures · GitHub login is disabled
+            </Text>
+          )}
+          {result.refreshFailure && (
+            <ErrorBand
+              tone="warning"
+              // The list is still on screen, so the band waits its turn.
+              role="status"
+              icon={CloudOffIcon}
+              title="Could not refresh runs"
+              detail={`${listAge(result.readAt)} · ${result.refreshFailure}`}
+              action={<ErrorBandButton onClick={tryAgain}>Try again</ErrorBandButton>}
+            />
+          )}
+          <div ref={content} tabIndex={-1} className="min-w-0 outline-none">
+            {children(result.list)}
+          </div>
+        </>
+      )}
+    </PageMain>
   );
 }
 
@@ -299,27 +290,14 @@ export function DashboardPage(props: DashboardPageProps) {
   return <DashboardFrame {...props} result={useRunListResult(runList)} />;
 }
 
-export interface DashboardPendingProps {
-  /** The shape of the Queue before the runs load. */
-  queue: ReactNode;
-}
-
 /**
- * The page while the first read of the run list runs. The route of the run
- * list shows it for the Queue and for History, so the path selects the page.
+ * The page while the first read of the run list runs, for the pending state
+ * of the route of the run list.
  */
-export function DashboardPending({ queue }: DashboardPendingProps) {
-  const path = useRouterState({ select: (state) => state.location.pathname });
-  if (path === "/") {
-    return (
-      <PageMain heading="Queue">
-        <RunsLoading>{queue}</RunsLoading>
-      </PageMain>
-    );
-  }
+export function DashboardPending({ heading, header, shape }: DashboardShape) {
   return (
-    <AccessFrame state={{ status: "loading" }} onRetry={() => {}}>
-      {null}
-    </AccessFrame>
+    <PageMain heading={heading}>
+      <RunsLoading header={header} shape={shape} />
+    </PageMain>
   );
 }

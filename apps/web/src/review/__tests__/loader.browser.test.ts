@@ -53,17 +53,13 @@ function countRequests(page: Page): Requests {
   return requests;
 }
 
-/**
- * Counts the times that the loading state of the run list is in the page: the
- * skeletons of the Queue, or the loading text of History.
- */
+/** Counts the times that the loading state of the run list is in the page: the skeletons. */
 async function watchLoadingText(page: Page) {
   await page.evaluate(() => {
     const state = { count: 0 };
     Object.assign(window, { loadingText: state });
     new MutationObserver(() => {
-      const text = document.body.textContent?.includes("Checking access and loading runs");
-      if (text || document.querySelector('[aria-label="Loading runs"]')) {
+      if (document.querySelector('[aria-label="Loading runs"]')) {
         state.count += 1;
       }
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -82,8 +78,8 @@ test("a click on History in the header makes no document request and no run list
   await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   const requests = countRequests(page);
   await page.getByRole("link", { name: "History", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
-  await expect(page.getByRole("rowheader")).toContainText("Dialog focus");
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link")).toContainText(["Dialog focus"]);
   // The Queue again: the same route of the run list, so no read.
   await page.getByRole("link", { name: /^Queue/ }).click();
   await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
