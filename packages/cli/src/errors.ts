@@ -10,6 +10,19 @@ export class CliError extends Error {
 }
 
 /**
+ * A refused request. `code` is the error code of the answer, and only when it
+ * has the safe form that http.ts prints.
+ */
+export class ServiceRefusal extends CliError {
+  constructor(
+    message: string,
+    readonly code: string | undefined,
+  ) {
+    super(message);
+  }
+}
+
+/**
  * The only text that names a screenshot in a log. Both keys passed the protocol
  * key check (letters, digits, and . _ / -, 256 characters at most), so they
  * cannot hold a line break. Never add a display title or the result of a
