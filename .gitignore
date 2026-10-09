@@ -15,6 +15,7 @@ playwright-report/
 *.pem
 .visonaut-app.json
 artifacts/
+.claude/worktrees/
 
 # Generated from the committed Wrangler bindings before type checking.
 **/worker-configuration.d.ts
