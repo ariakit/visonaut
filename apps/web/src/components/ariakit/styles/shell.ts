@@ -98,7 +98,10 @@ const seam = cv({
         return [facingBorder, "[--shell-facing-border:var(--border-width)]"];
       }
       if (value === "dashed") {
-        return cx(facingBorder, "border-dashed [--shell-facing-border:var(--border-width)]");
+        return cx(
+          facingBorder,
+          "border-dashed [--shell-facing-border:var(--border-width)]",
+        );
       }
       return "[--shell-facing-border:0px]";
     },
@@ -649,7 +652,8 @@ export const shellMainHeader = cv({
     /**
      * Keeps the main header below the shell's sticky headers. Defaults to true.
      */
-    $sticky: "shell-main-header-sticky sticky inset-bs-[calc(var(--shell-top)+var(--shell-head))]",
+    $sticky:
+      "shell-main-header-sticky sticky inset-bs-[calc(var(--shell-top)+var(--shell-head))]",
     /**
      * Shows the header at or above a named shell-container width. Prefix the
      * name with `max-` to show it only below that width. `true` keeps it at
@@ -745,23 +749,27 @@ const mainBand = cv({
 /** The centered content column, including inside a wider main band. */
 export const shellMainContent = cv({
   extend: [mainBand],
-  class: "shell-main-content [.shell-content>&]:col-[content] [.shell-main-band>&]:col-[content]",
+  class:
+    "shell-main-content [.shell-content>&]:col-[content] [.shell-main-band>&]:col-[content]",
 });
 
 /** Extends one step beyond the centered content column. */
 export const shellMainPopout = cv({
   extend: [mainBand],
-  class: "shell-main-popout [.shell-content>&]:col-[popout] [.shell-main-band>&]:col-[popout]",
+  class:
+    "shell-main-popout [.shell-content>&]:col-[popout] [.shell-main-band>&]:col-[popout]",
 });
 
 /** Extends beyond the popout column, while leaving the outer gutters. */
 export const shellMainFeature = cv({
   extend: [mainBand],
-  class: "shell-main-feature [.shell-content>&]:col-[feature] [.shell-main-band>&]:col-[feature]",
+  class:
+    "shell-main-feature [.shell-content>&]:col-[feature] [.shell-main-band>&]:col-[feature]",
 });
 
 /** Fills the main part's width, including its outer gutters. */
 export const shellMainFull = cv({
   extend: [mainBand],
-  class: "shell-main-full [.shell-content>&]:col-[full] [.shell-main-band>&]:col-[full]",
+  class:
+    "shell-main-full [.shell-content>&]:col-[full] [.shell-main-band>&]:col-[full]",
 });

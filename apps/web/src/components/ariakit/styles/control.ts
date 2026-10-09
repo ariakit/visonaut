@@ -1,10 +1,10 @@
 import { cv, cx } from "clava";
 import { includes } from "../utils/includes.ts";
-import type { FrameRoundedValue } from "../components/frame.ariakit.react.tsx";
-import { frame, getFrameRoundedClass } from "../components/frame.ariakit.react.tsx";
-import { hasLayerBackground, isLayerColor, layer } from "../components/layer.ariakit.react.tsx";
-import { textFrame } from "../components/text-frame.ariakit.react.tsx";
-import { text } from "../components/text.ariakit.react.tsx";
+import type { FrameRoundedValue } from "./frame.ts";
+import { frame, getFrameRoundedClass } from "./frame.ts";
+import { hasLayerBackground, isLayerColor, layer } from "./layer.ts";
+import { textFrame } from "./text-frame.ts";
+import { text } from "./text.ts";
 
 // A control and a control group set their font size the same way, and every
 // other measurement in this file derives from it through 1cap, 1em and 1lh. The
@@ -97,6 +97,36 @@ export const control = cv({
 // rows already provides that room, so those slots keep their requested size.
 const PADDED_SLOT_SIZES = ["xs", "sm", "md", "lg"] as const;
 
+const SLOT_SIZE_CLASSES = {
+  unset: "",
+  xs: "[--size:1ex]",
+  sm: "[--size:1cap]",
+  md: "[--size:1em]",
+  lg: "[--size:0.875lh]",
+  xl: "[--size:1lh]",
+  "2xl": "[--size:calc(1lh+var(--py)/var(--row-span))]",
+  full: "[--size:calc(1lh+var(--py)*2/var(--row-span))]",
+};
+
+export type SlotSize = keyof typeof SLOT_SIZE_CLASSES;
+
+/**
+ * Returns whether a value is one of the named slot sizes, such as `md` or `xl`.
+ */
+export function isSlotSize(value: unknown): value is SlotSize {
+  if (typeof value !== "string") return false;
+  return Object.hasOwn(SLOT_SIZE_CLASSES, value);
+}
+
+/**
+ * Returns the class of a named slot size, or `undefined` for any other value,
+ * so an extender that replaces `$size` with a function keeps the named sizes.
+ */
+export function getSlotSizeClass(value: unknown) {
+  if (!isSlotSize(value)) return;
+  return SLOT_SIZE_CLASSES[value];
+}
+
 export const controlSlot = cv({
   extend: [frame],
   class: [
@@ -117,31 +147,31 @@ export const controlSlot = cv({
     /**
      * Sets the slot size.
      */
-    $size: {
-      unset: "",
-      xs: "[--size:1ex]",
-      sm: "[--size:1cap]",
-      md: "[--size:1em]",
-      lg: "[--size:0.875lh]",
-      xl: "[--size:1lh]",
-      "2xl": "[--size:calc(1lh+var(--py)/var(--row-span))]",
-      full: "[--size:calc(1lh+var(--py)*2/var(--row-span))]",
-    },
+    $size: SLOT_SIZE_CLASSES,
     /**
      * Controls the slot's horizontal margin. By default, it's set based on the
      * slot size. The larger the slot, the larger the margin. Set to `closeGap`
      * to move the slot closer to the control's text.
      *
-     * The margin goes on the sibling element beside the slot, so the text must
-     * be wrapped in a label element such as `ButtonLabel`. A sibling selector
-     * cannot see a bare text node, and the margin would land on the next
-     * element instead, which may be another slot.
+     * A named margin goes on the sibling element beside the slot, so the text
+     * must be wrapped in a label element such as `ButtonLabel`. A sibling
+     * selector cannot see a bare text node, and the margin would land on the
+     * next element instead, which may be another slot.
+     *
+     * `auto` is for a slot that leads a label with a size an extender takes
+     * from its container, such as a slot size set on a nav. Its margin sits on
+     * the slot itself. It follows an `auto` size by default.
      *
      * A stacked card sets `--control-inline` to 0, which drops these margins
      * along with the slot's own.
      */
     $mx: {
       unset: "",
+      // A size from the container can be wider than the line. The slot then
+      // overflows its box on both sides, and its own end margin grows by the
+      // far-side overflow so the gap to the label holds. Tailwind emits me-*
+      // after the slot's own mx-*, so this margin wins by order.
+      auto: "me-[calc(var(--mx)+max(0px,(var(--size,1lh)-1lh)/2)*var(--control-inline,1))]",
       closeGap:
         "[&+*]:ms-[calc(var(--spacing)*-1*var(--control-inline,1))] [*:has(+&)]:me-[calc(var(--spacing)*-1*var(--control-inline,1))]",
       xs: "[&+*]:ms-[calc(var(--sidebearing)*-1*var(--control-inline,1))] [*:has(+&)]:me-[calc(var(--sidebearing)*-1*var(--control-inline,1))]",
@@ -185,16 +215,31 @@ export const controlSlot = cv({
       return getFrameRoundedClass(value);
     },
     /**
-     * Sets the element’s kind. When you use the `badge` kind, wrap text in a
-     * `<span>` element so it’s styled correctly.
+     * Sets the element’s kind. The `badge` and `shortcut` kinds style one
+     * element around the content. The slot components render it as a `<span>`,
+     * so wrap the content in one yourself only when you use this recipe
+     * directly. The badge trims that element to the height of its capitals. To
+     * truncate the badge text, put it in an element of your own with
+     * `block overflow-x-clip text-ellipsis whitespace-nowrap` and a maximum
+     * width. These clip only the inline axis, while `truncate` also clips the
+     * descenders.
      */
     $kind: {
       icon: "",
-      // A key chord reads the same way in every locale, so the bidi algorithm
-      // must not reorder its keys in a right-to-left row.
-      shortcut: "[direction:ltr]",
+      shortcut: [
+        // A key chord reads the same way in every locale, so the child element
+        // lays out its keys left to right, with the slot's alignment and gap.
+        // The slot keeps the row's direction, so its own margins follow it.
+        "*:flex *:[align-items:inherit] *:[gap:inherit] *:[direction:ltr]",
+        // An icon among the keys takes the size of an icon in the slot itself.
+        "*:[&>svg]:block *:[&>svg]:size-(--slot-icon-size,calc(var(--size)*var(--slot-icon-scale,1)))",
+      ],
       avatar: "overflow-clip",
-      badge: "*:text-[0.8125em]",
+      // The slot centers the text box. Trimmed to the capitals, that box no
+      // longer carries the half-leading that each engine rounds differently,
+      // which left the text off center in Chromium and Firefox.
+      // https://github.com/ariakit/ariakit/issues/7588
+      badge: "*:text-[0.8125em] *:[text-box:cap_alphabetic]",
     },
     /**
      * Sets the slot to be a square.
@@ -299,14 +344,20 @@ export const controlSlot = cv({
     },
   },
   refine({ variants, setVariants, addClass }) {
-    const paintsIcon = variants.$kind === "icon" && isLayerColor(variants.$layer);
+    const paintsIcon =
+      variants.$kind === "icon" && isLayerColor(variants.$layer);
     if (paintsIcon && variants.$rowSpan === 1) {
       // A painted icon slot is a tile, so its icon sits inside it instead of
       // filling it. A slot that spans rows is already taller than its icon.
       addClass("[--slot-icon-scale:0.6]");
     }
-    const paintsSurface = variants.$kind === "badge" || variants.$kind === "avatar";
+    const paintsSurface =
+      variants.$kind === "badge" || variants.$kind === "avatar";
     if (!paintsSurface) return;
+    // Forced colors remove the slot's fill, which may be its only boundary.
+    if (variants.$border == null && hasLayerBackground(variants)) {
+      addClass("forced-colors:ak-frame-border");
+    }
     addClass([
       // Mix the fill into its parent before ink is calculated, so disabled
       // text keeps the contrast chosen for the resulting surface.
@@ -331,15 +382,51 @@ export const controlSlot = cv({
       // Larger slots have room for the label's text size.
       if (variants.$size === "2xl") return;
       if (variants.$size === "full") return;
-      // Keep the parent's line height before adjusting font metrics, which also
-      // affect normal line height. A 0.45em cap height gives initials room.
-      addClass("leading-[1lh] [font-size-adjust:cap-height_0.45]");
+      addClass([
+        // Keep the parent's line height before adjusting font metrics, which
+        // also affect normal line height. Initials get a cap height of 0.3
+        // times the slot size at any size: 0.45em in a 24px slot at a 16px
+        // font. tan(atan2(a,b)) is a/b as a number; Firefox cannot divide one
+        // length by another in calc() yet.
+        "leading-[1lh] [font-size-adjust:cap-height_calc(0.3*tan(atan2(var(--size,1lh),1em)))]",
+        // The adjustment also changes 1cap here, and the inherited --px would
+        // measure it again for the margins. The frame's inset, a length
+        // measured in the frame's font, keeps the avatar on the icon column.
+        "[--px:calc(var(--py)+var(--text-frame-inset))]",
+      ]);
     }
     if (includes(PADDED_SLOT_SIZES, variants.$size)) {
       setVariants({ $size: "xl" });
     }
   },
 });
+
+/**
+ * The `$size` default of a slot whose container sizes its icon, such as a
+ * disclosure button. Only an icon takes that size, through the extender's
+ * `auto` size. A badge, an avatar or a shortcut keeps the size every other
+ * control slot gives it: the one-line box for a badge or an avatar (see
+ * `PADDED_SLOT_SIZES`), the text size for a shortcut.
+ */
+export function getIconSlotSize<Size extends string>(
+  defaultValue: Size | undefined,
+  variants: { $kind?: string },
+) {
+  if (variants.$kind !== "icon") return defaultValue;
+  // Replace only controlSlot's own `md` default (see its defaultVariants), so
+  // an extender's size still applies.
+  if (defaultValue !== "md") return defaultValue;
+  return "auto" as const;
+}
+
+/**
+ * Whether a control slot of this `$kind` styles its content through one child
+ * element, so a component must wrap the slot's children in a `<span>`. A badge
+ * scales the text in it, and a shortcut keeps its keys left to right in it.
+ */
+export function wrapsSlotChildren(kind?: string) {
+  return kind === "badge" || kind === "shortcut";
+}
 
 export const controlContent = cv({
   class: [
@@ -362,7 +449,8 @@ export const controlContent = cv({
 
 export const controlLabel = cv({
   extend: [text],
-  class: "group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0",
+  class:
+    "group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0",
   variants: {
     $truncate: "truncate",
   },
@@ -484,7 +572,8 @@ export const controlGroup = cv({
     $layout: {
       none: "",
       wrap: "flex flex-wrap",
-      stretch: "flex w-full [&>.control]:basis-0 [&>.control]:min-w-0 [&>.control]:grow",
+      stretch:
+        "flex w-full [&>.control]:basis-0 [&>.control]:min-w-0 [&>.control]:grow",
       horizontal: "flex",
       vertical: "vertical flex flex-col [&>.control]:justify-start",
     },
@@ -505,7 +594,10 @@ export const controlGroup = cv({
     $p: 1,
     $gap: "auto",
     $joined(defaultValue, variants) {
-      return defaultValue ?? (variants.$layout === "horizontal" || variants.$layout === "stretch");
+      return (
+        defaultValue ??
+        (variants.$layout === "horizontal" || variants.$layout === "stretch")
+      );
     },
   },
   refine({ variants, addClass }) {

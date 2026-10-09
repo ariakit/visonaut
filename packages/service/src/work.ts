@@ -374,7 +374,7 @@ export interface StatusIntent {
   comparisonRevision: number;
   sourceRevision: number;
   conclusion: "pending" | "success" | "failure";
-  /** The review state of the run and its three counts. A check with no run status has none. */
+  /** The review state of the run and its three counts. A check with no known state has none. */
   review: ReviewStatusSummary | null;
   detailsUrl: string;
   maxAttempts: number;
@@ -389,7 +389,7 @@ export interface StatusDelivery {
   comparison_revision: number;
   source_revision: number;
   conclusion: "pending" | "success" | "failure";
-  /** The four review values are NULL for a check with no run status and for an old row. */
+  /** The four review values are NULL for a check with no known state and for an old row. */
   review_state: ReviewStatusSummary["status"] | null;
   review_pending: number | null;
   review_rejected: number | null;

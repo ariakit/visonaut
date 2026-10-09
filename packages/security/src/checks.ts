@@ -1,3 +1,4 @@
+import { reviewStateWords, runClosedWords, type RunReviewState } from "@visonaut/protocol";
 import { numericId, record, SecurityError } from "./errors.js";
 import { GitHubUnavailableError, type GitHubClient } from "./github.js";
 
@@ -20,9 +21,36 @@ export interface StatusDelivery {
   comparison_revision: number;
   source_revision: number;
   conclusion: "pending" | "success" | "failure";
+  /** The four review values are NULL for a check with no known state and for an old row. */
+  review_state: RunReviewState | null;
+  review_pending: number | null;
+  review_rejected: number | null;
+  review_approved: number | null;
   details_url: string;
   attempts: number;
   max_attempts: number;
+}
+
+/**
+ * The review state of a run and its three counts, with the one definition of
+ * the run list: `pending` includes the rejected changes.
+ */
+export interface CheckReview {
+  state: RunReviewState;
+  pending: number;
+  rejected: number;
+  approved: number;
+}
+
+/** The review values of a stored status update. An update with no state has none. */
+export function checkReview(delivery: StatusDelivery): CheckReview | null {
+  if (delivery.review_state == null) return null;
+  return {
+    state: delivery.review_state,
+    pending: delivery.review_pending ?? 0,
+    rejected: delivery.review_rejected ?? 0,
+    approved: delivery.review_approved ?? 0,
+  };
 }
 
 /** Structural match for the sender result that the service retries with no lock. */
@@ -67,18 +95,101 @@ function reviewUrl(url: string, origin: string): string {
   return parsed.href;
 }
 
-export function genericCheckOutput(conclusion: StatusDelivery["conclusion"], detailsUrl: string) {
-  const summary = `[Open this review in Visonaut](${detailsUrl}). Sign in with GitHub if prompted.`;
-  if (conclusion === "pending") {
-    return { title: "Visual review is running", summary };
+/** The text of a check before the service read the state of its run. */
+export const startingCheckOutput = {
+  title: "Checking visual coverage",
+  summary: "Visonaut is verifying this commit.",
+};
+
+function changes(count: number, singular: string, plural: string) {
+  return count === 1 ? `1 change ${singular}` : `${count} changes ${plural}`;
+}
+
+interface CheckText {
+  title: string;
+  /** Who acts next. */
+  next: string;
+  /** True when the summary has the three counts. The other states read no counts. */
+  counted?: boolean;
+}
+
+// The maintainer approved each sentence on 2026-10-09 (the table of #267).
+// GitHub shows the text on each pull request, so a change needs a new approval.
+function checkText({ state, pending, rejected, approved }: CheckReview): CheckText {
+  switch (state) {
+    case "needs-review":
+      return {
+        // A rejected change has a verdict, so it does not wait for a review.
+        title: changes(pending - rejected, "needs review", "need review"),
+        next: "Next: a maintainer approves or rejects each change. If a change is not intended, the author pushes a commit that removes it.",
+        counted: true,
+      };
+    case "rejected":
+      return {
+        title: changes(rejected, "rejected", "rejected"),
+        next: "Next: the author pushes a commit that corrects the rejected changes. A maintainer can also change a decision.",
+        counted: true,
+      };
+    case "passed":
+      // A run with no change has no approval, and the accepted baseline run
+      // reads no counts. The text of both has no number.
+      if (approved === 0) {
+        return {
+          title: reviewStateWords.passed,
+          next: "No action is necessary. No change needs review.",
+        };
+      }
+      return {
+        title: changes(approved, "approved", "approved"),
+        next: "No action is necessary. Each change is approved.",
+        counted: true,
+      };
+    case "incomplete":
+      return {
+        title: `${reviewStateWords.incomplete} screenshots`,
+        next: "No action is necessary. CI captures the screenshots of this commit.",
+      };
+    case "comparing":
+      return {
+        title: `${reviewStateWords.comparing} screenshots`,
+        next: "No action is necessary. Visonaut compares the screenshots with the baseline.",
+      };
+    case "needs-recompare":
+      return {
+        title: reviewStateWords["needs-recompare"],
+        next: "Next: a maintainer runs the CI workflow of this commit again. The baseline changed after the comparison of this run.",
+      };
+    case "superseded":
+      return {
+        // A run closes for more than one cause, and the update stores none.
+        title: runClosedWords,
+        next: "This run is closed, and its result does not change. Next: the author pushes a commit, or a maintainer runs the CI workflow again, to start a new run.",
+      };
+    case "failed":
+      return {
+        title: "Capture or comparison failed",
+        next: "The capture or the comparison did not complete. Next: a maintainer runs the CI workflow again, or the author pushes a commit.",
+      };
   }
-  if (conclusion === "success") {
-    return { title: "Visual review passed", summary };
+}
+
+/**
+ * The public text of the check for one review state. The summary says who acts
+ * next. It has no screenshot name, no reviewer name, and no result of one image.
+ */
+export function genericCheckOutput(review: CheckReview, detailsUrl: string) {
+  const text = checkText(review);
+  const paragraphs = [text.next];
+  if (text.counted) {
+    const { pending, rejected, approved } = review;
+    paragraphs.push(
+      `Changes: ${pending - rejected} need review, ${rejected} rejected, ${approved} approved.`,
+    );
   }
-  return {
-    title: "Visual review has not passed",
-    summary,
-  };
+  paragraphs.push(
+    `[Open the run in Visonaut](${detailsUrl}). Only a person with write access to the repository can open it.`,
+  );
+  return { title: text.title, summary: paragraphs.join("\n\n") };
 }
 
 interface EnsureCheckParams {
@@ -170,7 +281,7 @@ export async function ensureGitHubCheck({
         external_id: externalId,
         details_url: href,
         status: "in_progress",
-        output: genericCheckOutput("pending", href),
+        output: startingCheckOutput,
       }),
     }),
   );
@@ -221,6 +332,9 @@ export async function sendGitHubCheck({
   origin,
   isCurrent,
 }: SendCheckParams): Promise<void | "not-sent" | StatusReadFailure> {
+  // The text needs the review state. An update with no state sends nothing.
+  const review = checkReview(intent);
+  if (!review) return "not-sent";
   const checkId = numericId(intent.check_id);
   const path = `/repos/${github.repository}/check-runs/${checkId}`;
   let existing: Record<string, unknown>;
@@ -246,7 +360,7 @@ export async function sendGitHubCheck({
     );
   }
   const href = reviewUrl(intent.details_url, origin);
-  const output = genericCheckOutput(intent.conclusion, href);
+  const output = genericCheckOutput(review, href);
   if (!(await isCurrent())) return "not-sent";
   // Each PATCH of a completed check writes its end time. Send none for the same result.
   if (showsCompletedResult({ existing, href, conclusion: intent.conclusion, output })) return;
