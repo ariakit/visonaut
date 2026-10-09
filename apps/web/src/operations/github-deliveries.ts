@@ -137,6 +137,19 @@ async function readDeliveryJson(response: Response, maximumBytes: number): Promi
   }
 }
 
+const firstRedeliveryWaitMs = 5 * 60_000;
+// GitHub can send a delivery again for 3 days. No wait is longer than 1 day.
+const maximumRedeliveryWaitMs = 24 * 60 * 60_000;
+
+/**
+ * The wait after the request with the number `attempts`, before the next one:
+ * 5 minutes after the first request, and two times longer after each later
+ * one. A receiver that fails for a time then keeps a later attempt.
+ */
+function redeliveryWaitMs(attempts: number) {
+  return Math.min(maximumRedeliveryWaitMs, firstRedeliveryWaitMs * 2 ** Math.max(0, attempts - 1));
+}
+
 /**
  * Close the recovery rows and the alerts of deliveries that arrived, in one
  * batch of 2 statements for any number of deliveries. Pass only delivery IDs
@@ -314,17 +327,18 @@ export async function recoverGitHubDeliveries({
         });
         continue;
       }
+      // The claim uses the same wait, so two passes cannot both claim a request.
+      const wait = redeliveryWaitMs(recovery.attempts);
       if (
         requested >= context.budget.tasksPerStep ||
-        (recovery.last_requested_at !== null &&
-          recovery.last_requested_at > context.now() - 5 * 60_000)
+        (recovery.last_requested_at !== null && recovery.last_requested_at > context.now() - wait)
       )
         continue;
       // Charge before POST so an ambiguous response cannot create unbounded retries.
       const claimed = await context.database
         .prepare(`UPDATE github_webhook_recovery SET attempts=attempts+1,last_requested_at=?,resolved_at=NULL
         WHERE guid=? AND attempts=? AND (last_requested_at IS NULL OR last_requested_at<=?) RETURNING guid`)
-        .bind(context.now(), delivery.guid, recovery.attempts, context.now() - 5 * 60_000)
+        .bind(context.now(), delivery.guid, recovery.attempts, context.now() - wait)
         .first();
       if (!claimed) continue;
       requested += 1;
