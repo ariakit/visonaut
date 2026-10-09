@@ -35,7 +35,13 @@ it.each(["superseded", "failed", "ambiguous", "unknown"])(
       now: 1,
     });
     const evidence = database.connection.prepare("SELECT * FROM ingest_staged_runs").all();
-    const read = () => operationsStatus({ database, projectId: "project", repositoryId: "123" });
+    const read = () =>
+      operationsStatus({
+        database,
+        projectId: "project",
+        repositoryId: "123",
+        captureLimit: 40_000,
+      });
     expect((await read()).events).toHaveLength(condition === "superseded" ? 0 : 1);
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
       resolved_at: null,
@@ -144,7 +150,13 @@ it.each([
       outbox: database.connection.prepare("SELECT * FROM work_status_outbox").all(),
       lineage: database.connection.prepare("SELECT * FROM visonaut_lineage").all(),
     };
-    const read = () => operationsStatus({ database, projectId: "project", repositoryId: "123" });
+    const read = () =>
+      operationsStatus({
+        database,
+        projectId: "project",
+        repositoryId: "123",
+        captureLimit: 40_000,
+      });
     const obsolete = condition === "lineage";
     expect((await read()).events).toHaveLength(obsolete ? 0 : 1);
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
