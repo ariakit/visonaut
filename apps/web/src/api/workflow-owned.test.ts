@@ -28,7 +28,7 @@ import {
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
 import { ConflictError, retireSnapshot, Service } from "@visonaut/service";
-import { exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
+import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { apiContext, type ApiBindings } from "./context.js";
@@ -437,6 +437,84 @@ async function fixture(
     githubResponses,
     registerPreRunCheck,
   };
+}
+
+/**
+ * Start the first signed attempt of a fixture again: remove its staged rows, and
+ * make GitHub answer for one running Submit job. The result signs a new GitHub
+ * token of that job at each call, as the CLI gets one for each signed request.
+ */
+async function runningSubmitJob(test: Awaited<ReturnType<typeof fixture>>) {
+  const workflowOwned = test.context.configuration.workflowOwned;
+  if (!workflowOwned) {
+    throw new Error("Expected workflow configuration.");
+  }
+  const { repositoryId, workflowRunId, testedSha } = test.manifest.run;
+  // The fixture stages the attempt. Remove it, so that a reserve call admits a new one.
+  await database.prepare("DELETE FROM ingest_staged_bundles WHERE run_id=?").bind(test.runId).run();
+  await database.prepare("DELETE FROM ingest_staged_runs WHERE id=?").bind(test.runId).run();
+  const base = `/repos/ariakit/ariakit/actions/runs/${workflowRunId}`;
+  const run = {
+    id: Number(workflowRunId),
+    run_attempt: 1,
+    repository: { id: Number(repositoryId), owner: { id: 5 } },
+    event: "push",
+    path: workflowOwned.callerWorkflowPath,
+    status: "in_progress",
+    conclusion: null,
+    head_sha: testedSha,
+    head_branch: "main",
+  };
+  test.githubResponses.set(
+    `/repos/ariakit/ariakit/contents/${workflowOwned.callerWorkflowPath}?ref=${testedSha}`,
+    {
+      type: "file",
+      path: workflowOwned.callerWorkflowPath,
+      sha: workflowOwned.callerWorkflowBlobSha,
+    },
+  );
+  test.githubResponses.set(base, run);
+  test.githubResponses.set(`${base}/attempts/1`, run);
+  test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
+    total_count: 1,
+    jobs: [
+      {
+        id: Number(test.jobId),
+        run_id: Number(workflowRunId),
+        run_attempt: 1,
+        name: workflowOwned.submitJobName,
+        check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
+        status: "in_progress",
+        conclusion: null,
+      },
+    ],
+  });
+  const signToken = () =>
+    new SignJWT({
+      repository: "ariakit/ariakit",
+      repository_id: repositoryId,
+      repository_owner_id: "5",
+      run_id: workflowRunId,
+      run_attempt: "1",
+      sha: testedSha,
+      check_run_id: test.jobId,
+      event_name: "push",
+      ref: "refs/heads/main",
+      workflow_ref: `ariakit/ariakit/${workflowOwned.callerWorkflowPath}@refs/heads/main`,
+      workflow_sha: testedSha,
+      job_workflow_ref: workflowOwned.reusableWorkflowRef,
+      job_workflow_sha: workflowOwned.reusableWorkflowSha,
+    })
+      .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
+      .setIssuer("https://token.actions.githubusercontent.com")
+      .setAudience("https://preview.example/submit")
+      .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+      .setIssuedAt()
+      .setNotBefore("0s")
+      .setExpirationTime("5m")
+      .setJti(crypto.randomUUID())
+      .sign(oidcKeys.privateKey);
+  return { signToken };
 }
 
 async function stage(test: Awaited<ReturnType<typeof fixture>>, local = false) {
@@ -2391,6 +2469,158 @@ describe("trusted local Submit", () => {
     ).rejects.toThrow("baseline changed");
   });
 
+  it("keeps the end of the credential on each reference page, so a long Submit of CLI 0.5.4 renews with a reserve call", async () => {
+    const test = await fixture();
+    for (const capture of test.manifest.captures) {
+      capture.comparison = { threshold: 0.2, maxDiffPixels: 0 };
+    }
+    const job = await runningSubmitJob(test);
+    const manifestDigest = await captureManifestDigest(test.manifest);
+    // The request form of CLI 0.5.4: a bearer token and a JSON body.
+    const send = async (path: string, token: string, body: unknown) => {
+      const response = await handleApi(
+        new Request(`https://preview.example${path}`, {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }),
+        test.context,
+        { waitUntil() {} },
+      );
+      if (!response) {
+        throw new Error("Expected a response of the API.");
+      }
+      return response;
+    };
+    // The CLI gets a new GitHub token for each reserve call.
+    const reserve = async () => {
+      const response = await send("/v1/runs", await job.signToken(), {
+        schemaVersion: "1.0",
+        ...test.manifest.run,
+        shardKey: test.manifest.shard.key,
+        comparisonMode: LOCAL_COMPARISON_MODE,
+      });
+      expect(response.status).toBe(201);
+      return (await response.json()) as { runId: string; capability: string; expiresAt: string };
+    };
+    const reference = (runId: string, capability: string) =>
+      send(`/v1/runs/${encodeURIComponent(runId)}/reference`, capability, {
+        schemaVersion: "1.0",
+        manifestDigest,
+      });
+    const end = (capability: string) => decodeJwt(capability).exp;
+    // The two expiry tests of CLI 0.5.4 use this margin.
+    const remaining = (expiresAt: string) => Date.parse(expiresAt) - Date.now();
+    const margin = 45_000;
+    stubGitHubSigningKeys();
+    // The test moves the clock. It starts at a full second, as a credential ends at one.
+    const start = Math.ceil(Date.now() / 1000) * 1000;
+    vi.useFakeTimers({ toFake: ["Date"], now: start });
+    try {
+      const reserved = await reserve();
+      const firstEnd = start / 1000 + 600;
+      expect(end(reserved.capability)).toBe(firstEnd);
+
+      // Each reference page binds the reference and keeps the end of the credential.
+      const first = await reference(reserved.runId, reserved.capability);
+      expect(first.status).toBe(200);
+      const firstPage = (await first.json()) as LocalReferencePage;
+      expect(end(firstPage.capability)).toBe(firstEnd);
+      expect(firstPage.expiresAt).toBe(new Date(firstEnd * 1000).toISOString());
+      vi.setSystemTime(start + 300_000);
+      const second = await reference(reserved.runId, firstPage.capability);
+      expect(second.status).toBe(200);
+      const secondPage = (await second.json()) as LocalReferencePage;
+      expect(end(secondPage.capability)).toBe(firstEnd);
+      expect(secondPage.expiresAt).toBe(firstPage.expiresAt);
+
+      // The comparison of a long Submit comes to the margin. The CLI then makes
+      // a reserve call with a new GitHub token, and reads the reference again.
+      vi.setSystemTime(start + 556_000);
+      expect(remaining(secondPage.expiresAt)).toBeLessThanOrEqual(margin);
+      const renewed = await reserve();
+      expect(renewed.runId).toBe(reserved.runId);
+      const renewedEnd = start / 1000 + 556 + 600;
+      expect(end(renewed.capability)).toBe(renewedEnd);
+      const third = await reference(renewed.runId, renewed.capability);
+      expect(third.status).toBe(200);
+      const renewedPage = (await third.json()) as LocalReferencePage;
+      expect(renewedPage.reference).toEqual(firstPage.reference);
+      expect(end(renewedPage.capability)).toBe(renewedEnd);
+      expect(remaining(renewedPage.expiresAt)).toBeGreaterThan(margin);
+
+      // 10 minutes after its identity check, the first credential is at its end.
+      vi.setSystemTime(start + 601_000);
+      const expired = await reference(reserved.runId, secondPage.capability);
+      expect(expired.status).toBe(401);
+      expect(await expired.json()).toMatchObject({ error: { code: "invalid_capability" } });
+
+      // The Submit continues with the renewed credential: declare, upload, finalize.
+      test.manifest.localComparison = {
+        mode: LOCAL_COMPARISON_MODE,
+        engineVersion: LOCAL_COMPARISON_ENGINE,
+        codecVersion: LOCAL_COMPARISON_CODEC,
+        reference: renewedPage.reference,
+        captures: test.manifest.captures.map((capture) => ({
+          itemKey: capture.itemKey,
+          variantKey: capture.variant.key,
+          candidateDigest: capture.image.digest,
+          referenceDigest: null,
+          outcome: "changed",
+          changedPixels: capture.image.width * capture.image.height,
+          ratio: 1,
+          sizeChanged: false,
+        })),
+        removals: [],
+      };
+      const declared = await send(
+        `/v1/runs/${encodeURIComponent(renewed.runId)}/shards/${encodeURIComponent(test.shardKey)}`,
+        renewedPage.capability,
+        test.manifest,
+      );
+      expect(declared.status).toBe(200);
+      const declaration = (await declared.json()) as {
+        manifestDigest: string;
+        uploads: Array<{ ticket: string }>;
+      };
+      expect(declaration.uploads).toHaveLength(1);
+      for (const upload of declaration.uploads) {
+        const uploaded = await handleApi(
+          new Request(`https://preview.example/v1/uploads/${encodeURIComponent(upload.ticket)}`, {
+            method: "PUT",
+            headers: {
+              accept: "application/json",
+              authorization: `Bearer ${renewedPage.capability}`,
+              "content-type": "image/png",
+            },
+            body: png,
+          }),
+          test.context,
+          { waitUntil() {} },
+        );
+        expect(uploaded?.status).toBe(204);
+      }
+      const finalized = await send(
+        `/v1/runs/${encodeURIComponent(renewed.runId)}/finalize`,
+        renewedPage.capability,
+        {
+          schemaVersion: "1.0",
+          shardKey: test.shardKey,
+          manifestDigest: declaration.manifestDigest,
+        },
+      );
+      expect(finalized.status).toBe(202);
+      expect(await finalized.json()).toMatchObject({ runId: renewed.runId, state: "staged" });
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("keeps an omitted actual SHA explicit, retains the accepted representative through promotion, and blocks active recompare", async () => {
     const test = await fixture();
     const seed = await acceptedReference(test);
@@ -2687,77 +2917,8 @@ describe("workflow-owned upload staging", () => {
       test: Awaited<ReturnType<typeof fixture>>,
       policy: CapacityPolicy,
     ) => {
-      const workflowOwned = test.context.configuration.workflowOwned;
-      if (!workflowOwned) {
-        throw new Error("Expected workflow configuration.");
-      }
-      const { repositoryId, workflowRunId, testedSha } = test.manifest.run;
-      // The fixture stages the attempt. Remove it, so that this call admits a new one.
-      await database
-        .prepare("DELETE FROM ingest_staged_bundles WHERE run_id=?")
-        .bind(test.runId)
-        .run();
-      await database.prepare("DELETE FROM ingest_staged_runs WHERE id=?").bind(test.runId).run();
-      const base = `/repos/ariakit/ariakit/actions/runs/${workflowRunId}`;
-      const run = {
-        id: Number(workflowRunId),
-        run_attempt: 1,
-        repository: { id: Number(repositoryId), owner: { id: 5 } },
-        event: "push",
-        path: workflowOwned.callerWorkflowPath,
-        status: "in_progress",
-        conclusion: null,
-        head_sha: testedSha,
-        head_branch: "main",
-      };
-      test.githubResponses.set(
-        `/repos/ariakit/ariakit/contents/${workflowOwned.callerWorkflowPath}?ref=${testedSha}`,
-        {
-          type: "file",
-          path: workflowOwned.callerWorkflowPath,
-          sha: workflowOwned.callerWorkflowBlobSha,
-        },
-      );
-      test.githubResponses.set(base, run);
-      test.githubResponses.set(`${base}/attempts/1`, run);
-      test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
-        total_count: 1,
-        jobs: [
-          {
-            id: Number(test.jobId),
-            run_id: Number(workflowRunId),
-            run_attempt: 1,
-            name: workflowOwned.submitJobName,
-            check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
-            status: "in_progress",
-            conclusion: null,
-          },
-        ],
-      });
-      const token = await new SignJWT({
-        repository: "ariakit/ariakit",
-        repository_id: repositoryId,
-        repository_owner_id: "5",
-        run_id: workflowRunId,
-        run_attempt: "1",
-        sha: testedSha,
-        check_run_id: test.jobId,
-        event_name: "push",
-        ref: "refs/heads/main",
-        workflow_ref: `ariakit/ariakit/${workflowOwned.callerWorkflowPath}@refs/heads/main`,
-        workflow_sha: testedSha,
-        job_workflow_ref: workflowOwned.reusableWorkflowRef,
-        job_workflow_sha: workflowOwned.reusableWorkflowSha,
-      })
-        .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
-        .setIssuer("https://token.actions.githubusercontent.com")
-        .setAudience("https://preview.example/submit")
-        .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
-        .setIssuedAt()
-        .setNotBefore("0s")
-        .setExpirationTime("5m")
-        .setJti(crypto.randomUUID())
-        .sign(oidcKeys.privateKey);
+      const { workflowRunId } = test.manifest.run;
+      const token = await (await runningSubmitJob(test)).signToken();
       const costs = measureD1(nativeDatabase);
       test.context.database = costs.database;
       test.context.service = new Service(costs.database);

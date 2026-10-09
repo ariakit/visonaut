@@ -13,8 +13,9 @@ import {
   type Manifest,
 } from "@visonaut/protocol";
 import {
+  bearerToken,
+  bindIngestReference,
   createGitHubClient,
-  issueIngestCapability,
   SecurityError,
   type IngestCapability,
 } from "@visonaut/security";
@@ -439,17 +440,21 @@ export async function referencePage(
   });
   if (captures.length !== end - cursor)
     throw new IncompleteError("The pinned reference page is incomplete.");
+  // The new credential binds the reference and keeps the end of the one that
+  // came in. Only a reserve call, with its identity check, starts a new life.
+  const bound = await bindIngestReference(
+    context.configuration.capability,
+    bearerToken(request),
+    reference,
+  );
   return Response.json({
     schemaVersion: "1.0",
     comparisonMode: LOCAL_COMPARISON_MODE,
     reference,
     captures,
     nextCursor: end < reference.captureCount ? String(end) : null,
-    capability: await issueIngestCapability(context.configuration.capability, {
-      ...capability,
-      reference,
-    }),
-    expiresAt: new Date(Date.now() + 600_000).toISOString(),
+    capability: bound.token,
+    expiresAt: bound.expiresAt,
   });
 }
 
