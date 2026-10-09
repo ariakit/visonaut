@@ -269,7 +269,7 @@ function Index() {
                 </Text>
               </div>
               <Frame $layer $lighten $border $rounded="2xl" $p={7} className="grid gap-5">
-                <Frame $layer="primary" $rounded="xl" $p={3} className="w-fit">
+                <Frame $layer="brand" $rounded="xl" $p={3} className="w-fit">
                   <ShieldCheckIcon size={24} aria-hidden="true" />
                 </Frame>
                 <Text render={<h2 />} className="text-2xl font-semibold tracking-tight">
@@ -278,7 +278,7 @@ function Index() {
                 <Text render={<p />} className="text-sm leading-relaxed ak-ink-60">
                   Use a GitHub account with write access to this repository.
                 </Text>
-                <Button $layer="primary" disabled={action !== null} onClick={() => void signIn()}>
+                <Button $layer="brand" disabled={action !== null} onClick={() => void signIn()}>
                   <ButtonLabel>
                     {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
                   </ButtonLabel>
@@ -313,11 +313,7 @@ function Index() {
                   <ButtonLabel>Retry</ButtonLabel>
                 </Button>
                 {state.status === "forbidden" && (
-                  <Button
-                    $layer="primary"
-                    disabled={action !== null}
-                    onClick={() => void signOut()}
-                  >
+                  <Button $layer="brand" disabled={action !== null} onClick={() => void signOut()}>
                     <ButtonLabel>Use another account</ButtonLabel>
                   </Button>
                 )}
@@ -361,7 +357,7 @@ function RunStatus({ state, label = stateLabels[state] }: RunStatusProps) {
   const Icon =
     state === "passed" ? CheckCheckIcon : color === "danger" ? CircleAlertIcon : Clock3Icon;
   return (
-    <Badge $layer={color ?? true} $rounded="full" className="text-xs max-w-full">
+    <Badge $layer={color ?? true} $rounded="full" className="max-w-full">
       <BadgeSlot>
         <Icon aria-hidden="true" />
       </BadgeSlot>
@@ -479,7 +475,7 @@ function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQu
                 </div>
                 <RunIdentity run={run} />
                 <Button
-                  $layer="primary"
+                  $layer="brand"
                   className="justify-self-start"
                   render={<Link to="/runs/$runId" params={{ runId: run.id }} />}
                 >

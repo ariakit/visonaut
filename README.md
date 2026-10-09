@@ -12,6 +12,8 @@ Use the [release and deployment guide](.github/workflows/README.md) for executio
 
 Open the review link from the GitHub check and sign in with GitHub. Access requires current write permission to the configured repository. Check the commit and attempt, select an item and variant, then inspect its images before you approve or reject it.
 
+A pull request author with no write permission cannot open the review link, and does not need it. The title of the Visonaut check names the state of the run, and its summary says who acts next. For example, `79 changes need review` waits for a maintainer, and `3 changes rejected` waits for a commit of the author that corrects the rejected changes. The [review guide](docs/review-guide.md#read-the-github-check) lists the title of each run state.
+
 Validated image URLs need no session. Anyone with a URL can view and copy those pixels. Run metadata, labels, decisions, export files, and quarantine remain private. The public route serves only validated image records, not arbitrary bucket paths. Preview uses isolated fixture runs without GitHub login or production data. It does not certify deployed authentication.
 
 The dashboard also shows unresolved service alerts. It refreshes them while open; no external notifications are sent.

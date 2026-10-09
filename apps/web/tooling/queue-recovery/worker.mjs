@@ -109,6 +109,7 @@ export default {
             database: env.DB,
             projectId: "probe",
             repositoryId: "disposable-probe",
+            captureLimit: 40_000,
           }),
         });
       }
@@ -144,6 +145,7 @@ export default {
             database: env.DB,
             projectId: "probe",
             repositoryId: "disposable-probe",
+            captureLimit: 40_000,
           }),
         });
       }
@@ -192,6 +194,7 @@ export default {
             database: env.DB,
             projectId: "probe",
             repositoryId: "disposable-probe",
+            captureLimit: 40_000,
           }),
           foreignKeys: (await env.DB.prepare("PRAGMA foreign_key_check").all()).results,
           checkedAt: Date.now(),

@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { getWork, Service } from "@visonaut/service";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
+import { operationsStatus } from "../api/operations.ts";
 import { enqueueReview, processReviewQueue, reviewTaskId } from "./review-queue.ts";
 
 afterEach(() => vi.restoreAllMocks());
@@ -185,6 +186,14 @@ it("waits between the attempts of a failed decision and stops after the fifth", 
   expect((await processReviewQueue(fixture.context)).deferred).toEqual([id]);
   expect(await getWork(database, id)).toMatchObject({ state: "dead", attempts: 5 });
   expect(review).toHaveBeenCalledTimes(5);
+  // The Service status reads the dead decision. The route /api/operations sends this answer.
+  const status = await operationsStatus({
+    database,
+    projectId: "project",
+    repositoryId: "123",
+    captureLimit: 40_000,
+  });
+  expect(status.deadReviewTasks).toEqual({ count: 1, newestAt: expect.any(Number) });
   // The same command cannot run again, and the send learns it with no write.
   fixture.state.time += 24 * 60 * 60 * 1000;
   expect(await enqueueReview(database, input)).toBe("dead");

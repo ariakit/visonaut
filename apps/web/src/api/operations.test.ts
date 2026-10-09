@@ -25,6 +25,7 @@ describe("private operation alerts", () => {
       database,
       projectId: "ariakit",
       repositoryId: "104133653",
+      captureLimit: 40_000,
     });
     expect(result.hasMore).toBe(true);
     expect(result.events).toHaveLength(50);
@@ -46,11 +47,21 @@ describe("private operation alerts", () => {
     using database = new TestDatabase();
     addProject(database);
     await expect(
-      operationsStatus({ database, projectId: "ariakit", repositoryId: "other" }),
+      operationsStatus({
+        database,
+        projectId: "ariakit",
+        repositoryId: "other",
+        captureLimit: 40_000,
+      }),
     ).rejects.toMatchObject({ status: 503 });
     addProject(database, "other", "other");
     await expect(
-      operationsStatus({ database, projectId: "ariakit", repositoryId: "104133653" }),
+      operationsStatus({
+        database,
+        projectId: "ariakit",
+        repositoryId: "104133653",
+        captureLimit: 40_000,
+      }),
     ).rejects.toMatchObject({ status: 503 });
   });
 
@@ -64,6 +75,7 @@ describe("private operation alerts", () => {
       database,
       projectId: "ariakit",
       repositoryId: "104133653",
+      captureLimit: 40_000,
     });
     expect(result.events).toEqual([]);
     expect(result.hasMore).toBe(false);

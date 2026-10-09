@@ -152,7 +152,7 @@ function PullRequest() {
   };
 
   return (
-    <Shell $layer="canvas" className="[--shell-header-step:calc(48px/14)]">
+    <Shell $layer="canvas" className="text-sm [--shell-header-step:calc(48px/14)]">
       <AppHeader repository={state.status === "pending" ? state.repository : undefined} />
       <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
         <ShellMainBody className="mx-auto w-full max-w-2xl py-8 sm:py-16">
@@ -195,7 +195,7 @@ function PullRequest() {
                   access to this repository.
                 </Text>
                 <Button
-                  $layer="primary"
+                  $layer="brand"
                   className="justify-self-start"
                   disabled={action}
                   onClick={() => void signIn()}
@@ -227,7 +227,7 @@ function PullRequest() {
                   </Button>
                 ) : (
                   <Button
-                    $layer="primary"
+                    $layer="brand"
                     className="justify-self-start"
                     disabled={action}
                     onClick={() => void switchAccount()}

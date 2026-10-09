@@ -18,7 +18,6 @@ import { ReviewCommandError } from "../review/model.ts";
 import type { ReviewModel, ReviewSelection } from "../review/model.ts";
 import { ReviewWorkspace } from "../review/review-workspace.tsx";
 import type { ReviewRoute } from "../review/review-workspace.tsx";
-import "../review.css";
 
 export const Route = createFileRoute("/runs/$runId")({
   validateSearch: (
@@ -54,7 +53,7 @@ type RunState = { status: "guest" } | { status: "ready"; model: ReviewModel };
 
 function RunShell({ children }: { children: ReactNode }) {
   return (
-    <Shell $layer="canvas" className="[--shell-header-step:calc(48px/14)]">
+    <Shell $layer="canvas" className="text-sm [--shell-header-step:calc(48px/14)]">
       <AppHeader />
       <ShellMain>
         <ShellMainBody className="min-h-[60dvh] items-center">{children}</ShellMainBody>
@@ -233,7 +232,7 @@ function RunPage({
             {actionError}
           </p>
         )}
-        <Button disabled={action !== null} onClick={() => void signIn()}>
+        <Button $layer="brand" disabled={action !== null} onClick={() => void signIn()}>
           <ButtonSlot>
             <LogIn />
           </ButtonSlot>

@@ -712,6 +712,7 @@ export async function handleReview(
         database: context.database,
         projectId: context.configuration.projectId,
         repositoryId: context.configuration.github.repositoryId,
+        captureLimit: context.configuration.limits.maximumCaptures,
       }),
     );
   }
