@@ -14,6 +14,7 @@ import {
   inventoryMetadata,
   maximumCaptureInventoryBytes,
   readCaptureInventory,
+  readStoredCaptureInventory,
   writeCaptureInventory,
   type CaptureInventory,
   type CaptureInventoryPointer,
@@ -771,6 +772,89 @@ describe("complete immutable capture inventory", () => {
       }
     },
   );
+
+  it.each([
+    ["checksum", "checksum differs"],
+    ["size", "stored size differs"],
+    ["count", "pointer content differs"],
+    ["run key", "pointer content differs"],
+    ["key digest", "pointer identity differs"],
+    ["missing", "is unavailable"],
+    ["version", "version is unsupported"],
+  ])("refuses %s evidence in a review read", async (mode, message) => {
+    const store = objectStore();
+    const inventory = await fixture();
+    if (mode === "version") {
+      Reflect.set(inventory, "schemaVersion", "baseline-delta-v9");
+    }
+    const pointer = await rawInventory(store, inventory);
+    const body = store.objects.get(pointer.objectKey);
+    if (!body) throw new Error("Missing object.");
+    if (mode === "checksum") {
+      // A valid list of the same size with another tested commit: only the
+      // digest of the bytes tells it apart.
+      const other = canonicalJson({ ...inventory, testedSha: "b".repeat(40) });
+      store.objects.set(pointer.objectKey, new TextEncoder().encode(other));
+    }
+    if (mode === "size") {
+      pointer.bytes -= 1;
+    }
+    if (mode === "count") {
+      pointer.captureCount += 1;
+    }
+    if (mode === "run key") {
+      pointer.objectKey = pointer.objectKey.replace("runs/run/", "runs/other/");
+      store.objects.set(pointer.objectKey, body);
+    }
+    if (mode === "key digest") {
+      pointer.objectKey = `runs/run/inventory/${"0".repeat(64)}.json`;
+      store.objects.set(pointer.objectKey, body);
+    }
+    if (mode === "missing") {
+      store.objects.clear();
+    }
+    await expect(readStoredCaptureInventory(store, pointer)).rejects.toThrow(message);
+  });
+
+  it.each([
+    ["noncanonical text", "not canonical JSON"],
+    ["another profile", "profile digest differs"],
+  ])(
+    "does not validate %s a second time in a review read, and validates it in a complete read",
+    async (mode, message) => {
+      const store = objectStore();
+      const inventory = await fixture();
+      if (mode === "another profile") {
+        // The profile no longer has the digest that the list gives it.
+        inventory.profiles = inventory.profiles.map((entry) => ({
+          digest: entry.digest,
+          profile: {
+            ...entry.profile,
+            viewport: { ...entry.profile.viewport, width: entry.profile.viewport.width + 1 },
+          },
+        }));
+      }
+      // The pointer has the digest of these bytes, as after a write by Submit.
+      const pointer = await rawInventory(
+        store,
+        inventory,
+        mode === "noncanonical text" ? JSON.stringify(inventory, null, 2) : undefined,
+      );
+      await expect(readCaptureInventory(store, pointer)).rejects.toThrow(message);
+      expect(await readStoredCaptureInventory(store, pointer)).toEqual(inventory);
+    },
+  );
+
+  it("gives the same capture list in a review read and in a complete read", async () => {
+    const store = objectStore();
+    for (const receipt of [false, true]) {
+      // With a receipt, the stored form has compact metadata that the reader expands.
+      const pointer = await writeCaptureInventory(store, await fixture(receipt));
+      expect(await readStoredCaptureInventory(store, pointer)).toEqual(
+        await readCaptureInventory(store, pointer),
+      );
+    }
+  });
 
   it("cancels a stream when stored size or streamed bytes exceed the signed bound", async () => {
     const store = objectStore();
