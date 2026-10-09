@@ -14,8 +14,8 @@ interface AppHeaderProps {
 
 const links = [
   { id: "queue", href: "/", label: "Review queue", icon: Inbox },
-  { id: "history", href: "/?view=history", label: "Run history", icon: History },
-  { id: "service", href: "/?view=service", label: "Service status", icon: Activity },
+  { id: "history", href: "/history", label: "Run history", icon: History },
+  { id: "service", href: "/status", label: "Service status", icon: Activity },
 ] as const;
 
 export function AppHeader({ active, repository, end }: AppHeaderProps) {
@@ -35,7 +35,7 @@ export function AppHeader({ active, repository, end }: AppHeaderProps) {
             </ButtonLabel>
           </ControlButton>
           {repository && (
-            <Text className="hidden xl:block max-w-44 truncate border-l border-current/15 pl-3 text-xs opacity-60">
+            <Text className="hidden xl:block max-w-44 truncate border-l border-current/15 pl-3 text-xs ak-ink-60">
               {repository}
             </Text>
           )}

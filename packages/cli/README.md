@@ -1,6 +1,6 @@
 # visonaut
 
-This guide describes CLI `visonaut@0.5.3`. Submit verified visual captures from a GitHub Actions workflow and inspect review status. The [current system guide](../../docs/current-contract.md) owns the supersession map and deployment limits.
+Submit verified visual captures from a GitHub Actions workflow and inspect review status. The [current system guide](../../docs/current-contract.md) owns the supersession map and deployment limits.
 
 ```sh
 visonaut submit --shard linux --shard safari

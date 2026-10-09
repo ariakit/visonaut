@@ -9,18 +9,21 @@ import {
   Clock3Icon,
   GitPullRequestIcon,
 } from "lucide-react";
-import { AppHeader } from "../components/app-shell.tsx";
-import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
-import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
-import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { AppHeader } from "../../components/app-shell.tsx";
+import {
+  ButtonLabel,
+  ButtonSlot,
+} from "../../components/ariakit/components/button.ariakit.react.tsx";
+import { Text } from "../../components/ariakit/components/text.ariakit.react.tsx";
+import { Frame } from "../../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
   ShellMain,
   ShellMainBody,
-} from "../components/ariakit/components/shell.ariakit.react.tsx";
-import { ControlButton as Button } from "../components/control-button.tsx";
+} from "../../components/ariakit/components/shell.ariakit.react.tsx";
+import { ControlButton as Button } from "../../components/control-button.tsx";
 
-export const Route = createFileRoute("/pulls/$pullNumber")({
+export const Route = createFileRoute("/_app/pulls/$pullNumber")({
   validateSearch: (search: Record<string, unknown>): { check?: string } => ({
     check: typeof search.check === "string" ? search.check : undefined,
   }),
@@ -156,7 +159,7 @@ function PullRequest() {
       <AppHeader repository={state.status === "pending" ? state.repository : undefined} />
       <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
         <ShellMainBody className="mx-auto w-full max-w-2xl py-8 sm:py-16">
-          <Button className="mb-6" render={<Link to="/" search={{}} />}>
+          <Button className="mb-6" render={<Link to="/" />}>
             <ButtonSlot>
               <ArrowLeftIcon />
             </ButtonSlot>
@@ -195,7 +198,7 @@ function PullRequest() {
                   access to this repository.
                 </Text>
                 <Button
-                  $layer="primary"
+                  $layer="brand"
                   className="justify-self-start"
                   disabled={action}
                   onClick={() => void signIn()}
@@ -227,7 +230,7 @@ function PullRequest() {
                   </Button>
                 ) : (
                   <Button
-                    $layer="primary"
+                    $layer="brand"
                     className="justify-self-start"
                     disabled={action}
                     onClick={() => void switchAccount()}

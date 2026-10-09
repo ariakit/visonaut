@@ -646,7 +646,7 @@ test("history says why a run closed, and names no cause when none is stored", as
   await page.route("**/api/operations", (route) =>
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
-  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F%3Fview%3Dhistory");
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fhistory");
   const table = page.getByRole("table", { name: "Latest 100 runs" });
   for (const [title, words] of [
     ["newer-run", "Replaced"],

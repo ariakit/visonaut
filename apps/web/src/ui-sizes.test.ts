@@ -21,9 +21,9 @@ test("no class sets a fixed text size", () => {
 test("each page shell sets the one base text size", () => {
   const shells = [
     "review/review-workspace.tsx",
-    "routes/index.tsx",
-    "routes/pulls.$pullNumber.tsx",
-    "routes/runs.$runId.tsx",
+    "dashboard/dashboard-page.tsx",
+    "routes/_app/pulls.$pullNumber.tsx",
+    "routes/_app/runs.$runId.tsx",
   ];
   for (const file of shells) {
     const content = readFileSync(join(source, file), "utf8");
@@ -34,4 +34,11 @@ test("each page shell sets the one base text size", () => {
 test("the style sheet that has the theme is imported once", () => {
   expect(find(/(?<!@)\bimport\s+["'][./]*\/?review\.css["']/)).toEqual([]);
   expect(find(/@import\s+["']\.\/review\.css["']/)).toEqual(["styles.css"]);
+});
+
+test("text and icons take their color from the text system", () => {
+  // opacity-N dims the whole element. ak-ink-N changes only the text color.
+  expect(find(/\bopacity-/)).toEqual([]);
+  // A color-named ink class is not a rule: use $text. Only ak-ink-N exists.
+  expect(find(/\bak-ink-[a-z]/)).toEqual([]);
 });

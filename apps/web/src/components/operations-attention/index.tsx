@@ -367,10 +367,10 @@ export function OperationsAttention({
         }
       >
         {error && (
-          <p className="ak-ink-danger" role="alert">
+          <Text render={<p />} $text="danger" role="alert">
             {error}{" "}
             {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
-          </p>
+          </Text>
         )}
         {status?.capacity && (
           <Frame
@@ -490,19 +490,21 @@ export function OperationsAttention({
             {alertCount > 0 && (
               <Badge
                 $layer="danger"
-                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! leading-none"
+                $forceRounded
+                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 leading-none"
                 aria-hidden="true"
               >
                 <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
               </Badge>
             )}
             {error && (
-              <span
-                className="dashboard-alert-error-mark ak-ink-danger font-bold"
+              <Text
+                $text="danger"
+                className="dashboard-alert-error-mark font-bold"
                 aria-hidden="true"
               >
                 !
-              </span>
+              </Text>
             )}
           </PopoverDisclosure>
           <Popover

@@ -353,7 +353,7 @@ export function ItemList({
                 }
               </CompositeRenderer>
               {!order.length && (
-                <Text render={<p />} className="py-4 text-xs opacity-60" role="status">
+                <Text render={<p />} className="py-4 text-xs ak-ink-60" role="status">
                   {items.length
                     ? "No screenshots match. Change the search or filter."
                     : "No screenshots in this comparison."}

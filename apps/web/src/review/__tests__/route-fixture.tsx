@@ -9,4 +9,11 @@ export const router = createRouter({
   routeTree: routeTree.update({ component: Outlet }),
   history: createMemoryHistory({ initialEntries: [entry] }),
 });
+declare global {
+  interface Window {
+    /** The router of the fixture. A test reads the location of the memory history from it. */
+    fixtureRouter: typeof router;
+  }
+}
+window.fixtureRouter = router;
 createRoot(element).render(<RouterProvider router={router} />);

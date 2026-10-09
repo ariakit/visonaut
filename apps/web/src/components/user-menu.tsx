@@ -63,7 +63,7 @@ export function UserMenu({ login, preview, signingOut, error, onSignOut }: UserM
           </PopoverDescription>
         </div>
         {error && (
-          <Text render={<p />} role="alert" className="text-xs ak-ink-danger">
+          <Text render={<p />} role="alert" $text="danger" className="text-xs">
             {error}
           </Text>
         )}
