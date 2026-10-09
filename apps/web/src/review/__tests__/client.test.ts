@@ -510,7 +510,7 @@ test("a conflict keeps its status when its evidence is malformed", async () => {
   await expect(
     failedRefresh(() =>
       json(
-        { error: { code: "conflict" }, model: { format: "compact-review-1" }, reviewer: 42 },
+        { error: { code: "conflict" }, model: { format: "compact-review-2" }, reviewer: 42 },
         409,
       ),
     ),

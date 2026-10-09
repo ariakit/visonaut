@@ -10,8 +10,8 @@ import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
 import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
-import { identityKey } from "@visonaut/protocol";
-import { completeReviewRows, readReviewInventory } from "./review-inventory.ts";
+import { CAPTURE_PAGE_ROWS, identityKey } from "@visonaut/protocol";
+import { readReviewInventory } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
   ConflictError,
@@ -226,6 +226,34 @@ function historyDecision(row: HistoryRow): DecisionRecord {
   };
 }
 
+/**
+ * The baseline that Submit stored in a review row, in the form of a capture
+ * record. The stored value is also the metadata: it has the name and the
+ * variant of a removed capture, and a changed capture takes them from its candidate.
+ */
+function storedBaseline(row: ReviewRow, referenceDigest: unknown) {
+  if (!row.reference_json || typeof referenceDigest !== "string") return null;
+  const { imageId, width, height } = object(JSON.parse(row.reference_json));
+  if (typeof imageId !== "string" || typeof width !== "number" || typeof height !== "number") {
+    throw new Error("The stored baseline of a review row is invalid.");
+  }
+  return {
+    capture: { id: row.id, image_id: imageId, metadata_json: row.reference_json },
+    image: { id: imageId, digest: referenceDigest, width, height, bytes_present: 1 },
+  };
+}
+
+/** A row with a baseline that D1 does not hold: Submit wrote it before it stored the baseline. */
+function lacksStoredBaseline(row: ReviewRow) {
+  if (row.reference_capture_id || row.reference_json) return false;
+  return typeof object(JSON.parse(row.tuple_json)).referenceDigest === "string";
+}
+
+/**
+ * The first response of a run page: the run header, the counts, and the rows
+ * that D1 stores. It reads no capture list from R2 for a run whose rows hold
+ * their baseline.
+ */
 export async function reviewModel(
   context: PrivateContext,
   runId: string,
@@ -322,7 +350,7 @@ export async function reviewModel(
       )
       .bind(run.id)
       .first());
-  const [storedRows, liveMetadata, eligibleApprovalRowIds, inventory] = await Promise.all([
+  const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
     archive
       ? (archive.sections.comparisonRows ?? [])
           .filter((row) => row.comparison_id === comparison?.id)
@@ -331,7 +359,7 @@ export async function reviewModel(
             (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
           )
       : comparison
-        ? context.service.comparisonRows(comparison.id)
+        ? context.service.reviewRows(comparison.id)
         : [],
     !archive && comparison
       ? context.database.batch([
@@ -363,17 +391,15 @@ export async function reviewModel(
       : comparison
         ? context.service.eligibleApprovalRowIds(comparison.id)
         : [],
-    run.inventory_key ? readReviewInventory(context, run.id) : null,
   ]);
-  const importedBaseline = Boolean(
-    run.inventory_key?.startsWith("baselines/import/") &&
-    inventory &&
-    !inventory.inventory.manifest,
-  );
-  const rows =
-    inventory && comparison && !importedBaseline
-      ? completeReviewRows(inventory, storedRows, comparison.id)
-      : storedRows;
+  // Only the import of a baseline writes a capture list below this prefix.
+  const importedBaseline = Boolean(run.inventory_key?.startsWith("baselines/import/"));
+  // A closed summary has no capture rows in D1, and a run from before the
+  // stored baseline has no baseline there. Both read the two capture lists.
+  const inventory =
+    run.inventory_key && (archive || rows.some(lacksStoredBaseline))
+      ? await readReviewInventory(context, run.id)
+      : null;
   const policyRow = archive
     ? (archive.sections.policies ?? []).find(
         (policy) => policy.digest === comparison?.policy_digest,
@@ -432,10 +458,14 @@ export async function reviewModel(
     comparison?.state === "invalidated" ||
     (!historical && (status.status === "failed" || status.status === "superseded"));
   const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
+  let rowsWithCandidate = 0;
   for (const row of rows) {
     const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
     const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
     const tuple = object(JSON.parse(row.tuple_json));
+    if (tuple.candidateDigest !== null) rowsWithCandidate += 1;
+    const baseline = storedBaseline(row, tuple.referenceDigest);
+    if (baseline) imageById.set(baseline.image.id, baseline.image);
     const candidate =
       tuple.candidateDigest === null
         ? null
@@ -445,6 +475,7 @@ export async function reviewModel(
       tuple.referenceDigest === null
         ? null
         : ((row.reference_capture_id ? captureById.get(row.reference_capture_id) : null) ??
+          baseline?.capture ??
           inventory?.referenceByIdentity.get(identity));
     const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
     const variant =
@@ -553,6 +584,11 @@ export async function reviewModel(
     item.variants.push(view);
     items.set(item.key, item);
   }
+  // The capture list of a run has each capture. A stored row with a candidate
+  // is one of them, and each other capture of the list is unchanged.
+  const captureCount =
+    comparison && run.inventory_key && !importedBaseline ? (run.capture_count ?? 0) : 0;
+  const unchangedCount = Math.max(0, captureCount - rowsWithCandidate);
   const model: ReviewModel = {
     run: {
       id: run.id,
@@ -613,6 +649,11 @@ export async function reviewModel(
     ),
     baselineRevision: project.baseline_revision,
     promotionId: project.promotion_id,
+    counts: { pending: status.pending, rejected: status.rejected, approved: status.approved },
+    unchanged: {
+      count: unchangedCount,
+      pages: unchangedCount ? Math.ceil(captureCount / CAPTURE_PAGE_ROWS) : 0,
+    },
     items: [...items.values()],
   };
   return compactReviewModel(model);

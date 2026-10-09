@@ -119,6 +119,7 @@ async function sparseFixture({
       profileDigest,
       renderingProfileDigest,
       image: source,
+      metadata,
     }),
   );
   if (referenceInventory) {
@@ -631,7 +632,7 @@ describe("sparse inventory operations", () => {
     ).toEqual({ capture_count: 3 });
   });
 
-  it("preserves changed, added, removed, and unchanged public review items after sparse history and image expiry", async () => {
+  it("preserves changed, added, and removed public review items after sparse history and image expiry", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const sparse = await sparseFixture({
@@ -655,13 +656,13 @@ describe("sparse inventory operations", () => {
       },
     });
     const before = parseReviewModel(await reviewModel(api, "run"));
+    // The first response has the rows that D1 stores, and it counts the others.
     expect(before.items.map((item) => item.variants[0]?.kind).sort()).toEqual([
       "added",
       "changed",
       "removed",
-      "unchanged",
-      "unchanged",
     ]);
+    expect(before.unchanged).toEqual({ count: 2, pages: 1 });
     for (const item of before.items) {
       expect(item.name).toBe("Dialog");
       expect(item.variants[0]?.labelParts).toEqual(
@@ -682,6 +683,7 @@ describe("sparse inventory operations", () => {
     const after = parseReviewModel(await reviewModel(api, "run"));
     expect(after).toMatchObject({ archived: true, evidenceState: "summary", imagesExpired: true });
     expect(itemEvidence(after.items)).toEqual(itemEvidence(before.items));
+    expect(after.unchanged).toEqual(before.unchanged);
     for (const item of after.items) {
       expect(item.variants[0]?.approveDisabledReason).toBeTruthy();
       expect(item.variants[0]?.rejectDisabledReason).toBeTruthy();

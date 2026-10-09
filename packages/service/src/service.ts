@@ -114,13 +114,22 @@ export class Service {
   }
 
   async comparisonRows(id: string) {
+    return this.storedRows(id, "");
+  }
+
+  private storedRows(id: string, columns: string) {
     return this.rows<ReviewRow>(
       `SELECT row.id,row.comparison_id,row.item_key,row.variant_key,row.ordinal,
       row.reference_capture_id,row.candidate_capture_id,row.tuple_json,row.outcome,
-      ${comparisonResultSql("row")} AS result_json,row.decision_revision,row.decision_id,row.source_decision_id
+      ${comparisonResultSql("row")} AS result_json,${columns}row.decision_revision,row.decision_id,row.source_decision_id
       FROM visonaut_comparison_rows row WHERE row.comparison_id = ? ORDER BY row.ordinal,row.id`,
       [id],
     );
+  }
+
+  /** The rows of a comparison with the baseline that Submit stored in each row. */
+  async reviewRows(id: string) {
+    return this.storedRows(id, "row.reference_json,");
   }
 
   async createPolicy(input: { digest: string; policy: ComparisonPolicy }) {
