@@ -39,7 +39,7 @@ The panel is read-only. A successful operation clears its event through the serv
 
 ## Open the correct run
 
-The Runs page shows the run type, tested commit, state, attempt, and creation time. Select a run to open its review workspace. Use **Refresh runs** to fetch the current list.
+The Runs page shows the run type, tested commit, state, attempt, and creation time. Select a run to open its review workspace. The list reads again when the tab becomes visible, and each minute while it is visible (each 15 seconds while a run is capturing or comparing). A hidden tab sends no request. Use **Refresh runs** to read it now. When a read fails, the page keeps the list, says **Could not refresh runs** with the age of the list, and offers **Try again**.
 
 Check the run identity above the images before you save a decision. A new workflow attempt is a separate run. A superseded attempt cannot accept review commands.
 
