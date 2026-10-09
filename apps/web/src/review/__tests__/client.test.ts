@@ -66,6 +66,36 @@ test("the client preserves archived read-only history and rejects malformed arch
   expect(() => parseReviewModel({ ...compactReviewModel(model), archived: "false" })).toThrow();
 });
 
+test("the answer of a closed run has the read-only reason one time, and the client gives it to each variant", () => {
+  const reason =
+    "This run is archived. Decisions show the state at archive time and are read-only.";
+  const closed: ReviewModel = {
+    ...fixtureModel(),
+    reviewReady: false,
+    archived: true,
+    readOnlyReason: reason,
+  };
+  for (const item of closed.items) {
+    for (const variant of item.variants) {
+      variant.rejectDisabledReason = reason;
+      variant.approveDisabledReason = reason;
+    }
+  }
+  const answer = compactReviewModel(closed);
+  expect(JSON.stringify(answer).split(reason)).toHaveLength(2);
+  const variants = parseReviewModel(answer).items.flatMap((item) => item.variants);
+  expect(variants.length).toBeGreaterThan(1);
+  for (const variant of variants) {
+    expect(variant).toMatchObject({ rejectDisabledReason: reason, approveDisabledReason: reason });
+  }
+  // A run that takes decisions has no reason, also when its header has a text.
+  const open = parseReviewModel({ ...answer, archived: undefined });
+  for (const variant of open.items.flatMap((item) => item.variants)) {
+    expect(variant.rejectDisabledReason).toBeUndefined();
+    expect(variant.approveDisabledReason).toBeUndefined();
+  }
+});
+
 test("the client binds every review and Undo to the server session for this page", async () => {
   const model = fixtureModel();
   const requests: Array<{ path: unknown; init?: RequestInit }> = [];

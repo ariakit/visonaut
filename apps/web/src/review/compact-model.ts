@@ -9,9 +9,18 @@ export interface ReviewMetadata {
   candidateProfile?: string;
 }
 
+/**
+ * A variant of an answer. It has no read-only reason: the header of a closed
+ * run has the reason one time, and the reader gives it to each variant.
+ */
 export interface CompactReviewVariant extends Omit<
   ReviewVariant,
-  keyof ReviewMetadata | "reference" | "candidate" | "diff"
+  | keyof ReviewMetadata
+  | "reference"
+  | "candidate"
+  | "diff"
+  | "rejectDisabledReason"
+  | "approveDisabledReason"
 > {
   reference: number | null;
   candidate: number | null;
@@ -85,6 +94,8 @@ export function compactReviewItems(
         threshold,
         referenceProfile,
         candidateProfile,
+        rejectDisabledReason: _rejectDisabledReason,
+        approveDisabledReason: _approveDisabledReason,
         ...fields
       } = variant;
       const shared = { engine, codec, policy, threshold, referenceProfile, candidateProfile };

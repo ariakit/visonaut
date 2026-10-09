@@ -1,5 +1,5 @@
 import { identityKey } from "@visonaut/protocol";
-import { IncompleteError, type ReviewRow } from "@visonaut/service";
+import { IncompleteError, type ReviewRow, type RunRow } from "@visonaut/service";
 import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
 import { readRunInventory, readSnapshotInventory } from "../inventory-records.ts";
 import type { PrivateContext } from "./context.ts";
@@ -40,8 +40,9 @@ function reviewImages(inventory: CaptureInventory): InventoryReviewImage[] {
   }));
 }
 
-export async function readReviewInventory(context: PrivateContext, runId: string) {
-  const inventory = await readRunInventory(context, runId);
+/** The capture list of a run and the list of its baseline, from the run row that the caller has. */
+export async function readReviewInventory(context: PrivateContext, run: RunRow) {
+  const inventory = await readRunInventory(context, run);
   if (!inventory) return null;
   const referenceInventory = inventory.referenceSnapshotId
     ? await readSnapshotInventory(context, inventory.referenceSnapshotId)

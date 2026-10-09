@@ -1725,6 +1725,18 @@ describe("trusted local Submit", () => {
       } finally {
         get.mockRestore();
       }
+      // The model has the run, the project, and the comparison: each is read
+      // one time. No statement looks for a promotion by its comparison, which
+      // has no index.
+      const statements = costs.costs.map((cost) => cost.sql);
+      for (const table of ["visonaut_runs", "visonaut_projects", "visonaut_comparisons"]) {
+        expect(statements.filter((sql) => sql === `SELECT * FROM ${table} WHERE id = ?`)).toEqual([
+          `SELECT * FROM ${table} WHERE id = ?`,
+        ]);
+      }
+      expect(
+        statements.filter((sql) => /FROM visonaut_promotions WHERE comparison_id/.test(sql)),
+      ).toEqual([]);
       reads.push({
         rows: costs.totals().rows_read,
         statements: costs.costs.length,
@@ -1757,14 +1769,12 @@ describe("trusted local Submit", () => {
       });
     }
     // The statements are the same for both sizes. The rows differ by a few
-    // between two runs of one size: a seek of a random id can read one more
-    // row, and one statement reads each promotion of the database.
+    // between two runs of one size: a seek of a random id can read one more row.
     expect(reads.map((read) => [read.statements, read.roundTrips])).toEqual([
-      [19, 13],
-      [19, 13],
+      [15, 10],
+      [15, 10],
     ]);
-    // 100 times the captures must not read more rows. The limit leaves room
-    // for the promotions that the tests before this one made.
+    // 100 times the captures must not read more rows.
     const [small, large] = reads.map((read) => read.rows);
     if (small === undefined || large === undefined) throw new Error("Expected two reads.");
     expect(Math.abs(large - small)).toBeLessThan(20);
@@ -1829,7 +1839,7 @@ describe("trusted local Submit", () => {
       statements: costs.costs.length,
       roundTrips: costs.roundTrips(),
       rowsWritten: costs.totals().rows_written,
-    }).toEqual({ statements: 6, roundTrips: 5, rowsWritten: 0 });
+    }).toEqual({ statements: 5, roundTrips: 4, rowsWritten: 0 });
     // The 4 changed captures are in the first page, and the answer leaves them out.
     expect(first).toMatchObject({ page: 0, pages: 2 });
     expect(first.items.map((item) => item.key)).toEqual(unchanged(ordered.slice(0, 2_000)));

@@ -37,19 +37,15 @@ export function inventoryPointer(record: InventoryRecord): CaptureInventoryPoint
   };
 }
 
+/**
+ * The capture list of a run, from the run row that the caller has. The
+ * function reads no row from D1.
+ */
 export async function readRunInventory(
-  context: InventoryContext,
-  runId: string,
+  context: Pick<InventoryContext, "images">,
+  run: InventoryRecord & { id: string; project_id: string; tested_sha: string },
   maximumBytes?: number,
 ) {
-  const run = await context.database
-    .prepare(`SELECT id,project_id,tested_sha,inventory_key,inventory_digest,inventory_bytes,
-      capture_count FROM visonaut_runs WHERE id=?`)
-    .bind(runId)
-    .first<InventoryRecord & { id: string; project_id: string; tested_sha: string }>();
-  if (!run) {
-    throw new IncompleteError("The inventory run does not exist.");
-  }
   const pointer = inventoryPointer(run);
   if (!pointer) return null;
   const inventory = await readCaptureInventory(context.images, pointer, maximumBytes);
