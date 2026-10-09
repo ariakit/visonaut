@@ -1,6 +1,7 @@
 import { GitHubUnavailableError } from "@visonaut/security";
 import { Service } from "@visonaut/service";
 import { expect, it, vi } from "vitest";
+import { dashboard } from "../api/dashboard.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { addUndecidedChange, captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 
@@ -41,8 +42,19 @@ function commitBeforeBatches(database: TestDatabase, decisions: (() => Promise<u
   };
 }
 
-/** A reviewer rejects one changed capture of a run: the first one by default. */
-async function reject(fixture: Fixture, runId: string, index = 0) {
+interface DecisionParams {
+  runId?: string;
+  /** The position of the changed capture in the comparison. */
+  index?: number;
+  verdict: "approved" | "rejected";
+  actorId?: string;
+}
+
+/** One decision of a reviewer on one changed capture of a run: the first one by default. */
+async function saveDecision(
+  fixture: Fixture,
+  { runId = "run", index = 0, verdict, actorId = "maintainer" }: DecisionParams,
+) {
   const service = new Service(fixture.context.database);
   const comparisonId = `comparison-${runId}`;
   const row = (await service.comparisonRows(comparisonId))[index];
@@ -50,15 +62,20 @@ async function reject(fixture: Fixture, runId: string, index = 0) {
     throw new Error("Missing comparison row.");
   }
   await service.review({
-    commandId: `reject-${runId}-${index}`,
-    actorId: "maintainer",
+    commandId: `${verdict}-${runId}-${index}-${row.decision_revision}`,
+    actorId,
     sessionId: "session",
     comparisonId,
-    verdict: "rejected",
+    verdict,
     targets: [{ id: row.id, expectedRevision: row.decision_revision }],
     selection: { itemKey: row.item_key, variantKey: row.variant_key },
     now: fixture.context.now(),
   });
+}
+
+/** A reviewer rejects one changed capture of a run: the first one by default. */
+function reject(fixture: Fixture, runId: string, index = 0) {
+  return saveDecision(fixture, { runId, index, verdict: "rejected" });
 }
 
 /** The checks whose delivered update has the current revision of the project. */
@@ -172,6 +189,113 @@ it("sends no text of an update when a decision commits after the claim", async (
 
   expect(next).toMatchObject({ completed: ["1"], attention: [] });
   expect(patches.map((patch) => patch.output.title)).toEqual(["1 change rejected"]);
+});
+
+// D-OPS-02: a review that waits for a maintainer must block the merge.
+it("keeps the check completed with the conclusion failure while a review waits", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const service = await captured(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  const patches = shownPatches(fixture);
+
+  await deliverGitHubStatuses(fixture.context);
+
+  expect((await service.status("run")).status).toBe("needs-review");
+  expect(patches).toEqual([
+    expect.objectContaining({
+      status: "completed",
+      conclusion: "failure",
+      output: expect.objectContaining({ title: "1 change needs review" }),
+    }),
+  ]);
+});
+
+it("shows the counts of the run list in the check text after each decision", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  // The run list needs the pull request number of the run.
+  database.connection.exec("UPDATE visonaut_runs SET lineage_key = 'pr:7' WHERE id = 'run'");
+  const patches = shownPatches(fixture);
+  const steps = [
+    async () => {},
+    () => saveDecision(fixture, { index: 0, verdict: "rejected" }),
+    () => saveDecision(fixture, { index: 1, verdict: "approved" }),
+    () => saveDecision(fixture, { index: 0, verdict: "approved" }),
+  ];
+  const listed: string[] = [];
+
+  for (const step of steps) {
+    await step();
+    await deliverGitHubStatuses(fixture.context);
+    const { runs } = await dashboard({
+      database,
+      configuration: {
+        projectId: "project",
+        github: { repositoryId: "123", repository: "owner/repo" },
+      },
+    });
+    const run = runs.find((candidate) => candidate.id === "run");
+    if (!run) {
+      throw new Error("Missing run.");
+    }
+    listed.push(
+      `Changes: ${run.pending - run.rejected} need review, ${run.rejected} rejected, ${run.approved} approved.`,
+    );
+  }
+
+  expect(listed).toEqual([
+    "Changes: 1 need review, 0 rejected, 1 approved.",
+    "Changes: 1 need review, 1 rejected, 0 approved.",
+    "Changes: 0 need review, 1 rejected, 1 approved.",
+    "Changes: 0 need review, 0 rejected, 2 approved.",
+  ]);
+  expect(patches.map((patch) => patch.output.summary.split("\n\n")[1])).toEqual(listed);
+});
+
+it("puts no item key, no variant key, and no login into the check text", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  const patches = shownPatches(fixture);
+  // A reviewer name that no sentence of the check text has.
+  const actorId = "octo-reviewer-login";
+
+  // Needs review, Rejected, and Passed for the run, then Capturing for a new run.
+  await deliverGitHubStatuses(fixture.context);
+  await saveDecision(fixture, { index: 0, verdict: "rejected", actorId });
+  await deliverGitHubStatuses(fixture.context);
+  await saveDecision(fixture, { index: 0, verdict: "approved", actorId });
+  await saveDecision(fixture, { index: 1, verdict: "approved", actorId });
+  await deliverGitHubStatuses(fixture.context);
+  await reserve(fixture.context, "another");
+  await deliverGitHubStatuses(fixture.context);
+
+  expect(patches.map((patch) => patch.output.title)).toEqual([
+    "1 change needs review",
+    "1 change rejected",
+    "2 changes approved",
+    "Capturing screenshots",
+  ]);
+  const rows = await new Service(database).comparisonRows("comparison-run");
+  const names = [
+    ...rows.flatMap((row) => [row.item_key, row.variant_key]),
+    actorId,
+    // The test file of the capture and the browser of its profile.
+    "private.test.ts",
+    "chromium",
+  ];
+  expect(names).toEqual(expect.arrayContaining(["dialog", "menu", "light"]));
+  const shown = JSON.stringify([
+    ...patches.map((patch) => patch.output),
+    ...[...fixture.state.checks.values()].map((check) => check.output),
+  ]);
+  for (const name of names) {
+    expect(shown).not.toContain(name);
+  }
 });
 
 // The case exists only for an update from before the deploy of the review
