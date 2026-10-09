@@ -1,23 +1,26 @@
 import { rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
-import { digestJson } from "@visonaut/protocol";
+import { capturePagesDigest, digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
-import {
-  emptyReferencePage,
-  imagePutNumbers,
-  reserveAnswer,
-  stagedCounts,
-  submitShard,
-} from "./trusted.js";
+import { pageService } from "./page-service.js";
+import type { Prepared } from "./page-service.js";
+import { imagePutNumbers, stagedCounts, submitShard } from "./trusted.js";
 
-const prepared = vi.hoisted(() => ({ directory: "", server: "https://review.example.test" }));
-// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
-vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
+const prepared = vi.hoisted((): Prepared => ({
+  server: "https://review.example.test",
+  bundles: [],
+  directory: "",
+  directories: [],
+}));
+// Workflow tests cover artifact and job provenance. These cases start at the verified bundle.
+vi.mock("../src/workflow.js", async () =>
+  (await import("./page-service.js")).workflowMock(prepared),
+);
 
-const directories: string[] = [];
+const directories: string[] = prepared.directories;
 const environment = {
   VISONAUT_SERVER: "https://review.example.test",
   GITHUB_RUN_ID: "456",
@@ -130,7 +133,7 @@ describe("public commands under temporary service backpressure", () => {
       return busy(code, "1");
     });
     vi.stubGlobal("fetch", fetch);
-    const result = await submitShard(prepared, local.directory, environment);
+    const result = await submitShard(prepared, [local], environment);
     expect(result.code).toBe(1);
     expect(paths).toEqual(["/v1/runs"]);
     expect(result.stderr).not.toContain("private-response-secret");
@@ -196,44 +199,30 @@ describe("public commands under temporary service backpressure", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["oidc", "reserve", "declare", "finalize"])(
+  it.each(["oidc", "reserve", "page", "index"])(
     "does not retry the %s operation",
     async (operation) => {
       const local = await fixture();
       directories.push(local.directory);
-      const paths: string[] = [];
-      let reservation = { capability: "capability-secret", expiresAt: "" };
-      const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-        const url = new URL(input instanceof Request ? input.url : input);
-        paths.push(url.pathname);
-        if (url.hostname.endsWith(".actions.githubusercontent.com")) {
-          return operation === "oidc" ? busy() : Response.json({ value: "oidc-secret" });
-        }
-        if (url.pathname === "/v1/runs") {
-          reservation = {
-            capability: "capability-secret",
-            expiresAt: new Date(Date.now() + 60_000).toISOString(),
-          };
-          return operation === "reserve"
-            ? busy()
-            : Response.json(
-                reserveAnswer({ schemaVersion: "1.0", runId: "run-123", ...reservation }),
-              );
-        }
-        if (url.pathname.endsWith("/reference")) {
-          return Response.json(await emptyReferencePage(init, reservation));
-        }
-        if (operation === "finalize" && url.pathname.includes("/shards/")) {
-          return Response.json({
-            schemaVersion: "1.0",
-            manifestDigest: await digestJson(JSON.parse(String(init?.body))),
-            uploads: [],
-          });
-        }
-        return busy();
+      const service = pageService({
+        requestToken: "request-secret",
+        respond: (url) => {
+          const selected =
+            operation === "oidc"
+              ? url.hostname.endsWith(".actions.githubusercontent.com")
+              : operation === "reserve"
+                ? url.pathname === "/v1/runs"
+                : url.pathname.endsWith(operation === "page" ? "/pages" : "/index");
+          return selected ? busy() : undefined;
+        },
       });
-      vi.stubGlobal("fetch", fetch);
-      expect((await submitShard(prepared, local.directory, environment)).code).toBe(1);
+      const result = await submitShard(prepared, [local], environment);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain("HTTP 503, service_unavailable");
+      const paths = service.paths();
+      // The refused request is the last one, and the CLI sent it one time.
+      const steps = { oidc: 1, reserve: 2, page: 3, index: 5 }[operation];
+      expect(paths).toHaveLength(steps ?? 0);
       expect(new Set(paths).size).toBe(paths.length);
     },
   );
@@ -243,10 +232,11 @@ describe("public commands under temporary service backpressure", () => {
     directories.push(local.directory);
     const received: Buffer[] = [];
     const realFetch = globalThis.fetch;
-    let manifestDigest = "";
     const reservation = {
       capability: "capability-secret",
-      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      comparisonMode: "local-pages-v1",
+      reference: { snapshotId: null, baselineRevision: 0, digest: null, pages: 0 },
     };
     await using server = createServer(async (incoming, response) => {
       const chunks: Buffer[] = [];
@@ -259,14 +249,11 @@ describe("public commands under temporary service backpressure", () => {
         response.end(JSON.stringify(value));
       };
       if (incoming.url === "/v1/runs") {
-        answer(reserveAnswer({ schemaVersion: "1.0", runId: "run-123", ...reservation }));
-      } else if (incoming.url?.endsWith("/reference")) {
-        answer(await emptyReferencePage({ body: body.toString("utf8") }, reservation));
-      } else if (incoming.url?.includes("/shards/")) {
-        manifestDigest = await digestJson(JSON.parse(body.toString("utf8")));
+        answer({ schemaVersion: "1.0", runId: "run-123", ...reservation });
+      } else if (incoming.url?.endsWith("/pages")) {
         answer({
           schemaVersion: "1.0",
-          manifestDigest,
+          pageDigest: await digestJson(JSON.parse(body.toString("utf8"))),
           uploads: [
             {
               imageDigest: local.capture.image.digest,
@@ -275,12 +262,11 @@ describe("public commands under temporary service backpressure", () => {
             },
           ],
         });
-      } else if (incoming.url?.endsWith("/finalize")) {
+      } else if (incoming.url?.endsWith("/index")) {
         answer({
           schemaVersion: "1.0",
           runId: "run-123",
-          shardKey: local.manifest.shard.key,
-          manifestDigest,
+          manifestDigest: await capturePagesDigest(JSON.parse(body.toString("utf8"))),
           state: "staged",
         });
       } else if (incoming.url === "/v1/runs/456/submit") {
@@ -288,7 +274,8 @@ describe("public commands under temporary service backpressure", () => {
       } else {
         received.push(body);
         if (received.length === 1) {
-          await writeFile(join(local.directory, "capture.png"), Buffer.alloc(imageBytes.length));
+          const stored = join(prepared.directory, "images", `${local.capture.image.digest}.png`);
+          await writeFile(stored, Buffer.alloc(imageBytes.length));
           response.writeHead(503, { "Content-Type": "application/json", "Retry-After": "0" });
           response.end(JSON.stringify({ error: { code: "service_unavailable" } }));
         } else {
@@ -311,7 +298,7 @@ describe("public commands under temporary service backpressure", () => {
       return realFetch(input, init);
     });
     prepared.server = `http://127.0.0.1:${address.port}`;
-    const result = await submitShard(prepared, local.directory, environment);
+    const result = await submitShard(prepared, [local], environment);
     prepared.server = "https://review.example.test";
     expect(result.code).toBe(0);
     expect(received).toEqual([imageBytes, imageBytes]);

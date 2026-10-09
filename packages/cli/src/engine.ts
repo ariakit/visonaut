@@ -1,40 +1,53 @@
 import { createHmac } from "node:crypto";
+import { realpath } from "node:fs/promises";
 import {
-  digestJson,
-  LOCAL_COMPARISON_MODE,
+  CAPTURE_PAGE_ROWS,
+  canonicalJson,
+  capturePageBytes,
+  capturePageUploads,
+  captureRowProfile,
+  createCapturePagesReceipt,
+  LOCAL_COMPARISON_CODEC,
+  LOCAL_COMPARISON_ENGINE,
+  parseCapturePage,
   SCHEMA_VERSION,
+  sha256,
   TRANSPORT,
-  uploadImages,
 } from "@visonaut/protocol";
 import type {
-  DeclareShardResponse,
-  LocalReferenceBinding,
-  Manifest,
-  ReserveRunResponse,
+  CapturePage,
+  CapturePageEntry,
+  CapturePageIndex,
+  CapturePageTest,
+  CaptureComparison,
+  CaptureProfile,
+  CaptureRow,
+  CaptureRowImage,
+  CaptureRowResult,
+  DeclarePageResponse,
   RunStatus,
+  StagedPagesResponse,
+  Variant,
 } from "@visonaut/protocol";
 import { beginSubmission } from "./bundle-submit.js";
-import { CliError, protocolVersion, record, ServiceRefusal, text } from "./errors.js";
+import { captureLabel, CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
-import { imageLabeller, loadCapture, readImageFile } from "./files.js";
-import type { LocalManifest } from "./files.js";
+import { readImageFile } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
-import { compareLocally, readReference, validateLocalImages } from "./local-comparison.js";
-import { refreshSubmissionReceipt } from "./signed-context.js";
+import { compareCapture, maskPath, referenceCursor } from "./local-comparison.js";
+import { CAPABILITY_HEADROOM_MS, openSession, SUBMIT_SHARD_KEY } from "./session.js";
+import type { Session } from "./session.js";
+import { writeReceipt } from "./signed-context.js";
+import { imagePath, loadSubmission, mergeCaptureRecords } from "./submission.js";
+import type { CaptureRecord } from "./submission.js";
 
 export type { ExitCode } from "./errors.js";
 
 const MAX_UPLOAD_TICKET_LENGTH = 4096;
 const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
-// Leave a full 30-second request deadline plus clock/scheduling headroom.
-const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
-// Keep at most four byte-limited reuse pages in flight.
+// Keep at most four byte-limited reuse requests in flight.
 const REUSE_PAGE_CONCURRENCY = 4;
 const IMAGE_PUT_CONCURRENCY = 5;
-// The first reserve call waits at the capacity limit: 20 tries with 30 seconds between them.
-// The 19 waits take 9 minutes 30 seconds.
-const CAPACITY_MAX_TRIES = 20;
-const CAPACITY_RETRY_DELAY_MS = 30_000;
 
 const HELP = `Usage:
   visonaut begin --run <GitHub-run-id> [--server <origin>]
@@ -107,54 +120,22 @@ function argumentsFrom(argv: string[], environment: Record<string, string | unde
   return result;
 }
 
-function reservedRun(value: unknown): ReserveRunResponse {
-  protocolVersion(value);
-  if (
-    !record(value) ||
-    !text(value.schemaVersion) ||
-    !text(value.runId) ||
-    !text(value.capability) ||
-    !text(value.expiresAt) ||
-    !Number.isFinite(Date.parse(value.expiresAt))
-  ) {
-    throw new CliError("The service returned an invalid upload capability.");
-  }
-  if (Date.parse(value.expiresAt) <= Date.now()) {
-    throw new CliError(
-      "The upload capability has expired. Retry to request a fresh capability.",
-      4,
-    );
-  }
-  if (value.comparisonMode !== LOCAL_COMPARISON_MODE) {
-    throw new CliError(
-      "The service does not support local comparison. Update the service before Submit.",
-    );
-  }
-  return {
-    schemaVersion: value.schemaVersion,
-    runId: value.runId,
-    capability: value.capability,
-    expiresAt: value.expiresAt,
-  };
-}
-
-function shardDeclaration(
+function pageDeclaration(
   value: unknown,
-  digest: string,
-  manifest: Manifest,
-): DeclareShardResponse {
+  pageDigest: string,
+  images: Map<string, CaptureRowImage>,
+): DeclarePageResponse {
   protocolVersion(value);
-  const images = uploadImages(manifest);
   if (
     !record(value) ||
     !text(value.schemaVersion) ||
-    value.manifestDigest !== digest ||
+    value.pageDigest !== pageDigest ||
     !Array.isArray(value.uploads) ||
     value.uploads.length > images.size
   ) {
-    throw new CliError("The service returned an invalid shard declaration.");
+    throw new CliError("The service returned an invalid page declaration.");
   }
-  let reuse: DeclareShardResponse["reuse"];
+  let reuse: DeclarePageResponse["reuse"];
   if (value.reuse !== undefined) {
     if (
       !record(value.reuse) ||
@@ -168,7 +149,7 @@ function shardDeclaration(
     ) {
       throw new CliError("The service returned an invalid reuse challenge.");
     }
-    if (Date.parse(value.reuse.expiresAt) - Date.now() > UPLOAD_CREDENTIAL_HEADROOM_MS) {
+    if (Date.parse(value.reuse.expiresAt) - Date.now() > CAPABILITY_HEADROOM_MS) {
       reuse = {
         nonce: value.reuse.nonce,
         token: value.reuse.token,
@@ -178,7 +159,7 @@ function shardDeclaration(
   }
   const imageDigests = new Set<string>();
   const tickets = new Set<string>();
-  const uploads: DeclareShardResponse["uploads"] = [];
+  const uploads: DeclarePageResponse["uploads"] = [];
   for (const upload of value.uploads) {
     if (
       !record(upload) ||
@@ -208,7 +189,7 @@ function shardDeclaration(
       maxBytes: upload.maxBytes,
     });
   }
-  return { schemaVersion: value.schemaVersion, manifestDigest: digest, uploads, reuse };
+  return { schemaVersion: value.schemaVersion, pageDigest, uploads, reuse };
 }
 
 function reusedImages(value: unknown, offered: Set<string>): string[] {
@@ -224,6 +205,454 @@ function reusedImages(value: unknown, offered: Set<string>): string[] {
     reused.add(digest);
   }
   return [...reused];
+}
+
+interface StagedPagesParams {
+  value: unknown;
+  runId: string;
+  manifestDigest: string;
+}
+
+function stagedPages({ value, runId, manifestDigest }: StagedPagesParams): StagedPagesResponse {
+  protocolVersion(value);
+  if (
+    !record(value) ||
+    !text(value.schemaVersion) ||
+    value.runId !== runId ||
+    value.manifestDigest !== manifestDigest ||
+    value.state !== "staged"
+  ) {
+    throw new CliError("The service returned an invalid staged run receipt.");
+  }
+  return { schemaVersion: value.schemaVersion, runId, manifestDigest, state: "staged" };
+}
+
+/** The sums of the image traffic of all pages of one Submit. */
+interface UploadTotals {
+  started: number;
+  reused: number;
+  uploaded: number;
+  // Sum per-request durations; concurrent PUTs can overlap in wall time.
+  putElapsedMs: number;
+  putBytes: number;
+  putRetryWaitMs: number;
+  reportedReused: number;
+  reportedUploaded: number;
+}
+
+// A page is sent again after a renewal. This count of tries with no staged image ends it.
+const MAX_STALLED_PAGE_TRIES = 2;
+
+interface StagePageParams {
+  session: Session;
+  directory: string;
+  page: CapturePage;
+  /** The name of the first capture of each capture image of the page, by the image digest. */
+  labels: Map<string, string>;
+  totals: UploadTotals;
+  progress: (value: string) => void;
+}
+
+/**
+ * Send one page, then the images that the service asks for. The answer has
+ * tickets only for the images that the service does not have, so a page that
+ * is sent again continues where the last try stopped. Returns the page digest.
+ */
+async function stagePage({
+  session,
+  directory,
+  page,
+  labels,
+  totals,
+  progress,
+}: StagePageParams): Promise<string> {
+  try {
+    // The service makes the same check. A failure here sends no byte of the page.
+    parseCapturePage(page);
+  } catch {
+    throw new CliError("The captures cannot be written as a valid capture page.");
+  }
+  let body: Uint8Array<ArrayBuffer>;
+  try {
+    body = capturePageBytes(page);
+  } catch {
+    throw new CliError(
+      "A page of captures is above the limit of 4 MiB. Use shorter test titles and capture options.",
+    );
+  }
+  const pageDigest = await sha256(body);
+  const sizes = capturePageUploads(page);
+  // Tickets contain ASCII only. Allow each bounded ticket plus its digest,
+  // byte count, JSON syntax, and a separate bounded response envelope.
+  const maximumResponseBytes = 8192 + sizes.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
+  const completed = new Set<string>();
+  const read = async (digest: string) => {
+    const image = sizes.get(digest);
+    if (!image) {
+      throw new CliError("An upload ticket refers to an unknown image.");
+    }
+    // An image that is no capture of the page is a mask. A mask has no name: a name would
+    // show that a capture changed.
+    const label = labels.get(digest);
+    const path = label === undefined ? maskPath(digest) : imagePath(digest);
+    return readImageFile(directory, { digest, bytes: image.bytes, path }, label);
+  };
+  let stalledTries = 0;
+  // A capability can reach its last 45 seconds while a request runs. Then the page is sent
+  // again with a new capability. Two tries in sequence with no staged image end the command,
+  // so a service that always gives a short capability cannot create a loop.
+  const sendAgain = (message: string) => {
+    if (completedWithToken) {
+      stalledTries = 0;
+      return;
+    }
+    stalledTries++;
+    if (stalledTries === MAX_STALLED_PAGE_TRIES) {
+      throw new CliError(message, 4);
+    }
+  };
+  let completedWithToken = 0;
+  while (true) {
+    // A capability that expires soon is renewed here, and its tickets are requested again.
+    const token = await session.capability();
+    completedWithToken = 0;
+    const response = await request({
+      url: new URL(TRANSPORT.page(session.runId), session.origin),
+      token,
+      method: "POST",
+      body,
+      mediaType: "application/json",
+      maximumResponseBytes,
+    });
+    const declaration = pageDeclaration(response, pageDigest, sizes);
+    if (declaration.uploads.some((upload) => completed.has(upload.imageDigest))) {
+      throw new CliError("The service requested an image that this upload already completed.");
+    }
+    let renewalRequired = false;
+    const reuse = declaration.reuse;
+    if (reuse) {
+      const batches: (typeof declaration.uploads)[] = [];
+      let batch: typeof declaration.uploads = [];
+      let batchBytes = 0;
+      for (const upload of declaration.uploads) {
+        const size = sizes.get(upload.imageDigest)?.bytes ?? 0;
+        if (batch.length && (batch.length === 32 || batchBytes + size > 8 * 1024 * 1024)) {
+          batches.push(batch);
+          batch = [];
+          batchBytes = 0;
+        }
+        batch.push(upload);
+        batchBytes += size;
+      }
+      if (batch.length) {
+        batches.push(batch);
+      }
+      const expiresSoon = () =>
+        session.expiresSoon() || Date.parse(reuse.expiresAt) - Date.now() <= CAPABILITY_HEADROOM_MS;
+      const reuseBatch = async (
+        entries: typeof declaration.uploads,
+      ): Promise<string[] | undefined> => {
+        if (expiresSoon()) return;
+        const proofs = [];
+        for (const upload of entries) {
+          const bytes = await read(upload.imageDigest);
+          proofs.push({
+            imageDigest: upload.imageDigest,
+            proof: createHmac("sha256", Buffer.from(reuse.nonce, "hex"))
+              .update(bytes)
+              .digest("hex"),
+          });
+        }
+        if (expiresSoon()) return;
+        const reuseResponse = await request({
+          url: new URL(TRANSPORT.reuse(session.runId), session.origin),
+          token,
+          method: "POST",
+          body: JSON.stringify({
+            schemaVersion: SCHEMA_VERSION,
+            pageDigest,
+            challenge: reuse.token,
+            proofs,
+          }),
+          mediaType: "application/json",
+          retryUnavailable: true,
+        });
+        return reusedImages(reuseResponse, new Set(proofs.map((proof) => proof.imageDigest)));
+      };
+      for (let offset = 0; offset < batches.length; offset += REUSE_PAGE_CONCURRENCY) {
+        // A group must settle before credentials change or missed images fall back to PUT.
+        const results = await Promise.allSettled(
+          batches.slice(offset, offset + REUSE_PAGE_CONCURRENCY).map(reuseBatch),
+        );
+        let expired = false;
+        for (const result of results) {
+          if (result.status === "rejected") throw result.reason;
+          if (result.value === undefined) {
+            expired = true;
+            continue;
+          }
+          for (const digest of result.value) {
+            completed.add(digest);
+            totals.reused++;
+            completedWithToken++;
+          }
+        }
+        if (totals.reused - totals.reportedReused >= 128) {
+          progress(`Visonaut reused ${totals.reused} unchanged originals.\n`);
+          totals.reportedReused = totals.reused;
+        }
+        if (expired) {
+          // After progress, a new declaration gives a new challenge. With no progress,
+          // the images fall back to PUT with the tickets of this declaration.
+          renewalRequired = session.expiresSoon() || completedWithToken > 0;
+          break;
+        }
+      }
+    }
+    if (renewalRequired) {
+      sendAgain("The upload capability expired before any image could be staged.");
+      continue;
+    }
+    const pending = declaration.uploads.filter((upload) => !completed.has(upload.imageDigest));
+    for (let offset = 0; offset < pending.length; offset += IMAGE_PUT_CONCURRENCY) {
+      if (session.expiresSoon()) {
+        renewalRequired = true;
+        break;
+      }
+      const group = pending.slice(offset, offset + IMAGE_PUT_CONCURRENCY);
+      const results = await Promise.allSettled(
+        group.map(async (upload) => {
+          const bytes = await read(upload.imageDigest);
+          if (session.expiresSoon()) return false;
+          const putStarted = performance.now();
+          await request({
+            url: new URL(TRANSPORT.upload(upload.ticket), session.origin),
+            token,
+            method: "PUT",
+            body: bytes,
+            mediaType: "image/png",
+            empty: true,
+            retryUnavailable: true,
+            onAttempt: () => {
+              totals.putBytes += bytes.byteLength;
+            },
+            onRetryWait: (elapsedMs) => {
+              totals.putRetryWaitMs += elapsedMs;
+            },
+          });
+          totals.putElapsedMs += performance.now() - putStarted;
+          return true;
+        }),
+      );
+      for (const [index, result] of results.entries()) {
+        if (result.status === "rejected") continue;
+        if (!result.value) {
+          renewalRequired = true;
+          continue;
+        }
+        const upload = group[index];
+        if (!upload) throw new CliError("An upload result has no ticket.");
+        completed.add(upload.imageDigest);
+        totals.uploaded++;
+        completedWithToken++;
+      }
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+      if (totals.uploaded - totals.reportedUploaded >= 128) {
+        progress(`Visonaut uploaded ${totals.uploaded} originals.\n`);
+        totals.reportedUploaded = totals.uploaded;
+      }
+      if (renewalRequired) break;
+    }
+    if (!renewalRequired) return pageDigest;
+    sendAgain(
+      "The upload capability expired before any image could be uploaded. Retry the upload.",
+    );
+  }
+}
+
+/** One shared list of a page. An entry gets its position at its first use. */
+function sharedList<T>() {
+  const entries: T[] = [];
+  const positions = new Map<string, number>();
+  const position = (identity: string, entry: T) => {
+    const known = positions.get(identity);
+    if (known !== undefined) return known;
+    positions.set(identity, entries.length);
+    return entries.push(entry) - 1;
+  };
+  return { entries, position };
+}
+
+/** Collect the rows of one page. Each shared list gets its entries in the order of first use. */
+function pageBuilder() {
+  const variants = sharedList<Variant>();
+  const tests = sharedList<CapturePageTest>();
+  const profiles = sharedList<CaptureProfile>();
+  const comparisons = sharedList<CaptureComparison>();
+  const rows: CaptureRow[] = [];
+  const labels = new Map<string, string>();
+  return {
+    /** The name of the first capture of each capture image, by the image digest. */
+    labels,
+    get size() {
+      return rows.length;
+    },
+    add(capture: CaptureRecord, result: CaptureRowResult) {
+      const { profile, clip } = captureRowProfile(capture.profile);
+      const { digest, bytes, width, height } = capture.image;
+      if (!labels.has(digest)) {
+        labels.set(digest, captureLabel(capture.itemKey, capture.variant.key));
+      }
+      rows.push([
+        capture.itemKey,
+        capture.name,
+        variants.position(canonicalJson(capture.variant), capture.variant),
+        tests.position(capture.test.id, capture.test),
+        profiles.position(canonicalJson(profile), profile),
+        clip,
+        comparisons.position(canonicalJson(capture.comparison), capture.comparison),
+        digest,
+        bytes,
+        width,
+        height,
+        result,
+      ]);
+    },
+    page(): CapturePage {
+      return {
+        schemaVersion: SCHEMA_VERSION,
+        variants: variants.entries,
+        profiles: profiles.entries,
+        tests: tests.entries,
+        comparisons: comparisons.entries,
+        rows,
+      };
+    },
+  };
+}
+
+interface SubmitPagesParams {
+  origin: URL;
+  directory: string;
+  environment: NodeJS.ProcessEnv;
+  secrets: Set<string>;
+  stdout: (value: string) => void;
+  stderr: (value: string) => void;
+}
+
+/**
+ * Send the captures of the prepared directory as pages of rows, then the page
+ * index. One page of the run and one page of the reference are in memory.
+ */
+async function submitPages({
+  origin,
+  directory,
+  environment,
+  secrets,
+  stdout,
+  stderr,
+}: SubmitPagesParams): Promise<string> {
+  const submission = await loadSubmission(directory);
+  const { run } = submission;
+  if (
+    environment.GITHUB_RUN_ID !== run.workflowRunId ||
+    Number(environment.GITHUB_RUN_ATTEMPT) !== run.workflowAttempt
+  ) {
+    throw new CliError("The capture does not match this GitHub workflow attempt.", 4);
+  }
+  // Validate every input before sending credentials or mutating remote data: this pass over
+  // the record files finds two captures with the same keys.
+  let captureCount = 0;
+  for await (const _capture of mergeCaptureRecords(directory, submission.files)) {
+    captureCount++;
+  }
+  if (!captureCount) {
+    throw new CliError("The capture jobs made no capture.");
+  }
+  // The wait notices go to standard error, so they never mix with the output of the command.
+  const session = await openSession({ origin, run, environment, secrets }, stderr);
+  const reference = referenceCursor(session);
+  const totals: UploadTotals = {
+    started: performance.now(),
+    reused: 0,
+    uploaded: 0,
+    putElapsedMs: 0,
+    putBytes: 0,
+    putRetryWaitMs: 0,
+    reportedReused: 0,
+    reportedUploaded: 0,
+  };
+  const pages: CapturePageEntry[] = [];
+  let builder = pageBuilder();
+  let last: [string, string] | undefined;
+  const flush = async () => {
+    if (!last) return;
+    const digest = await stagePage({
+      session,
+      directory,
+      page: builder.page(),
+      labels: builder.labels,
+      totals,
+      progress: stdout,
+    });
+    pages.push({ digest, last });
+    builder = pageBuilder();
+    last = undefined;
+  };
+  for await (const capture of mergeCaptureRecords(directory, submission.files)) {
+    const identity: [string, string] = [capture.itemKey, capture.variant.key];
+    const accepted = await reference.take(identity);
+    builder.add(capture, await compareCapture({ session, directory, capture, accepted }));
+    last = identity;
+    if (builder.size === CAPTURE_PAGE_ROWS) {
+      await flush();
+    }
+  }
+  await flush();
+  stdout(
+    `Visonaut staged ${totals.reused + totals.uploaded} originals (${totals.reused} reused, ${totals.uploaded} uploaded) and ${pages.length} capture pages in ${Math.round((performance.now() - totals.started) / 1000)}s.\n`,
+  );
+  stdout(
+    `Image PUTs: ${Math.round(totals.putElapsedMs)}ms aggregate request time, ${totals.putBytes} attempted bytes, ${Math.round(totals.putRetryWaitMs)}ms retry wait.\n`,
+  );
+  const { snapshotId, baselineRevision, digest } = session.reference;
+  const index: CapturePageIndex = {
+    schemaVersion: SCHEMA_VERSION,
+    producer: submission.producer,
+    job: submission.job,
+    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    reference: { snapshotId, baselineRevision, digest },
+    sources: submission.sources,
+    pages,
+  };
+  const receipt = await createCapturePagesReceipt({
+    index,
+    workflowRunId: run.workflowRunId,
+    testedSha: run.testedSha,
+    shardKey: SUBMIT_SHARD_KEY,
+  });
+  // The workflow uploads the receipt after this step, so write it before the run is staged.
+  await writeReceipt(receipt, directory, environment);
+  const response = await request({
+    url: new URL(TRANSPORT.pageIndex(session.runId), origin),
+    token: await session.capability(),
+    method: "POST",
+    mediaType: "application/json",
+    body: canonicalJson(index),
+  });
+  stagedPages({ value: response, runId: session.runId, manifestDigest: receipt.manifestDigest });
+  const submitted = await submitRun({
+    origin,
+    attempt: run.workflowAttempt,
+    externalRunId: run.workflowRunId,
+    environment,
+    secrets,
+  });
+  if (submitted.runId !== session.runId) {
+    throw new CliError("The service submitted a different run.");
+  }
+  return submitted.runId;
 }
 
 function runStatus(value: unknown, origin: URL, runId: string): RunStatus {
@@ -276,42 +705,6 @@ function runStatus(value: unknown, origin: URL, runId: string): RunStatus {
     completedShards: value.completedShards,
     expectedShards: value.expectedShards,
     errors: value.errors,
-  };
-}
-
-interface StagedShard {
-  schemaVersion: string;
-  runId: string;
-  shardKey: string;
-  manifestDigest: string;
-  state: "staged";
-}
-
-interface StagedShardParams {
-  value: unknown;
-  runId: string;
-  shardKey: string;
-  manifestDigest: string;
-}
-
-function stagedShard({ value, runId, shardKey, manifestDigest }: StagedShardParams): StagedShard {
-  protocolVersion(value);
-  if (
-    !record(value) ||
-    !text(value.schemaVersion) ||
-    value.runId !== runId ||
-    value.shardKey !== shardKey ||
-    value.manifestDigest !== manifestDigest ||
-    value.state !== "staged"
-  ) {
-    throw new CliError("The service returned an invalid staged shard receipt.");
-  }
-  return {
-    schemaVersion: value.schemaVersion,
-    runId,
-    shardKey,
-    manifestDigest,
-    state: "staged",
   };
 }
 
@@ -368,317 +761,6 @@ async function submitRun({
     body: JSON.stringify({ schemaVersion: SCHEMA_VERSION, workflowAttempt: attempt }),
   });
   return submittedRun(response);
-}
-
-interface ReserveParams {
-  origin: URL;
-  manifest: Manifest;
-  environment: NodeJS.ProcessEnv;
-  secrets: Set<string>;
-}
-
-async function reserve({
-  origin,
-  manifest,
-  environment,
-  secrets,
-}: ReserveParams): Promise<ReserveRunResponse> {
-  const token = await githubToken(origin, environment, "submit");
-  secrets.add(token);
-  const response = await request({
-    url: new URL(TRANSPORT.reserve, origin),
-    token,
-    method: "POST",
-    mediaType: "application/json",
-    body: JSON.stringify({
-      schemaVersion: SCHEMA_VERSION,
-      ...manifest.run,
-      shardKey: manifest.shard.key,
-      comparisonMode: LOCAL_COMPARISON_MODE,
-    }),
-  });
-  const reservation = reservedRun(response);
-  secrets.add(reservation.capability);
-  return reservation;
-}
-
-/**
- * Send the first reserve call. The code `capacity_exceeded` means that the service is at its
- * limit of active runs, and an active run ends without a person. So wait and send the call again.
- * `reserve` asks for a new OIDC token on each try, because the service accepts a token for 10
- * minutes at most. Any other refusal needs a person, so it ends the call at once.
- *
- * A renewal does not wait: the service skips the capacity check for a run that it already holds.
- */
-async function reserveWhenAdmitted(params: ReserveParams, report: (line: string) => void) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await reserve(params);
-    } catch (error) {
-      // The service sends the same Retry-After header for each 503, so only the code decides.
-      if (!(error instanceof ServiceRefusal) || error.code !== "capacity_exceeded") {
-        throw error;
-      }
-      if (attempt === CAPACITY_MAX_TRIES) {
-        throw new CliError(
-          `Visonaut stayed at its capacity limit for ${attempt} tries. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.`,
-        );
-      }
-      report(
-        `Visonaut is at its capacity limit (try ${attempt} of ${CAPACITY_MAX_TRIES}). Waiting ${CAPACITY_RETRY_DELAY_MS / 1000} seconds before the next try.\n`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, CAPACITY_RETRY_DELAY_MS));
-    }
-  }
-}
-
-async function renewReservation(
-  params: ReserveParams,
-  reference: LocalReferenceBinding | undefined = params.manifest.localComparison?.reference,
-): Promise<ReserveRunResponse> {
-  const reservation = await reserve(params);
-  if (!reference) return reservation;
-  const selected = await readReference({ ...params, reservation });
-  if ((await digestJson(selected.reference)) !== (await digestJson(reference))) {
-    throw new CliError(
-      "The accepted reference changed. Rerun Submit to compare the verified captures again.",
-    );
-  }
-  return selected.reservation;
-}
-
-interface UploadShardParams extends ReserveParams {
-  local: LocalManifest;
-  manifestDigest: string;
-  reservation: ReserveRunResponse;
-  progress: (value: string) => void;
-}
-
-async function uploadShard({
-  origin,
-  manifest,
-  environment,
-  secrets,
-  local,
-  manifestDigest,
-  reservation,
-  progress,
-}: UploadShardParams): Promise<ReserveRunResponse> {
-  const started = performance.now();
-  const runId = reservation.runId;
-  const images = uploadImages(manifest);
-  const labelOf = imageLabeller(manifest);
-  // Tickets contain ASCII only. Allow each bounded ticket plus its digest,
-  // byte count, JSON syntax, and a separate bounded response envelope.
-  const maximumResponseBytes = 8192 + images.size * (MAX_UPLOAD_TICKET_LENGTH + 256);
-  const body = JSON.stringify(manifest);
-  const completed = new Set<string>();
-  let uploadedImages = 0;
-  let reusedCount = 0;
-  // Sum per-request durations; concurrent PUTs can overlap in wall time.
-  let imagePutElapsedMs = 0;
-  let imagePutBytes = 0;
-  let imagePutRetryWaitMs = 0;
-  let lastReportedReused = 0;
-  let lastReportedUploaded = 0;
-  let completedSinceReservation = 0;
-  while (true) {
-    if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-      throw new CliError(
-        "The upload capability expires too soon. Retry to request a fresh capability.",
-        4,
-      );
-    }
-    const response = await request({
-      url: new URL(TRANSPORT.shard(runId, manifest.shard.key), origin),
-      token: reservation.capability,
-      method: "POST",
-      body,
-      mediaType: "application/json",
-      maximumResponseBytes,
-    });
-    const declaration = shardDeclaration(response, manifestDigest, manifest);
-    if (declaration.uploads.some((upload) => completed.has(upload.imageDigest))) {
-      throw new CliError("The service requested an image that this upload already completed.");
-    }
-    let renewalRequired = false;
-    const reuse = declaration.reuse;
-    if (reuse) {
-      const pages: (typeof declaration.uploads)[] = [];
-      let page: typeof declaration.uploads = [];
-      let pageBytes = 0;
-      for (const upload of declaration.uploads) {
-        const image = images.get(upload.imageDigest);
-        if (!image) throw new CliError("A reuse challenge refers to an unknown image.");
-        if (page.length && (page.length === 32 || pageBytes + image.bytes > 8 * 1024 * 1024)) {
-          pages.push(page);
-          page = [];
-          pageBytes = 0;
-        }
-        page.push(upload);
-        pageBytes += image.bytes;
-      }
-      if (page.length) pages.push(page);
-      const expiresSoon = (expiresAt: string) =>
-        Date.parse(expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS;
-      const reusePage = async (
-        entries: typeof declaration.uploads,
-      ): Promise<string[] | undefined> => {
-        if (expiresSoon(reservation.expiresAt) || expiresSoon(reuse.expiresAt)) {
-          return;
-        }
-        const proofs = [];
-        for (const upload of entries) {
-          const image = images.get(upload.imageDigest);
-          if (!image) throw new CliError("A reuse challenge refers to an unknown image.");
-          const bytes = await readImageFile(local.directory, image, labelOf(image));
-          proofs.push({
-            imageDigest: upload.imageDigest,
-            proof: createHmac("sha256", Buffer.from(reuse.nonce, "hex"))
-              .update(bytes)
-              .digest("hex"),
-          });
-        }
-        if (expiresSoon(reservation.expiresAt) || expiresSoon(reuse.expiresAt)) {
-          return;
-        }
-        const response = await request({
-          url: new URL(TRANSPORT.reuse(runId), origin),
-          token: reservation.capability,
-          method: "POST",
-          body: JSON.stringify({
-            schemaVersion: SCHEMA_VERSION,
-            shardKey: manifest.shard.key,
-            manifestDigest,
-            challenge: reuse.token,
-            proofs,
-          }),
-          mediaType: "application/json",
-          retryUnavailable: true,
-        });
-        return reusedImages(response, new Set(proofs.map((proof) => proof.imageDigest)));
-      };
-      for (let offset = 0; offset < pages.length; offset += REUSE_PAGE_CONCURRENCY) {
-        // A batch must settle before credentials change or missed images fall back to PUT.
-        const results = await Promise.allSettled(
-          pages.slice(offset, offset + REUSE_PAGE_CONCURRENCY).map(reusePage),
-        );
-        let expired = false;
-        for (const result of results) {
-          if (result.status === "rejected") throw result.reason;
-          if (result.value === undefined) {
-            expired = true;
-            continue;
-          }
-          for (const digest of result.value) {
-            completed.add(digest);
-            reusedCount++;
-            completedSinceReservation++;
-          }
-        }
-        if (reusedCount - lastReportedReused >= 128) {
-          progress(`Visonaut reused ${reusedCount} unchanged originals.\n`);
-          lastReportedReused = reusedCount;
-        }
-        if (expired) {
-          renewalRequired = expiresSoon(reservation.expiresAt) || completedSinceReservation > 0;
-          break;
-        }
-      }
-    }
-    if (renewalRequired) {
-      if (!completedSinceReservation) {
-        throw new CliError("The upload capability expired before any image could be staged.", 4);
-      }
-      reservation = await renewReservation({ origin, manifest, environment, secrets });
-      if (reservation.runId !== runId) {
-        throw new CliError("The service changed the run identity during upload renewal.");
-      }
-      completedSinceReservation = 0;
-      continue;
-    }
-    const pendingUploads = declaration.uploads.filter(
-      (upload) => !completed.has(upload.imageDigest),
-    );
-    for (let offset = 0; offset < pendingUploads.length; offset += IMAGE_PUT_CONCURRENCY) {
-      if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-        renewalRequired = true;
-        break;
-      }
-      const batch = pendingUploads.slice(offset, offset + IMAGE_PUT_CONCURRENCY);
-      const results = await Promise.allSettled(
-        batch.map(async (upload) => {
-          const image = images.get(upload.imageDigest);
-          if (!image) {
-            throw new CliError("An upload ticket refers to an unknown image.");
-          }
-          const bytes = await readImageFile(local.directory, image, labelOf(image));
-          if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-            return false;
-          }
-          const putStarted = performance.now();
-          await request({
-            url: new URL(TRANSPORT.upload(upload.ticket), origin),
-            token: reservation.capability,
-            method: "PUT",
-            body: bytes,
-            mediaType: image.mediaType,
-            empty: true,
-            retryUnavailable: true,
-            onAttempt: () => {
-              imagePutBytes += bytes.byteLength;
-            },
-            onRetryWait: (elapsedMs) => {
-              imagePutRetryWaitMs += elapsedMs;
-            },
-          });
-          imagePutElapsedMs += performance.now() - putStarted;
-          return true;
-        }),
-      );
-      for (const [index, result] of results.entries()) {
-        if (result.status === "rejected") continue;
-        if (!result.value) {
-          renewalRequired = true;
-          continue;
-        }
-        const upload = batch[index];
-        if (!upload) throw new CliError("An upload result has no ticket.");
-        completed.add(upload.imageDigest);
-        uploadedImages++;
-        completedSinceReservation++;
-      }
-      const failure = results.find((result) => result.status === "rejected");
-      if (failure?.status === "rejected") throw failure.reason;
-      if (uploadedImages - lastReportedUploaded >= 128) {
-        progress(`Visonaut uploaded ${uploadedImages} originals.\n`);
-        lastReportedUploaded = uploadedImages;
-      }
-      if (renewalRequired) break;
-    }
-    if (!renewalRequired) {
-      progress(
-        `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
-      );
-      progress(
-        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms aggregate request time, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait.\n`,
-      );
-      return reservation;
-    }
-    // Renew only after progress, so a short-lived response cannot create a loop.
-    // Replaying the same declaration issues fresh tickets for incomplete images.
-    if (!completedSinceReservation) {
-      throw new CliError(
-        "The upload capability expired before any image could be uploaded. Retry the upload.",
-        4,
-      );
-    }
-    reservation = await renewReservation({ origin, manifest, environment, secrets });
-    if (reservation.runId !== runId) {
-      throw new CliError("The service changed the run identity during upload renewal.");
-    }
-    completedSinceReservation = 0;
-  }
 }
 
 /** Streams contain no credentials; exit 0 after upload is not visual approval. */
@@ -752,86 +834,17 @@ export async function runInternalCli({
       }
       return status.state === "passed" ? 0 : 3;
     }
-    const local = await loadCapture(options.directory ?? DEFAULT_CAPTURE_DIRECTORY);
-    // Validate every input before sending credentials or mutating remote data.
-    await validateLocalImages(local);
-    let { manifest } = local;
-    if (
-      environment.GITHUB_RUN_ID !== manifest.run.workflowRunId ||
-      Number(environment.GITHUB_RUN_ATTEMPT) !== manifest.run.workflowAttempt
-    ) {
-      throw new CliError("The capture does not match this GitHub workflow attempt.", 4);
-    }
-    // The wait notices go to standard error, so they never mix with the output of the command.
-    let reservation = await reserveWhenAdmitted({ origin, manifest, environment, secrets }, stderr);
-    const selected = await readReference({ origin, manifest, reservation, secrets });
-    const localComparison = await compareLocally({
+    const runId = await submitPages({
       origin,
-      manifest,
-      reservation: selected.reservation,
-      secrets,
-      local,
-      selected,
-      renew: () => renewReservation({ origin, manifest, environment, secrets }, selected.reference),
-    });
-    reservation = selected.reservation;
-    manifest = { ...manifest, localComparison };
-    await refreshSubmissionReceipt(manifest, local.directory, environment);
-    const manifestDigest = await digestJson(manifest);
-    if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-      const renewed = await renewReservation({ origin, manifest, environment, secrets });
-      if (renewed.runId !== reservation.runId) {
-        throw new CliError("The service changed the run identity after local comparison.");
-      }
-      reservation = renewed;
-    }
-    reservation = await uploadShard({
-      origin,
-      manifest,
+      directory: await realpath(options.directory ?? DEFAULT_CAPTURE_DIRECTORY),
       environment,
       secrets,
-      local,
-      manifestDigest,
-      reservation,
-      progress: (value) => stdout(redact(value)),
+      stdout: (value) => stdout(redact(value)),
+      stderr,
     });
-    if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
-      const renewed = await renewReservation({ origin, manifest, environment, secrets });
-      if (renewed.runId !== reservation.runId) {
-        throw new CliError("The service changed the run identity before shard submission.");
-      }
-      reservation = renewed;
-    }
-    const response = await request({
-      url: new URL(TRANSPORT.finalize(reservation.runId), origin),
-      token: reservation.capability,
-      method: "POST",
-      mediaType: "application/json",
-      body: JSON.stringify({
-        schemaVersion: SCHEMA_VERSION,
-        shardKey: manifest.shard.key,
-        manifestDigest,
-      }),
-    });
-    const receipt = stagedShard({
-      value: response,
-      runId: reservation.runId,
-      shardKey: manifest.shard.key,
-      manifestDigest,
-    });
-    const submitted = await submitRun({
-      origin,
-      attempt: manifest.run.workflowAttempt,
-      externalRunId: manifest.run.workflowRunId,
-      environment,
-      secrets,
-    });
-    if (submitted.runId !== receipt.runId) {
-      throw new CliError("The service submitted a different run.");
-    }
     stdout(
       redact(
-        `Shard ${manifest.shard.key} staged and run ${submitted.runId} submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n`,
+        `The captures are staged and run ${runId} is submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n`,
       ),
     );
     return 0;

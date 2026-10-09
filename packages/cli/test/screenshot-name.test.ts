@@ -4,12 +4,20 @@ import { join } from "node:path";
 import type { Capture } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runCli } from "../src/index.js";
 import { fixture } from "./fixture.js";
+import type { Prepared } from "./page-service.js";
+import { submitShard } from "./trusted.js";
 
-const prepared = vi.hoisted(() => ({ directory: "", server: "https://visonaut.example" }));
-// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
-vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
+const prepared = vi.hoisted((): Prepared => ({
+  server: "https://visonaut.example",
+  bundles: [],
+  directory: "",
+  directories: [],
+}));
+// Workflow tests cover artifact and job provenance. These cases start at the verified bundle.
+vi.mock("../src/workflow.js", async () =>
+  (await import("./page-service.js")).workflowMock(prepared),
+);
 
 // A display title can hold any text, so a message must never print it.
 const DISPLAY_TITLE = "Display title sentinel";
@@ -21,7 +29,7 @@ const environment = {
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
 };
 
-const directories: string[] = [];
+const directories: string[] = prepared.directories;
 afterEach(async () => {
   vi.unstubAllGlobals();
   for (const directory of directories.splice(0)) {
@@ -74,7 +82,6 @@ async function submit({
 }: SubmitParams) {
   const local = await fixture();
   directories.push(local.directory);
-  prepared.directory = local.directory;
   const [capture] = local.manifest.captures;
   const [test] = local.manifest.tests;
   if (!capture || !test) {
@@ -112,15 +119,7 @@ async function submit({
   }
   const fetch = vi.fn();
   vi.stubGlobal("fetch", fetch);
-  let stderr = "";
-  const code = await runCli({
-    argv: ["submit", "--shard", "chrome-1"],
-    environment,
-    stdout: () => {},
-    stderr: (value) => {
-      stderr += value;
-    },
-  });
+  const { code, stderr } = await submitShard(prepared, [local], environment);
   return { code, stderr, fetch };
 }
 
@@ -219,6 +218,32 @@ describe("a failure about one screenshot file names the screenshot", () => {
     // It passes the check of the file and stops later, at the missing service answer.
     expect(result.stderr).not.toContain("pixels");
     expect(result.fetch).toHaveBeenCalled();
+  });
+
+  it("names the screenshot that two capture jobs made, with its two keys only", async () => {
+    const jobs = await Promise.all(
+      ["linux", "safari"].map(async (shard) => {
+        const local = await fixture();
+        directories.push(local.directory);
+        local.manifest.shard.key = shard;
+        const [capture] = local.manifest.captures;
+        const [test] = local.manifest.tests;
+        if (!capture || !test) throw new Error("The fixture has no capture.");
+        capture.name = DISPLAY_TITLE;
+        test.titlePath = [DISPLAY_TITLE];
+        await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+        return local;
+      }),
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const result = await submitShard(prepared, jobs, environment);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(
+      "visonaut: dialog/open (react-light): Two captures have this item key and variant key. Give each screenshot its own keys.\n",
+    );
+    expectOnlyFileText(result.stderr);
   });
 
   const notPng = Buffer.from("this file is not a png");

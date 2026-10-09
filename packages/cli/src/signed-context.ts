@@ -1,11 +1,14 @@
 import { appendFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createDiscoveryReceipt, parseManifest, type Manifest } from "@visonaut/protocol";
+import type { CapturePagesReceipt } from "@visonaut/protocol";
 import { CliError, record } from "./errors.js";
 import { githubToken } from "./http.js";
+import { writeSubmission } from "./submission.js";
+import type { Submission } from "./submission.js";
 
+/** Find the signed Submit job of this process and write the prepared submission with it. */
 export async function bindSubmission(
-  manifest: Manifest,
+  pending: Omit<Submission, "job">,
   directory: string,
   origin: URL,
   environment: Record<string, string | undefined>,
@@ -26,7 +29,7 @@ export async function bindSubmission(
   const matches: Record<string, unknown>[] = [];
   for (let page = 1; page <= 20; page++) {
     const response = await fetch(
-      `https://api.github.com/repos/${manifest.run.repository}/actions/runs/${manifest.run.workflowRunId}/attempts/${environment.GITHUB_RUN_ATTEMPT}/jobs?per_page=100&page=${page}`,
+      `https://api.github.com/repos/${pending.run.repository}/actions/runs/${pending.run.workflowRunId}/attempts/${environment.GITHUB_RUN_ATTEMPT}/jobs?per_page=100&page=${page}`,
       {
         headers: {
           Authorization: `Bearer ${environment.GH_TOKEN}`,
@@ -47,7 +50,7 @@ export async function bindSubmission(
       if (
         record(job) &&
         job.check_run_url ===
-          `https://api.github.com/repos/${manifest.run.repository}/check-runs/${claims.check_run_id}`
+          `https://api.github.com/repos/${pending.run.repository}/check-runs/${claims.check_run_id}`
       ) {
         matches.push(job);
       }
@@ -66,54 +69,33 @@ export async function bindSubmission(
   ) {
     throw new CliError("The signed Submit job identity is ambiguous.", 4);
   }
-  const rebound = parseManifest({
-    ...manifest,
-    run: {
-      ...manifest.run,
-      workflowAttempt: Number(environment.GITHUB_RUN_ATTEMPT),
-    },
-    shard: {
-      key: "combined",
-      jobId: String(job.id),
-      sourceAttempt: Number(environment.GITHUB_RUN_ATTEMPT),
-    },
-  });
-  const file = join(directory, "manifest.json");
-  const temporary = `${file}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(rebound)}\n`, { flag: "wx", mode: 0o600 });
-  await rename(temporary, file);
-  const receipt = await createDiscoveryReceipt(rebound);
-  const receiptFile = join(directory, "receipt.json");
-  await writeFile(receiptFile, `${JSON.stringify(receipt)}\n`, { flag: "wx", mode: 0o600 });
-  if (!environment.GITHUB_OUTPUT) {
-    throw new CliError("GITHUB_OUTPUT is required.", 2);
-  }
-  await appendFile(
-    environment.GITHUB_OUTPUT,
-    `name=${receipt.artifactName}\npath=${receiptFile}\n`,
-  );
-  return rebound;
+  const attempt = Number(environment.GITHUB_RUN_ATTEMPT);
+  const submission: Submission = {
+    ...pending,
+    run: { ...pending.run, workflowAttempt: attempt },
+    job: { id: String(job.id), attempt },
+  };
+  await writeSubmission(directory, submission);
+  return submission;
 }
 
-/** Keep the signed job's ordinary discovery artifact bound to the final receipt. */
-export async function refreshSubmissionReceipt(
-  manifest: Manifest,
+/**
+ * Write the receipt of the run and tell the workflow its artifact name. The
+ * workflow uploads the file as one ordinary artifact, and the service reads
+ * the manifest digest from the artifact name.
+ */
+export async function writeReceipt(
+  receipt: CapturePagesReceipt,
   directory: string,
   environment: Record<string, string | undefined>,
 ) {
   if (!environment.GITHUB_OUTPUT) {
     throw new CliError("GITHUB_OUTPUT is required.", 2);
   }
-  parseManifest(manifest);
-  const file = join(directory, "manifest.json");
-  const temporary = `${file}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(manifest)}\n`, { flag: "wx", mode: 0o600 });
-  await rename(temporary, file);
-  const receipt = await createDiscoveryReceipt(manifest);
   const receiptFile = join(directory, "receipt.json");
-  const receiptTemporary = `${receiptFile}.tmp`;
-  await writeFile(receiptTemporary, `${JSON.stringify(receipt)}\n`, { flag: "wx", mode: 0o600 });
-  await rename(receiptTemporary, receiptFile);
+  const temporary = `${receiptFile}.tmp`;
+  await writeFile(temporary, `${JSON.stringify(receipt)}\n`, { mode: 0o600 });
+  await rename(temporary, receiptFile);
   await appendFile(
     environment.GITHUB_OUTPUT,
     `name=${receipt.artifactName}\npath=${receiptFile}\n`,

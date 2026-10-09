@@ -1,9 +1,10 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FIXED_DIGEST, parseManifest } from "@visonaut/protocol";
+import { FIXED_DIGEST } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { prepareBundleSubmission } from "../src/bundle-submit.js";
+import { loadSubmission } from "../src/submission.js";
 import { bundlePair } from "./fixture.js";
 
 const captures = vi.hoisted(() => ({ downloadCaptures: vi.fn() }));
@@ -62,18 +63,15 @@ async function prepare(retired: Record<string, string> = {}) {
     VISONAUT_SERVER: "https://visonaut.example",
     VISONAUT_SUBMIT_JOB_NAME: submitJob.name,
   });
-  const manifest = parseManifest(
-    JSON.parse(await readFile(join(directory, "manifest.json"), "utf8")),
-  );
-  return { manifest, requests };
+  return { submission: await loadSubmission(directory), requests };
 }
 
 describe("signed Submit with the fixed digest", () => {
   it("sends the fixed digest in both fields and needs no variable for it", async () => {
-    const { manifest, requests } = await prepare();
-    expect(manifest.run.planDigest).toBe(FIXED_DIGEST);
-    expect(manifest.discovery?.executorDigest).toBe(FIXED_DIGEST);
-    expect(manifest.shard).toEqual({ key: "combined", jobId: "99", sourceAttempt: 1 });
+    const { submission, requests } = await prepare();
+    // The reserve call sends the run of the prepared submission.
+    expect(submission.run.planDigest).toBe(FIXED_DIGEST);
+    expect(submission.job).toEqual({ id: "99", attempt: 1 });
     // The begin call, the signed job lookup, and the two OIDC tokens are the only requests.
     expect(requests).toEqual([
       "run.actions.githubusercontent.com/id-token",
@@ -99,7 +97,7 @@ describe("signed Submit with the fixed digest", () => {
     async (_name, retired) => {
       const without = await prepare();
       const withRetired = await prepare(retired);
-      expect(withRetired.manifest).toEqual(without.manifest);
+      expect(withRetired.submission).toEqual(without.submission);
       expect(withRetired.requests).toEqual(without.requests);
     },
   );

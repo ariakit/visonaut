@@ -48,8 +48,8 @@ export async function runWorkflowCommand(
     await submitWithoutVisuals(selectedEnvironment);
     return { command: "submit", noVisual: true };
   }
-  if (shards.length < 1 || shards.length > 16) {
-    throw new CliError("Submit requires --no-visual or 1–16 --shard pairs.", 2);
+  if (!shards.length) {
+    throw new CliError("Submit requires --no-visual or at least one --shard pair.", 2);
   }
   const prepared = await prepareBundleSubmission(shards, selectedEnvironment);
   return { command: "submit", ...prepared };
