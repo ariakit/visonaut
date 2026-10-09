@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import {
   ensureGitHubCheck,
   findGitHubCheck,
+  GitHubUnavailableError,
   sendGitHubCheck,
   type GitHubClient,
   type StatusDelivery,
@@ -129,6 +130,161 @@ it.each([
     sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
   ).rejects.toMatchObject({ code: "wrong_check" });
   expect(github.request).toHaveBeenCalledTimes(1);
+});
+
+const currentCheck = {
+  ...legacyCheck,
+  name: "Visonaut",
+  external_id: "visonaut:run-1",
+};
+
+const shownFailure = {
+  ...currentCheck,
+  details_url: `${origin}/runs/run-1`,
+  status: "completed",
+  conclusion: "failure",
+  completed_at: "2026-10-01T10:00:00Z",
+  output: {
+    title: "Visual review has not passed",
+    summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
+  },
+};
+
+function patchBodies(github: GitHubClient) {
+  return vi
+    .mocked(github.request)
+    .mock.calls.filter(([, init]) => init?.method === "PATCH")
+    .map(([, init]): unknown => JSON.parse(String(init?.body)));
+}
+
+// The GitHub client throws this error for each failed request. No answer has no status.
+it.each([
+  [
+    "an error status",
+    new GitHubUnavailableError(502),
+    "SecurityError: GitHub verification is temporarily unavailable. GitHub status: 502.",
+  ],
+  [
+    "no answer",
+    new GitHubUnavailableError(),
+    "SecurityError: GitHub verification is temporarily unavailable.",
+  ],
+])("returns a failed read with %s as a result and sends no PATCH", async (_label, error, cause) => {
+  const github = senderClient(currentCheck);
+  vi.mocked(github.request).mockRejectedValueOnce(error);
+  expect(
+    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
+  ).toEqual({ readError: cause });
+  expect(github.request).toHaveBeenCalledTimes(1);
+});
+
+it("returns a read with no check object as a failed read", async () => {
+  const github = senderClient(currentCheck);
+  vi.mocked(github.request).mockResolvedValueOnce(null);
+  expect(
+    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
+  ).toEqual({ readError: "SecurityError: Trusted metadata is unavailable." });
+  expect(github.request).toHaveBeenCalledTimes(1);
+});
+
+it("throws the error of a failed PATCH", async () => {
+  const github = senderClient(currentCheck);
+  vi.mocked(github.request).mockImplementation(async (_path, init) => {
+    if (init?.method === "PATCH") {
+      throw new Error("Lost PATCH response.");
+    }
+    return currentCheck;
+  });
+  await expect(
+    sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
+  ).rejects.toThrow("Lost PATCH response.");
+});
+
+it("sends no PATCH when GitHub already shows the same completed result", async () => {
+  const github = senderClient(shownFailure);
+  expect(
+    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
+  ).toBeUndefined();
+  expect(patchBodies(github)).toEqual([]);
+});
+
+it("does not report an update that is not current as sent", async () => {
+  const github = senderClient(shownFailure);
+  expect(
+    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => false }),
+  ).toBe("not-sent");
+  expect(patchBodies(github)).toEqual([]);
+});
+
+it.each([
+  ["title", { output: { ...shownFailure.output, title: "Visual review failed" } }],
+  ["summary", { output: { ...shownFailure.output, summary: "Open the review." } }],
+  ["review link", { details_url: `${origin}/runs/run-0` }],
+  ["missing output", { output: null }],
+])("keeps the first end time when only the %s changes", async (_label, change) => {
+  const github = senderClient({ ...shownFailure, ...change });
+  await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true });
+  expect(patchBodies(github)).toEqual([
+    {
+      name: "Visonaut",
+      details_url: `${origin}/runs/run-1`,
+      output: shownFailure.output,
+      status: "completed",
+      conclusion: "failure",
+      completed_at: "2026-10-01T10:00:00Z",
+    },
+  ]);
+});
+
+it.each([
+  ["another conclusion", { conclusion: "success" }],
+  ["a check in progress", { status: "in_progress", conclusion: null, completed_at: null }],
+  // The stored end time is valid only for a check that GitHub shows as completed.
+  ["a check that is not completed and keeps its old result", { status: "in_progress" }],
+])("sends a new end time after %s", async (_label, change) => {
+  vi.useFakeTimers({ now: new Date("2026-10-02T12:00:00.000Z") });
+  try {
+    const github = senderClient({ ...shownFailure, ...change });
+    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true });
+    expect(patchBodies(github)).toEqual([
+      expect.objectContaining({
+        status: "completed",
+        conclusion: "failure",
+        completed_at: "2026-10-02T12:00:00.000Z",
+      }),
+    ]);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("sends the same pending result again with no end time", async () => {
+  const pending = {
+    ...shownFailure,
+    status: "in_progress",
+    conclusion: null,
+    completed_at: null,
+    output: {
+      title: "Visual review is running",
+      summary: shownFailure.output.summary,
+    },
+  };
+  const github = senderClient(pending);
+  await sendGitHubCheck({
+    github,
+    intent: { ...intent, conclusion: "pending" },
+    testedSha,
+    origin,
+    isCurrent: async () => true,
+  });
+  expect(patchBodies(github)).toEqual([
+    {
+      name: "Visonaut",
+      details_url: `${origin}/runs/run-1`,
+      output: pending.output,
+      status: "in_progress",
+    },
+  ]);
 });
 
 it("finds a legacy check only by its exact pre-rename external identity", async () => {
