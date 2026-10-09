@@ -7,7 +7,22 @@ import {
 } from "./hash.js";
 import type {
   CaptureComparison,
+  CapturePage,
+  CapturePageEntry,
+  CapturePageIndex,
+  CapturePageIndexLimits,
+  CapturePageTest,
   CaptureProfile,
+  CaptureReference,
+  CaptureReferenceIdentity,
+  CaptureRow,
+  CaptureRowClip,
+  CaptureRowImage,
+  CaptureRowResult,
+  CaptureRowView,
+  CaptureSource,
+  Json,
+  Variant,
   ComparisonPolicy,
   Manifest,
   TrustedCollection,
@@ -16,7 +31,13 @@ import type {
   LocalComparisonReceipt,
   LocalReferenceBinding,
 } from "./types.js";
-import { LOCAL_COMPARISON_MODE, LOCAL_COMPARISON_ENGINE, LOCAL_COMPARISON_CODEC } from "./types.js";
+import {
+  CAPTURE_PAGE_MAX_BYTES,
+  CAPTURE_PAGE_ROWS,
+  LOCAL_COMPARISON_MODE,
+  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_CODEC,
+} from "./types.js";
 
 export class ProtocolError extends Error {
   constructor(
@@ -198,7 +219,7 @@ export function validateProfile(value: unknown): asserts value is CaptureProfile
   }
 }
 
-function validateVariant(value: unknown) {
+function validateVariant(value: unknown): asserts value is Variant {
   object(value, "variant");
   validateKey(field(value, "key"), "variant.key");
   member(field(value, "browser"), ["chromium", "firefox", "webkit"], "variant.browser");
@@ -357,20 +378,8 @@ function assertManifest(value: unknown): asserts value is Manifest {
     list(sources, "captureSources", 1, 16);
     const keys: string[] = [];
     for (const source of sources) {
-      object(source, "capture source");
-      required(source, "shardKey", validateKey);
+      validateCaptureSource(source);
       keys.push(source.shardKey);
-      integer(field(source, "workflowAttempt"), "source workflowAttempt", 1);
-      for (const key of ["jobId", "artifactId"]) {
-        const identifier = field(source, key);
-        string(identifier, key, 32);
-        if (!/^[1-9][0-9]*$/.test(identifier)) {
-          fail(`${key} must be a positive decimal ID`);
-        }
-      }
-      string(field(source, "jobName"), "jobName", 256);
-      string(field(source, "artifactName"), "artifactName", 256);
-      validateDigest(field(source, "manifestDigest"), "manifestDigest");
     }
     unique(keys, "capture source shard");
   }
@@ -381,6 +390,25 @@ function assertManifest(value: unknown): asserts value is Manifest {
       validateDigest(field(discovery, key), key);
     }
   }
+}
+
+function decimalId(value: unknown, label: string): asserts value is string {
+  string(value, label, 32);
+  if (!/^[1-9][0-9]*$/.test(value)) {
+    fail(`${label} must be a positive decimal ID`);
+  }
+}
+
+function validateCaptureSource(value: unknown): asserts value is CaptureSource {
+  object(value, "capture source");
+  required(value, "shardKey", validateKey);
+  integer(field(value, "workflowAttempt"), "source workflowAttempt", 1);
+  for (const key of ["jobId", "artifactId"]) {
+    decimalId(field(value, key), key);
+  }
+  string(field(value, "jobName"), "jobName", 256);
+  string(field(value, "artifactName"), "artifactName", 256);
+  validateDigest(field(value, "manifestDigest"), "manifestDigest");
 }
 
 /** Unknown optional fields survive parsing and contribute to the payload digest. */
@@ -747,4 +775,467 @@ export function validateComparisonPolicy(value: unknown): asserts value is Compa
   if (Object.hasOwn(value, "maxChangedPixels")) {
     integer(value.maxChangedPixels, "maxChangedPixels");
   }
+}
+
+// One image of a row or one mask. The Submit bounds of the CLI are smaller.
+const CAPTURE_ROW_IMAGE_MAX_BYTES = 20 * 1024 * 1024;
+const CAPTURE_ROW_IMAGE_MAX_SIDE = 100_000;
+
+/** Order by the item key, then by the variant key. Keys are ASCII, so this is also byte order. */
+export function compareCaptureIdentity(
+  first: readonly [itemKey: string, variantKey: string],
+  second: readonly [itemKey: string, variantKey: string],
+): number {
+  if (first[0] !== second[0]) {
+    return first[0] < second[0] ? -1 : 1;
+  }
+  if (first[1] !== second[1]) {
+    return first[1] < second[1] ? -1 : 1;
+  }
+  return 0;
+}
+
+function validateRowClip(value: unknown): asserts value is CaptureRowClip | null {
+  if (value === null) return;
+  if (!Array.isArray(value) || value.length !== 4) {
+    fail("A row clip must be null or have x, y, width, and height");
+  }
+  for (const entry of value) {
+    if (typeof entry !== "number" || !Number.isFinite(entry)) {
+      fail("A row clip must hold finite numbers");
+    }
+  }
+}
+
+function validateRowImage(value: Record<keyof CaptureRowImage, unknown>, label: string) {
+  validateDigest(value.digest, `${label} digest`);
+  integer(value.bytes, `${label} bytes`, 1, CAPTURE_ROW_IMAGE_MAX_BYTES);
+  integer(value.width, `${label} width`, 1, CAPTURE_ROW_IMAGE_MAX_SIDE);
+  integer(value.height, `${label} height`, 1, CAPTURE_ROW_IMAGE_MAX_SIDE);
+}
+
+function validateRowResult(
+  value: unknown,
+  image: CaptureRowImage,
+): asserts value is CaptureRowResult {
+  if (value === 0) return;
+  if (value === 1) return;
+  object(value, "row result");
+  required(value, "reference", validateDigest);
+  // Equal bytes have the result 0, so that one capture has one row form.
+  if (value.reference === image.digest) {
+    fail("A compared capture cannot have the bytes of its reference");
+  }
+  member(field(value, "outcome"), ["unchanged", "changed"], "row outcome");
+  integer(field(value, "changedPixels"), "changedPixels", 0, image.width * image.height);
+  const ratio = field(value, "ratio");
+  if (typeof ratio !== "number" || !Number.isFinite(ratio) || ratio < 0 || ratio > 1) {
+    fail("Row ratio must be between 0 and 1");
+  }
+  if (typeof field(value, "sizeChanged") !== "boolean") {
+    fail("Row sizeChanged must be boolean");
+  }
+  if (!Object.hasOwn(value, "mask")) return;
+  const mask = value.mask;
+  object(mask, "row mask");
+  validateRowImage(
+    {
+      digest: field(mask, "digest"),
+      bytes: field(mask, "bytes"),
+      width: field(mask, "width"),
+      height: field(mask, "height"),
+    },
+    "mask",
+  );
+  if (value.outcome !== "changed") {
+    fail("Only a changed capture can have a mask");
+  }
+}
+
+function validatePageTest(value: unknown): asserts value is CapturePageTest {
+  object(value, "page test");
+  required(value, "id", string);
+  string(field(value, "file"), "test.file");
+  required(value, "retry", integer);
+  const titlePath = field(value, "titlePath");
+  list(titlePath, "titlePath", 1, 100);
+  for (const title of titlePath) {
+    string(title, "title");
+  }
+}
+
+function validatePageProfile(value: unknown): asserts value is CaptureProfile {
+  validateProfile(value);
+  if (Object.hasOwn(value, "comparisonPolicyDigest")) {
+    fail("A page profile cannot hold comparison settings");
+  }
+  if (Object.hasOwn(value, "comparisonEngineVersion")) {
+    fail("A page profile cannot hold comparison settings");
+  }
+}
+
+interface SharedListParams<T> {
+  page: Record<string, unknown>;
+  key: string;
+  rowCount: number;
+  parse: (entry: unknown) => T;
+  identity: (entry: T) => string;
+}
+
+/** A shared list of a page has at most one entry for each row, and no entry two times. */
+function sharedList<T>({ page, key, rowCount, parse, identity }: SharedListParams<T>): T[] {
+  const entries = field(page, key);
+  list(entries, key, 1, rowCount);
+  const result: T[] = [];
+  const identities: string[] = [];
+  for (const value of entries) {
+    const entry = parse(value);
+    result.push(entry);
+    identities.push(identity(entry));
+  }
+  unique(identities, `page ${key} entry`);
+  return result;
+}
+
+/**
+ * Validate one capture page: the bounds of each field, the order of the rows,
+ * and the order of each shared list. The caller bounds the bytes of the body
+ * with `CAPTURE_PAGE_MAX_BYTES` before it parses the JSON text. Only the last
+ * page of a run can have fewer than `CAPTURE_PAGE_ROWS` rows, and only a
+ * reader of all pages can check that.
+ */
+export function parseCapturePage(value: unknown): CapturePage {
+  assertCapturePage(value);
+  return value;
+}
+
+function assertCapturePage(value: unknown): asserts value is CapturePage {
+  object(value, "capture page");
+  validateVersion(field(value, "schemaVersion"));
+  const rows = field(value, "rows");
+  list(rows, "rows", 1, CAPTURE_PAGE_ROWS);
+  const rowCount = rows.length;
+  const variants = sharedList({
+    page: value,
+    key: "variants",
+    rowCount,
+    parse: (entry) => {
+      validateVariant(entry);
+      return entry;
+    },
+    // Two captures can use one variant key with two contents, as in a manifest of today.
+    identity: canonicalJson,
+  });
+  const profiles = sharedList({
+    page: value,
+    key: "profiles",
+    rowCount,
+    parse: (entry) => {
+      validatePageProfile(entry);
+      return entry;
+    },
+    identity: canonicalJson,
+  });
+  const tests = sharedList({
+    page: value,
+    key: "tests",
+    rowCount,
+    parse: (entry) => {
+      validatePageTest(entry);
+      return entry;
+    },
+    identity: (test) => test.id,
+  });
+  const comparisons = sharedList({
+    page: value,
+    key: "comparisons",
+    rowCount,
+    parse: (entry) => {
+      validateCaptureComparison(entry);
+      return entry;
+    },
+    identity: canonicalJson,
+  });
+  // The count of entries of each shared list that the rows before this one use.
+  const used = { variant: 0, test: 0, profile: 0, comparison: 0 };
+  const position = (entry: unknown, key: keyof typeof used) => {
+    integer(entry, `row ${key}`, 0, used[key]);
+    // A list has the order of first use, so a new entry is always the next one.
+    if (entry === used[key]) {
+      used[key]++;
+    }
+    return entry;
+  };
+  // One digest names one image, so each use of it in a page has the same size.
+  const images = new Map<string, CaptureRowImage>();
+  const sameImage = (image: CaptureRowImage) => {
+    const first = images.get(image.digest);
+    if (!first) {
+      images.set(image.digest, image);
+      return;
+    }
+    if (
+      first.bytes !== image.bytes ||
+      first.width !== image.width ||
+      first.height !== image.height
+    ) {
+      fail("One image digest of a page has two sizes");
+    }
+  };
+  let previous: [string, string] | undefined;
+  for (const row of rows) {
+    if (!Array.isArray(row) || row.length !== 12) {
+      fail("A capture row must have 12 positions");
+    }
+    const [itemKey, name, variantAt, testAt, profileAt, clip, comparisonAt] = row;
+    const [, , , , , , , digest, bytes, width, height, result] = row;
+    validateKey(itemKey, "itemKey");
+    if (name !== null) {
+      string(name, "name");
+      if (name === itemKey) {
+        fail("A row name that is the item key must be null");
+      }
+    }
+    const variant = variants[position(variantAt, "variant")];
+    const test = tests[position(testAt, "test")];
+    const profile = profiles[position(profileAt, "profile")];
+    const comparison = comparisons[position(comparisonAt, "comparison")];
+    if (!variant || !test || !profile || !comparison) {
+      fail("A row refers to a missing shared entry");
+    }
+    validateRowClip(clip);
+    if (clip && Object.hasOwn(profile.captureOptions, "clip")) {
+      fail("A row with a clip needs a profile without captureOptions.clip");
+    }
+    // One capture has one row form: a rectangle that a row can hold is in the row.
+    if (!clip && captureRowProfile(profile).clip) {
+      fail("A clip rectangle of a profile must be in the row");
+    }
+    if (variant.browser !== profile.browser) {
+      fail("Variant browser differs from the capture profile");
+    }
+    for (const key of ["colorScheme", "contrast", "forcedColors"] as const) {
+      if (Object.hasOwn(variant, key) && variant[key] !== profile[key]) {
+        fail(`Variant ${key} differs from the capture profile`);
+      }
+    }
+    const image = { digest, bytes, width, height };
+    validateRowImage(image, "image");
+    validateRowResult(result, image);
+    sameImage(image);
+    if (typeof result === "object" && result.mask) {
+      sameImage(result.mask);
+    }
+    const identity: [string, string] = [itemKey, variant.key];
+    if (previous && compareCaptureIdentity(previous, identity) >= 0) {
+      fail("Capture rows must increase by the item key and then the variant key");
+    }
+    previous = identity;
+  }
+  if (
+    used.variant !== variants.length ||
+    used.test !== tests.length ||
+    used.profile !== profiles.length ||
+    used.comparison !== comparisons.length
+  ) {
+    fail("Each shared entry of a page must be used by a row");
+  }
+}
+
+/** The canonical JSON bytes of a page: the request body, and the input of its digest. */
+export function capturePageBytes(page: CapturePage): Uint8Array<ArrayBuffer> {
+  const bytes = new TextEncoder().encode(canonicalJson(page));
+  if (bytes.byteLength > CAPTURE_PAGE_MAX_BYTES) {
+    fail(`A capture page must have at most ${CAPTURE_PAGE_MAX_BYTES} bytes`);
+  }
+  return bytes;
+}
+
+/** The row form of `captureOptions.clip`, when the value has exactly the four numbers. */
+function clipRectangle(clip: Json | undefined): CaptureRowClip | null {
+  if (!clip) return null;
+  if (typeof clip !== "object") return null;
+  if (Array.isArray(clip)) return null;
+  if (Object.keys(clip).length !== 4) return null;
+  const { x, y, width, height } = clip;
+  if (typeof x !== "number") return null;
+  if (typeof y !== "number") return null;
+  if (typeof width !== "number") return null;
+  if (typeof height !== "number") return null;
+  return [x, y, width, height];
+}
+
+/**
+ * Move the clip rectangle of a profile into a row, so that captures that
+ * differ only in the rectangle share one profile of the page. A clip with
+ * another form stays in the profile.
+ */
+export function captureRowProfile(profile: CaptureProfile): {
+  profile: CaptureProfile;
+  clip: CaptureRowClip | null;
+} {
+  const { clip, ...captureOptions } = profile.captureOptions;
+  const rectangle = clipRectangle(clip);
+  if (!rectangle) {
+    return { profile, clip: null };
+  }
+  return { profile: { ...profile, captureOptions }, clip: rectangle };
+}
+
+/**
+ * Read one row of a validated page as an object with names. The profile is the
+ * complete profile of the capture, and its digest is the digest that the
+ * capture job computed.
+ */
+export async function captureRowView(page: CapturePage, row: CaptureRow): Promise<CaptureRowView> {
+  const [itemKey, name, variantAt, testAt, profileAt, clip, comparisonAt] = row;
+  const [, , , , , , , digest, bytes, width, height, result] = row;
+  const variant = page.variants[variantAt];
+  const test = page.tests[testAt];
+  const shared = page.profiles[profileAt];
+  const comparison = page.comparisons[comparisonAt];
+  if (!variant || !test || !shared || !comparison) {
+    fail("A row refers to a missing shared entry");
+  }
+  const profile = clip
+    ? {
+        ...shared,
+        captureOptions: {
+          ...shared.captureOptions,
+          clip: { x: clip[0], y: clip[1], width: clip[2], height: clip[3] },
+        },
+      }
+    : shared;
+  return {
+    itemKey,
+    variantKey: variant.key,
+    name: name ?? itemKey,
+    variant,
+    test,
+    profile,
+    profileDigest: await digestJson(profile),
+    comparison,
+    image: { digest, bytes, width, height },
+    result,
+  };
+}
+
+/**
+ * The images of a validated page that the service does not have from the
+ * reference: each new or changed capture, and each mask. All images are PNG.
+ */
+export function capturePageUploads(page: CapturePage): Map<string, CaptureRowImage> {
+  const images = new Map<string, CaptureRowImage>();
+  for (const row of page.rows) {
+    const [, , , , , , , digest, bytes, width, height, result] = row;
+    if (result === 0) continue;
+    if (result === 1 || result.outcome === "changed") {
+      images.set(digest, { digest, bytes, width, height });
+    }
+    if (result !== 1 && result.mask) {
+      images.set(result.mask.digest, result.mask);
+    }
+  }
+  return images;
+}
+
+export function validateCaptureReferenceIdentity(
+  value: unknown,
+): asserts value is CaptureReferenceIdentity {
+  object(value, "capture reference");
+  const snapshotId = field(value, "snapshotId");
+  if (snapshotId !== null) {
+    string(snapshotId, "snapshotId", 256);
+  }
+  integer(field(value, "baselineRevision"), "baselineRevision");
+  const digest = field(value, "digest");
+  if (digest !== null) {
+    validateDigest(digest, "reference digest");
+  }
+}
+
+/** The reference of a reserve answer. A run with no reference has no reference page. */
+export function validateCaptureReference(value: unknown): asserts value is CaptureReference {
+  object(value, "capture reference");
+  const pages = field(value, "pages");
+  integer(pages, "reference pages");
+  validateCaptureReferenceIdentity(value);
+  if ((value.digest === null) !== (pages === 0)) {
+    fail("Only a run with no reference has no reference page");
+  }
+}
+
+function validatePageEntry(value: unknown): asserts value is CapturePageEntry {
+  object(value, "page entry");
+  required(value, "digest", validateDigest);
+  const last = field(value, "last");
+  if (!Array.isArray(last) || last.length !== 2) {
+    fail("A page entry must name its last item key and variant key");
+  }
+  validateKey(last[0], "last itemKey");
+  validateKey(last[1], "last variantKey");
+}
+
+/**
+ * Validate the page index of a run. The two lists grow with the run, so the
+ * caller gives their bounds: the protocol has no limit for a complete run.
+ */
+export function parseCapturePageIndex(
+  value: unknown,
+  limits: CapturePageIndexLimits,
+): CapturePageIndex {
+  assertCapturePageIndex(value, limits);
+  return value;
+}
+
+function assertCapturePageIndex(
+  value: unknown,
+  { maximumPages, maximumSources }: CapturePageIndexLimits,
+): asserts value is CapturePageIndex {
+  for (const limit of [maximumPages, maximumSources]) {
+    if (!Number.isSafeInteger(limit) || limit < 1) {
+      throw new TypeError("The limits of a page index must be positive integers");
+    }
+  }
+  object(value, "page index");
+  validateVersion(field(value, "schemaVersion"));
+  const producer = field(value, "producer");
+  object(producer, "producer");
+  for (const key of ["name", "version", "nodeVersion", "playwrightVersion"]) {
+    string(field(producer, key), `producer.${key}`);
+  }
+  const job = field(value, "job");
+  object(job, "job");
+  decimalId(field(job, "id"), "job.id");
+  const attempt = field(job, "attempt");
+  integer(attempt, "job.attempt", 1);
+  const comparison = field(value, "comparison");
+  object(comparison, "comparison");
+  member(field(comparison, "engineVersion"), [LOCAL_COMPARISON_ENGINE], "local engine");
+  member(field(comparison, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
+  validateCaptureReferenceIdentity(field(value, "reference"));
+  const sources = field(value, "sources");
+  list(sources, "sources", 1, maximumSources);
+  const shardKeys: string[] = [];
+  for (const source of sources) {
+    validateCaptureSource(source);
+    if (source.workflowAttempt > attempt) {
+      fail("A capture source comes from a later workflow attempt");
+    }
+    shardKeys.push(source.shardKey);
+  }
+  unique(shardKeys, "capture source shard");
+  const pages = field(value, "pages");
+  list(pages, "pages", 1, maximumPages);
+  const digests: string[] = [];
+  let previous: CapturePageEntry | undefined;
+  for (const page of pages) {
+    validatePageEntry(page);
+    if (previous && compareCaptureIdentity(previous.last, page.last) >= 0) {
+      fail("Page entries must increase by the item key and then the variant key");
+    }
+    previous = page;
+    digests.push(page.digest);
+  }
+  unique(digests, "page digest");
 }

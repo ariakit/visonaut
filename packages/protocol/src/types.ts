@@ -186,6 +186,162 @@ export interface LocalComparisonReceipt {
   removals: CaptureIdentity[];
 }
 
+/** The `comparisonMode` of a reserve call that sends the captures as pages of rows. */
+export const CAPTURE_PAGES_MODE = "local-pages-v1";
+/** Each capture page but the last one of a run has exactly this count of rows. */
+export const CAPTURE_PAGE_ROWS = 2000;
+/** The largest canonical JSON text of one capture page, in UTF-8 bytes. */
+export const CAPTURE_PAGE_MAX_BYTES = 4 * 1024 * 1024;
+
+export interface CaptureRowImage {
+  digest: string;
+  bytes: number;
+  width: number;
+  height: number;
+}
+
+/** The result of a capture whose bytes differ from the bytes of its reference. */
+export interface CaptureRowComparison {
+  /** The digest of the reference image. It is never the digest of the capture. */
+  reference: string;
+  outcome: "unchanged" | "changed";
+  changedPixels: number;
+  ratio: number;
+  sizeChanged: boolean;
+  /** Present only when a changed capture has pixel differences to show. */
+  mask?: CaptureRowImage;
+}
+
+/**
+ * `0`: the capture has the bytes of its reference. `1`: the capture is new, so
+ * it has no reference. An object: the Submit job compared the pixels.
+ */
+export type CaptureRowResult = 0 | 1 | CaptureRowComparison;
+
+export type CaptureRowClip = [x: number, y: number, width: number, height: number];
+
+/**
+ * One capture of a page. A row holds positions and no names, because a name in
+ * each row is a repeated value. Read a row with `captureRowView`, and do not
+ * index it by number. A new position needs a new minor schema version.
+ */
+export type CaptureRow = [
+  itemKey: string,
+  /** The display name, or `null` when it is the item key. */
+  name: string | null,
+  /** Position in `variants` of the page. */
+  variant: number,
+  /** Position in `tests` of the page. */
+  test: number,
+  /** Position in `profiles` of the page. */
+  profile: number,
+  /** `captureOptions.clip` of the profile of this capture, or `null`. */
+  clip: CaptureRowClip | null,
+  /** Position in `comparisons` of the page. */
+  comparison: number,
+  imageDigest: string,
+  imageBytes: number,
+  imageWidth: number,
+  imageHeight: number,
+  result: CaptureRowResult,
+];
+
+export interface CapturePageTest {
+  id: string;
+  file: string;
+  titlePath: string[];
+  retry: number;
+}
+
+/**
+ * At most `CAPTURE_PAGE_ROWS` captures in the order of the item key and then
+ * the variant key. Each shared list has the order of first use by the rows, so
+ * the same captures always give the same page and the same digest.
+ */
+export interface CapturePage {
+  schemaVersion: string;
+  variants: Variant[];
+  /** Each profile of a row with a clip rectangle has no `captureOptions.clip`. */
+  profiles: CaptureProfile[];
+  tests: CapturePageTest[];
+  comparisons: CaptureComparison[];
+  rows: CaptureRow[];
+}
+
+/** A row as an object with names. `captureRowView` builds it. */
+export interface CaptureRowView extends CaptureIdentity {
+  /** The display name. It is the item key when the row has no name. */
+  name: string;
+  variant: Variant;
+  test: CapturePageTest;
+  /** The complete profile, with the clip rectangle of the row. */
+  profile: CaptureProfile;
+  profileDigest: string;
+  comparison: CaptureComparison;
+  image: CaptureRowImage;
+  result: CaptureRowResult;
+}
+
+/** The accepted reference that the service selects for a run. */
+export interface CaptureReferenceIdentity {
+  snapshotId: string | null;
+  baselineRevision: number;
+  /**
+   * An opaque identity of the reference inventory, with the form of a digest.
+   * The service gives it. A client only compares it for equality and copies
+   * it. It is `null` when the project has no reference.
+   */
+  digest: string | null;
+}
+
+export interface CaptureReference extends CaptureReferenceIdentity {
+  /** The count of reference pages. Their numbers are 1 to this count. */
+  pages: number;
+}
+
+export interface CapturePageEntry {
+  digest: string;
+  /** The identity of the last row of the page. */
+  last: [itemKey: string, variantKey: string];
+}
+
+/**
+ * The list of the pages of one run, in the order of the format. Its digest is
+ * the manifest digest of the run. It holds no count of the captures.
+ */
+export interface CapturePageIndex {
+  schemaVersion: string;
+  producer: Manifest["producer"];
+  /** The signed Submit job that made the pages. */
+  job: { id: string; attempt: number };
+  comparison: {
+    engineVersion: typeof LOCAL_COMPARISON_ENGINE;
+    codecVersion: typeof LOCAL_COMPARISON_CODEC;
+  };
+  reference: CaptureReferenceIdentity;
+  /** One entry for each capture job. */
+  sources: CaptureSource[];
+  pages: CapturePageEntry[];
+}
+
+/** The caller sets the bounds of the two lists that grow with a run. */
+export interface CapturePageIndexLimits {
+  maximumPages: number;
+  maximumSources: number;
+}
+
+/** The content of the receipt artifact of a run that sent pages. */
+export interface CapturePagesReceipt {
+  schemaVersion: string;
+  artifactName: string;
+  manifestDigest: string;
+  workflowRunId: string;
+  workflowAttempt: number;
+  testedSha: string;
+  jobId: string;
+  shardKey: string;
+}
+
 export interface PlannedTest {
   id: string;
   captures: CaptureIdentity[];
@@ -275,6 +431,21 @@ export interface ReserveRunResponse {
   comparisonMode?: typeof LOCAL_COMPARISON_MODE;
 }
 
+export interface ReservePagesRequest extends RunProvenance {
+  schemaVersion: string;
+  shardKey: string;
+  comparisonMode: typeof CAPTURE_PAGES_MODE;
+}
+
+export interface ReservePagesResponse {
+  schemaVersion: string;
+  runId: string;
+  capability: string;
+  expiresAt: string;
+  comparisonMode: typeof CAPTURE_PAGES_MODE;
+  reference: CaptureReference;
+}
+
 export interface UploadTicket {
   imageDigest: string;
   ticket: string;
@@ -312,6 +483,28 @@ export interface StagedShardResponse {
   runId: string;
   state: "staged";
   shardKey: string;
+  manifestDigest: string;
+}
+
+export interface DeclarePageResponse {
+  schemaVersion: string;
+  pageDigest: string;
+  /** Tickets only for the images of the page that the service does not have. */
+  uploads: UploadTicket[];
+  reuse?: { nonce: string; token: string; expiresAt: string };
+}
+
+export interface ReusePageImagesRequest {
+  schemaVersion: string;
+  pageDigest: string;
+  challenge: string;
+  proofs: { imageDigest: string; proof: string }[];
+}
+
+export interface StagedPagesResponse {
+  schemaVersion: string;
+  runId: string;
+  state: "staged";
   manifestDigest: string;
 }
 
@@ -363,4 +556,10 @@ export const TRANSPORT = {
   submit: (externalWorkflowRunId: string) =>
     `/v1/runs/${encodeURIComponent(externalWorkflowRunId)}/submit`,
   status: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}`,
+  referencePage: (runId: string, referenceDigest: string, number: number) =>
+    `/v1/runs/${encodeURIComponent(runId)}/reference/${referenceDigest}/pages/${number}`,
+  referenceImage: (runId: string, imageDigest: string) =>
+    `/v1/runs/${encodeURIComponent(runId)}/reference/images/${imageDigest}`,
+  page: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/pages`,
+  pageIndex: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/index`,
 } as const;
