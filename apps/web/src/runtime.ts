@@ -267,8 +267,7 @@ export function apiBindings(env: BackendEnv): ApiBindings {
       },
     },
     configuration,
-    admission: (identity) =>
-      checkRunAdmission(env.DB, databaseCapacityPolicy(env), identity, Date.now()),
+    admission: (identity) => checkRunAdmission(env.DB, databaseCapacityPolicy(env), identity),
     history: {
       async read(runId) {
         await assertOperationsProject(env);

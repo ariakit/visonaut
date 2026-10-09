@@ -103,7 +103,8 @@ describe("public commands under temporary service backpressure", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("explains a capacity pause without retrying reserve", async () => {
+  /** Run an upload whose reserve call the service refuses with this code. */
+  const refusedReserve = async (code: string) => {
     const local = await fixture();
     directories.push(local.directory);
     const paths: string[] = [];
@@ -113,16 +114,29 @@ describe("public commands under temporary service backpressure", () => {
         return Response.json({ value: "oidc-secret" });
       }
       paths.push(url.pathname);
-      return busy("capacity_exceeded", "1");
+      return busy(code, "1");
     });
     vi.stubGlobal("fetch", fetch);
     const result = await execute(["upload", "--dir", local.directory]);
     expect(result.code).toBe(1);
     expect(paths).toEqual(["/v1/runs"]);
+    expect(result.stderr).not.toContain("private-response-secret");
+    return result;
+  };
+
+  it("explains a capacity pause without retrying reserve", async () => {
+    const result = await refusedReserve("capacity_exceeded");
     expect(result.stderr).toContain("capacity limit");
     expect(result.stderr).toContain("Service attention");
     expect(result.stderr).toContain("Rerun this job");
-    expect(result.stderr).not.toContain("private-response-secret");
+  });
+
+  it("reports a database size stop as a general refusal with its code without retrying reserve", async () => {
+    const result = await refusedReserve("database_size_exceeded");
+    expect(result.stderr).toContain(
+      "The service refused the request (HTTP 503, database_size_exceeded). No visual approval was granted.",
+    );
+    expect(result.stderr).not.toContain("capacity limit");
   });
 
   it("does not retry network failures", async () => {
