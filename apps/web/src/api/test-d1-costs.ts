@@ -10,9 +10,14 @@ export interface D1Cost {
   rows_written: number;
 }
 
-/** Record native D1 metadata without counting fixture setup or SQL statements. */
+/**
+ * Record native D1 metadata without counting fixture setup or SQL statements.
+ * `roundTrips()` counts each call of `first`, `all`, `run`, or `batch`.
+ * A batch of any size is one.
+ */
 export function measureD1(database: NativeDatabase) {
   const costs: D1Cost[] = [];
+  let roundTrips = 0;
   const statements = new WeakMap<NativeStatement, { native: NativeStatement; sql: string }>();
   const record = (sql: string, meta: Pick<D1Cost, "rows_read" | "rows_written">) => {
     costs.push({ sql, rows_read: meta.rows_read, rows_written: meta.rows_written });
@@ -27,6 +32,7 @@ export function measureD1(database: NativeDatabase) {
         if (key === "first") {
           // D1's first() omits meta. Execute the same SQL via all() to retain it.
           return async (column?: string) => {
+            roundTrips += 1;
             const result = await target.all();
             record(sql, result.meta);
             const row = result.results[0] ?? null;
@@ -35,6 +41,7 @@ export function measureD1(database: NativeDatabase) {
         }
         if (key === "all" || key === "run") {
           return async () => {
+            roundTrips += 1;
             const result = await target[key]();
             record(sql, result.meta);
             return result;
@@ -59,6 +66,7 @@ export function measureD1(database: NativeDatabase) {
               if (!measured) throw new Error("Expected a measured D1 statement.");
               return measured;
             });
+            roundTrips += 1;
             const results = await target.batch(entries.map((entry) => entry.native));
             for (let index = 0; index < results.length; index++) {
               const result = results[index];
@@ -75,6 +83,10 @@ export function measureD1(database: NativeDatabase) {
     costs,
     reset() {
       costs.length = 0;
+      roundTrips = 0;
+    },
+    roundTrips() {
+      return roundTrips;
     },
     report(label: string) {
       const path = process.env.VISONAUT_D1_COST_REPORT;
