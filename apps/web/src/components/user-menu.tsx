@@ -38,7 +38,7 @@ export function UserMenu({ login, preview, signingOut, error, onSignOut }: UserM
         $rounded="lg"
         $p={2}
         aria-label={preview ? "Preview account menu" : "Account menu"}
-        className="shrink-0 text-[13px] leading-5"
+        className="shrink-0"
       >
         <ButtonSlot>
           <UserRound />

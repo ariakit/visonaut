@@ -45,6 +45,7 @@ import {
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { AppHeader } from "../components/app-shell.tsx";
+import { Heading } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ReviewStatus } from "./review-status.tsx";
 import { sidebarStorageKey } from "./sidebar-preference.ts";
@@ -63,7 +64,6 @@ import { needsReview, partitionItems, reviewTargets, verdictLabel } from "./navi
 import { useEvidence } from "./use-evidence.ts";
 import { useReviewSession } from "./use-review-session.ts";
 import { VariantSummary } from "./variant-summary.tsx";
-import "../review.css";
 
 export interface ReviewWorkspaceProps {
   model: ReviewModel;
@@ -191,7 +191,7 @@ function ShortcutHelp() {
           <dt>Tab / Escape</dt>
           <dd>Move to controls or close this help.</dd>
         </dl>
-        <ak.DialogDismiss render={<Button className="text-xs" />}>
+        <ak.DialogDismiss render={<Button $size="xs" />}>
           <ButtonLabel>Close help</ButtonLabel>
         </ak.DialogDismiss>
       </ak.Dialog>
@@ -552,7 +552,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
 
   return (
     <Shell
-      className="review-workspace [--shell-header-step:calc(48px/14)]"
+      className="review-workspace text-sm [--shell-header-step:calc(48px/14)]"
       ref={workspace}
       tabIndex={0}
       aria-label="Review workspace"
@@ -571,10 +571,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Review navigation"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-[10px] uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
             Screenshots
           </Text>
-          <Text className="text-[11px] opacity-50">
+          <Text className="text-xs opacity-50">
             {model.items.length} {model.items.length === 1 ? "item" : "items"}
           </Text>
         </ShellSidebarHeader>
@@ -633,7 +633,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </ShellMainFull>
         </ShellMainHeader>
         <ShellMainIntro className="py-0! border-b border-(--ak-edge)">
-          <div className="flex flex-wrap items-center gap-4 py-2 text-[10px] opacity-50">
+          <div className="flex flex-wrap items-center gap-4 py-2 text-xs opacity-50">
             <span className="flex items-center gap-1">
               <GitCommitHorizontal size={12} />
               {model.run.testedSha.slice(0, 7)}
@@ -659,12 +659,13 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
             <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
               <div className="review-result-heading min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Text
+                  <Heading
                     render={<h1 />}
-                    className="text-2xl sm:text-[28px] font-semibold tracking-tight wrap-anywhere"
+                    $level={2}
+                    className="mb-0 font-semibold tracking-tight wrap-anywhere"
                   >
                     {item?.name ?? "Visual review"}
-                  </Text>
+                  </Heading>
                   {variant && <ReviewStatus variant={variant} />}
                 </div>
                 {variant && (
@@ -761,7 +762,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                     $kind="flat"
                     $rounded="full"
                     $forceRounded
-                    $size="sm"
+                    $size="xs"
                     $border
                     $selectedPush={false}
                     $p={2}
@@ -770,7 +771,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                     href={route ? undefined : `#variant-${encodeURIComponent(entry.key)}`}
                     key={entry.id}
                     id={entry.id}
-                    className="review-variant min-w-0 text-xs"
+                    className="review-variant min-w-0"
                     title={`${entry.label} · ${verdictLabel(entry)}`}
                     render={
                       route ? (
@@ -859,7 +860,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                           aria-label="Image view"
                         >
                           <FlatButton
-                            className="text-xs whitespace-nowrap"
+                            $size="xs"
+                            className="whitespace-nowrap"
                             $p={1.5}
                             $rounded="md"
                             aria-pressed={effectiveMode === "side"}
@@ -873,7 +875,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                             <ButtonSlot $kind="shortcut">S</ButtonSlot>
                           </FlatButton>
                           <FlatButton
-                            className="text-xs whitespace-nowrap"
+                            $size="xs"
+                            className="whitespace-nowrap"
                             $p={1.5}
                             $rounded="md"
                             aria-pressed={effectiveMode === "diff"}
@@ -888,7 +891,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                             <ButtonSlot $kind="shortcut">D</ButtonSlot>
                           </FlatButton>
                           <FlatButton
-                            className="text-xs whitespace-nowrap"
+                            $size="xs"
+                            className="whitespace-nowrap"
                             $p={1.5}
                             $rounded="md"
                             aria-pressed={effectiveMode === "new"}
@@ -902,7 +906,8 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                             <ButtonSlot $kind="shortcut">F</ButtonSlot>
                           </FlatButton>
                           <FlatButton
-                            className="text-xs whitespace-nowrap"
+                            $size="xs"
+                            className="whitespace-nowrap"
                             $p={1.5}
                             $rounded="md"
                             aria-pressed={effectiveMode === "original"}
@@ -928,7 +933,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                           {(["fit", 1, 2] as const).map((value) => (
                             <FlatButton
                               key={value}
-                              className="text-xs"
+                              $size="xs"
                               $p={1.5}
                               $rounded="md"
                               aria-pressed={zoom === value}
@@ -996,7 +1001,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                             {terminalComparison && variant.error && <p>{variant.error}</p>}
                             {retryImages && (
                               <Button
-                                className="text-xs"
+                                $size="xs"
                                 disabled={busy}
                                 onClick={() => setRetry((value) => value + 1)}
                               >
@@ -1005,7 +1010,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                             )}
                             {recompareEvidence && commands.recompare && recompareAllowed && (
                               <Button
-                                className="text-xs"
+                                $size="xs"
                                 disabled={
                                   busy || awaitingComparison || saveState.status === "error"
                                 }
@@ -1141,7 +1146,6 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                       : saveState.message}
                     {!model.archived && saveState.status === "error" && saveState.failed && (
                       <Button
-                        className="text-xs"
                         onClick={() => {
                           if (saveState.failed) void save(saveState.failed);
                         }}
@@ -1150,12 +1154,12 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                       </Button>
                     )}
                     {!model.archived && saveState.status === "error" && saveState.failedUndo && (
-                      <Button className="text-xs" onClick={() => void undo(saveState.failedUndo)}>
+                      <Button onClick={() => void undo(saveState.failedUndo)}>
                         <ButtonLabel>Retry Undo</ButtonLabel>
                       </Button>
                     )}
                     {(saveState.status === "conflict" || saveState.status === "error") && (
-                      <Button className="text-xs" onClick={() => void refresh()}>
+                      <Button onClick={() => void refresh()}>
                         <ButtonLabel>Refresh current state</ButtonLabel>
                       </Button>
                     )}
@@ -1178,7 +1182,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Capture details"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-[10px] uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
             Capture details
           </Text>
           <Button
@@ -1204,7 +1208,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         <div className="flex flex-wrap items-center gap-2">
           <ShortcutHelp />
           <Button
-            className="text-xs"
+            $size="xs"
             aria-pressed={shortcuts}
             onClick={() => setShortcuts((value) => !value)}
           >
@@ -1212,7 +1216,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </Button>
           {commands.recompare && !model.preview && (
             <Button
-              className="text-xs"
+              $size="xs"
               disabled={
                 !recompareAllowed || busy || awaitingComparison || saveState.status === "error"
               }
@@ -1234,11 +1238,11 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         open={itemsOpen && narrow}
         onClose={() => setItemsOpen(false)}
         render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-        className="fixed inset-4 z-50 flex flex-col gap-4"
+        className="fixed inset-4 z-50 flex flex-col gap-4 text-sm"
         backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
       >
         <div className="flex items-center justify-between">
-          <ak.DialogHeading>Screenshots</ak.DialogHeading>
+          <ak.DialogHeading className="text-base">Screenshots</ak.DialogHeading>
           <ak.DialogDismiss render={<Button aria-label="Close screenshots" />}>
             <ButtonSlot>
               <X />
@@ -1253,11 +1257,11 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         unmountOnHide
         finalFocus={detailsTrigger}
         render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-        className="fixed inset-4 z-50 overflow-auto"
+        className="fixed inset-4 z-50 overflow-auto text-sm"
         backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
       >
         <div className="flex items-center justify-between mb-5">
-          <ak.DialogHeading>Capture details</ak.DialogHeading>
+          <ak.DialogHeading className="text-base">Capture details</ak.DialogHeading>
           <ak.DialogDismiss render={<Button aria-label="Close capture details" />}>
             <ButtonSlot>
               <X />
@@ -1271,7 +1275,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         onClose={() => setBatchScope(null)}
         unmountOnHide
         render={<Frame $layer="canvas" $border $p={6} $rounded="2xl" />}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto"
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto text-sm"
         backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
       >
         <ak.DialogHeading className="text-lg font-semibold">
