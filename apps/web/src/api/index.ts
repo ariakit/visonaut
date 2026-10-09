@@ -100,6 +100,11 @@ export async function handleApi(
   lifetime: {
     waitUntil(promise: Promise<unknown>): void;
     failure?: OperationFailureContext;
+    /**
+     * True for the run list of a streamed document. Its answer cannot set a
+     * cookie, so the access check does not renew the session.
+     */
+    disableSessionRefresh?: boolean;
   },
 ): Promise<Response | null> {
   const url = new URL(request.url);
@@ -221,6 +226,7 @@ export async function handleApi(
       auth,
       database: bindings.database,
       github,
+      disableRefresh: lifetime.disableSessionRefresh,
       access:
         request.method === "GET" || request.method === "HEAD"
           ? "read"

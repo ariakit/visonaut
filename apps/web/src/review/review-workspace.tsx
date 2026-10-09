@@ -44,7 +44,6 @@ import {
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { AppHeader } from "../components/app-shell.tsx";
 import { Heading } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ReviewStatus } from "./review-status.tsx";
@@ -63,13 +62,17 @@ import type {
 import { needsReview, partitionItems, reviewTargets, verdictLabel } from "./navigation.ts";
 import { useEvidence } from "./use-evidence.ts";
 import { useReviewSession } from "./use-review-session.ts";
+import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
 import { VariantSummary } from "./variant-summary.tsx";
 
 export interface ReviewWorkspaceProps {
   model: ReviewModel;
   commands: ReviewCommands;
   route?: ReviewRoute;
-  headerEnd?: ReactNode;
+  /** The header of the app, from the layout route. */
+  header?: ReactNode;
+  /** Tells the route when a decision is not sent or not saved. */
+  onUnsentDecisionsChange?(unsent: boolean): void;
 }
 
 export interface ReviewRoute {
@@ -203,7 +206,13 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
   return <ReviewSession key={props.model.run.id} {...props} />;
 }
 
-function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: ReviewWorkspaceProps) {
+function ReviewSession({
+  model: suppliedModel,
+  commands,
+  route,
+  header,
+  onUnsentDecisionsChange,
+}: ReviewWorkspaceProps) {
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const [mode, setMode] = useState<ReviewMode>("side");
   const [zoom, setZoom] = useState<ReviewZoom>("fit");
@@ -271,25 +280,37 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
     onRefresh: () => setRetry((value) => value + 1),
   });
   const {
-    model,
-    pendingReviews,
+    model: changedModel,
     saveState,
     busy,
     reviewBlocked,
-    sendingCount,
-    queuedCount,
     canUndo,
     pendingComparison,
     awaitingComparison,
     terminalComparison,
+    unsentDecisions,
     runStatus,
     save,
     undo,
     refresh,
     recompare,
   } = session;
+  useEffect(() => {
+    onUnsentDecisionsChange?.(unsentDecisions);
+  }, [onUnsentDecisionsChange, unsentDecisions]);
   const routedSelection = route?.selection;
   const onRouteSelect = route?.onSelect;
+  const unchanged = useUnchangedScreenshots({
+    model: changedModel,
+    commands,
+    selection: routedSelection,
+  });
+  // The page shows the items of the first response with each unchanged
+  // screenshot that is loaded. The session keeps the first response.
+  const model = useMemo(
+    () => ({ ...changedModel, items: unchanged.items }),
+    [changedModel, unchanged.items],
+  );
   const routedItem = model.items.find((entry) => entry.key === routedSelection?.itemKey);
   const routedVariant = routedItem?.variants.find(
     (entry) => entry.key === routedSelection?.variantKey,
@@ -328,13 +349,16 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   if (batchScope && !batchValid) setBatchScope(null);
   const counts = useMemo(
     () => ({
-      pending: model.items.reduce(
+      pending: changedModel.items.reduce(
         (count, entry) => count + entry.variants.filter(needsReview).length,
         0,
       ),
-      total: model.items.reduce((count, entry) => count + entry.variants.length, 0),
+      // The total does not grow when a page of unchanged screenshots loads.
+      total:
+        changedModel.unchanged.count +
+        changedModel.items.reduce((count, entry) => count + entry.variants.length, 0),
     }),
-    [model.items],
+    [changedModel],
   );
   const { pending, total } = counts;
   const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
@@ -361,8 +385,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
   useEffect(() => {
     if (!routedSelection || !onRouteSelect || !item || !variant) return;
     if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
+    // The address can name an unchanged screenshot of a page that is not loaded yet.
+    if (unchanged.locating) return;
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
-  }, [item, variant, routedSelection, onRouteSelect]);
+  }, [item, variant, routedSelection, onRouteSelect, unchanged.locating]);
 
   const selectedVariantId = variant?.id;
   useLayoutEffect(() => {
@@ -480,6 +506,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       selectedIndex={item ? model.items.indexOf(item) : -1}
       selectItem={selectItem}
       route={route}
+      unchanged={unchanged}
       variantKeyForItem={(entry) => entry.variants.find(needsReview)?.key ?? entry.variants[0]?.key}
     />
   );
@@ -513,7 +540,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </a>
         ))}
       </nav>
-      <dl className="grid grid-cols-1 gap-2 my-5 [&>dt]:mt-2 [&>dt]:opacity-50 [&>dd]:wrap-anywhere">
+      <dl className="grid grid-cols-1 gap-2 my-5 [&>dt]:mt-2 [&>dt]:ak-ink-50 [&>dd]:wrap-anywhere">
         <dt>Changed pixels</dt>
         <dd>
           {variant.changedPixels?.toLocaleString() ?? "—"}
@@ -558,7 +585,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
       aria-label="Review workspace"
       $layer="canvas"
     >
-      <AppHeader repository={model.run.repository} end={headerEnd} />
+      {header}
       <ShellSidebar
         id="review-screenshots"
         $show="5xl"
@@ -571,10 +598,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Review navigation"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
             Screenshots
           </Text>
-          <Text className="text-xs opacity-50">
+          <Text className="text-xs ak-ink-50">
             {model.items.length} {model.items.length === 1 ? "item" : "items"}
           </Text>
         </ShellSidebarHeader>
@@ -619,7 +646,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 </Text>
               </div>
               <div className="review-run-progress flex shrink-0 items-center gap-3">
-                <Text className="text-xs opacity-60">
+                <Text className="text-xs ak-ink-60">
                   {pending} of {total} need review
                 </Text>
                 <progress
@@ -633,7 +660,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </ShellMainFull>
         </ShellMainHeader>
         <ShellMainIntro className="py-0! border-b border-(--ak-edge)">
-          <div className="flex flex-wrap items-center gap-4 py-2 text-xs opacity-50">
+          <div className="flex flex-wrap items-center gap-4 py-2 text-xs ak-ink-50">
             <span className="flex items-center gap-1">
               <GitCommitHorizontal size={12} />
               {model.run.testedSha.slice(0, 7)}
@@ -669,7 +696,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                   {variant && <ReviewStatus variant={variant} />}
                 </div>
                 {variant && (
-                  <Text render={<p />} className="mt-2 text-xs opacity-55">
+                  <Text render={<p />} className="mt-2 text-xs ak-ink-55">
                     {variant.ratio != null ? (variant.ratio * 100).toFixed(2) + "% changed · " : ""}
                     {variant.changedPixels?.toLocaleString() ?? "—"} changed pixels
                   </Text>
@@ -743,15 +770,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 $forceRounded
                 $p={1}
                 $gap={1.5}
-                glider={{
-                  $kind: "flat",
-                  $rounded: "full",
-                  $forceRounded: true,
-                  $lightnessPush: false,
-                  $lightnessOffset: false,
-                  $lighten: 2,
-                  $border: true,
-                }}
+                glider={{ $kind: "bar", $barOffset: "frame" }}
                 aria-label="Variants"
                 className="review-variants max-w-full mb-4"
                 ref={variantStrip}
@@ -826,7 +845,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 >
                   {!model.archived &&
                     (variant.approveDisabledReason || variant.rejectDisabledReason) && (
-                      <p className="text-xs opacity-60 px-3 py-2">
+                      <p className="text-xs ak-ink-60 px-3 py-2">
                         {variant.rejectDisabledReason ?? variant.approveDisabledReason}
                       </p>
                     )}
@@ -1141,9 +1160,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                         : "status"
                     }
                   >
-                    {busy && pendingReviews.length
-                      ? `${sendingCount ? `Sending ${sendingCount} decision${sendingCount === 1 ? "" : "s"}… ` : ""}${queuedCount ? `${queuedCount} queued on server.${sendingCount ? "" : " You can close this window."}` : ""}`
-                      : saveState.message}
+                    {saveState.message}
                     {!model.archived && saveState.status === "error" && saveState.failed && (
                       <Button
                         onClick={() => {
@@ -1182,7 +1199,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Capture details"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
             Capture details
           </Text>
           <Button
@@ -1281,7 +1298,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         <ak.DialogHeading className="text-lg font-semibold">
           Review all changed views
         </ak.DialogHeading>
-        <ak.DialogDescription className="text-sm opacity-60 mt-2">
+        <ak.DialogDescription className="text-sm ak-ink-60 mt-2">
           This decision applies to all {targets.length} changed views in {item?.name}, including
           views with a previous decision.
         </ak.DialogDescription>

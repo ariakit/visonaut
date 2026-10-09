@@ -27,17 +27,19 @@ If you are the author of a pull request and you have no write access to the repo
 
 The check can also show a title that is not a state of a run, for example `Checking visual coverage` before the run starts, or `Visual capture is not required` when the workflow selected no visual capture for the commit.
 
+Only a pull request whose branch is in this repository gets a Visonaut check. A pull request from a fork gets none, so its author has no title to read.
+
 ## Check service attention
 
-The dashboard shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
+The **Status** page shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. The link **Status** in the header has the number of open alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
 
-Alerts refresh every minute while the dashboard is open. Browser suspension can delay a refresh. Use **Refresh alerts** to check now. If a check fails, the panel marks the shown alerts as possibly out of date and offers **Retry alerts**. No external notifications are sent. Open the dashboard to check service health.
+Alerts refresh every minute while the Status page is open and its tab is visible. A hidden tab sends no request, and the page reads the alerts again when the tab becomes visible. Use **Refresh alerts** to check now. If a check fails, the panel marks the shown alerts as possibly out of date and offers **Retry alerts**. No external notifications are sent. Open the Status page to check service health.
 
 The panel is read-only. A successful operation clears its event through the service; there is no dismiss or acknowledge action. **No unresolved operation alerts** reports the event list at the shown check time. It does not certify every service dependency.
 
 ## Open the correct run
 
-The Runs page shows the run type, tested commit, state, attempt, and creation time. Select a run to open its review workspace. Use **Refresh runs** to fetch the current list.
+The **Queue** lists each run that needs a decision or attention: the next run to review as a card, then the other runs to review, the runs under **Running**, and the runs under **Needs attention**. **History** lists the latest 100 runs. A row of the Queue shows the pull request title and number (or the branch kind and the commit), the attempt from the second attempt, the age, and the state. Select a row to open its review workspace. The list reads again when the tab becomes visible, and each minute while it is visible (each 15 seconds while a run is capturing or comparing). A hidden tab sends no request. On History, use **Refresh runs** to read it now. When a read fails, the page keeps the list, says **Could not refresh runs** with the age of the list, and offers **Try again**.
 
 Check the run identity above the images before you save a decision. A new workflow attempt is a separate run. A superseded attempt cannot accept review commands.
 
@@ -67,7 +69,7 @@ Review actions wait for the current selection's required images to load and deco
 
 ## Save a decision
 
-Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. **Sending** still needs the browser. **Queued on server** confirms durable admission; processing continues after the window closes. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
+Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. The decision bar says **Saving…** until the service confirms the decision, and the browser asks before you leave the page until then. After 30 seconds the bar also says that the decision is still queued. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 
@@ -104,7 +106,7 @@ Review shortcuts work across the page while enabled, subject to the native input
 | Tab                   | Move through controls                      |
 | Escape                | Close help or a menu                       |
 
-Each item remembers its last selected variant. A first visit uses the first variant. If a remembered variant is no longer available, the page selects the first and announces the change. Arrow keys and visible controls reach variants beyond the first six.
+Each item remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first variant. If a remembered variant is no longer available, the page selects the first and announces the change. Arrow keys and visible controls reach variants beyond the first six.
 
 Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
 

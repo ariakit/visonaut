@@ -101,6 +101,10 @@ export function createAuth(configuration: AuthConfiguration) {
         },
       },
     },
+    // A sign-in that fails at GitHub with no stored state returns to the app,
+    // which shows the sign-in page with the reason. With a stored state, it
+    // returns to the page that started the sign-in.
+    onAPIError: { errorURL: `${origin}/` },
     telemetry: { enabled: false },
   });
 }

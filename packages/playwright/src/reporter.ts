@@ -204,7 +204,9 @@ export default class VisonautReporter implements Reporter {
             await rm(path.dirname(imageAttachment.path), { recursive: true, force: true });
           }
           const image = record(payload.image, "image");
-          const imageDigest = await sha256(bytes);
+          // A Node.js buffer can have a shared buffer, which the digest does
+          // not accept. The copy of one image has a plain buffer.
+          const imageDigest = await sha256(Uint8Array.from(bytes));
           if (image.digest !== imageDigest || image.bytes !== bytes.byteLength) {
             throw new Error("Capture image bytes do not match the attachment");
           }

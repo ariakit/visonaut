@@ -1,21 +1,11 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 const brand = [0, 106, 187];
 const white = [255, 255, 255];
-
-// A computed color can be in any CSS color space. The canvas converts it to sRGB.
-function colorOf(locator: Locator, property: "backgroundColor" | "color") {
-  return locator.evaluate((element, property) => {
-    const context = document.createElement("canvas").getContext("2d");
-    if (!context) throw new Error("Canvas unavailable");
-    context.fillStyle = getComputedStyle(element)[property];
-    context.fillRect(0, 0, 1, 1);
-    return Array.from(context.getImageData(0, 0, 1, 1).data);
-  }, property);
-}
 
 async function signedOut(page: Page, status: 401 | 403) {
   await page.route("**/api/**", (route) =>
@@ -29,37 +19,32 @@ for (const scheme of schemes) {
   test.describe(`${scheme} scheme`, () => {
     test.use({ colorScheme: scheme });
 
-    test("the sign-in button and its icon tile of the dashboard are the brand color", async ({
-      page,
-    }) => {
-      await signedOut(page, 401);
-      await page.goto(`${fixture}?entry=%2F`);
-      const button = page.getByRole("button", { name: "Sign in with GitHub" });
-      await expect(button).toBeVisible();
-      expect(await colorOf(button, "backgroundColor")).toEqual([...brand, 255]);
-      expect(await colorOf(button.getByText("Sign in with GitHub"), "color")).toEqual([
-        ...white,
-        255,
-      ]);
-      const tile = page
-        .getByRole("heading", { name: "Review visual changes." })
-        .locator("xpath=preceding-sibling::*[1]");
-      expect(await colorOf(tile, "backgroundColor")).toEqual([...brand, 255]);
-    });
+    // One sign-in page and one no access page serve each page of the app.
+    for (const path of ["/", "/pulls/7", "/runs/run-42"]) {
+      test(`the sign-in button of ${path} is the brand color`, async ({ page }) => {
+        await signedOut(page, 401);
+        await page.goto(`${fixture}?entry=${encodeURIComponent(path)}`);
+        const button = page.getByRole("button", { name: "Sign in with GitHub" });
+        await expect(button).toBeVisible();
+        expect(await colorOf(button, "backgroundColor")).toEqual([...brand, 255]);
+        expect(await colorOf(button.getByText("Sign in with GitHub"), "color")).toEqual([
+          ...white,
+          255,
+        ]);
+      });
 
-    test("the account button of a dashboard without access is the brand color", async ({
-      page,
-    }) => {
-      await signedOut(page, 403);
-      await page.goto(`${fixture}?entry=%2F`);
-      const button = page.getByRole("button", { name: "Use another account" });
-      await expect(button).toBeVisible();
-      expect(await colorOf(button, "backgroundColor")).toEqual([...brand, 255]);
-      expect(await colorOf(button.getByText("Use another account"), "color")).toEqual([
-        ...white,
-        255,
-      ]);
-    });
+      test(`the account button of ${path} without access is the brand color`, async ({ page }) => {
+        await signedOut(page, 403);
+        await page.goto(`${fixture}?entry=${encodeURIComponent(path)}`);
+        const button = page.getByRole("button", { name: "Use another account" });
+        await expect(button).toBeVisible();
+        expect(await colorOf(button, "backgroundColor")).toEqual([...brand, 255]);
+        expect(await colorOf(button.getByText("Use another account"), "color")).toEqual([
+          ...white,
+          255,
+        ]);
+      });
+    }
 
     test("the review link of a ready run is the brand color", async ({ page }) => {
       await page.route("**/api/runs", (route) =>
@@ -88,36 +73,10 @@ for (const scheme of schemes) {
         route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
       );
       await page.goto(`${fixture}?entry=%2F`);
-      const link = page.getByRole("link", { name: "Review changes" });
+      const link = page.getByRole("link", { name: "Review", exact: true });
       await expect(link).toBeVisible();
       expect(await colorOf(link, "backgroundColor")).toEqual([...brand, 255]);
-      expect(await colorOf(link.getByText("Review changes"), "color")).toEqual([...white, 255]);
-    });
-
-    for (const [name, status, button] of [
-      ["sign-in", 401, "Sign in with GitHub"],
-      ["account", 403, "Use another account"],
-    ] as const) {
-      test(`the ${name} button of the pull request page is the brand color`, async ({ page }) => {
-        await signedOut(page, status);
-        await page.goto(`${fixture}?entry=${encodeURIComponent("/pulls/7")}`);
-        const target = page.getByRole("button", { name: button });
-        await expect(target).toBeVisible();
-        expect(await colorOf(target, "backgroundColor")).toEqual([...brand, 255]);
-        expect(await colorOf(target.getByText(button), "color")).toEqual([...white, 255]);
-      });
-    }
-
-    test("the sign-in button of the run page is the brand color", async ({ page }) => {
-      await signedOut(page, 401);
-      await page.goto(`${fixture}?entry=${encodeURIComponent("/runs/run-42")}`);
-      const button = page.getByRole("button", { name: "Sign in with GitHub" });
-      await expect(button).toBeVisible();
-      expect(await colorOf(button, "backgroundColor")).toEqual([...brand, 255]);
-      expect(await colorOf(button.getByText("Sign in with GitHub"), "color")).toEqual([
-        ...white,
-        255,
-      ]);
+      expect(await colorOf(link.getByText("Review"), "color")).toEqual([...white, 255]);
     });
   });
 }

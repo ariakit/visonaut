@@ -198,7 +198,21 @@ export interface ProjectRow {
   fresh_setup: number;
 }
 
+/**
+ * The captures of a run with comparison settings that deserve a look. Capture
+ * code selects the settings, so the service only counts them.
+ */
+export interface ComparisonSettingsCounts {
+  /** The captures whose settings differ from the settings of their baseline. */
+  changed: number;
+  /** The captures whose settings are looser than the built-in policy. */
+  loose: number;
+}
+
 export interface RunRow {
+  /** The two counts of `ComparisonSettingsCounts`. A run from before the counts has NULL. */
+  settings_changed_count?: number | null;
+  settings_loose_count?: number | null;
   inventory_key?: string | null;
   inventory_digest?: string | null;
   inventory_bytes?: number | null;
@@ -244,6 +258,8 @@ export interface ReviewRow {
   tuple_json: string;
   outcome: string;
   result_json: string | null;
+  /** The baseline that Submit stored in the row. A row from before that has none. */
+  reference_json?: string | null;
   decision_revision: number;
   decision_id: string | null;
   source_decision_id: string | null;

@@ -1,6 +1,6 @@
 import { identityKey } from "@visonaut/protocol";
-import { IncompleteError, type ReviewRow } from "@visonaut/service";
-import type { CaptureInventory } from "../capture-inventory.ts";
+import { IncompleteError, type ReviewRow, type RunRow } from "@visonaut/service";
+import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
 import { readRunInventory, readSnapshotInventory } from "../inventory-records.ts";
 import type { PrivateContext } from "./context.ts";
 
@@ -40,8 +40,9 @@ function reviewImages(inventory: CaptureInventory): InventoryReviewImage[] {
   }));
 }
 
-export async function readReviewInventory(context: PrivateContext, runId: string) {
-  const inventory = await readRunInventory(context, runId);
+/** The capture list of a run and the list of its baseline, from the run row that the caller has. */
+export async function readReviewInventory(context: PrivateContext, run: RunRow) {
+  const inventory = await readRunInventory(context, run);
   if (!inventory) return null;
   const referenceInventory = inventory.referenceSnapshotId
     ? await readSnapshotInventory(context, inventory.referenceSnapshotId)
@@ -92,36 +93,35 @@ export async function readReviewInventory(context: PrivateContext, runId: string
   return { inventory, candidates, references, images, referenceByIdentity, candidateByIdentity };
 }
 
-export function completeReviewRows(
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The review rows of the unchanged captures of one page. A capture with a
+ * stored row is left out, because the first response of the run has it. Each
+ * other capture must be unchanged: a capture with a change and no stored row
+ * would be on no page, so the request fails.
+ */
+export function unchangedReviewRows(
   evidence: NonNullable<Awaited<ReturnType<typeof readReviewInventory>>>,
-  rows: ReviewRow[],
+  captures: InventoryCapture[],
   comparisonId: string,
+  stored: ReadonlySet<string>,
 ): ReviewRow[] {
-  const stored = new Set(
-    rows.map((row) => identityKey({ itemKey: row.item_key, variantKey: row.variant_key })),
-  );
-  const complete = [...rows];
   const imageById = new Map(evidence.images.map((image) => [image.id, image]));
-  for (const capture of evidence.inventory.captures) {
+  const rows: ReviewRow[] = [];
+  for (const capture of captures) {
     const identity = identityKey(capture);
     if (stored.has(identity)) continue;
     const reference = evidence.referenceByIdentity.get(identity);
-    const result = capture.metadata.localResult;
-    const observed = capture.metadata.observedImage;
-    if (
-      !reference ||
-      !result ||
-      typeof result !== "object" ||
-      Array.isArray(result) ||
-      !observed ||
-      typeof observed !== "object" ||
-      Array.isArray(observed)
-    ) {
+    const local = capture.metadata.localResult;
+    const candidate = capture.metadata.observedImage;
+    if (!reference || !isRecord(local) || !isRecord(candidate)) {
       throw new IncompleteError("An omitted review row lacks verified unchanged evidence.");
     }
-    const local = result as Record<string, unknown>;
-    const candidate = observed as Record<string, unknown>;
     const image = imageById.get(reference.image_id);
+    // Submit stores no row for a change of zero pixels with an equal size.
     const unchanged =
       local.outcome === "unchanged" ||
       (local.outcome === "changed" &&
@@ -135,7 +135,7 @@ export function completeReviewRows(
     if (!unchanged || !image) {
       throw new IncompleteError("A changed capture is missing its persisted review row.");
     }
-    complete.push({
+    rows.push({
       id: `${comparisonId}:${capture.id}`,
       comparison_id: comparisonId,
       item_key: capture.itemKey,
@@ -162,7 +162,5 @@ export function completeReviewRows(
       source_decision_id: null,
     });
   }
-  return complete.sort(
-    (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
-  );
+  return rows;
 }

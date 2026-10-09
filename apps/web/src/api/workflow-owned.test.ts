@@ -5,6 +5,7 @@ import {
 import { nativeTestStorage } from "./test-storage.ts";
 import { measureUploadCosts } from "./test-upload-costs.ts";
 import { measureD1 } from "./test-d1-costs.ts";
+import { dashboard } from "./dashboard.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { readFile, writeFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
@@ -17,6 +18,7 @@ import {
   digestRenderingProfile,
   canonicalJson,
   captureManifestDigest,
+  compareCaptureIdentity,
   LOCAL_COMPARISON_MODE,
   LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_CODEC,
@@ -24,11 +26,12 @@ import {
   sha256,
   TRANSPORT,
   workflowSourceDigest,
+  type CaptureComparison,
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
-import { ConflictError, retireSnapshot, Service } from "@visonaut/service";
+import { ConflictError, IncompleteError, retireSnapshot, Service } from "@visonaut/service";
 import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -58,11 +61,11 @@ import {
 import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-retention.js";
 import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
-import { handleReview, reviewModel } from "./review.ts";
+import { handleReview, reviewCapturePage, reviewModel } from "./review.ts";
 import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
 import * as captureInventory from "../capture-inventory.ts";
 import { referenceCaptureInputs } from "./local-comparison.ts";
-import { parseReviewModel } from "../review/client.ts";
+import { parseCapturePage, parseReviewModel } from "../review/client.ts";
 
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -1027,12 +1030,16 @@ function retention(now: number, objectsPerStep: number) {
   };
 }
 
+const builtInComparison: CaptureComparison = { threshold: 0.2, maxDiffPixels: 0 };
+
 async function localSession(
   test: Awaited<ReturnType<typeof fixture>>,
-  comparison = { threshold: 0.2, maxDiffPixels: 0 },
+  /** The settings of each capture, or of one capture by its item key. */
+  comparison: CaptureComparison | ((itemKey: string) => CaptureComparison) = builtInComparison,
 ) {
   for (const capture of test.manifest.captures) {
-    capture.comparison = comparison;
+    capture.comparison =
+      typeof comparison === "function" ? comparison(capture.itemKey) : comparison;
   }
   const claims = await verifyIngestCapability(
     test.context.configuration.capability,
@@ -1247,6 +1254,8 @@ async function acceptedReference(
 async function acceptedInventoryReference(
   test: Awaited<ReturnType<typeof fixture>>,
   accepted?: Awaited<ReturnType<typeof acceptedReference>>,
+  /** The comparison settings of each baseline capture. A list of an import has none. */
+  comparison?: CaptureComparison,
 ) {
   const seed = accepted ?? (await acceptedReference(test));
   const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
@@ -1277,6 +1286,7 @@ async function acceptedInventoryReference(
           name: "Imported baseline",
           variant: capture.variant,
           profile: { $visonautProfileDigest: profile.digest },
+          ...(comparison ? { comparison, comparisonDigest: await digestJson(comparison) } : {}),
         },
       };
     }),
@@ -1316,6 +1326,62 @@ function localReferenceImageReader(
       test.runId,
       imageId,
     );
+}
+
+const changedNames = ["changed-0", "changed-1", "changed-2", "changed-3"];
+
+/** Submit a run with 4 changed captures. Each other capture is equal to its baseline. */
+async function changedRun(captureCount: number) {
+  const test = await fixture();
+  const source = test.manifest.captures[0];
+  if (!source) throw new Error("Expected a source capture.");
+  test.context.configuration.limits.maximumCaptures = captureCount;
+  test.context.configuration.limits.maximumManifestBytes = 16 * 1024 * 1024;
+  const names = [
+    ...changedNames,
+    ...Array.from({ length: captureCount - changedNames.length }, (_, index) => `same-${index}`),
+  ];
+  test.manifest.captures = names.map((name, ordinal) => ({
+    ...structuredClone(source),
+    itemKey: `dialog/${name}`,
+    name: `Dialog ${name}`,
+    ordinal,
+  }));
+  await acceptedInventoryReference(test);
+  for (const candidate of test.manifest.captures.slice(0, changedNames.length)) {
+    candidate.image = {
+      ...candidate.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+  }
+  const session = await localSession(test);
+  const results = test.manifest.localComparison?.captures ?? [];
+  // The session reads one page of the reference, and each capture has a baseline.
+  for (const result of results) {
+    Object.assign(result, {
+      referenceDigest: image.digest,
+      outcome: "unchanged",
+      changedPixels: 0,
+      ratio: 0,
+    });
+  }
+  for (const result of results.slice(0, changedNames.length)) {
+    result.outcome = "changed";
+    result.changedPixels = 1;
+    result.ratio = 1 / (image.width * image.height);
+    result.mask = {
+      digest: image.digest,
+      bytes: png.byteLength,
+      width: image.width,
+      height: image.height,
+      mediaType: "image/png",
+      path: `images/mask-${result.itemKey.slice("dialog/".length)}.png`,
+    };
+  }
+  await stageLocal(test, session);
+  const run = await materializeWorkflowRun(test.context, test.runId);
+  return { test, run };
 }
 
 describe("trusted local Submit", () => {
@@ -1584,17 +1650,20 @@ describe("trusted local Submit", () => {
           },
         };
         const model = parseReviewModel(await reviewModel(privateContext, run.id));
-        expect(model.items).toHaveLength(captureCount);
-        const first = model.items.find((item) => item.key === "dialog/open/0");
-        expect(first).toMatchObject({ key: "dialog/open/0", name: "Current dialog 0" });
-        const profile = test.manifest.profiles[0];
-        if (!profile) throw new Error("Expected the measured profile.");
-        expect(first?.variants[0]).toMatchObject({
-          label: "react · chromium · light · react-light",
-          candidateProfile: await digestRenderingProfile(profile.profile),
-          kind: changed ? "changed" : "unchanged",
-          ...(changed ? {} : { candidate: null, candidateOmitted: true }),
-        });
+        // The first response has the changed capture only, and counts the others.
+        expect(model.items).toHaveLength(changed ? 1 : 0);
+        expect(model.unchanged).toEqual({ count: captureCount - (changed ? 1 : 0), pages: 1 });
+        if (changed) {
+          const first = model.items[0];
+          expect(first).toMatchObject({ key: "dialog/open/0", name: "Current dialog 0" });
+          const profile = test.manifest.profiles[0];
+          if (!profile) throw new Error("Expected the measured profile.");
+          expect(first?.variants[0]).toMatchObject({
+            label: "react · chromium · light · react-light",
+            candidateProfile: await digestRenderingProfile(profile.profile),
+            kind: "changed",
+          });
+        }
         if (!run.inventory_key || !run.inventory_digest || run.inventory_bytes == null) {
           throw new Error("Expected the complete run inventory.");
         }
@@ -1619,6 +1688,278 @@ describe("trusted local Submit", () => {
     },
     60_000,
   );
+
+  it("answers the first response of a run from D1 only, with the same statements for 40 and 4,000 captures", async () => {
+    const reads: { rows: number; statements: number; roundTrips: number }[] = [];
+    for (const captureCount of [40, 4_000]) {
+      const { test, run } = await changedRun(captureCount);
+      if (!run.comparison_id) throw new Error("Expected the completed comparison.");
+      // One approval and two rejections give each of the three counts another value.
+      const stored = await test.context.service.comparisonRows(run.comparison_id);
+      for (const [index, verdict] of (["approved", "rejected", "rejected"] as const).entries()) {
+        const row = stored[index];
+        if (!row) throw new Error("Expected a changed row.");
+        await test.context.service.review({
+          commandId: crypto.randomUUID(),
+          actorId: "user",
+          sessionId: "session",
+          comparisonId: run.comparison_id,
+          verdict,
+          targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+          selection: { itemKey: row.item_key, variantKey: row.variant_key },
+          now: Date.now(),
+        });
+      }
+      const costs = measureD1(nativeDatabase);
+      const privateContext = {
+        ...test.context,
+        database: costs.database,
+        service: new Service(costs.database),
+        lifetime: { waitUntil: vi.fn() },
+        identity: {
+          githubUserId: "user",
+          login: "user",
+          role: "admin",
+          userId: "user",
+          sessionId: "session",
+          sessionHeaders: new Headers(),
+        },
+      };
+      const get = vi.spyOn(test.context.images, "get");
+      let answer: Awaited<ReturnType<typeof reviewModel>>;
+      try {
+        answer = await reviewModel(privateContext, run.id);
+        expect(get).not.toHaveBeenCalled();
+      } finally {
+        get.mockRestore();
+      }
+      // The model has the run, the project, and the comparison: each is read
+      // one time. No statement looks for a promotion by its comparison, which
+      // has no index.
+      const statements = costs.costs.map((cost) => cost.sql);
+      for (const table of ["visonaut_runs", "visonaut_projects", "visonaut_comparisons"]) {
+        expect(statements.filter((sql) => sql === `SELECT * FROM ${table} WHERE id = ?`)).toEqual([
+          `SELECT * FROM ${table} WHERE id = ?`,
+        ]);
+      }
+      expect(
+        statements.filter((sql) => /FROM visonaut_promotions WHERE comparison_id/.test(sql)),
+      ).toEqual([]);
+      reads.push({
+        rows: costs.totals().rows_read,
+        statements: costs.costs.length,
+        roundTrips: costs.roundTrips(),
+      });
+      expect(costs.totals().rows_written).toBe(0);
+      expect(new TextEncoder().encode(JSON.stringify(answer)).byteLength).toBeLessThan(20_000);
+      const model = parseReviewModel(answer);
+      expect(model.items.map((item) => [item.key, item.name, item.variants[0]?.kind])).toEqual(
+        changedNames.map((name) => [`dialog/${name}`, `Dialog ${name}`, "changed"]),
+      );
+      for (const item of model.items) {
+        expect(item.variants[0]).toMatchObject({
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: profiledImage.digest },
+          diff: { digest: image.digest },
+        });
+      }
+      expect(model.unchanged).toEqual({
+        count: captureCount - changedNames.length,
+        pages: Math.ceil(captureCount / 2_000),
+      });
+      // The counts are the counts of the run list for the same run.
+      const listed = (await dashboard(privateContext)).runs.find((entry) => entry.id === run.id);
+      expect(listed).toMatchObject({ pending: 3, rejected: 2, approved: 1 });
+      expect(model.counts).toEqual({
+        pending: listed?.pending,
+        rejected: listed?.rejected,
+        approved: listed?.approved,
+      });
+    }
+    // The statements are the same for both sizes. The rows differ by a few
+    // between two runs of one size: a seek of a random id can read one more row.
+    expect(reads.map((read) => [read.statements, read.roundTrips])).toEqual([
+      [15, 10],
+      [15, 10],
+    ]);
+    // 100 times the captures must not read more rows.
+    const [small, large] = reads.map((read) => read.rows);
+    if (small === undefined || large === undefined) throw new Error("Expected two reads.");
+    expect(Math.abs(large - small)).toBeLessThan(20);
+    expect(large).toBeLessThan(400);
+  }, 120_000);
+
+  it("returns the captures of a run as unchanged variants in pages of 2,000, in the order of the protocol", async () => {
+    const captureCount = 4_000;
+    const { test, run } = await changedRun(captureCount);
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const variantKey = test.manifest.captures[0]?.variant.key ?? "";
+    // The order of the capture pages: the item key, then the variant key.
+    const ordered = test.manifest.captures
+      .map((capture) => capture.itemKey)
+      .sort((first, second) => compareCaptureIdentity([first, variantKey], [second, variantKey]));
+    const unchanged = (keys: string[]) => keys.filter((key) => key.startsWith("dialog/same-"));
+    const read = async (query: string) => {
+      const response = await handleReview(
+        new Request(`https://preview.example/api/runs/${run.id}/captures?${query}`),
+        privateContext,
+      );
+      if (!response) {
+        throw new Error("Expected the capture page route.");
+      }
+      return parseCapturePage(await response.json());
+    };
+    const get = vi.spyOn(test.context.images, "get");
+    let first: Awaited<ReturnType<typeof read>>;
+    try {
+      first = await read("page=0");
+      // The reader of today reads the run list and the reference list for each page.
+      expect(get).toHaveBeenCalledTimes(2);
+    } finally {
+      get.mockRestore();
+    }
+    // One batch has the policy and the identities of the 4 stored rows.
+    const costs = measureD1(nativeDatabase);
+    await reviewCapturePage(
+      { ...privateContext, database: costs.database, service: new Service(costs.database) },
+      run.id,
+      { page: 0 },
+    );
+    const identityReads = costs.costs
+      .filter((cost) => cost.sql.includes("FROM visonaut_comparison_rows"))
+      .map((cost) => cost.rows_read);
+    // D1 counts the 4 rows, and one more when the seek reads past the last row.
+    expect(identityReads).toHaveLength(1);
+    expect(identityReads[0]).toBeGreaterThanOrEqual(4);
+    expect(identityReads[0]).toBeLessThanOrEqual(5);
+    expect({
+      statements: costs.costs.length,
+      roundTrips: costs.roundTrips(),
+      rowsWritten: costs.totals().rows_written,
+    }).toEqual({ statements: 5, roundTrips: 4, rowsWritten: 0 });
+    // The 4 changed captures are in the first page, and the answer leaves them out.
+    expect(first).toMatchObject({ page: 0, pages: 2 });
+    expect(first.items.map((item) => item.key)).toEqual(unchanged(ordered.slice(0, 2_000)));
+    expect(first.items).toHaveLength(1_996);
+    const second = await read("page=1");
+    expect(second).toMatchObject({ page: 1, pages: 2 });
+    expect(second.items.map((item) => item.key)).toEqual(ordered.slice(2_000));
+    expect(second.items[0]).toMatchObject({
+      name: `Dialog ${ordered[2_000]?.slice("dialog/".length)}`,
+      variants: [
+        {
+          id: expect.stringContaining(`${run.comparison_id}:`),
+          key: variantKey,
+          kind: "unchanged",
+          revision: 0,
+          verdict: null,
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: image.digest },
+          diff: null,
+        },
+      ],
+    });
+    // A link names a capture, and the answer is the page that holds it.
+    const located = await read(
+      `item=${encodeURIComponent(ordered[3_000] ?? "")}&variant=${encodeURIComponent(variantKey)}`,
+    );
+    expect(located.page).toBe(1);
+    expect(located.items.map((item) => item.key)).toEqual(second.items.map((item) => item.key));
+    for (const query of [
+      "page=2",
+      "page=-1",
+      "page=1.5",
+      `item=dialog%2Fnone&variant=${variantKey}`,
+    ]) {
+      await expect(read(query)).rejects.toMatchObject({ status: 404 });
+    }
+    // The first response and the pages have each capture of the run one time.
+    const model = parseReviewModel(await reviewModel(privateContext, run.id));
+    expect(model.unchanged).toEqual({ count: first.items.length + second.items.length, pages: 2 });
+    expect(
+      [...model.items, ...first.items, ...second.items].map((item) => item.key).sort(),
+    ).toEqual([...ordered].sort());
+  }, 120_000);
+
+  it("fails a page that has a changed capture with no stored review row", async () => {
+    const { test, run } = await changedRun(6);
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    await expect(reviewCapturePage(privateContext, run.id, { page: 0 })).resolves.toMatchObject({
+      page: 0,
+    });
+    // The capture list still has the change, and D1 has no row for it.
+    await database
+      .prepare("DELETE FROM visonaut_comparison_rows WHERE comparison_id=? AND item_key=?")
+      .bind(run.comparison_id, "dialog/changed-1")
+      .run();
+    const failure = reviewCapturePage(privateContext, run.id, { page: 0 });
+    await expect(failure).rejects.toBeInstanceOf(IncompleteError);
+    await expect(failure).rejects.toMatchObject({
+      code: "INCOMPLETE",
+      message: "A changed capture is missing its persisted review row.",
+    });
+  });
+
+  it("reads the baseline of a run from before the stored baseline from its capture lists", async () => {
+    const { test, run } = await changedRun(6);
+    await database
+      .prepare("UPDATE visonaut_comparison_rows SET reference_json=NULL WHERE comparison_id=?")
+      .bind(run.comparison_id)
+      .run();
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      const model = parseReviewModel(await reviewModel(privateContext, run.id));
+      // The run list and the reference list: 2 objects.
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(model.items.map((item) => item.key)).toEqual(
+        changedNames.map((name) => `dialog/${name}`),
+      );
+      for (const item of model.items) {
+        expect(item.variants[0]).toMatchObject({
+          kind: "changed",
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: profiledImage.digest },
+        });
+      }
+      expect(model.unchanged).toEqual({ count: 2, pages: 1 });
+    } finally {
+      get.mockRestore();
+    }
+  });
 
   it("stores the baseline of each review row in the rows that Submit already writes", async () => {
     const test = await fixture();
@@ -1702,6 +2043,99 @@ describe("trusted local Submit", () => {
         },
       ],
     ]);
+  }, 60_000);
+
+  it("stores the two counts of the comparison settings in the run row that Submit already writes, with the same check result", async () => {
+    const submits: {
+      rowsWritten: number;
+      stored: unknown;
+      header: unknown;
+      status: unknown;
+      conclusion: string;
+    }[] = [];
+    // The second Submit has 3 captures at threshold 0.5. The first one has the
+    // built-in settings for each capture.
+    for (const threshold of [0.2, 0.5]) {
+      const test = await fixture();
+      const source = test.manifest.captures[0];
+      if (!source) throw new Error("Expected a source capture.");
+      test.manifest.captures = ["loose-0", "loose-1", "loose-2", "same-0", "same-1"].map(
+        (name, ordinal) => ({
+          ...structuredClone(source),
+          itemKey: `dialog/${name}`,
+          name: `Dialog ${name}`,
+          ordinal,
+        }),
+      );
+      await acceptedInventoryReference(test, undefined, builtInComparison);
+      const session = await localSession(test, (itemKey) =>
+        itemKey.startsWith("dialog/loose-") ? { threshold, maxDiffPixels: 0 } : builtInComparison,
+      );
+      await stageLocal(test, session);
+      const costs = measureD1(nativeDatabase);
+      test.context.database = costs.database;
+      test.context.service = new Service(costs.database);
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      const rowsWritten = costs.totals().rows_written;
+      // The counts are in the one statement that sets the comparison of the
+      // run, and no other statement writes them.
+      expect(
+        costs.costs
+          .map((cost) => cost.sql)
+          .filter((sql) => sql.includes("settings_loose_count"))
+          .map((sql) => sql.startsWith("UPDATE visonaut_runs SET comparison_id=?")),
+      ).toEqual([true]);
+      const privateContext = {
+        ...test.context,
+        lifetime: { waitUntil: vi.fn() },
+        identity: {
+          githubUserId: "user",
+          login: "user",
+          role: "admin",
+          userId: "user",
+          sessionId: "session",
+          sessionHeaders: new Headers(),
+        },
+      };
+      const {
+        status: state,
+        pending,
+        rejected,
+        approved,
+      } = await test.context.service.status(run.id);
+      const status = { status: state, pending, rejected, approved };
+      const { conclusion } = await test.context.service.prepareStatusIntent({
+        runId: run.id,
+        checkId: `settings-${threshold}`,
+        detailsUrl: `https://preview.example/runs/${run.id}`,
+        maxAttempts: 5,
+        now: Date.now(),
+      });
+      submits.push({
+        rowsWritten,
+        stored: await nativeDatabase
+          .prepare(
+            "SELECT settings_changed_count AS changed,settings_loose_count AS loose FROM visonaut_runs WHERE id=?",
+          )
+          .bind(run.id)
+          .first(),
+        header: parseReviewModel(await reviewModel(privateContext, run.id)).run.comparisonSettings,
+        status,
+        conclusion,
+      });
+    }
+    const [builtIn, loose] = submits;
+    if (!builtIn || !loose) throw new Error("Expected two Submits.");
+    expect(builtIn.stored).toEqual({ changed: 0, loose: 0 });
+    expect(builtIn.header).toEqual({ changed: 0, loose: 0 });
+    expect(loose.stored).toEqual({ changed: 3, loose: 3 });
+    expect(loose.header).toEqual({ changed: 3, loose: 3 });
+    // The counts change no result: the same status, the same conclusion of the
+    // check, and the same number of written rows.
+    expect(loose.status).toEqual(builtIn.status);
+    expect(builtIn.status).toMatchObject({ status: "passed" });
+    expect([builtIn.conclusion, loose.conclusion]).toEqual(["success", "success"]);
+    expect(loose.rowsWritten).toBe(builtIn.rowsWritten);
   }, 60_000);
 
   it("uses a flat R2 baseline for a complete unchanged run and recovers without staged evidence", async () => {
@@ -2805,7 +3239,11 @@ describe("trusted local Submit", () => {
       },
     };
     const model = parseReviewModel(await reviewModel(privateContext, run.id));
-    expect(model.items[0]?.variants[0]).toMatchObject({
+    expect(model.items).toEqual([]);
+    expect(model.unchanged).toEqual({ count: 1, pages: 1 });
+    // The candidate differs from the baseline inside the limit, and Submit did not store it.
+    const page = parseCapturePage(await reviewCapturePage(privateContext, run.id, { page: 0 }));
+    expect(page.items[0]?.variants[0]).toMatchObject({
       candidate: null,
       candidateOmitted: true,
       kind: "unchanged",
@@ -3260,6 +3698,56 @@ describe("workflow-owned upload staging", () => {
     ).toBe(200);
   });
 
+  it("refuses a run of one capture above the capture limit before the first upload ticket", async () => {
+    const test = await fixture();
+    const limit = test.manifest.captures.length;
+    test.context.configuration.limits.maximumCaptures = limit;
+    const atLimit = structuredClone(test.manifest);
+    const last = test.manifest.captures.at(-1);
+    if (!last) {
+      throw new Error("Expected a capture in the fixture manifest.");
+    }
+    test.manifest.captures.push({
+      ...last,
+      itemKey: `${last.itemKey}/above-the-limit`,
+      ordinal: last.ordinal + 1,
+    });
+    const costs = measureD1(nativeDatabase);
+    const refusal = await declareStaged(
+      test.post(test.manifest),
+      { ...test.context, database: costs.database },
+      test.runId,
+      test.shardKey,
+    ).catch((error: unknown) => error);
+    const statements = costs.costs.map((cost) => cost.sql);
+    expect(refusal).toBeInstanceOf(SecurityError);
+    expect(refusal).toMatchObject({
+      code: "capture_limit_exceeded",
+      status: 413,
+      message: `The run has more captures than the capture limit of ${limit}.`,
+    });
+    // The refusal is the early check: the service did not try to stage the
+    // manifest. The later check of the staged sum gives the same code.
+    expect(statements.length).toBeGreaterThan(0);
+    expect(statements.filter((sql) => sql.includes("ingest_staged_manifests"))).toEqual([]);
+    // The refusal comes before the service stages the manifest or an image.
+    const staged = await database
+      .prepare(
+        "SELECT (SELECT COUNT(*) FROM ingest_staged_manifests WHERE run_id = ?) AS manifests, (SELECT COUNT(*) FROM ingest_staged_images WHERE run_id = ?) AS images",
+      )
+      .bind(test.runId, test.runId)
+      .first();
+    expect(staged).toEqual({ manifests: 0, images: 0 });
+    // A run with exactly the limit is accepted.
+    const accepted = await declareStaged(
+      test.post(atLimit),
+      test.context,
+      test.runId,
+      test.shardKey,
+    );
+    expect(accepted.status).toBe(200);
+  });
+
   it("atomically caps captures across all shards in a staged run", async () => {
     const test = await fixture();
     test.context.configuration.limits.maximumCaptures = 1;
@@ -3301,7 +3789,7 @@ describe("workflow-owned upload staging", () => {
     });
     await expect(
       declareStaged(otherPost, test.context, test.runId, otherShardKey),
-    ).rejects.toMatchObject({ code: "upload_limit", status: 413 });
+    ).rejects.toMatchObject({ code: "capture_limit_exceeded", status: 413 });
     expect(
       (await declareStaged(test.post(test.manifest), test.context, test.runId, test.shardKey))
         .status,

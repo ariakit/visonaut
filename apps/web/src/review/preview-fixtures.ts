@@ -40,6 +40,8 @@ export function previewReviewModel(): ReviewModel {
     recompareDisabledReason: readOnlyReason,
     baselineRevision: 0,
     promotionId: null,
+    counts: { pending: 2, rejected: 0, approved: 0 },
+    unchanged: { count: 0, pages: 0 },
     items: [
       {
         key: "dialog/open",
@@ -60,8 +62,6 @@ export function previewReviewModel(): ReviewModel {
           engine: "fixture",
           policy: "fixture",
           threshold: "Synthetic example",
-          approveDisabledReason: readOnlyReason,
-          rejectDisabledReason: readOnlyReason,
         })),
       },
     ],
@@ -111,6 +111,8 @@ export function previewFixtureResponse(request: Request): Response | null {
   }
   if (request.method === "GET" && pathname === "/api/operations") {
     return Response.json({
+      // The Status page tells the header that the account is the preview account.
+      preview: true,
       events: [],
       checkedAt: 0,
       hasMore: false,

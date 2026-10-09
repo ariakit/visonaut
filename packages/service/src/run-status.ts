@@ -9,6 +9,7 @@ import { statusIntentStatements } from "./work.ts";
 import type { StatusDelivery } from "./work.ts";
 import type { Database, SqlValue } from "./database.ts";
 import type { Service } from "./service.ts";
+import type { ComparisonRow, ProjectRow, RunRow } from "./types.ts";
 import { projectGuard } from "./run-guards.ts";
 
 async function readRows<T>(database: Database, sql: string, values: SqlValue[] = []) {
@@ -23,11 +24,31 @@ async function readOne<T>(database: Database, sql: string, values: SqlValue[] = 
   return row;
 }
 
-export async function readRunStatus(service: Service, runId: string) {
-  const run = await service.run(runId);
+/** The rows of a run that a caller of the status reader already has. */
+export interface LoadedStatusRows {
+  run?: RunRow;
+  comparison?: ComparisonRow | null;
+  project?: ProjectRow;
+}
+
+/**
+ * The review status of a run. A caller that has the run, its comparison, or
+ * its project gives them in `loaded`, and the reader reads only the missing
+ * rows. The same reader sets the GitHub check, so the order of the rules
+ * below does not depend on `loaded`.
+ */
+export async function readRunStatus(
+  service: Service,
+  runId: string,
+  loaded: LoadedStatusRows = {},
+) {
+  const run = loaded.run?.id === runId ? loaded.run : await service.run(runId);
+  // A caller can have another comparison of the run, such as a historical one.
+  const readComparison = async (id: string) =>
+    loaded.comparison?.id === id ? loaded.comparison : service.comparison(id);
   const initial = reviewStatus({ run });
   if (initial.status === "passed") {
-    const comparison = run.comparison_id ? await service.comparison(run.comparison_id) : undefined;
+    const comparison = run.comparison_id ? await readComparison(run.comparison_id) : undefined;
     return { run, comparison, ...initial };
   }
   // A closed run needs no more reads.
@@ -43,7 +64,7 @@ export async function readRunStatus(service: Service, runId: string) {
     return { run, ...initial, failures };
   }
   if (!run.comparison_id) throw new IncompleteError("The run comparison is missing.");
-  const comparison = await service.comparison(run.comparison_id);
+  const comparison = await readComparison(run.comparison_id);
   const preliminary = reviewStatus({ run, comparison });
   if (preliminary.status === "needs-recompare") return { run, comparison, ...preliminary };
   const failures = await readRows<{ id: string; last_error: string | null }>(
@@ -59,7 +80,8 @@ export async function readRunStatus(service: Service, runId: string) {
     `SELECT ${reviewCountsSql} FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
     [comparison.id],
   );
-  const project = await service.project(run.project_id);
+  const project =
+    loaded.project?.id === run.project_id ? loaded.project : await service.project(run.project_id);
   const currentPromotion = project.promotion_id
     ? await statement(
         service.database,

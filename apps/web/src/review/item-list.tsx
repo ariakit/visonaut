@@ -28,6 +28,7 @@ import { itemThumbnail, needsReview, partitionItems } from "./navigation.ts";
 import type { ItemEntry } from "./navigation.ts";
 import { ScreenshotFilter } from "./screenshot-filter.tsx";
 import type { ScreenshotStatusFilter } from "./screenshot-filter.tsx";
+import type { UnchangedScreenshots } from "./use-unchanged-screenshots.ts";
 
 interface ItemListProps {
   items: ReviewItem[];
@@ -35,6 +36,8 @@ interface ItemListProps {
   selectItem(index: number): void;
   onOrderChange?(order: number[]): void;
   route?: ReviewRoute;
+  /** The unchanged screenshots of the run, which load in pages. */
+  unchanged?: UnchangedScreenshots;
   variantKeyForItem(item: ReviewItem): string | undefined;
 }
 
@@ -80,6 +83,7 @@ export function ItemList({
   selectItem,
   onOrderChange,
   route,
+  unchanged,
   variantKeyForItem,
 }: ItemListProps) {
   const list = useRef<HTMLElement>(null);
@@ -88,6 +92,10 @@ export function ItemList({
   const previousSelection = useRef(selectedIndex);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ScreenshotStatusFilter>("all");
+  // Unchanged screenshots that are not loaded are also in the accepted group.
+  // The other filters cannot match an unchanged screenshot.
+  const unloaded =
+    Boolean(unchanged && !unchanged.complete) && (filter === "all" || filter === "approved");
   const { attention, accepted, order } = useMemo(() => {
     const groups = partitionItems(items);
     // Filtering positions must not replace the model indices used by selection.
@@ -285,6 +293,8 @@ export function ItemList({
           setQuery(value);
           if (value.trim()) {
             setAcceptedOpen(true);
+            // The search reads each screenshot, so it needs each page.
+            unchanged?.loadAll();
           }
         }}
         onFilterChange={(value) => {
@@ -292,8 +302,17 @@ export function ItemList({
           if (value !== "all") {
             setAcceptedOpen(true);
           }
+          if (value === "approved") {
+            unchanged?.loadAll();
+          }
         }}
       />
+      {unchanged?.failed && (
+        // The text is outside the group: a link can fail while the group is closed.
+        <Text render={<p />} className="text-xs" role="alert">
+          The unchanged screenshots could not be loaded. Load them again in the group Accepted.
+        </Text>
+      )}
       <Nav
         ref={list}
         render={<nav />}
@@ -339,7 +358,7 @@ export function ItemList({
         }}
       >
         <ak.CompositeProvider store={store}>
-          {(attention.length > 0 || accepted.length === 0) && (
+          {(attention.length > 0 || (accepted.length === 0 && !unloaded)) && (
             <div className="review-item-scroll min-h-0 flex-1 overflow-auto">
               <CompositeRenderer<{ id: string; entry?: ItemEntry }>
                 store={store}
@@ -353,7 +372,7 @@ export function ItemList({
                 }
               </CompositeRenderer>
               {!order.length && (
-                <Text render={<p />} className="py-4 text-xs opacity-60" role="status">
+                <Text render={<p />} className="py-4 text-xs ak-ink-60" role="status">
                   {items.length
                     ? "No screenshots match. Change the search or filter."
                     : "No screenshots in this comparison."}
@@ -361,12 +380,17 @@ export function ItemList({
               )}
             </div>
           )}
-          {accepted.length > 0 && (
+          {(accepted.length > 0 || unloaded) && (
             <NavDisclosure
               render={<div />}
               className={`review-accepted-group duration-0! shrink-0 min-h-0 flex! flex-col ${attention.length ? "max-h-[50%]" : "flex-1"}`}
               open={acceptedOpen}
-              setOpen={setAcceptedOpen}
+              setOpen={(open) => {
+                setAcceptedOpen(open);
+                if (open) {
+                  unchanged?.loadOnOpen();
+                }
+              }}
               content={{
                 unmountOnHide: true,
                 guide: false,
@@ -375,7 +399,11 @@ export function ItemList({
               }}
               button={
                 <NavDisclosureButton className="review-accepted-toggle">
-                  <ButtonLabel>Accepted ({accepted.length})</ButtonLabel>
+                  <ButtonLabel>
+                    {unloaded
+                      ? `Accepted · ${unchanged?.count.toLocaleString("en-US")} unchanged`
+                      : `Accepted (${accepted.length})`}
+                  </ButtonLabel>
                 </NavDisclosureButton>
               }
             >
@@ -393,6 +421,20 @@ export function ItemList({
                     entry ? renderItem(entry, rowProps, accepted.length) : null
                   }
                 </CompositeRenderer>
+                {unloaded && (
+                  <div className="grid gap-2 py-2">
+                    <Button
+                      $kind="flat"
+                      $rounded="lg"
+                      $p={2}
+                      className="text-xs"
+                      disabled={unchanged?.loading}
+                      onClick={() => unchanged?.loadNext()}
+                    >
+                      <ButtonLabel>{unchanged?.loading ? "Loading…" : "Load more"}</ButtonLabel>
+                    </Button>
+                  </div>
+                )}
               </div>
             </NavDisclosure>
           )}

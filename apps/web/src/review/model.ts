@@ -48,7 +48,7 @@ export interface ReviewVariant {
   referenceProfile?: string;
   candidateProfile?: string;
   error?: string;
-  /** The server computes history protection from the current promotion. */
+  /** The read-only reason of a closed run, which the reader takes from the header of the answer. */
   rejectDisabledReason?: string;
   approveDisabledReason?: string;
 }
@@ -68,6 +68,17 @@ export interface HistoricalComparison {
   createdAt: number;
 }
 
+/** The three review counts of a run, with the definition of the run list. */
+export interface ReviewCounts {
+  pending: number;
+  rejected: number;
+  approved: number;
+}
+
+/**
+ * The first response of a run page. Its items are the screenshots that the
+ * service stores a review row for: changed, added, and removed.
+ */
 export interface ReviewModel {
   preview?: boolean;
   evidenceState?: "summary";
@@ -82,6 +93,12 @@ export interface ReviewModel {
     createdAt?: string;
     status: string;
     error?: string;
+    /**
+     * The captures whose comparison settings differ from the baseline, and the
+     * captures whose settings are looser than the built-in policy (threshold
+     * 0.2 and 0 pixels). A run from before the counts does not have the field.
+     */
+    comparisonSettings?: { changed: number; loose: number };
   };
   comparisonId: string;
   comparisonRevision: number;
@@ -94,8 +111,21 @@ export interface ReviewModel {
   readOnlyReason?: string;
   baselineRevision: number;
   promotionId: string | null;
+  counts: ReviewCounts;
+  /** The screenshots that `items` does not have, and the pages that hold them. */
+  unchanged: { count: number; pages: number };
   items: ReviewItem[];
 }
+
+/** One page of the unchanged screenshots of a run. */
+export interface ReviewCapturePage {
+  page: number;
+  pages: number;
+  items: ReviewItem[];
+}
+
+/** A page by its number, or the page that holds one screenshot. */
+export type ReviewCapturePlace = { page: number } | ReviewSelection;
 
 export interface ReviewPollState {
   run: { status: string; error?: string };
@@ -135,17 +165,26 @@ export interface ReviewCommandResult {
   noop?: boolean;
 }
 
+/**
+ * The receipt of a saved decision. It has no model: the page applies it to the
+ * model that it holds.
+ */
 export interface ReviewSaveResult {
   commandId: string;
   selection: ReviewSelection;
   revisions: ReviewTarget[];
   baselineRevision: number;
   promotionId: string | null;
+  /** The run revision that the decision started from. */
+  previousRunRevision?: number;
+  /** The run revision that the decision made. */
   runRevision?: number;
+  /** The run revision when the service answered. */
+  currentRunRevision?: number;
   reviewer?: string;
   runStatus?: string;
+  counts?: ReviewCounts;
   noop?: boolean;
-  model?: ReviewModel;
 }
 
 export interface ReviewCommands {
@@ -159,6 +198,7 @@ export interface ReviewCommands {
   undo(command: UndoCommand): Promise<ReviewCommandResult>;
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;
+  capturePage(place: ReviewCapturePlace): Promise<ReviewCapturePage>;
   recompare?(): Promise<ReviewModel>;
 }
 

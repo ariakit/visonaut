@@ -49,6 +49,8 @@ export function fixtureModel(): ReviewModel {
     reviewReady: true,
     baselineRevision: 4,
     promotionId: null,
+    counts: { pending: 11, rejected: 0, approved: 0 },
+    unchanged: { count: 0, pages: 0 },
     items: [
       {
         key: "dialog/open",

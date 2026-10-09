@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import type { Route } from "@playwright/test";
-import { compactReviewModel } from "../compact-model.ts";
+import type { Page, Route } from "@playwright/test";
+import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -52,9 +52,12 @@ for (const queued of [false, true]) {
             revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
+            previousRunRevision: initial.comparisonRevision,
             runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: initial.comparisonRevision + 1,
             reviewer: "maintainer-reference",
             runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -152,7 +155,7 @@ test("dashboard loads its protected run list without a separate identity request
     });
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  await expect(page.getByRole("heading", { name: "All reviews are complete." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   expect(requests).toContain("/api/runs");
   expect(requests).not.toContain("/api/me");
 });
@@ -241,7 +244,7 @@ for (const [screen, routeEntry] of [
   });
 }
 
-test("dashboard keeps recovery runs available and operation alerts in the header", async ({
+test("dashboard keeps recovery runs available and the alert count on the Status link", async ({
   page,
 }) => {
   const recoveryRun = {
@@ -262,6 +265,8 @@ test("dashboard keeps recovery runs available and operation alerts in the header
         runs: [recoveryRun],
         actionable: [recoveryRun],
         project: { repository: "ariakit/ariakit", baselineRevision: 3 },
+        alertCount: 1,
+        user: { id: "user-1", githubUserId: "1", login: "octo-maintainer" },
       },
     }),
   );
@@ -286,24 +291,27 @@ test("dashboard keeps recovery runs available and operation alerts in the header
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
-  const recovery = page.getByRole("region", { name: "Needs attention" });
-  await expect(recovery.getByRole("heading", { name: "Pull request" })).toBeVisible();
-  await expect(recovery).toContainText("New capture needed · Attempt 2");
-  await expect(recovery.getByRole("link", { name: "Open run" })).toHaveAttribute(
-    "href",
-    "/runs/run-42",
-  );
-  const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
+  const recovery = page.getByRole("group", { name: "Needs attention" }).getByRole("link");
+  // A row of a pull request with no stored number has its kind and its commit.
+  await expect(recovery).toContainText("pull request 0123456");
+  await expect(recovery).toContainText("attempt 2");
+  await expect(recovery).toContainText("Rerun needed");
+  await expect(recovery).toHaveAttribute("href", "/runs/run-42");
+  // The count is a field of the run list. The Queue reads no alert list.
+  const statusLink = page.getByRole("link", { name: "Status" });
+  const alerts = statusLink.getByLabel("1 open alert");
   await expect(alerts).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
-  await alerts.click();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toBeVisible();
-  await page.getByRole("button", { name: "Dismiss popup" }).click();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Refresh runs" }).click();
-  await expect.poll(() => operationsLoads).toBe(2);
-  await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  await expect(alerts).toHaveText("1");
+  // A new read of the run list, as a return to the tab starts it.
+  const read = page.waitForResponse("**/api/runs");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await read;
+  await expect(alerts).toBeVisible();
+  expect(operationsLoads).toBe(0);
+  await expect(page.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   const table = page.getByRole("table", { name: "Latest 100 runs" });
   await expect(table).toBeVisible();
@@ -322,21 +330,25 @@ test("dashboard keeps recovery runs available and operation alerts in the header
   await page.setViewportSize({ width: 320, height: 700 });
   await expect(mobileDetails).toBeInViewport();
   await expect(table.getByText("New capture needed", { exact: true })).toBeInViewport();
-  await expect(alerts.locator(".dashboard-alert-count")).toBeInViewport();
+  await expect(alerts).toBeInViewport();
   expect(
-    await alerts.evaluate((button) => {
-      const count = button.querySelector(".dashboard-alert-count");
+    await statusLink.evaluate((link) => {
+      const count = link.querySelector("[aria-label='1 open alert']");
       if (!count) return false;
-      const buttonBounds = button.getBoundingClientRect();
+      const linkBounds = link.getBoundingClientRect();
       const countBounds = count.getBoundingClientRect();
       return (
-        countBounds.top >= buttonBounds.top &&
-        countBounds.bottom <= buttonBounds.bottom &&
-        countBounds.left >= buttonBounds.left &&
-        countBounds.right <= buttonBounds.right
+        countBounds.top >= linkBounds.top &&
+        countBounds.bottom <= linkBounds.bottom &&
+        countBounds.left >= linkBounds.left &&
+        countBounds.right <= linkBounds.right
       );
     }),
   ).toBe(true);
+  // The count is text that a person can read.
+  expect(
+    await alerts.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)),
+  ).toBeGreaterThanOrEqual(12);
   expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
     await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
   );
@@ -503,11 +515,16 @@ test("historical sign-in preserves the selected comparison in its return path", 
     route.fulfill({ status: 400, json: { code: "TEST", message: "Sign-in fixture" } }),
   );
   await page.goto(fixtureUrl);
-  await expect(page.getByRole("heading", { name: "Sign in to review this run" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in to review" })).toBeVisible();
   expect(requests).not.toContain("/api/me");
   const request = page.waitForRequest("**/api/auth/sign-in/social");
   await page.getByRole("button", { name: "Sign in with GitHub" }).click();
-  expect((await request).postDataJSON()).toMatchObject({ provider: "github", callbackURL: entry });
+  // A sign-in returns to the run, and a failed sign-in returns to it too.
+  expect((await request).postDataJSON()).toMatchObject({
+    provider: "github",
+    callbackURL: entry,
+    errorCallbackURL: entry,
+  });
   expect(errors).toEqual([]);
 });
 
@@ -520,14 +537,18 @@ test("the sign-in page follows the system dark color scheme", async ({ page }) =
     }),
   );
   await page.goto(fixtureUrl);
-  await expect(page.getByRole("heading", { name: "Sign in to review this run" })).toBeVisible();
-  const background = await page.locator(".shell").evaluate((element) => {
-    const context = document.createElement("canvas").getContext("2d");
-    if (!context) throw new Error("Canvas unavailable");
-    context.fillStyle = getComputedStyle(element).backgroundColor;
-    context.fillRect(0, 0, 1, 1);
-    return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
-  });
+  await expect(page.getByRole("heading", { name: "Sign in to review" })).toBeVisible();
+  // The sign-in page has no shell: its root paints the canvas.
+  const background = await page
+    .locator("main")
+    .locator("xpath=..")
+    .evaluate((element) => {
+      const context = document.createElement("canvas").getContext("2d");
+      if (!context) throw new Error("Canvas unavailable");
+      context.fillStyle = getComputedStyle(element).backgroundColor;
+      context.fillRect(0, 0, 1, 1);
+      return Array.from(context.getImageData(0, 0, 1, 1).data).slice(0, 3);
+    });
   expect(background.every((channel) => channel < 120)).toBe(true);
 });
 
@@ -595,17 +616,17 @@ test("the work list shows an old PR title while recent history stays separate", 
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  const work = page.getByRole("region", { name: "Ready to review" });
-  const run = work.getByRole("article").filter({ hasText: "Dialog focus styles" });
+  const run = page.getByRole("article", { name: "Dialog focus styles" });
   await expect(run.getByRole("heading", { name: "Dialog focus styles" })).toBeVisible();
   await expect(run).toContainText("#104");
-  await expect(run.getByRole("link", { name: "Review changes" })).toHaveAttribute(
+  await expect(run.getByRole("link", { name: "Review", exact: true })).toHaveAttribute(
     "href",
     "/runs/old-pending",
   );
-  await expect(run).toContainText("3 views await approval, including 1 rejected.");
-  await expect(work).not.toContainText("#105");
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  // The 3 pending variants are 2 open changes and 1 rejected variant.
+  await expect(run).toContainText(/2 changes · .*1 rejected/);
+  await expect(page.getByRole("main")).not.toContainText("#105");
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
     "#105 · Pull request",
   );
@@ -646,7 +667,7 @@ test("history says why a run closed, and names no cause when none is stored", as
   await page.route("**/api/operations", (route) =>
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
-  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F%3Fview%3Dhistory");
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fhistory");
   const table = page.getByRole("table", { name: "Latest 100 runs" });
   for (const [title, words] of [
     ["newer-run", "Replaced"],
@@ -713,7 +734,7 @@ test("a preview review has image fixtures and no live actions or login", async (
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
 
-test("an early conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
+test("a conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
   page,
 }) => {
   const initial = fixtureModel();
@@ -729,7 +750,6 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   Object.assign(changed, { verdict: "rejected", source: "human", revision: 1 });
   const posted: Array<{ commandId: string; previousCommandId?: string; selection: unknown }> = [];
   let releaseFirst = false;
-  let earlyConflict = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/review-sessions")
@@ -744,25 +764,29 @@ test("an early conflict keeps later decisions chained and preserves newer confir
       const command = posted[index];
       if (!command) throw new Error("Missing queued command");
       if (index === 1) {
-        await route.fulfill({
+        return route.fulfill({
           status: 409,
           json: {
             error: { code: "conflict", message: "The second decision changed." },
             model: compactReviewModel(conflictModel),
           },
         });
-        earlyConflict = true;
-        return;
       }
       if (index === 0 && releaseFirst) {
+        // Another reviewer saved a decision before the read of this receipt.
         return route.fulfill({
           json: {
             commandId: command.commandId,
             selection: command.selection,
-            revisions: [],
+            revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
-            model: compactReviewModel(latest),
+            previousRunRevision: initial.comparisonRevision,
+            runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: latest.comparisonRevision,
+            reviewer: "maintainer-1",
+            runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -778,7 +802,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
         },
       });
     }
-    return route.fulfill({ json: compactReviewModel(initial) });
+    return route.fulfill({ json: compactReviewModel(releaseFirst ? latest : initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
   const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
@@ -786,7 +810,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect(reject).toBeEnabled();
   await reject.click();
-  await expect.poll(() => earlyConflict).toBe(true);
+  await expect.poll(() => posted.length).toBe(2);
   await expect(approve).toBeEnabled();
   await approve.click();
   await expect.poll(() => posted.length).toBe(3);
@@ -799,4 +823,440 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect.poll(() => posted.length).toBe(4);
   expect(posted[3]).not.toHaveProperty("previousCommandId");
+});
+
+test("a newer run revision in an earlier receipt makes the page read the model after the last receipt", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  const revision = initial.comparisonRevision;
+  // Two decisions of this page, and then a rejection of another reviewer.
+  const latest = structuredClone(initial);
+  latest.comparisonRevision = revision + 3;
+  const [first, second, other] = latest.items[0]?.variants ?? [];
+  if (!first || !second || !other) throw new Error("Missing review variants");
+  Object.assign(first, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(second, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(other, { verdict: "rejected", source: "human", revision: 1 });
+  const posted: Array<{ commandId: string; selection: unknown }> = [];
+  let release = false;
+  let modelReads = 0;
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-order" } });
+    }
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON();
+      posted.push(command);
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/queued")) {
+      const index = posted.findIndex((command) => path.includes(command.commandId));
+      const command = posted[index];
+      if (!command) throw new Error("Missing queued command");
+      if (!release) {
+        return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+      }
+      // The read of the second receipt came before the other reviewer, and
+      // the read of the first receipt came after.
+      return route.fulfill({
+        json: {
+          commandId: command.commandId,
+          selection: command.selection,
+          revisions: [{ id: index ? second.id : first.id, expectedRevision: 1 }],
+          baselineRevision: initial.baselineRevision,
+          promotionId: null,
+          previousRunRevision: revision + index,
+          runRevision: revision + index + 1,
+          currentRunRevision: index ? revision + 2 : revision + 3,
+          reviewer: "maintainer-1",
+          runStatus: "needs-review",
+          counts: { pending: 10 - index, rejected: 0, approved: 1 + index },
+        },
+      });
+    }
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: { run: initial.run, comparisonState: "ready", reviewReady: true, archived: false },
+      });
+    }
+    modelReads += 1;
+    return route.fulfill({ json: compactReviewModel(release ? latest : initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(1);
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(2);
+  const readsBefore = modelReads;
+  release = true;
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
+  expect(modelReads - readsBefore).toBe(1);
+});
+
+/** The largest number of page requests that ran at the same time in a test. */
+let pageRequestPeak = 0;
+/** Lets the first page request of a test with `held` continue. */
+let releaseFirstPage = () => {};
+
+/**
+ * A run with 4 changed screenshots in the first response and 3 unchanged
+ * screenshots in 2 pages. The result has the query of each page request.
+ */
+async function unchangedRun(
+  page: Page,
+  { changed = true, failing = [] as number[], held = false } = {},
+) {
+  const model = fixtureModel();
+  model.items = changed ? model.items.slice(1) : [];
+  model.counts = { pending: 2, rejected: 0, approved: 2 };
+  model.unchanged = { count: 3, pages: 2 };
+  const source = fixtureModel().items[0]?.variants[0];
+  if (!source) {
+    throw new Error("Fixture variant is missing.");
+  }
+  const unchanged = (key: string) => ({
+    ...source,
+    id: `row-unchanged-${key}`,
+    key,
+    label: `${key} · Chromium`,
+    kind: "unchanged" as const,
+    diff: null,
+  });
+  const pages = [
+    [
+      { key: "alpha/unchanged", name: "Alpha", variants: [unchanged("Light")] },
+      // The first response has this item with its 2 changed variants.
+      { key: "menu/open", name: "Open menu", variants: [unchanged("Menu-wide")] },
+    ],
+    [{ key: "zeta/unchanged", name: "Zeta", variants: [unchanged("Light")] }],
+  ];
+  const requests: string[] = [];
+  let running = 0;
+  pageRequestPeak = 0;
+  const first = held
+    ? new Promise<void>((resolve) => {
+        releaseFirstPage = resolve;
+      })
+    : Promise.resolve();
+  await page.route("**/api/runs/run-42", (route) =>
+    route.fulfill({ json: compactReviewModel(model) }),
+  );
+  await page.route("**/api/runs/run-42/captures*", async (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    requests.push(query.toString());
+    running += 1;
+    pageRequestPeak = Math.max(pageRequestPeak, running);
+    if (requests.length === 1) {
+      await first;
+    }
+    // Each answer takes some time, so that requests at the same time show.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    running -= 1;
+    // `failing` has the numbers of the page requests that fail, from 1.
+    if (failing.includes(requests.length)) {
+      // The answer of the service for a capture list that does not agree with the stored rows.
+      return route.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: "incomplete",
+            message: "A changed capture is missing its persisted review row.",
+          },
+        },
+      });
+    }
+    // A request with no page number names one screenshot.
+    const number = query.has("page")
+      ? Number(query.get("page"))
+      : pages.findIndex((items) =>
+          items.some(
+            (item) =>
+              item.key === query.get("item") &&
+              item.variants.some((variant) => variant.key === query.get("variant")),
+          ),
+        );
+    const items = pages[number];
+    if (!items) {
+      return route.fulfill({ status: 404, json: { error: { code: "not_found" } } });
+    }
+    return route.fulfill({
+      json: {
+        format: "review-captures-1",
+        page: number,
+        pages: pages.length,
+        ...compactReviewItems(items),
+      },
+    });
+  });
+  return requests;
+}
+
+const unchangedFailure =
+  "The unchanged screenshots could not be loaded. Load them again in the group Accepted.";
+
+function runUrl(entry: string) {
+  return `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
+}
+
+test("the changed screenshots show first, and the unchanged group loads one page at a time", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /New item/ })).toBeVisible();
+  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+  // A request at the load of the page would start before the network is idle.
+  await page.waitForLoadState("networkidle");
+  expect(requests).toEqual([]);
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Removed item/ })).toBeVisible();
+  expect(requests).toEqual(["page=0"]);
+  await expect(items.getByRole("link", { name: /Zeta/ })).toHaveCount(0);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=1"]);
+  await expect(items.getByRole("button", { name: "Accepted (3)" })).toBeVisible();
+  await expect(items.getByRole("button", { name: /Load more/ })).toHaveCount(0);
+  // The unchanged variant of an item of the first response is in its variants.
+  await items.getByRole("link", { name: /Open menu/ }).click();
+  const variants = page.getByRole("navigation", { name: "Variants" });
+  await expect(variants.getByRole("link", { name: /Menu-wide/ })).toBeVisible();
+  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+});
+
+test("a direct link to an unchanged variant loads its page and opens the variant", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
+  await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+  ).toHaveAccessibleName(/Light · Chromium/);
+  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
+  expect(
+    await page.evaluate(async () => {
+      const { router } = await import("./route-fixture.tsx");
+      return router.state.location.search;
+    }),
+  ).toMatchObject({ item: "zeta/unchanged", variant: "Light" });
+  // The group of the selected screenshot is open.
+  await expect(
+    page.getByRole("navigation", { name: "Review items" }).getByRole("link", { name: /Zeta/ }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+test("a link whose page request fails keeps its address and shows the failure", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1] });
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  // The group is closed, and the text shows.
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
+  // The address still names the screenshot, so a reload asks for it again.
+  expect(
+    await page.evaluate(async () => {
+      const { router } = await import("./route-fixture.tsx");
+      return router.state.location.search;
+    }),
+  ).toMatchObject({ item: "zeta/unchanged", variant: "Light" });
+});
+
+test("a link to a screenshot that the run does not have selects a changed screenshot", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42?item=none&variant=Light"));
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { router } = await import("./route-fixture.tsx");
+        return router.state.location.search;
+      }),
+    )
+    .toMatchObject({ item: "menu/open", variant: "Menu" });
+  expect(requests).toEqual(["item=none&variant=Light"]);
+});
+
+test("a search loads each page of the unchanged screenshots", async ({ page }) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  // Each of the 4 changes of the text asks for each page.
+  await page.getByRole("combobox", { name: "Search screenshots" }).pressSequentially("zeta");
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Open menu/ })).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=1"]);
+  expect(pageRequestPeak).toBe(1);
+});
+
+test("a search whose first page fails asks one time for each change that follows the failure", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1], held: true });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  const search = page.getByRole("combobox", { name: "Search screenshots" });
+  // 4 changes of the text wait behind the first request, which then fails.
+  await search.pressSequentially("zeta");
+  releaseFirstPage();
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  await page.waitForLoadState("networkidle");
+  expect(requests).toEqual(["page=0"]);
+  await search.press("Backspace");
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=0", "page=1"]);
+});
+
+test("a page after the first one that fails loads when the reviewer opens the group again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [2] });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  const search = page.getByRole("combobox", { name: "Search screenshots" });
+  await search.fill("a");
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
+  expect(requests).toEqual(["page=0", "page=1"]);
+  await page.keyboard.press("Escape");
+  const group = items.getByRole("button", { name: "Accepted · 3 unchanged" });
+  await group.click();
+  await group.click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=1", "page=1"]);
+});
+
+test("a filter that no unchanged screenshot can match does not show their group", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await page.getByRole("option", { name: "Review status: All" }).click();
+  await page
+    .getByRole("listbox", { name: "Review status", exact: true })
+    .getByRole("option", { name: "Rejected" })
+    .click();
+  await expect(items.getByText("No screenshots match. Change the search or filter.")).toBeVisible();
+  await expect(items.getByRole("button", { name: /Accepted/ })).toHaveCount(0);
+  await expect(items.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
+test("the filter of approved screenshots loads each page of the unchanged screenshots", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await page.getByRole("option", { name: "Review status: All" }).click();
+  await page
+    .getByRole("listbox", { name: "Review status", exact: true })
+    .getByRole("option", { name: "Approved" })
+    .click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=1"]);
+});
+
+test("a run with no change loads the first page of its unchanged screenshots at once", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { changed: false });
+  await page.goto(runUrl("/runs/run-42"));
+  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
+  expect(requests).toEqual(["page=0"]);
+});
+
+test("a run with no change shows the progress and a failure of its first page, and loads it again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { changed: false, failing: [1], held: true });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  // The run page started the first load, and the group shows that it runs.
+  await expect(items.getByRole("button", { name: "Loading…" })).toBeDisabled();
+  releaseFirstPage();
+  // The failure drops the load of the open group, which waited in the queue.
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  expect(requests).toEqual(["page=0"]);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=0"]);
+});
+
+test("a page of unchanged screenshots that fails to load shows the failure and loads again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1] });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=0"]);
+});
+
+test("a decision for the whole item saves when the selected variant is an unchanged one", async ({
+  page,
+}) => {
+  await unchangedRun(page);
+  const posted: unknown[] = [];
+  await page.route("**/api/review-sessions", (route) =>
+    route.fulfill({ json: { reviewSessionId: "session-unchanged" } }),
+  );
+  await page.route("**/api/comparisons/**", (route) => {
+    const command = route.request().postDataJSON();
+    posted.push(command);
+    return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+  });
+  await page.route("**/api/commands/**", (route) =>
+    route.fulfill({ status: 202, json: { queued: true } }),
+  );
+  await page.goto(runUrl("/runs/run-42?item=menu%2Fopen&variant=Menu-wide"));
+  await expect(
+    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+  ).toHaveAccessibleName(/Menu-wide/);
+  await page.getByRole("button", { name: /^All 2 changed views/ }).click();
+  await page.getByRole("button", { name: /Approve whole item/ }).click();
+  await expect.poll(() => posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({
+    verdict: "approved",
+    wholeItemKey: "menu/open",
+    targets: [
+      { id: "row-Menu", expectedRevision: 0 },
+      { id: "row-Menu-dark", expectedRevision: 0 },
+    ],
+    selection: { itemKey: "menu/open", variantKey: "Menu-wide" },
+  });
 });

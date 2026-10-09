@@ -1,8 +1,10 @@
 import { fetchOrFail, readFailure, readSuccess } from "../client-error.ts";
 import { ReviewCommandError } from "./model.ts";
 import type {
+  ReviewCapturePage,
   ReviewCommandResult,
   ReviewCommands,
+  ReviewCounts,
   ReviewImage,
   ReviewItem,
   ReviewModel,
@@ -96,6 +98,8 @@ function variantPart(value: unknown): ReviewVariantPart {
 interface SharedReviewEvidence {
   images: Array<ReviewImage | null>;
   metadata: Array<Record<string, unknown>>;
+  /** The read-only reason of a closed run. The answer has it one time, in its header. */
+  readOnlyReason?: string;
 }
 
 function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
@@ -139,8 +143,8 @@ function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
     referenceProfile: optionalString(metadata.referenceProfile),
     candidateProfile: optionalString(metadata.candidateProfile),
     error: optionalString(data.error),
-    rejectDisabledReason: optionalString(data.rejectDisabledReason),
-    approveDisabledReason: optionalString(data.approveDisabledReason),
+    rejectDisabledReason: shared.readOnlyReason,
+    approveDisabledReason: shared.readOnlyReason,
   };
 }
 
@@ -153,16 +157,32 @@ function item(value: unknown, shared: SharedReviewEvidence): ReviewItem {
   };
 }
 
-export function parseReviewModel(value: unknown): ReviewModel {
-  const data = record(value);
-  if (data.format !== "compact-review-1") {
-    throw new Error("This review format has changed. Refresh before reviewing.");
-  }
+/** The items of an answer, with the evidence that its variants share. */
+function items(data: Record<string, unknown>): ReviewItem[] {
   const shared: SharedReviewEvidence = {
     images: values(data.images).map(image),
     metadata: values(data.metadata).map(record),
+    readOnlyReason: data.archived === true ? optionalString(data.readOnlyReason) : undefined,
   };
+  return values(data.items).map((value) => item(value, shared));
+}
+
+export function parseCapturePage(value: unknown): ReviewCapturePage {
+  const data = record(value);
+  if (data.format !== "review-captures-1") {
+    throw new Error("This review format has changed. Refresh before reviewing.");
+  }
+  return { page: number(data.page), pages: number(data.pages), items: items(data) };
+}
+
+export function parseReviewModel(value: unknown): ReviewModel {
+  const data = record(value);
+  if (data.format !== "compact-review-2") {
+    throw new Error("This review format has changed. Refresh before reviewing.");
+  }
   const run = record(data.run);
+  const settings = run.comparisonSettings == null ? null : record(run.comparisonSettings);
+  const unchanged = record(data.unchanged);
   return {
     preview: data.preview == null ? undefined : boolean(data.preview),
     evidenceState: data.evidenceState == null ? undefined : oneOf(data.evidenceState, ["summary"]),
@@ -177,6 +197,14 @@ export function parseReviewModel(value: unknown): ReviewModel {
       createdAt: optionalString(run.createdAt),
       status: string(run.status),
       error: optionalString(run.error),
+      ...(settings
+        ? {
+            comparisonSettings: {
+              changed: number(settings.changed),
+              loose: number(settings.loose),
+            },
+          }
+        : {}),
     },
     comparisonId: string(data.comparisonId),
     comparisonRevision: number(data.comparisonRevision),
@@ -203,7 +231,9 @@ export function parseReviewModel(value: unknown): ReviewModel {
     readOnlyReason: optionalString(data.readOnlyReason),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
-    items: values(data.items).map((value) => item(value, shared)),
+    counts: reviewCounts(data.counts),
+    unchanged: { count: number(unchanged.count), pages: number(unchanged.pages) },
+    items: items(data),
   };
 }
 
@@ -233,7 +263,16 @@ function commandResult(value: unknown): ReviewCommandResult {
   };
 }
 
-function saveResult(value: unknown): ReviewSaveResult {
+function reviewCounts(value: unknown): ReviewCounts {
+  const counts = record(value);
+  return {
+    pending: number(counts.pending),
+    rejected: number(counts.rejected),
+    approved: number(counts.approved),
+  };
+}
+
+export function parseSaveResult(value: unknown): ReviewSaveResult {
   const data = record(value);
   return {
     commandId: string(data.commandId),
@@ -244,11 +283,13 @@ function saveResult(value: unknown): ReviewSaveResult {
     }),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
-    runRevision: data.runRevision == null ? undefined : number(data.runRevision),
+    previousRunRevision: optionalNumber(data.previousRunRevision),
+    runRevision: optionalNumber(data.runRevision),
+    currentRunRevision: optionalNumber(data.currentRunRevision),
     reviewer: optionalString(data.reviewer),
     runStatus: optionalString(data.runStatus),
+    counts: data.counts == null ? undefined : reviewCounts(data.counts),
     noop: data.noop == null ? undefined : boolean(data.noop),
-    model: data.model == null ? undefined : parseReviewModel(data.model),
   };
 }
 
@@ -285,6 +326,110 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   });
 }
 
+// The wait before each read of a receipt. A decision is usually saved before
+// the first read. The last wait repeats while a decision stays in the queue.
+const receiptWaits = [100, 200, 400, 800, 1600, 3200, 5000];
+
+interface ReceiptWait {
+  commandId: string;
+  signal?: AbortSignal;
+  resolve(receipt: Record<string, unknown>): void;
+  reject(reason: unknown): void;
+}
+
+/**
+ * One poll loop for the receipts of the queued decisions of a page. It reads
+ * the receipt of the oldest decision only: the service runs the decisions of
+ * a page in their order. It reads nothing while the tab is hidden.
+ */
+function createReceiptPoll() {
+  const waiting: ReceiptWait[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let reading = false;
+  let reads = 0;
+  // The unit tests of the client have no document.
+  const hidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
+  const schedule = () => {
+    if (timer !== undefined) return;
+    if (reading) return;
+    if (!waiting.length) return;
+    if (hidden()) return;
+    timer = setTimeout(() => void read(), receiptWaits[Math.min(reads, receiptWaits.length - 1)]);
+  };
+  // The tab is in front again: the next read comes after the shortest wait.
+  const onVisibilityChange = () => {
+    if (hidden()) return;
+    clearTimeout(timer);
+    timer = undefined;
+    reads = 0;
+    schedule();
+  };
+  const remove = (entry: ReceiptWait) => {
+    const index = waiting.indexOf(entry);
+    if (index < 0) return;
+    waiting.splice(index, 1);
+    // The next decision becomes the oldest, and it starts with the short waits.
+    if (index === 0) {
+      reads = 0;
+      clearTimeout(timer);
+      timer = undefined;
+      schedule();
+    }
+    if (waiting.length) return;
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    }
+  };
+  const read = async () => {
+    timer = undefined;
+    const entry = waiting[0];
+    if (!entry) return;
+    if (hidden()) return;
+    reading = true;
+    reads += 1;
+    try {
+      const receipt = record(
+        await request(
+          `/api/commands/${encodeURIComponent(entry.commandId)}/queued`,
+          undefined,
+          entry.signal,
+        ),
+      );
+      if (receipt.queued !== true) {
+        remove(entry);
+        entry.resolve(receipt);
+      }
+    } catch (error) {
+      remove(entry);
+      entry.reject(error);
+    } finally {
+      reading = false;
+      schedule();
+    }
+  };
+  return (commandId: string, signal?: AbortSignal) =>
+    new Promise<Record<string, unknown>>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+      const entry: ReceiptWait = { commandId, signal, resolve, reject };
+      signal?.addEventListener(
+        "abort",
+        () => {
+          remove(entry);
+          reject(signal.reason);
+        },
+        { once: true },
+      );
+      if (!waiting.length && typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", onVisibilityChange);
+      }
+      waiting.push(entry);
+      schedule();
+    });
+}
+
 /** Loads review evidence before creating a session for a review command. */
 export function createReviewCommands(runId: string, comparisonId?: string): ReviewCommands {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
@@ -295,6 +440,7 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
       : `${runPath}${suffix}`;
   let sessionPromise: Promise<string> | undefined;
   let admission: Promise<unknown> = Promise.resolve();
+  const receipt = createReceiptPoll();
   const reviewSession = () => {
     sessionPromise ??= request("/api/review-sessions", {})
       .then((session) => string(record(session).reviewSessionId))
@@ -324,20 +470,10 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
           );
         });
       admission = submitted;
-      let result = await submitted;
-      if (result.queued === true) options?.onQueued?.();
-      while (result.queued === true) {
-        options?.signal?.throwIfAborted();
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        result = record(
-          await request(
-            `/api/commands/${encodeURIComponent(command.commandId)}/queued`,
-            undefined,
-            options?.signal,
-          ),
-        );
-      }
-      return saveResult(result);
+      const result = await submitted;
+      if (result.queued !== true) return parseSaveResult(result);
+      options?.onQueued?.();
+      return parseSaveResult(await receipt(command.commandId, options?.signal));
     },
     async undo(command) {
       const reviewSessionId = await reviewSession();
@@ -351,6 +487,14 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
     },
     async refresh() {
       return parseReviewModel(await request(selectedPath()));
+    },
+    async capturePage(place) {
+      // The captures belong to the run: each comparison of it has the same list.
+      const query =
+        "page" in place
+          ? `page=${place.page}`
+          : `item=${encodeURIComponent(place.itemKey)}&variant=${encodeURIComponent(place.variantKey)}`;
+      return parseCapturePage(await request(`${runPath}/captures?${query}`));
     },
     async pollStatus() {
       return parseReviewPollState(await request(selectedPath("/state")));

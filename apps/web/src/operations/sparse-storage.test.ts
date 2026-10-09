@@ -29,9 +29,9 @@ import {
   type ResetContext,
 } from "../../tooling/baseline-reset/reset.ts";
 import { captured, context, digest, profile, TestDatabase } from "./test-fixtures.ts";
-import { reviewModel } from "../api/review.ts";
+import { reviewCapturePage, reviewModel } from "../api/review.ts";
 import type { PrivateContext } from "../api/context.ts";
-import { parseReviewModel } from "../review/client.ts";
+import { parseCapturePage, parseReviewModel } from "../review/client.ts";
 import type { ReviewItem } from "../review/model.ts";
 
 interface SparseFixtureParams {
@@ -119,6 +119,7 @@ async function sparseFixture({
       profileDigest,
       renderingProfileDigest,
       image: source,
+      metadata,
     }),
   );
   if (referenceInventory) {
@@ -631,7 +632,7 @@ describe("sparse inventory operations", () => {
     ).toEqual({ capture_count: 3 });
   });
 
-  it("preserves changed, added, removed, and unchanged public review items after sparse history and image expiry", async () => {
+  it("preserves changed, added, and removed public review items after sparse history and image expiry", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const sparse = await sparseFixture({
@@ -655,13 +656,13 @@ describe("sparse inventory operations", () => {
       },
     });
     const before = parseReviewModel(await reviewModel(api, "run"));
+    // The first response has the rows that D1 stores, and it counts the others.
     expect(before.items.map((item) => item.variants[0]?.kind).sort()).toEqual([
       "added",
       "changed",
       "removed",
-      "unchanged",
-      "unchanged",
     ]);
+    expect(before.unchanged).toEqual({ count: 2, pages: 1 });
     for (const item of before.items) {
       expect(item.name).toBe("Dialog");
       expect(item.variants[0]?.labelParts).toEqual(
@@ -679,12 +680,26 @@ describe("sparse inventory operations", () => {
     for (let step = 0; step < 10; step++) {
       if ((await expireRunImages(fixture.context)).completed.includes("run")) break;
     }
-    const after = parseReviewModel(await reviewModel(api, "run"));
+    const answer = await reviewModel(api, "run");
+    const after = parseReviewModel(answer);
     expect(after).toMatchObject({ archived: true, evidenceState: "summary", imagesExpired: true });
+    // The answer of a closed run has its read-only reason one time, in the header.
+    const reason = after.readOnlyReason ?? "";
+    expect(reason).not.toBe("");
+    expect(JSON.stringify(answer).split(reason)).toHaveLength(2);
     expect(itemEvidence(after.items)).toEqual(itemEvidence(before.items));
+    expect(after.unchanged).toEqual(before.unchanged);
+    // The rows of the summary keep their identities in D1, so the page of a
+    // closed run has the 2 unchanged captures and no error.
+    const page = parseCapturePage(await reviewCapturePage(api, "run", { page: 0 }));
+    expect(page.items.flatMap((item) => item.variants.map((variant) => variant.kind))).toEqual([
+      "unchanged",
+      "unchanged",
+    ]);
+    // The reader of the page gives the reason of the header to each variant.
     for (const item of after.items) {
-      expect(item.variants[0]?.approveDisabledReason).toBeTruthy();
-      expect(item.variants[0]?.rejectDisabledReason).toBeTruthy();
+      expect(item.variants[0]?.approveDisabledReason).toBe(reason);
+      expect(item.variants[0]?.rejectDisabledReason).toBe(reason);
     }
     expect(fixture.images.objects.has(sparse.pointer.objectKey)).toBe(true);
     expect(fixture.images.objects.has("runs/run/images/0.png")).toBe(false);

@@ -2,7 +2,7 @@
 
 Visual regression capture, comparison, and review for Ariakit.
 
-Visonaut captures prepared Playwright pages. Trusted CLI Submit verifies the capture evidence and compares PNG images in CI. The service validates the signed receipt and lets maintainers review changes in a private web app. The GitHub App check reports the result. Uploading a capture does not approve it. The comparison Worker still validates uploaded images and processes supported legacy comparisons.
+Visonaut captures prepared Playwright pages. Trusted CLI Submit verifies the capture evidence and compares PNG images in CI. The service validates the signed receipt and lets maintainers review changes in a private web app. The GitHub App check reports the result. Uploading a capture does not approve it. The service checks the size and the SHA-256 digest of each uploaded image, and it does not decode the bytes. The Submit job decodes each capture when it compares. The comparison Worker is still deployed, but a new run does not send images to it.
 
 The [current implementation contract](docs/current-contract.md) is the current guide. It owns the requirements, exact supersession map, source behavior, selected targets, and evidence limits. [PR #205](https://github.com/ariakit/visonaut/pull/205) completed the authority handoff on 2026-10-02. The [pinned issue #1 notice](https://github.com/ariakit/visonaut/issues/1#issuecomment-5958332349) preserves the earlier issue. Every unaffected requirement remains binding. The guide also records the selected changes from [issue #204](https://github.com/ariakit/visonaut/issues/204).
 
@@ -14,9 +14,11 @@ Open the review link from the GitHub check and sign in with GitHub. Access requi
 
 A pull request author with no write permission cannot open the review link, and does not need it. The title of the Visonaut check names the state of the run, and its summary says who acts next. For example, `79 changes need review` waits for a maintainer, and `3 changes rejected` waits for a commit of the author that corrects the rejected changes. The [review guide](docs/review-guide.md#read-the-github-check) lists the title of each run state.
 
+Only a pull request whose branch is in this repository gets a Visonaut check. A pull request from a fork gets none, so its author has no title to read.
+
 Validated image URLs need no session. Anyone with a URL can view and copy those pixels. Run metadata, labels, decisions, export files, and quarantine remain private. The public route serves only validated image records, not arbitrary bucket paths. Preview uses isolated fixture runs without GitHub login or production data. It does not certify deployed authentication.
 
-The dashboard also shows unresolved service alerts. It refreshes them while open; no external notifications are sent.
+The Status page shows unresolved service alerts. It refreshes them while it is open and its tab is visible. No external notifications are sent.
 
 Use the [review guide](docs/review-guide.md) for image modes, keyboard controls, whole-item commands, Undo, and recovery from a failed save.
 
@@ -34,7 +36,7 @@ await visual(page, {
 });
 ```
 
-Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Native `Plan` runs `visonaut submit --no-visual` only after successful `Plan CI` computes `app=false`. For `app=true`, `App / Visual Capture (linux)` and `App / Visual Capture (safari)` feed `App / Visual Submit`. Trusted Submit verifies successful native Plan and the complete capture set. The [adapter guide](packages/playwright/README.md) explains capture profiles, comparison settings, stability, and retries. The [CLI guide](packages/cli/README.md) explains submission. The current package pair is `visonaut@0.5.3` and `@visonaut/playwright@0.4.0`, with Playwright `1.63.0`. The [implementation checkpoint](docs/history/simplification-implementation.md#current-handoff-checkpoint) records publication, consumer adoption, required checks, and deployment. PR #205 completed the readiness marker and authority handoff; #207 records completed transfer-key cleanup. These dated receipts do not prove the later #204 removal gates.
+Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Native `Plan` runs `visonaut submit --no-visual` only after successful `Plan CI` computes `app=false`. For `app=true`, `App / Visual Capture (linux)` and `App / Visual Capture (safari)` feed `App / Visual Submit`. Trusted Submit verifies successful native Plan and the complete capture set. The [adapter guide](packages/playwright/README.md) explains capture profiles, comparison settings, stability, and retries. The [CLI guide](packages/cli/README.md) explains submission. The versions are in the [CLI manifest](packages/cli/package.json) and the [adapter manifest](packages/playwright/package.json). The [implementation checkpoint](docs/history/simplification-implementation.md#current-handoff-checkpoint) records publication, consumer adoption, required checks, and deployment. PR #205 completed the readiness marker and authority handoff; #207 records completed transfer-key cleanup. These dated receipts do not prove the later #204 removal gates.
 
 ```sh
 # In the trusted signed Submit job, after every capture job succeeds:
@@ -45,7 +47,7 @@ The service accepts a run from the signed GitHub Actions identity alone. It veri
 
 ## Work on the repository
 
-Use Node.js 24.18.0 and pnpm 12.5.1. Google Chrome is required for the review browser tests.
+Use the Node.js version in `engines` and the pnpm version in `packageManager` of the [root manifest](package.json). Google Chrome is required for the review browser tests.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -59,7 +61,7 @@ Use the [development and verification guide](docs/development.md) for command sc
 | Path                  | Purpose                                                    |
 | --------------------- | ---------------------------------------------------------- |
 | `apps/web`            | TanStack Start app, private API, review UI, and operations |
-| `apps/compare`        | Image validation and legacy comparison Worker              |
+| `apps/compare`        | Private image validation Worker                            |
 | `packages/playwright` | Public Playwright adapter and reporter                     |
 | `packages/cli`        | Public `visonaut` begin, submit, and status commands       |
 | `packages/protocol`   | Capture and service contracts                              |

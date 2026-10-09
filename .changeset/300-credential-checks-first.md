@@ -9,6 +9,8 @@ The service now checks the credential of a request before it does other work:
 
 - **Private API routes.** On each private route that the API handler serves, a request with no session cookie and no bearer token gets `401` before any database work.
 
+- **Identity route.** On `/api/me`, a request with no session cookie and no bearer token gets `401` with the code `sign_in_required` before the sign-in instance exists.
+
 - **Ingest routes.** A request with no bearer token gets `401` with the code `credential_required` before any database work. This includes Submit.
 
 - **Webhooks.** The service checks the signature of a webhook before it reads the project.

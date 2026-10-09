@@ -1,6 +1,7 @@
 import { assertDimensions, imageLimits } from "@visonaut/compare";
 import { Buffer } from "node:buffer";
 import {
+  canonicalJson,
   captureManifestDigest,
   digestJson,
   digestRenderingProfile,
@@ -24,6 +25,7 @@ import {
   atomic,
   IncompleteError,
   statement,
+  type ComparisonSettingsCounts,
   type ReferenceCaptureInput,
 } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
@@ -164,6 +166,51 @@ export async function referenceCaptureInputs(
     // Only the name and the variant leave D1: the review row of a removal stores them.
     metadata: JSON.parse(row.label_json),
   }));
+}
+
+/**
+ * The counts of the comparison settings of a Submit. Capture code selects the
+ * settings of each capture, and loose settings make a change unchanged, so the
+ * run header shows these counts. They change no result.
+ *
+ * - `changed`: the captures whose settings differ from the settings that the
+ *   baseline capture of the same identity had. A capture with no baseline, or
+ *   with a baseline that has no settings digest, is not in the count.
+ * - `loose`: the captures whose settings permit more than the built-in policy
+ *   of the adapter, which is threshold 0.2 and 0 pixels.
+ */
+export async function comparisonSettingsCounts(
+  manifest: Manifest,
+  references: ReferenceCaptureInput[],
+): Promise<ComparisonSettingsCounts> {
+  const baselineDigests = new Map(
+    references.map((capture) => [identityKey(capture), capture.metadata?.comparisonDigest]),
+  );
+  // A manifest has few different settings, so each digest is made one time.
+  const digests = new Map<string, string>();
+  const counts = { changed: 0, loose: 0 };
+  for (const capture of manifest.captures) {
+    const settings = capture.comparison;
+    if (!settings) continue;
+    if (
+      settings.threshold > 0.2 ||
+      (settings.maxDiffPixels ?? 0) > 0 ||
+      (settings.maxDiffPixelRatio ?? 0) > 0
+    ) {
+      counts.loose += 1;
+    }
+    const baselineDigest = baselineDigests.get(
+      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+    );
+    if (typeof baselineDigest !== "string") continue;
+    const text = canonicalJson(settings);
+    const digest = digests.get(text) ?? (await digestJson(settings));
+    digests.set(text, digest);
+    if (digest !== baselineDigest) {
+      counts.changed += 1;
+    }
+  }
+  return counts;
 }
 
 /** Stored in the existing signed run JSON; it is not supplied by capture code. */

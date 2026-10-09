@@ -1,0 +1,54 @@
+diff --git a/apps/web/src/routes/index.tsx b/apps/web/src/routes/index.tsx
+index 9a35633..47a643a 100644
+--- a/apps/web/src/routes/index.tsx
++++ b/apps/web/src/routes/index.tsx
+@@ -1,4 +1,27 @@
+ import { createFileRoute, Link } from "@tanstack/react-router";
++import { createIsomorphicFn } from "@tanstack/react-start";
++import { getRequest } from "@tanstack/react-start/server";
++import { env } from "cloudflare:workers";
++import { handleApi } from "../api/index.ts";
++import { apiBindings } from "../runtime.ts";
++
++const startRuns = createIsomorphicFn()
++  .server(async (): Promise<unknown> => {
++    const request = getRequest();
++    const started = Date.now();
++    const delay = Number(new URL(request.url).searchParams.get("delay") ?? 0);
++    const response = await handleApi(
++      new Request(new URL("/api/runs", request.url), { headers: request.headers }),
++      apiBindings(env as never),
++      { waitUntil: () => {}, failure: { correlationId: crypto.randomUUID(), startedAt: started } },
++    );
++    const data: unknown = await response?.json();
++    const read = Date.now() - started;
++    await new Promise((resolve) => setTimeout(resolve, delay));
++    return { probe: "RUN_LIST_PROBE", readMs: read, status: response?.status, data };
++  })
++  .client(async (): Promise<unknown> => undefined);
++
+ import { createAuthClient } from "better-auth/react";
+ import { useCallback, useEffect, useState } from "react";
+ import {
+@@ -42,6 +65,8 @@ export const Route = createFileRoute("/")({
+   validateSearch: (search: Record<string, unknown>): { view?: "history" | "service" } => ({
+     view: search.view === "history" || search.view === "service" ? search.view : undefined,
+   }),
++  ssr: "data-only",
++  loader: () => ({ runs: startRuns() }),
+   component: Index,
+ });
+ 
+@@ -129,6 +154,12 @@ function runDate(value: number) {
+ 
+ function Index() {
+   const { view } = Route.useSearch();
++  const probe = Route.useLoaderData();
++  useEffect(() => {
++    void Promise.resolve(probe.runs).then((value) => {
++      document.documentElement.dataset.probe = value ? JSON.stringify(value).slice(0, 60) : "none";
++    });
++  }, [probe]);
+   const [state, setState] = useState<DashboardState>({ status: "loading" });
+   const [reload, setReload] = useState(0);
+   const [action, setAction] = useState<"sign-in" | "sign-out" | null>(null);

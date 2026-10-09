@@ -452,6 +452,18 @@ export async function reserveVerifiedStagedRun(
   return run;
 }
 
+/**
+ * The refusal of a run above the capture limit. It has its own code, so that a
+ * client does not handle it as a limit that a wait or a smaller image clears.
+ */
+function captureLimitExceeded(limit: number) {
+  return new SecurityError(
+    "capture_limit_exceeded",
+    413,
+    `The run has more captures than the capture limit of ${limit}.`,
+  );
+}
+
 export async function declareStaged(
   request: Request,
   context: ApiContext,
@@ -496,6 +508,12 @@ export async function declareStaged(
       "The manifest does not belong to this trusted upload job.",
     );
   }
+  const captureLimit = context.configuration.limits.maximumCaptures;
+  // Refuse a run above the capture limit before the reference read and before
+  // the first upload ticket.
+  if (manifest.captures.length > captureLimit) {
+    throw captureLimitExceeded(captureLimit);
+  }
   const images = new Map<string, Manifest["captures"][number]["image"]>();
   for (const capture of manifest.captures) {
     const image = capture.image;
@@ -534,7 +552,6 @@ export async function declareStaged(
   const maximumUploads =
     capability.maximumImages * (capability.comparisonMode === LOCAL_COMPARISON_MODE ? 2 : 1);
   if (
-    manifest.captures.length > context.configuration.limits.maximumCaptures ||
     observedImages.length > capability.maximumImages ||
     images.size > maximumUploads ||
     declaredBytes > capability.maximumBytes ||
@@ -543,7 +560,7 @@ export async function declareStaged(
       (image) => image.bytes > context.configuration.limits.maximumImageBytes,
     )
   ) {
-    throw new SecurityError("upload_limit", 413, "The shard exceeds its capture or byte limit.");
+    throw new SecurityError("upload_limit", 413, "The shard exceeds its image or byte limit.");
   }
   const existingManifest = await context.database
     .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
@@ -585,7 +602,7 @@ export async function declareStaged(
         assertion(
           context.database,
           "(SELECT COALESCE(SUM(capture_count), 0) FROM ingest_staged_manifests WHERE run_id = ?) <= ?",
-          [run.id, context.configuration.limits.maximumCaptures],
+          [run.id, captureLimit],
         ),
         assertion(
           context.database,
@@ -607,10 +624,21 @@ export async function declareStaged(
         .bind(run.id, job.job_id)
         .first<StagedManifestEvidence>();
       if (!raced) {
+        // The batch has one failure for three limits. Only the capture limit
+        // has its own code, so read the staged capture count of the run.
+        const staged = await context.database
+          .prepare(
+            "SELECT COALESCE(SUM(capture_count), 0) AS captures FROM ingest_staged_manifests WHERE run_id = ?",
+          )
+          .bind(run.id)
+          .first<{ captures: number }>();
+        if ((staged?.captures ?? 0) + manifest.captures.length > captureLimit) {
+          throw captureLimitExceeded(captureLimit);
+        }
         throw new SecurityError(
           "upload_limit",
           413,
-          "The staged workflow exceeds its original-byte or capture limit.",
+          "The staged workflow exceeds its original-byte limit.",
         );
       }
     }

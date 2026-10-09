@@ -1,17 +1,22 @@
 import {
+  decisionReceipt,
   enqueueReview,
   failedDecision,
   processReviewQueue,
   reviewTaskId,
   type QueuedReviewInput,
 } from "../operations/review-queue.ts";
-import { compactReviewModel } from "../review/compact-model.ts";
+import {
+  compactReviewItems,
+  compactReviewModel,
+  type CompactCapturePage,
+} from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
 import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
-import { identityKey } from "@visonaut/protocol";
-import { completeReviewRows, readReviewInventory } from "./review-inventory.ts";
+import { CAPTURE_PAGE_ROWS, compareCaptureIdentity, identityKey } from "@visonaut/protocol";
+import { readReviewInventory, unchangedReviewRows } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
   ConflictError,
@@ -60,15 +65,12 @@ interface VariantView {
   referenceProfile?: string;
   candidateProfile?: string;
   error?: string;
-  rejectDisabledReason?: string;
-  approveDisabledReason?: string;
 }
 interface ImageRecord {
   id: string;
   digest: string;
   width: number;
   height: number;
-  bytes_present: number;
 }
 interface CaptureRecord {
   id: string;
@@ -204,7 +206,6 @@ function historyImage(row: HistoryRow): ImageRecord {
     digest: historyString(row, "digest"),
     width: historyNumber(row, "width"),
     height: historyNumber(row, "height"),
-    bytes_present: 0,
   };
 }
 
@@ -226,197 +227,56 @@ function historyDecision(row: HistoryRow): DecisionRecord {
   };
 }
 
-export async function reviewModel(
-  context: PrivateContext,
-  runId: string,
-  selectedComparisonId?: string,
-) {
-  const run = await projectRun(context, runId);
-  const selectedComparison = selectedComparisonId
-    ? await context.service.comparison(selectedComparisonId)
-    : null;
-  if (
-    selectedComparison &&
-    (selectedComparison.run_id !== run.id || selectedComparison.purpose !== "historical")
-  ) {
-    throw new SecurityError("not_found", 404, "The historical comparison was not found.");
+/**
+ * The baseline that Submit stored in a review row, in the form of a capture
+ * record. The stored value is also the metadata: it has the name and the
+ * variant of a removed capture, and a changed capture takes them from its candidate.
+ */
+function storedBaseline(row: ReviewRow, referenceDigest: unknown) {
+  if (!row.reference_json || typeof referenceDigest !== "string") return null;
+  const { imageId, width, height } = object(JSON.parse(row.reference_json));
+  if (typeof imageId !== "string" || typeof width !== "number" || typeof height !== "number") {
+    throw new Error("The stored baseline of a review row is invalid.");
   }
-  const archive = run.detail_archived ? await readClosedSummary(context.database, run.id) : null;
-  if (run.detail_archived && !archive)
-    throw new SecurityError(
-      "history_conversion_pending",
-      503,
-      "Closed history is being converted to a decision summary.",
-    );
-  if (selectedComparison && !archive) {
-    const archived = await context.database
-      .prepare(
-        "SELECT 1 FROM operations_comparison_archives WHERE comparison_id = ? AND state = 'ready'",
-      )
-      .bind(selectedComparison.id)
-      .first();
-    if (archived)
-      throw new SecurityError(
-        "history_unavailable",
-        503,
-        "The historical comparison archive is unavailable.",
-      );
-  }
-  const historical = Boolean(selectedComparison);
-  const comparisonId = selectedComparison?.id ?? run.comparison_id;
-  const readOnlyReason = archive?.viewUnavailableReason ?? archivedReadOnlyReason;
-  const savedRun = archive?.sections.run?.[0];
-  if (archive && (!savedRun || savedRun.id !== run.id || savedRun.project_id !== run.project_id)) {
-    throw new Error("Archived run identity is inconsistent.");
-  }
-  const savedComparison = archive?.sections.comparisons?.find((entry) => entry.id === comparisonId);
-  if (archive && comparisonId && !savedComparison) {
-    throw new Error("Archived comparison metadata is missing.");
-  }
-  const pullRequestNumber =
-    run.kind === "pull_request" ? Number(/^pr:(\d+)$/.exec(run.lineage_key)?.[1]) || null : null;
-  const [metadata, project, status, comparison] = await Promise.all([
-    context.database.batch([
-      context.database
-        .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
-        .bind(run.id),
-      context.database
-        .prepare(
-          "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
-        )
-        .bind(run.id),
-      context.database
-        .prepare(
-          "SELECT json_extract(payload_json,'$.pull_request.title') AS title FROM github_webhook_delivery WHERE event='pull_request' AND CAST(json_extract(payload_json,'$.repository.id') AS TEXT)=? AND json_extract(payload_json,'$.pull_request.number')=? ORDER BY received_at DESC LIMIT 1",
-        )
-        .bind(context.configuration.github.repositoryId, pullRequestNumber),
-    ]),
-    context.service.project(run.project_id),
-    context.service.status(run.id),
-    archive
-      ? Promise.resolve(
-          savedComparison
-            ? {
-                id: historyString(savedComparison, "id"),
-                policy_digest: historyString(savedComparison, "policy_digest"),
-                state: historyString(savedComparison, "state"),
-              }
-            : null,
-        )
-      : comparisonId
-        ? context.service.comparison(comparisonId)
-        : Promise.resolve(null),
-  ]);
-  const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
-  const historicalComparisons = batchRows<{
-    id: string;
-    ordinal: number;
-    state: ComparisonState;
-    createdAt: number;
-  }>(metadata[1]);
-  const localRun =
-    run.inventory_key ||
-    (await context.database
-      .prepare(
-        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-      )
-      .bind(run.id)
-      .first());
-  const [storedRows, liveMetadata, eligibleApprovalRowIds, inventory] = await Promise.all([
-    archive
-      ? (archive.sections.comparisonRows ?? [])
-          .filter((row) => row.comparison_id === comparison?.id)
-          .map(historyReviewRow)
-          .sort(
-            (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
-          )
-      : comparison
-        ? context.service.comparisonRows(comparison.id)
-        : [],
-    !archive && comparison
-      ? context.database.batch([
-          context.database
-            .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
-            .bind(comparison.policy_digest),
-          context.database
-            .prepare(
-              "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
-          context.database
-            .prepare(
-              "SELECT i.id, i.digest, i.width, i.height, i.bytes_present FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
-          context.database
-            .prepare(
-              "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
-          context.database
-            .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
-            .bind(comparison.id),
-        ])
-      : null,
-    archive
-      ? (archive.sections.acceptance ?? []).map((row) => historyString(row, "id"))
-      : comparison
-        ? context.service.eligibleApprovalRowIds(comparison.id)
-        : [],
-    run.inventory_key ? readReviewInventory(context, run.id) : null,
-  ]);
-  const importedBaseline = Boolean(
-    run.inventory_key?.startsWith("baselines/import/") &&
-    inventory &&
-    !inventory.inventory.manifest,
-  );
-  const rows =
-    inventory && comparison && !importedBaseline
-      ? completeReviewRows(inventory, storedRows, comparison.id)
-      : storedRows;
-  const policyRow = archive
-    ? (archive.sections.policies ?? []).find(
-        (policy) => policy.digest === comparison?.policy_digest,
-      )
-    : liveMetadata
-      ? batchRows<{ policy_json: string }>(liveMetadata[0])[0]
-      : null;
-  const captures = archive
-    ? {
-        results: [
-          ...(archive.sections.captures ?? []),
-          ...(archive.sections.referenceCaptures ?? []),
-        ]
-          .filter((entry) => typeof entry.id === "string")
-          .map(historyCapture),
-      }
-    : { results: liveMetadata ? batchRows<CaptureRecord>(liveMetadata[1]) : [] };
-  const images = archive
-    ? {
-        results: [
-          ...(archive.sections.images ?? []),
-          ...(archive.sections.referenceImages ?? []),
-        ].map(historyImage),
-      }
-    : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
-  if (inventory) {
-    captures.results.push(...inventory.candidates, ...inventory.references);
-    images.results.push(...inventory.images);
-  }
-  const decisions = archive
-    ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
-    : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
-  const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
-  const policy = policyRow ? object(JSON.parse(historyString(policyRow, "policy_json"))) : {};
-  const pixelLimit =
-    typeof policy.maxChangedPixels === "number"
-      ? `maximum ${policy.maxChangedPixels} changed pixels; `
-      : "";
-  const threshold = `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
-  const eligibleApprovals = new Set(eligibleApprovalRowIds);
-  const imageById = new Map(images.results.map((image) => [image.id, image]));
-  const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));
-  const decisionById = new Map(decisions.results.map((decision) => [decision.id, decision]));
+  return {
+    capture: { id: row.id, image_id: imageId, metadata_json: row.reference_json },
+    image: { id: imageId, digest: referenceDigest, width, height },
+  };
+}
+
+/** A row with a baseline that D1 does not hold: Submit wrote it before it stored the baseline. */
+function lacksStoredBaseline(row: ReviewRow) {
+  if (row.reference_capture_id || row.reference_json) return false;
+  return typeof object(JSON.parse(row.tuple_json)).referenceDigest === "string";
+}
+
+interface ReviewItemsParams {
+  rows: ReviewRow[];
+  captures: Map<string, CaptureRecord>;
+  images: Map<string, ImageRecord>;
+  decisions: Map<string, DecisionRecord>;
+  eligibleApprovals: Set<string>;
+  /** The capture lists, for a capture or a baseline that D1 does not hold. */
+  inventory: Awaited<ReturnType<typeof readReviewInventory>>;
+  /** The comparison ended before each row had a result. */
+  comparisonStopped: boolean;
+  policyDigest?: string;
+  /** The threshold text of the project policy, for a capture with no settings of its own. */
+  threshold: string;
+}
+
+/** The items of a review answer, with one variant for each row. */
+function reviewItems({
+  rows,
+  captures,
+  images: imageById,
+  decisions,
+  eligibleApprovals,
+  inventory,
+  comparisonStopped,
+  policyDigest,
+  threshold,
+}: ReviewItemsParams) {
   const imageView = (id: string | undefined): ImageView | null => {
     const image = id ? imageById.get(id) : null;
     if (!image) return null;
@@ -428,23 +288,29 @@ export async function reviewModel(
       height: image.height,
     };
   };
-  const comparisonStopped =
-    comparison?.state === "invalidated" ||
-    (!historical && (status.status === "failed" || status.status === "superseded"));
   const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
+  let rowsWithCandidate = 0;
   for (const row of rows) {
     const stoppedBeforeEvidence = row.outcome === "pending" && comparisonStopped;
     const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
     const tuple = object(JSON.parse(row.tuple_json));
+    if (tuple.candidateDigest !== null) {
+      rowsWithCandidate += 1;
+    }
+    const baseline = storedBaseline(row, tuple.referenceDigest);
+    if (baseline) {
+      imageById.set(baseline.image.id, baseline.image);
+    }
     const candidate =
       tuple.candidateDigest === null
         ? null
-        : ((row.candidate_capture_id ? captureById.get(row.candidate_capture_id) : null) ??
+        : ((row.candidate_capture_id ? captures.get(row.candidate_capture_id) : null) ??
           inventory?.candidateByIdentity.get(identity));
     const reference =
       tuple.referenceDigest === null
         ? null
-        : ((row.reference_capture_id ? captureById.get(row.reference_capture_id) : null) ??
+        : ((row.reference_capture_id ? captures.get(row.reference_capture_id) : null) ??
+          baseline?.capture ??
           inventory?.referenceByIdentity.get(identity));
     const metadata = object(JSON.parse((candidate ?? reference)?.metadata_json ?? "{}"));
     const variant =
@@ -455,14 +321,13 @@ export async function reviewModel(
       (metadata.candidateStored === false || metadata.candidateStored === 0) &&
       tuple.candidateDigest !== tuple.referenceDigest;
     const result = object(JSON.parse(row.result_json ?? "{}"));
-    const decision = decisionById.get(row.source_decision_id ?? row.decision_id ?? "");
+    const decision = decisions.get(row.source_decision_id ?? row.decision_id ?? "");
     const effective =
       decision &&
       !decision.revoked &&
       (decision.verdict !== "approved" || eligibleApprovals.has(row.id))
         ? decision
         : null;
-    const promotedHistory = Boolean(history || run.state === "accepted");
     const item = items.get(row.item_key) ?? {
       key: row.item_key,
       name: typeof metadata.name === "string" ? metadata.name : row.item_key,
@@ -519,9 +384,7 @@ export async function reviewModel(
       ...(typeof result.engineVersion === "string" ? { engine: result.engineVersion } : {}),
       ...(typeof result.codecVersion === "string" ? { codec: result.codecVersion } : {}),
       policy:
-        typeof metadata.comparisonDigest === "string"
-          ? metadata.comparisonDigest
-          : comparison?.policy_digest,
+        typeof metadata.comparisonDigest === "string" ? metadata.comparisonDigest : policyDigest,
       threshold:
         metadata.comparison && typeof metadata.comparison === "object"
           ? `Color threshold ${object(metadata.comparison).threshold}; ${object(metadata.comparison).maxDiffPixels === undefined ? "" : `maximum ${object(metadata.comparison).maxDiffPixels} pixels; `}${object(metadata.comparison).maxDiffPixelRatio === undefined ? "" : `ratio ${object(metadata.comparison).maxDiffPixelRatio}`}`
@@ -537,22 +400,306 @@ export async function reviewModel(
         : row.outcome === "error"
           ? { error: "Comparison evidence is unavailable." }
           : {}),
-      ...(archive
-        ? {
-            rejectDisabledReason: readOnlyReason,
-            approveDisabledReason: readOnlyReason,
-          }
-        : promotedHistory
-          ? {
-              rejectDisabledReason:
-                "This run is already in the baseline. Capture a correction in a new complete main run.",
-              approveDisabledReason: "Promoted history is read-only.",
-            }
-          : {}),
     };
     item.variants.push(view);
     items.set(item.key, item);
   }
+  return { items: [...items.values()], rowsWithCandidate };
+}
+
+/** The threshold text of a project policy. */
+function policyThreshold(policyJson: string) {
+  const policy = object(JSON.parse(policyJson));
+  const pixelLimit =
+    typeof policy.maxChangedPixels === "number"
+      ? `maximum ${policy.maxChangedPixels} changed pixels; `
+      : "";
+  return `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
+}
+
+/** A page by its number, or the page that holds one capture. */
+export type CapturePagePlace = { page: number } | { itemKey: string; variantKey: string };
+
+const capturePageNotFound = "The capture page was not found.";
+
+/**
+ * One page of the captures of a run, as unchanged variants: the second
+ * request of a run page. A page is the `CAPTURE_PAGE_ROWS` captures at that
+ * place in the order of the item key and then the variant key, which is the
+ * order of the capture pages of the protocol. The answer leaves out a capture
+ * with a stored review row, because the first response has it. It fails for a
+ * capture that has a change and no stored row.
+ */
+export async function reviewCapturePage(
+  context: PrivateContext,
+  runId: string,
+  place: CapturePagePlace,
+): Promise<CompactCapturePage> {
+  const run = await projectRun(context, runId);
+  const listed =
+    run.comparison_id && run.inventory_key && !run.inventory_key.startsWith("baselines/import/");
+  const [evidence, comparison] = listed
+    ? await Promise.all([
+        readReviewInventory(context, run),
+        context.service.comparison(run.comparison_id ?? ""),
+      ])
+    : [null, null];
+  if (!evidence || !comparison) {
+    throw new SecurityError("not_found", 404, capturePageNotFound);
+  }
+  const captures = [...evidence.inventory.captures].sort((first, second) =>
+    compareCaptureIdentity([first.itemKey, first.variantKey], [second.itemKey, second.variantKey]),
+  );
+  const pages = Math.ceil(captures.length / CAPTURE_PAGE_ROWS);
+  const index =
+    "page" in place
+      ? place.page * CAPTURE_PAGE_ROWS
+      : captures.findIndex(
+          (capture) => capture.itemKey === place.itemKey && capture.variantKey === place.variantKey,
+        );
+  if (index < 0 || index >= captures.length) {
+    throw new SecurityError("not_found", 404, capturePageNotFound);
+  }
+  const page = Math.floor(index / CAPTURE_PAGE_ROWS);
+  // The identities of the stored rows: a capture of the page with a change
+  // must have one. The rows grow with the changes of the run, not its captures.
+  const [policies, identities] = await context.database.batch([
+    context.database
+      .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
+      .bind(comparison.policy_digest),
+    context.database
+      .prepare("SELECT item_key, variant_key FROM visonaut_comparison_rows WHERE comparison_id = ?")
+      .bind(comparison.id),
+  ]);
+  const policy = batchRows<{ policy_json: string }>(policies)[0];
+  const stored = new Set(
+    batchRows<{ item_key: string; variant_key: string }>(identities).map((row) =>
+      identityKey({ itemKey: row.item_key, variantKey: row.variant_key }),
+    ),
+  );
+  const { items } = reviewItems({
+    rows: unchangedReviewRows(
+      evidence,
+      captures.slice(page * CAPTURE_PAGE_ROWS, (page + 1) * CAPTURE_PAGE_ROWS),
+      comparison.id,
+      stored,
+    ),
+    // Each capture and each baseline of a page comes from the capture lists.
+    captures: new Map(),
+    images: new Map(evidence.images.map((image) => [image.id, image])),
+    decisions: new Map(),
+    eligibleApprovals: new Set(),
+    inventory: evidence,
+    comparisonStopped: false,
+    policyDigest: comparison.policy_digest,
+    threshold: policyThreshold(policy?.policy_json ?? "{}"),
+  });
+  return { format: "review-captures-1", page, pages, ...compactReviewItems(items) };
+}
+
+/**
+ * The first response of a run page: the run header, the counts, and the rows
+ * that D1 stores. It reads no capture list from R2 for a run whose rows hold
+ * their baseline.
+ */
+export async function reviewModel(
+  context: PrivateContext,
+  runId: string,
+  selectedComparisonId?: string,
+) {
+  const run = await projectRun(context, runId);
+  const selectedComparison = selectedComparisonId
+    ? await context.service.comparison(selectedComparisonId)
+    : null;
+  if (
+    selectedComparison &&
+    (selectedComparison.run_id !== run.id || selectedComparison.purpose !== "historical")
+  ) {
+    throw new SecurityError("not_found", 404, "The historical comparison was not found.");
+  }
+  const archive = run.detail_archived ? await readClosedSummary(context.database, run.id) : null;
+  if (run.detail_archived && !archive)
+    throw new SecurityError(
+      "history_conversion_pending",
+      503,
+      "Closed history is being converted to a decision summary.",
+    );
+  if (selectedComparison && !archive) {
+    const archived = await context.database
+      .prepare(
+        "SELECT 1 FROM operations_comparison_archives WHERE comparison_id = ? AND state = 'ready'",
+      )
+      .bind(selectedComparison.id)
+      .first();
+    if (archived)
+      throw new SecurityError(
+        "history_unavailable",
+        503,
+        "The historical comparison archive is unavailable.",
+      );
+  }
+  const historical = Boolean(selectedComparison);
+  const comparisonId = selectedComparison?.id ?? run.comparison_id;
+  const readOnlyReason = archive?.viewUnavailableReason ?? archivedReadOnlyReason;
+  const savedRun = archive?.sections.run?.[0];
+  if (archive && (!savedRun || savedRun.id !== run.id || savedRun.project_id !== run.project_id)) {
+    throw new Error("Archived run identity is inconsistent.");
+  }
+  const savedComparison = archive?.sections.comparisons?.find((entry) => entry.id === comparisonId);
+  if (archive && comparisonId && !savedComparison) {
+    throw new Error("Archived comparison metadata is missing.");
+  }
+  const pullRequestNumber =
+    run.kind === "pull_request" ? Number(/^pr:(\d+)$/.exec(run.lineage_key)?.[1]) || null : null;
+  const [metadata, project, liveComparison] = await Promise.all([
+    context.database.batch([
+      context.database
+        .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
+        .bind(run.id),
+      context.database
+        .prepare(
+          "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
+        )
+        .bind(run.id),
+      context.database
+        .prepare(
+          "SELECT json_extract(payload_json,'$.pull_request.title') AS title FROM github_webhook_delivery WHERE event='pull_request' AND CAST(json_extract(payload_json,'$.repository.id') AS TEXT)=? AND json_extract(payload_json,'$.pull_request.number')=? ORDER BY received_at DESC LIMIT 1",
+        )
+        .bind(context.configuration.github.repositoryId, pullRequestNumber),
+    ]),
+    context.service.project(run.project_id),
+    // A closed summary has the comparison, and a selected one is loaded.
+    archive || !comparisonId
+      ? null
+      : (selectedComparison ?? context.service.comparison(comparisonId)),
+  ]);
+  const comparison = savedComparison
+    ? {
+        id: historyString(savedComparison, "id"),
+        policy_digest: historyString(savedComparison, "policy_digest"),
+        state: historyString(savedComparison, "state"),
+      }
+    : liveComparison;
+  const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
+  const historicalComparisons = batchRows<{
+    id: string;
+    ordinal: number;
+    state: ComparisonState;
+    createdAt: number;
+  }>(metadata[1]);
+  const localRun =
+    run.inventory_key ||
+    (await context.database
+      .prepare(
+        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
+      )
+      .bind(run.id)
+      .first());
+  const [status, rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+    // The status reader gets the rows of this read, and reads only the others.
+    context.service.status(run.id, { run, project, comparison: liveComparison }),
+    archive
+      ? (archive.sections.comparisonRows ?? [])
+          .filter((row) => row.comparison_id === comparison?.id)
+          .map(historyReviewRow)
+          .sort(
+            (first, second) => first.ordinal - second.ordinal || first.id.localeCompare(second.id),
+          )
+      : comparison
+        ? context.service.reviewRows(comparison.id)
+        : [],
+    !archive && comparison
+      ? context.database.batch([
+          context.database
+            .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
+            .bind(comparison.policy_digest),
+          context.database
+            .prepare(
+              "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+          context.database
+            .prepare(
+              "SELECT i.id, i.digest, i.width, i.height FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+          context.database
+            .prepare(
+              "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+            )
+            .bind(comparison.id, comparison.id),
+        ])
+      : null,
+    archive
+      ? (archive.sections.acceptance ?? []).map((row) => historyString(row, "id"))
+      : comparison
+        ? context.service.eligibleApprovalRowIds(comparison.id)
+        : [],
+  ]);
+  // Only the import of a baseline writes a capture list below this prefix.
+  const importedBaseline = Boolean(run.inventory_key?.startsWith("baselines/import/"));
+  // A closed summary has no capture rows in D1, and a run from before the
+  // stored baseline has no baseline there. Both read the two capture lists.
+  const inventory =
+    run.inventory_key && (archive || rows.some(lacksStoredBaseline))
+      ? await readReviewInventory(context, run)
+      : null;
+  const policyRow = archive
+    ? (archive.sections.policies ?? []).find(
+        (policy) => policy.digest === comparison?.policy_digest,
+      )
+    : liveMetadata
+      ? batchRows<{ policy_json: string }>(liveMetadata[0])[0]
+      : null;
+  const captures = archive
+    ? {
+        results: [
+          ...(archive.sections.captures ?? []),
+          ...(archive.sections.referenceCaptures ?? []),
+        ]
+          .filter((entry) => typeof entry.id === "string")
+          .map(historyCapture),
+      }
+    : { results: liveMetadata ? batchRows<CaptureRecord>(liveMetadata[1]) : [] };
+  const images = archive
+    ? {
+        results: [
+          ...(archive.sections.images ?? []),
+          ...(archive.sections.referenceImages ?? []),
+        ].map(historyImage),
+      }
+    : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
+  if (inventory) {
+    captures.results.push(...inventory.candidates, ...inventory.references);
+    images.results.push(...inventory.images);
+  }
+  const decisions = archive
+    ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
+    : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
+  const threshold = policyThreshold(policyRow ? historyString(policyRow, "policy_json") : "{}");
+  const eligibleApprovals = new Set(eligibleApprovalRowIds);
+  const imageById = new Map(images.results.map((image) => [image.id, image]));
+  const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));
+  const decisionById = new Map(decisions.results.map((decision) => [decision.id, decision]));
+  const comparisonStopped =
+    comparison?.state === "invalidated" ||
+    (!historical && (status.status === "failed" || status.status === "superseded"));
+  const { items, rowsWithCandidate } = reviewItems({
+    rows,
+    captures: captureById,
+    images: imageById,
+    decisions: decisionById,
+    eligibleApprovals,
+    inventory,
+    comparisonStopped,
+    policyDigest: comparison?.policy_digest,
+    threshold,
+  });
+  // The capture list of a run has each capture. A stored row with a candidate
+  // is one of them, and each other capture of the list is unchanged.
+  const captureCount =
+    comparison && run.inventory_key && !importedBaseline ? (run.capture_count ?? 0) : 0;
+  const unchangedCount = Math.max(0, captureCount - rowsWithCandidate);
   const model: ReviewModel = {
     run: {
       id: run.id,
@@ -574,6 +721,14 @@ export async function reviewModel(
         : status.status,
       ...(historical && comparison?.state === "invalidated"
         ? { error: historicalComparisonError }
+        : {}),
+      ...(run.settings_changed_count != null && run.settings_loose_count != null
+        ? {
+            comparisonSettings: {
+              changed: run.settings_changed_count,
+              loose: run.settings_loose_count,
+            },
+          }
         : {}),
     },
     ...(!run.active || run.state === "accepted" || historical || archive
@@ -613,7 +768,12 @@ export async function reviewModel(
     ),
     baselineRevision: project.baseline_revision,
     promotionId: project.promotion_id,
-    items: [...items.values()],
+    counts: { pending: status.pending, rejected: status.rejected, approved: status.approved },
+    unchanged: {
+      count: unchangedCount,
+      pages: unchangedCount ? Math.ceil(captureCount / CAPTURE_PAGE_ROWS) : 0,
+    },
+    items,
   };
   return compactReviewModel(model);
 }
@@ -636,6 +796,7 @@ async function reviewSession(context: PrivateContext, id: unknown) {
   return sessionId;
 }
 
+/** The answer of an Undo: it keeps the model. */
 async function commandResult(context: PrivateContext, result: CommandResult, runId: string) {
   return Response.json({ ...result, model: await reviewModel(context, runId) });
 }
@@ -752,6 +913,23 @@ export async function handleReview(
       await reviewModel(context, uuid(runMatch[1]), selected ? uuid(selected) : undefined),
     );
   }
+  const capturesMatch = /^\/api\/runs\/([a-f0-9-]+)\/captures$/.exec(path);
+  if (capturesMatch?.[1] && request.method === "GET") {
+    const query = new URL(request.url).searchParams;
+    const page = query.get("page");
+    if (page !== null && !/^(0|[1-9][0-9]{0,5})$/.test(page)) {
+      throw new SecurityError("not_found", 404, capturePageNotFound);
+    }
+    return Response.json(
+      await reviewCapturePage(
+        context,
+        uuid(capturesMatch[1]),
+        page === null
+          ? { itemKey: string(query.get("item")), variantKey: string(query.get("variant")) }
+          : { page: Number(page) },
+      ),
+    );
+  }
   const runStateMatch = /^\/api\/runs\/([a-f0-9-]+)\/state$/.exec(path);
   if (runStateMatch?.[1] && request.method === "GET") {
     const selected = new URL(request.url).searchParams.get("comparison");
@@ -772,6 +950,12 @@ export async function handleReview(
     const comparison = await context.service.comparison(input.comparisonId);
     const run = await projectRun(context, comparison.run_id);
     const result = task.result ? object(JSON.parse(task.result)) : null;
+    if (task.state === "complete" && !result?.error) {
+      // The stored receipt, with no model. This request read the run after the
+      // task, so the revision is not older than the receipt. The page reads
+      // the model only when the two do not agree.
+      return Response.json({ ...result, currentRunRevision: run.revision });
+    }
     if (task.state === "complete" || task.state === "dead") {
       // Other decisions can finish before the browser reads this receipt.
       const model = await reviewModel(context, run.id);
@@ -780,22 +964,19 @@ export async function handleReview(
         if (task.state === "dead") {
           return Response.json({ error: failedDecision, model }, { status: 409 });
         }
-        if (result?.error) {
-          return Response.json(
-            {
-              error: {
-                code: "conflict",
-                message:
-                  typeof result.error === "string"
-                    ? result.error
-                    : "The queued decision could not be processed. Review it again.",
-              },
-              model,
+        return Response.json(
+          {
+            error: {
+              code: "conflict",
+              message:
+                typeof result?.error === "string"
+                  ? result.error
+                  : "The queued decision could not be processed. Review it again.",
             },
-            { status: 409 },
-          );
-        }
-        return Response.json({ ...result, model });
+            model,
+          },
+          { status: 409 },
+        );
       }
     }
     return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
@@ -850,29 +1031,12 @@ export async function handleReview(
       }
       const result = await context.service.review({ ...input, now: Date.now() });
       if (!result.noop) await wakeReviewStatus(context);
-      if (
-        result.noop ||
-        result.previousRunRevision !== body.expectedRunRevision ||
-        result.runRevision === undefined ||
-        result.baselineRevision !== body.expectedBaselineRevision ||
-        result.promotionId !== (body.expectedPromotionId ?? null)
-      ) {
-        return commandResult(context, result, run.id);
-      }
+      // The receipt, with no model. The run is read after the review state: a
+      // write that the state already counts then shows in the run revision.
       const status = await context.service.status(run.id);
-      if (
-        status.run.revision !== result.runRevision ||
-        (await context.service.run(run.id)).revision !== result.runRevision ||
-        (status.status !== "passed" &&
-          status.status !== "rejected" &&
-          status.status !== "needs-review")
-      ) {
-        return commandResult(context, result, run.id);
-      }
       return Response.json({
-        ...result,
-        reviewer: context.identity.githubUserId,
-        runStatus: status.status,
+        ...decisionReceipt(result, context.identity.githubUserId, status),
+        currentRunRevision: (await context.service.run(run.id)).revision,
       });
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {

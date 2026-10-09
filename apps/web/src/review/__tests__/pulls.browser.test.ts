@@ -44,7 +44,9 @@ test("a PR page explains pending capture and can refresh", async ({ page }) => {
   });
   await page.goto(entry);
   await expect(page.getByRole("heading", { name: "Pull request #7" })).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("has not reached Visonaut");
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "has not reached Visonaut",
+  );
   await expect(page.getByRole("link", { name: "Open on GitHub" })).toHaveAttribute(
     "href",
     "https://github.com/ariakit/ariakit/pull/7",
@@ -108,8 +110,8 @@ test("a failed capture explains that no review is ready", async ({ page }) => {
     }),
   );
   await page.goto(entry);
-  await expect(page.getByRole("status")).toContainText("capture failed");
-  await expect(page.getByRole("status")).not.toContainText("will update");
+  await expect(page.getByRole("main").getByRole("status")).toContainText("capture failed");
+  await expect(page.getByRole("main").getByRole("status")).not.toContainText("will update");
   await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
 });
 
@@ -125,11 +127,13 @@ test("a replaced attempt explains that it has no review and names no cause", asy
     }),
   );
   await page.goto(entry);
-  await expect(page.getByRole("status")).toContainText("This attempt has no review.");
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "This attempt has no review.",
+  );
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
     "The run closed before its screenshots were complete.",
   );
-  await expect(page.getByRole("status")).toContainText("find the latest check");
+  await expect(page.getByRole("main").getByRole("status")).toContainText("find the latest check");
   await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
 });
 
@@ -149,7 +153,9 @@ test("a PR page without a check sends no check parameter", async ({ page }) => {
   await page.goto(
     `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent("/pulls/7")}`,
   );
-  await expect(page.getByRole("status")).toContainText("No visual review needed.");
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "No visual review needed.",
+  );
   expect(queries).toEqual([""]);
 });
 
