@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { digestJson, captureManifestDigest, uploadImages } from "@visonaut/protocol";
+import { FIXED_DIGEST, digestJson, captureManifestDigest, uploadImages } from "@visonaut/protocol";
 import type { Capture, LocalReferenceCapture, Manifest } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, expect, it, vi } from "vitest";
@@ -73,7 +73,7 @@ async function localFixture() {
     }),
   );
   local.manifest.discovery = {
-    executorDigest: "e".repeat(64),
+    executorDigest: FIXED_DIGEST,
     configurationDigest: "f".repeat(64),
     inventoryDigest: "a".repeat(64),
   };

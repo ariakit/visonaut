@@ -58,7 +58,7 @@ function execution(job: Record<string, unknown>) {
   };
 }
 
-/** Only a pinned signed job calls this; candidate manifests cannot select their evidence. */
+/** Only the signed Submit job calls this; candidate manifests cannot select their evidence. */
 export async function downloadCaptures({
   shards,
   directory,

@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
-import { digestJson, parseManifest, sha256 } from "@visonaut/protocol";
+import { FIXED_DIGEST, digestJson, parseManifest, sha256 } from "@visonaut/protocol";
 import { zip } from "../../cli/test/archive-fixture.js";
 import { extractCaptureArchive } from "../../cli/src/artifact-archive.js";
 import type { ComparisonOptions } from "../src/index.js";
@@ -29,6 +29,8 @@ const metadata = {
 interface FixtureOptions {
   retries?: number;
   discovery?: boolean;
+  /** The options of an adapter before this release, which a caller might still pass. */
+  retiredDigests?: boolean;
   extraArgs?: string[];
   browserName?: "chromium" | "webkit";
   timeout?: number;
@@ -40,6 +42,7 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
   const {
     retries = 0,
     discovery = false,
+    retiredDigests = false,
     extraArgs = [],
     browserName = "chromium",
     timeout = 10000,
@@ -88,11 +91,16 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
             workflowRunId: "456",
             workflowAttempt: 1,
             testedSha: "d".repeat(40),
-            planDigest: "e".repeat(64),
+            ...(retiredDigests ? { planDigest: "e".repeat(64) } : {}),
           },
           shard: { key: "chromium-1", jobId: "789", sourceAttempt: 1 },
           ...(discovery
-            ? { discovery: { executorDigest: "f".repeat(64), repositoryRoot: directory } }
+            ? {
+                discovery: {
+                  repositoryRoot: directory,
+                  ...(retiredDigests ? { executorDigest: "f".repeat(64) } : {}),
+                },
+              }
             : {}),
         },
       ],
@@ -598,7 +606,8 @@ it("discovers candidate identities under the immutable full collection configura
   );
   expect(fixture.code, fixture.output).toBe(0);
   const manifest = await manifestAt(fixture.directory);
-  expect(manifest.discovery?.executorDigest).toBe("f".repeat(64));
+  expect(manifest.run.planDigest).toBe(FIXED_DIGEST);
+  expect(manifest.discovery?.executorDigest).toBe(FIXED_DIGEST);
   expect(manifest.tests.map((test) => test.file)).toEqual(["capture.spec.ts"]);
   expect(manifest.captures.map((capture) => capture.itemKey)).toEqual(["new/item"]);
   const receipt = JSON.parse(
@@ -608,6 +617,20 @@ it("discovers candidate identities under the immutable full collection configura
   expect(receipt.artifactName).toBe(
     `visonaut-discovery-1-789-chromium-1-${await digestJson(manifest)}`,
   );
+}, 20000);
+
+it("sends the fixed digest in both fields, also when the configuration still sets the old options", async () => {
+  await using fixture = await runFixture(
+    `test('old options', async ({ page }) => {
+    await page.setContent('<p>Added item</p>');
+    await visual(page, { item: 'new/item', variant: { key: 'new-variant', browser: 'chromium' } });
+  });`,
+    { discovery: true, retiredDigests: true },
+  );
+  expect(fixture.code, fixture.output).toBe(0);
+  const manifest = await manifestAt(fixture.directory);
+  expect(manifest.run.planDigest).toBe(FIXED_DIGEST);
+  expect(manifest.discovery?.executorDigest).toBe(FIXED_DIGEST);
 }, 20000);
 
 it("refuses a command-line subset of the trusted collection", async () => {

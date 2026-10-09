@@ -3,8 +3,6 @@ import { runCli } from "../src/index.js";
 
 const environment = {
   VISONAUT_SERVER: "https://visonaut.example",
-  VISONAUT_PACKAGE_SHA256: "b".repeat(64),
-  VISONAUT_WORKFLOW_SOURCE_SHA: "c".repeat(40),
   GITHUB_RUN_ID: "456",
   GITHUB_RUN_ATTEMPT: "2",
   GITHUB_SHA: "a".repeat(40),
@@ -72,11 +70,7 @@ it("reports only the native Plan's no-visual result without capture credentials"
     });
     return new Response(null, { status: 204 });
   });
-  const result = await execute(["submit", "--no-visual", "--server", "https://selected.example"], {
-    ...environment,
-    VISONAUT_PACKAGE_SHA256: "",
-    VISONAUT_WORKFLOW_SOURCE_SHA: "",
-  });
+  const result = await execute(["submit", "--no-visual", "--server", "https://selected.example"]);
   expect(result.code).toBe(0);
   expect(requests).toHaveLength(2);
   expect(result.stdout).toContain("No visual capture is required");

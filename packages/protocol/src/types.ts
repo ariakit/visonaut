@@ -66,6 +66,14 @@ export interface ProfileRecord {
   profile: CaptureProfile;
 }
 
+/**
+ * The digest that the CLI and the adapter send in `run.planDigest` and in
+ * `discovery.executorDigest`. It is the SHA-256 of the empty text. The service
+ * compares neither field with a setting, so the value only has the form of a
+ * digest.
+ */
+export const FIXED_DIGEST = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
 export interface RunProvenance {
   repository: string;
   repositoryId: string;
@@ -120,9 +128,9 @@ export interface Manifest {
   tests: TestOutcome[];
   captures: Capture[];
   discovery?: CandidateDiscovery;
-  /** Added only by the pinned signed Submit job after GitHub artifact verification. */
+  /** Added only by the signed Submit job after GitHub artifact verification. */
   captureSources?: CaptureSource[];
-  /** Added only by the pinned signed Submit executor after local comparison. */
+  /** Added only by the signed Submit executor after local comparison. */
   localComparison?: LocalComparisonReceipt;
 }
 
