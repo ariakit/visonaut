@@ -33,7 +33,7 @@ type PageState =
   | {
       status: "pending";
       repository: string;
-      capture: "pending" | "failed" | "not-required";
+      capture: "pending" | "failed" | "not-required" | "replaced";
     };
 
 function PullRequest() {
@@ -48,14 +48,13 @@ function PullRequest() {
     const controller = new AbortController();
     const load = async () => {
       try {
-        const response = await fetch(
-          `/api/pulls/${encodeURIComponent(pullNumber)}?check=${encodeURIComponent(check ?? "")}`,
-          {
-            credentials: "same-origin",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
+        // Without a check, the service answers for the newest head commit of the pull request.
+        const query = check ? `?check=${encodeURIComponent(check)}` : "";
+        const response = await fetch(`/api/pulls/${encodeURIComponent(pullNumber)}${query}`, {
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
         if (response.status === 401) {
           setState({ status: "guest" });
           return;
@@ -84,7 +83,12 @@ function PullRequest() {
           return;
         }
         if (runId !== null) throw new Error("Invalid response.");
-        if (capture !== "pending" && capture !== "failed" && capture !== "not-required") {
+        if (
+          capture !== "pending" &&
+          capture !== "failed" &&
+          capture !== "not-required" &&
+          capture !== "replaced"
+        ) {
           throw new Error("Invalid response.");
         }
         if (!controller.signal.aborted) {
@@ -258,14 +262,18 @@ function PullRequest() {
                         ? "No visual review needed."
                         : state.capture === "failed"
                           ? "Visual capture failed."
-                          : "Waiting for screenshots."}
+                          : state.capture === "replaced"
+                            ? "This attempt has no review."
+                            : "Waiting for screenshots."}
                     </Text>
                     <Text render={<p />} className="text-sm leading-relaxed ak-ink-60 mt-2">
                       {state.capture === "not-required"
                         ? "This pull request does not require a visual capture."
                         : state.capture === "failed"
                           ? "No review is ready. Open the pull request on GitHub to inspect the failing check."
-                          : "The visual capture has not reached Visonaut yet. This page updates automatically when the review is ready."}
+                          : state.capture === "replaced"
+                            ? "The run closed before its screenshots were complete. Open the pull request on GitHub to find the latest check."
+                            : "The visual capture has not reached Visonaut yet. This page updates automatically when the review is ready."}
                     </Text>
                   </div>
                 </Frame>

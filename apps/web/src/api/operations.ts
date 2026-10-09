@@ -3,6 +3,12 @@ import type { Database, Result } from "@visonaut/service";
 import { obsoleteCheckDeliverySql } from "../operations/check-state.ts";
 import { obsoleteStagedReconciliationSql } from "../operations/staged-alerts.ts";
 
+/** The alerts that a person can still act on. */
+export const unresolvedAlertsSql = `resolved_at IS NULL
+        AND NOT (kind='check-delivery' AND code='exhausted'
+          AND ${obsoleteCheckDeliverySql("subject_id")})
+        AND NOT (kind='staged-reconciliation' AND ${obsoleteStagedReconciliationSql("subject_id")})`;
+
 /** SQL column aliases define the row shape, as in the D1 API. */
 function batchRows<T>(result: Result | undefined) {
   if (!result) {
@@ -25,10 +31,7 @@ export async function operationsStatus({
   const [projectResult, eventResult, capacityResult] = await database.batch([
     database.prepare("SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2"),
     database.prepare(`SELECT kind,code,subject_id AS subject,first_seen_at AS firstSeenAt,last_seen_at AS lastSeenAt
-      FROM operations_events WHERE resolved_at IS NULL
-        AND NOT (kind='check-delivery' AND code='exhausted'
-          AND ${obsoleteCheckDeliverySql("subject_id")})
-        AND NOT (kind='staged-reconciliation' AND ${obsoleteStagedReconciliationSql("subject_id")})
+      FROM operations_events WHERE ${unresolvedAlertsSql}
       ORDER BY last_seen_at DESC,id ASC LIMIT 51`),
     database.prepare("SELECT value FROM operations_cursors WHERE id='database-capacity'"),
   ]);

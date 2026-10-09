@@ -12,6 +12,9 @@ import {
   parseManifest,
   parseTrustedPlan,
   reviewStateWords,
+  runClosedReasons,
+  runClosedReasonWords,
+  runClosedWords,
   validateManifestProfiles,
   validateShardAgainstPlan,
   workflowSourceDigest,
@@ -586,4 +589,16 @@ it("has one word for each of the eight review states", () => {
     superseded: "Replaced",
     failed: "Failed",
   });
+});
+
+it("has words for each closed reason, and words with no cause for a run without one", () => {
+  expect(Object.keys(runClosedReasonWords)).toEqual([...runClosedReasons]);
+  expect(runClosedReasonWords).toEqual({
+    replaced: "Replaced",
+    "pull-request-closed": "Closed",
+    "merge-group-destroyed": "Removed from queue",
+    "baseline-retired": "Retired",
+    expired: "Expired",
+  });
+  expect(Object.values(runClosedReasonWords)).not.toContain(runClosedWords);
 });

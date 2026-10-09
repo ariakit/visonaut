@@ -6,7 +6,8 @@ import {
 } from "../operations/review-queue.ts";
 import { compactReviewModel } from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
-import { dashboard } from "./dashboard.js";
+import { dashboard, type RunsAnswer } from "./dashboard.js";
+import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
 import { identityKey } from "@visonaut/protocol";
 import { completeReviewRows, readReviewInventory } from "./review-inventory.ts";
@@ -724,57 +725,23 @@ export async function handleReview(
     return Response.json({ reviewSessionId: id }, { status: 201 });
   }
   if (path === "/api/runs" && request.method === "GET") {
-    return Response.json(await dashboard(context));
+    const answer: RunsAnswer = {
+      ...(await dashboard(context)),
+      user: {
+        id: context.identity.userId,
+        githubUserId: context.identity.githubUserId,
+        login: context.identity.login,
+      },
+    };
+    return Response.json(answer);
   }
   const pullMatch = /^\/api\/pulls\/([1-9][0-9]{0,9})$/.exec(path);
   if (pullMatch?.[1] && request.method === "GET") {
-    const pullNumber = Number(pullMatch[1]);
     const check = new URL(request.url).searchParams.get("check");
-    if (!check || !/^visonaut:pre:[a-f0-9]{40}(?::[1-9][0-9]*)?$/.test(check)) {
+    if (check !== null && !/^visonaut:pre:[a-f0-9]{40}(?::[1-9][0-9]*)?$/.test(check)) {
       throw new SecurityError("not_found", 404, "The pull-request check was not found.");
     }
-    const current = await context.database
-      .prepare(
-        "SELECT tested_sha AS testedSha, docs_only AS docsOnly, state, workflow_run_id AS workflowRunId, workflow_attempt AS workflowAttempt FROM pre_run_checks WHERE repository_id=? AND kind='pull_request' AND pull_request_number=? AND external_id=?",
-      )
-      .bind(context.configuration.github.repositoryId, pullNumber, check)
-      .first<{
-        testedSha: string;
-        docsOnly: number;
-        state: string;
-        workflowRunId: string | null;
-        workflowAttempt: number | null;
-      }>();
-    if (!current) {
-      throw new SecurityError("not_found", 404, "The pull-request check was not found.");
-    }
-    const lineageKey = `pr:${pullNumber}`;
-    let run: { id: string; state: string; sealedAt: number | null } | null = null;
-    if (!current.docsOnly && current.workflowRunId && current.workflowAttempt) {
-      run = await context.database
-        .prepare(
-          "SELECT id,state,sealed_at AS sealedAt FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=? AND kind='pull_request' AND lineage_key=? AND tested_sha=?",
-        )
-        .bind(
-          context.configuration.projectId,
-          current.workflowRunId,
-          current.workflowAttempt,
-          lineageKey,
-          current.testedSha,
-        )
-        .first<{ id: string; state: string; sealedAt: number | null }>();
-    }
-    let state = "pending";
-    if (run?.state === "failed") state = "failed";
-    else if (run && run.sealedAt !== null) state = "ready";
-    else if (current?.state === "failed") state = "failed";
-    else if (current?.docsOnly) state = "not-required";
-    return Response.json({
-      repository: context.configuration.github.repository,
-      pullNumber,
-      runId: state === "ready" ? run?.id : null,
-      state,
-    });
+    return Response.json(await pullAnswer({ context, pullNumber: Number(pullMatch[1]), check }));
   }
   const runMatch = /^\/api\/runs\/([a-f0-9-]+)$/.exec(path);
   if (runMatch?.[1] && request.method === "GET") {

@@ -113,6 +113,46 @@ test("a failed capture explains that no review is ready", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
 });
 
+test("a replaced attempt explains that it has no review and names no cause", async ({ page }) => {
+  await page.route("**/api/pulls/7*", (route) =>
+    route.fulfill({
+      json: {
+        repository: "ariakit/ariakit",
+        pullNumber: 7,
+        runId: null,
+        state: "replaced",
+      },
+    }),
+  );
+  await page.goto(entry);
+  await expect(page.getByRole("status")).toContainText("This attempt has no review.");
+  await expect(page.getByRole("status")).toContainText(
+    "The run closed before its screenshots were complete.",
+  );
+  await expect(page.getByRole("status")).toContainText("find the latest check");
+  await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
+});
+
+test("a PR page without a check sends no check parameter", async ({ page }) => {
+  const queries: string[] = [];
+  await page.route("**/api/pulls/7*", (route) => {
+    queries.push(new URL(route.request().url()).search);
+    return route.fulfill({
+      json: {
+        repository: "ariakit/ariakit",
+        pullNumber: 7,
+        runId: null,
+        state: "not-required",
+      },
+    });
+  });
+  await page.goto(
+    `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent("/pulls/7")}`,
+  );
+  await expect(page.getByRole("status")).toContainText("No visual review needed.");
+  expect(queries).toEqual([""]);
+});
+
 test("a PR deep link preserves its path through sign-in", async ({ page }) => {
   await page.route("**/api/pulls/7*", (route) =>
     route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } }),

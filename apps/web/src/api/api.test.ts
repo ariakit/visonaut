@@ -579,7 +579,12 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
   it("rechecks permissions and rejects cross-origin review writes", async () => {
     const test = await fixture();
     const headers = { authorization: `Bearer ${test.token}` };
-    expect((await test.send("/api/runs", { headers })).status).toBe(200);
+    const runs = await test.send("/api/runs", { headers });
+    expect(runs.status).toBe(200);
+    expect(await objectResponse(runs)).toMatchObject({
+      alertCount: 0,
+      user: { githubUserId: "42", login: "maintainer" },
+    });
     expect(
       (
         await test.send("/api/review-sessions", {
@@ -709,7 +714,15 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       )
       .run();
     expect((await test.send(path)).status).toBe(401);
-    expect((await test.send("/api/pulls/42", { headers })).status).toBe(404);
+    // Without a check and without a run, the newest check of the pull request answers.
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      pullNumber: 42,
+      runId: null,
+      state: "pending",
+      headSha: "f".repeat(40),
+    });
+    expect((await test.send("/api/pulls/42?check=invalid", { headers })).status).toBe(404);
+    expect((await test.send("/api/pulls/44", { headers })).status).toBe(404);
     expect(
       (await test.send(`/api/pulls/43?check=${encodeURIComponent(check)}`, { headers })).status,
     ).toBe(404);
@@ -740,7 +753,111 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       runId: test.runId,
       state: "ready",
     });
-    await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id=?").bind(test.runId).run();
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_delivery(delivery_id,event,payload_digest,payload_json,received_at,processed_at) VALUES('title-delivery','pull_request','digest',?,1,1)",
+      )
+      .bind(
+        JSON.stringify({
+          pull_request: { number: 42, title: "Add the dialog animation" },
+          repository: { id: Number(test.bindings.configuration.github.repositoryId) },
+        }),
+      )
+      .run();
+    // The page of the check shows its title, commit, attempt, and workflow link.
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      repository: "ariakit/ariakit",
+      title: "Add the dialog animation",
+      headSha: "f".repeat(40),
+      attempt: 1,
+      workflowUrl: "https://github.com/ariakit/ariakit/actions/runs/456/attempts/1",
+    });
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      runId: test.runId,
+      state: "ready",
+    });
+    // GitHub can make a newer check with no run of its own for the same head
+    // commit. Without a check, the request still opens the attempt that ran.
+    const aliasCheck = `visonaut:pre:${"6".repeat(40)}`;
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active',?,?)",
+      )
+      .bind(
+        "6".repeat(40),
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        aliasCheck,
+        Date.now() + 30_000,
+        Date.now() + 30_000,
+      )
+      .run();
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      runId: test.runId,
+      state: "ready",
+    });
+    expect(
+      await objectResponse(
+        await test.send(`/api/pulls/42?check=${encodeURIComponent(aliasCheck)}`, { headers }),
+      ),
+    ).toMatchObject({ runId: null, state: "pending" });
+    await database.prepare("DELETE FROM pre_run_checks WHERE external_id=?").bind(aliasCheck).run();
+    // A rerun has a newer check for the same commit, bound to attempt 2, and no
+    // run until its admission. It answers, and not the run of attempt 1.
+    const rerunCheck = `${check}:1`;
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES (?,1,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active','456',2,?,?)",
+      )
+      .bind(
+        test.manifest.run.testedSha,
+        test.bindings.configuration.github.repositoryId,
+        "f".repeat(40),
+        "a".repeat(40),
+        rerunCheck,
+        Date.now() + 30_000,
+        Date.now() + 30_000,
+      )
+      .run();
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      runId: null,
+      state: "pending",
+      attempt: 2,
+      workflowUrl: "https://github.com/ariakit/ariakit/actions/runs/456/attempts/2",
+    });
+    await database.prepare("DELETE FROM pre_run_checks WHERE external_id=?").bind(rerunCheck).run();
+    // A newer head commit with no run answers for itself, and not for the run
+    // of the commit before.
+    const documentsCheck = `visonaut:pre:${"5".repeat(40)}`;
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,1,?,'docs_complete',?,?)",
+      )
+      .bind(
+        "5".repeat(40),
+        test.bindings.configuration.github.repositoryId,
+        "4".repeat(40),
+        "a".repeat(40),
+        documentsCheck,
+        Date.now() + 30_000,
+        Date.now() + 30_000,
+      )
+      .run();
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      runId: null,
+      state: "not-required",
+      headSha: "4".repeat(40),
+    });
+    await database
+      .prepare("DELETE FROM pre_run_checks WHERE external_id=?")
+      .bind(documentsCheck)
+      .run();
+    // A run that closed after it sealed still has a review to open.
+    await database
+      .prepare("UPDATE visonaut_runs SET active=0,state='superseded' WHERE id=?")
+      .bind(test.runId)
+      .run();
     expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
       runId: test.runId,
       state: "ready",
@@ -753,6 +870,32 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       runId: null,
       state: "failed",
     });
+    // The run closed before it sealed, so it has no review to open.
+    await database
+      .prepare("UPDATE visonaut_runs SET state='superseded' WHERE id=?")
+      .bind(test.runId)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: null,
+      state: "replaced",
+    });
+    // The Plan selected no visual capture, so no run will come.
+    await database
+      .prepare("UPDATE visonaut_runs SET state='reviewing' WHERE id=?")
+      .bind(test.runId)
+      .run();
+    await database
+      .prepare("UPDATE pre_run_checks SET plan_visual_required=0 WHERE external_id=?")
+      .bind(check)
+      .run();
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      runId: null,
+      state: "not-required",
+    });
+    await database
+      .prepare("UPDATE pre_run_checks SET plan_visual_required=NULL WHERE external_id=?")
+      .bind(check)
+      .run();
     await database
       .prepare(
         "UPDATE pre_run_checks SET workflow_run_id=NULL,workflow_attempt=NULL,docs_only=1 WHERE external_id=?",
@@ -762,6 +905,30 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
       runId: null,
       state: "not-required",
+    });
+    // The newest head commit has no run, so its newest check answers.
+    const newerHead = "8".repeat(40);
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active',?,?)",
+      )
+      .bind(
+        "7".repeat(40),
+        test.bindings.configuration.github.repositoryId,
+        newerHead,
+        "a".repeat(40),
+        `visonaut:pre:${"7".repeat(40)}`,
+        Date.now() + 60_000,
+        Date.now() + 60_000,
+      )
+      .run();
+    const newest = await objectResponse(await test.send("/api/pulls/42", { headers }));
+    expect(newest).toMatchObject({ runId: null, state: "pending", headSha: newerHead });
+    expect(newest).not.toHaveProperty("attempt");
+    expect(newest).not.toHaveProperty("workflowUrl");
+    expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
+      state: "not-required",
+      headSha: "f".repeat(40),
     });
     test.setPermission("read");
     expect((await test.send(path, { headers })).status).toBe(200);
