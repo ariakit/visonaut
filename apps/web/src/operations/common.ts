@@ -22,8 +22,13 @@ interface RecordEventInput {
   keepOpenAlert?: boolean;
 }
 
+/** The primary key of an alert. One alert is one kind, one subject, and one code. */
+export function eventId(input: Pick<RecordEventInput, "kind" | "subject" | "code">) {
+  return `${input.kind}:${input.subject}:${input.code}`;
+}
+
 export async function recordEvent(database: Database, input: RecordEventInput) {
-  const id = `${input.kind}:${input.subject}:${input.code}`;
+  const id = eventId(input);
   await database
     .prepare(`INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at)
     VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at,
@@ -45,6 +50,21 @@ export async function resolveEvents(
       "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL",
     )
     .bind(now, kind, subject)
+    .run();
+}
+
+/**
+ * Close each listed alert that is open, with one statement for all of them.
+ * The statement finds each alert by its primary key, and it changes no row
+ * while no listed alert is open.
+ */
+export async function resolveEventIds(database: Database, ids: string[], now: number) {
+  if (!ids.length) return;
+  await database
+    .prepare(
+      "UPDATE operations_events SET resolved_at=? WHERE resolved_at IS NULL AND id IN (SELECT value FROM json_each(?))",
+    )
+    .bind(now, JSON.stringify(ids))
     .run();
 }
 

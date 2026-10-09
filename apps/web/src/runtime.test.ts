@@ -4,6 +4,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { unstable_readConfig } from "wrangler";
 import * as api from "./api/index.ts";
+import { measureD1 } from "./api/test-d1-costs.ts";
 import * as capacity from "./capacity.ts";
 import * as preRun from "./api/pre-run.ts";
 import * as workflowRetention from "./api/workflow-retention.ts";
@@ -207,18 +208,14 @@ async function event(id: string) {
 }
 
 describe("scheduler alert recovery", () => {
-  it.each(["webhooks", "staged"] as const)(
+  const reconcilers = {
+    webhooks: () => vi.mocked(api.reconcileWebhooks),
+    "check-aliases": () => vi.mocked(preRun.reconcileEquivalentPullRequestChecks),
+  };
+  it.each(["webhooks", "check-aliases"] as const)(
     "records returned %s failures without requiring a thrown exception first",
     async (kind) => {
-      if (kind === "webhooks") {
-        vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 1, pending: ["delivery"] });
-      } else {
-        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
-          checked: 1,
-          errors: [{ runId: "run", code: "incomplete" }],
-          progressed: 0,
-        });
-      }
+      reconcilers[kind]().mockResolvedValue({ checked: 1, pending: ["item"] });
       await runScheduledOperations(env);
       expect(await event(`${kind}:scheduler:reconciliation-failed`)).toEqual({
         occurrences: 1,
@@ -227,39 +224,22 @@ describe("scheduler alert recovery", () => {
       expect(operations.runOperations).toHaveBeenCalled();
     },
   );
-  it.each(["webhooks", "staged"] as const)(
+  it.each(["webhooks", "check-aliases"] as const)(
     "resolves only %s reconciliation errors after a clean reconciliation",
     async (kind) => {
       await recordEvent(env.DB, { kind, subject: "scheduler", code: "another-failure", now });
       await recordEvent(env.DB, { kind, subject: "item", code: "reconciliation-failed", now });
-      const reconcile = kind === "webhooks" ? api.reconcileWebhooks : api.reconcileStagedWorkflows;
-      vi.mocked(reconcile).mockRejectedValue(new Error("Reconciliation unavailable."));
+      reconcilers[kind]().mockRejectedValue(new Error("Reconciliation unavailable."));
       await runScheduledOperations(env);
       await runScheduledOperations(env);
       const id = `${kind}:scheduler:reconciliation-failed`;
       expect(await event(id)).toEqual({ occurrences: 2, resolved_at: null });
 
-      if (kind === "webhooks") {
-        vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 1, pending: ["delivery"] });
-      } else {
-        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
-          checked: 1,
-          errors: [{ runId: "run", code: "incomplete" }],
-          progressed: 0,
-        });
-      }
+      reconcilers[kind]().mockResolvedValue({ checked: 1, pending: ["item"] });
       await runScheduledOperations(env);
       expect(await event(id)).toEqual({ occurrences: 3, resolved_at: null });
 
-      if (kind === "webhooks") {
-        vi.mocked(api.reconcileWebhooks).mockResolvedValue({ checked: 0, pending: [] });
-      } else {
-        vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
-          checked: 0,
-          errors: [],
-          progressed: 0,
-        });
-      }
+      reconcilers[kind]().mockResolvedValue({ checked: 0, pending: [] });
       await runScheduledOperations(env);
       expect(await event(id)).toEqual({ occurrences: 3, resolved_at: now });
       expect(await event(`${kind}:scheduler:another-failure`)).toEqual({
@@ -270,6 +250,143 @@ describe("scheduler alert recovery", () => {
         occurrences: 1,
         resolved_at: null,
       });
+    },
+  );
+
+  // A staged run is not ready while its Submit job runs. The step returns it
+  // as an error and tries it again, and it has its own alert after 5 failures.
+  it.each([{ kind: "recovery" }, { kind: "ingest" }] as const)(
+    "raises no alert of the step staged in a $kind pass while a new run is not ready",
+    async (message) => {
+      vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
+        checked: 1,
+        errors: [{ runId: "run", code: "incomplete" }],
+        progressed: 0,
+      });
+      await runScheduledOperations(env, message);
+      expect(api.reconcileStagedWorkflows).toHaveBeenCalledOnce();
+      expect(
+        await env.DB.prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL").all(),
+      ).toMatchObject({ results: [] });
+    },
+  );
+
+  it("closes the alert of the step staged in the pass that completes the step", async () => {
+    await recordEvent(env.DB, {
+      kind: "staged",
+      subject: "scheduler",
+      code: "another-failure",
+      now,
+    });
+    vi.mocked(api.reconcileStagedWorkflows).mockRejectedValue(new Error("Unavailable."));
+    await runScheduledOperations(env);
+    await runScheduledOperations(env, { kind: "ingest" });
+    const id = "staged:scheduler:reconciliation-failed";
+    expect(await event(id)).toEqual({ occurrences: 2, resolved_at: null });
+    // A pass that does not run the step keeps its alert open.
+    await runScheduledOperations(env, { kind: "status" });
+    expect(await event(id)).toEqual({ occurrences: 2, resolved_at: null });
+
+    vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
+      checked: 1,
+      errors: [{ runId: "run", code: "incomplete" }],
+      progressed: 0,
+    });
+    await runScheduledOperations(env, { kind: "ingest" });
+    expect(await event(id)).toEqual({ occurrences: 2, resolved_at: now });
+    expect(await event("staged:scheduler:another-failure")).toEqual({
+      occurrences: 1,
+      resolved_at: null,
+    });
+  });
+
+  it("closes the alert of the step staged-retention in the pass that completes the step", async () => {
+    vi.mocked(workflowRetention.expireStagedAttempts).mockRejectedValueOnce(
+      new Error("Unavailable."),
+    );
+    await runScheduledOperations(env);
+    const id = "staged-retention:scheduler:step-failed";
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+    await runScheduledOperations(env, { kind: "status" });
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+    await runScheduledOperations(env);
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
+  });
+
+  it("closes the alerts of each completed step with one statement for the pass", async () => {
+    for (const kind of ["upstream-webhook", "webhooks", "check-aliases", "staged"]) {
+      await recordEvent(env.DB, {
+        kind,
+        subject: "scheduler",
+        code: kind === "upstream-webhook" ? "recovery-unavailable" : "reconciliation-failed",
+        now,
+      });
+    }
+    await recordEvent(env.DB, {
+      kind: "staged-retention",
+      subject: "scheduler",
+      code: "step-failed",
+      now,
+    });
+    await reportSchedulerFailure(env);
+    const measured = measureD1(await runtime.getD1Database("DB"));
+    await runScheduledOperations({ ...env, DB: measured.database });
+    expect(measured.costs.filter((cost) => cost.sql.includes("operations_events"))).toEqual([
+      {
+        sql: "UPDATE operations_events SET resolved_at=? WHERE resolved_at IS NULL AND id IN (SELECT value FROM json_each(?))",
+        rows_read: expect.any(Number),
+        rows_written: 6,
+      },
+    ]);
+    expect(
+      await env.DB.prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL").all(),
+    ).toMatchObject({ results: [] });
+  });
+
+  it("closes the alert of a completed step when the pass fails after it", async () => {
+    vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValueOnce(new Error("Unavailable."));
+    await runScheduledOperations(env);
+    const id = "upstream-webhook:scheduler:recovery-unavailable";
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+    await reportSchedulerFailure(env);
+    vi.mocked(operations.runOperations).mockRejectedValueOnce(new Error("Unavailable."));
+    await expect(runScheduledOperations(env)).rejects.toThrow("Unavailable.");
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
+    // The pass did not complete, so its own alert stays open.
+    expect(await event("runtime:scheduler:configuration-or-step-failed")).toEqual({
+      occurrences: 1,
+      resolved_at: null,
+    });
+  });
+
+  it("closes the alert of a completed step when a later configuration read fails", async () => {
+    const id = "upstream-webhook:scheduler:recovery-unavailable";
+    await recordEvent(env.DB, {
+      kind: "upstream-webhook",
+      subject: "scheduler",
+      code: "recovery-unavailable",
+      now,
+    });
+    await expect(
+      runScheduledOperations({ ...env, GITHUB_WEBHOOK_SECRET: undefined }),
+    ).rejects.toThrow();
+    expect(operations.runOperations).not.toHaveBeenCalled();
+    expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
+  });
+
+  it.each([
+    { kind: "ingest" },
+    { kind: "status" },
+    { kind: "maintenance", family: "retention" },
+  ] as const)(
+    "keeps the alert of the pass open after a $kind pass, and closes it after a recovery pass",
+    async (message) => {
+      await reportSchedulerFailure(env);
+      const id = "runtime:scheduler:configuration-or-step-failed";
+      await runScheduledOperations(env, message);
+      expect(await event(id)).toEqual({ occurrences: 1, resolved_at: null });
+      await runScheduledOperations(env);
+      expect(await event(id)).toEqual({ occurrences: 1, resolved_at: now });
     },
   );
 

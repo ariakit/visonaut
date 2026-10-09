@@ -33,7 +33,7 @@ import {
   validateCapacityPolicy,
   type CapacityPolicy,
 } from "./capacity.ts";
-import { recordEvent, validateBudget } from "./operations/common.ts";
+import { eventId, recordEvent, resolveEventIds, validateBudget } from "./operations/common.ts";
 import { expireStagedAttempts } from "./api/workflow-retention.ts";
 import { reconcileEquivalentPullRequestChecks } from "./api/pre-run.ts";
 
@@ -298,6 +298,9 @@ export async function runScheduledOperations(
   const correlationId = crypto.randomUUID();
   await assertOperationsProject(env);
   const context = operationsContext(env);
+  // The alert of each step that completes closes with one statement at the
+  // end of the pass.
+  const completedStepAlerts: string[] = [];
   if (message.kind === "recovery") {
     try {
       await monitorDatabaseCapacity(env.DB, databaseCapacityPolicy(env), Date.now());
@@ -311,9 +314,10 @@ export async function runScheduledOperations(
         now: Date.now(),
       }).catch(() => {});
     }
+    const alert = { kind: "upstream-webhook", subject: "scheduler", code: "recovery-unavailable" };
     try {
       await recoverGitHubDeliveries({ context, configuration: githubConfiguration(env) });
-      await resolveSchedulerFailure(env, "upstream-webhook", "recovery-unavailable");
+      completedStepAlerts.push(eventId(alert));
     } catch (error) {
       logOperationFailure({
         operation: "github-delivery-recovery",
@@ -339,12 +343,7 @@ export async function runScheduledOperations(
         correlationId,
         startedAt,
       });
-      await recordEvent(env.DB, {
-        kind: "upstream-webhook",
-        subject: "scheduler",
-        code: "recovery-unavailable",
-        now: Date.now(),
-      });
+      await recordEvent(env.DB, { ...alert, now: Date.now() });
     }
   }
   let reconcileMore = false;
@@ -357,9 +356,13 @@ export async function runScheduledOperations(
     : message.kind === "ingest"
       ? ([["staged", reconcileStagedWorkflows]] as const)
       : []) {
+    const alert = { kind, subject: "scheduler", code: "reconciliation-failed" };
     try {
       const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
-      const failed = "pending" in result ? result.pending.length : result.errors.length;
+      // A staged run that is not ready is an error of the result. The step
+      // tries it again, and a run that fails 5 times gets its own alert, so
+      // the errors of the staged runs do not raise the alert of the step.
+      const failed = "pending" in result ? result.pending.length : 0;
       const progressed =
         kind === "staged"
           ? "progressed" in result && typeof result.progressed === "number" && result.progressed > 0
@@ -367,14 +370,9 @@ export async function runScheduledOperations(
       if (kind === "staged" && result.checked >= context.budget.tasksPerStep && progressed)
         reconcileMore = true;
       if (failed === 0) {
-        await resolveSchedulerFailure(env, kind, "reconciliation-failed");
+        completedStepAlerts.push(eventId(alert));
       } else {
-        await recordEvent(env.DB, {
-          kind,
-          subject: "scheduler",
-          code: "reconciliation-failed",
-          now: Date.now(),
-        });
+        await recordEvent(env.DB, { ...alert, now: Date.now() });
       }
     } catch {
       logOperationFailure({
@@ -383,78 +381,72 @@ export async function runScheduledOperations(
         correlationId,
         startedAt,
       });
-      await recordEvent(env.DB, {
-        kind,
-        subject: "scheduler",
-        code: "reconciliation-failed",
-        now: Date.now(),
-      });
+      await recordEvent(env.DB, { ...alert, now: Date.now() });
     }
   }
-  if (
-    (message.kind === "recovery" || message.kind === "ingest") &&
-    apiBindings(env).configuration.workflowOwned
-  ) {
-    try {
-      const expired = await expireStagedAttempts(context);
-      if (expired.hasMore) reconcileMore = true;
-      if (expired.attention.length === 0) {
-        await resolveSchedulerFailure(env, "staged-retention", "step-failed");
-      }
-    } catch {
-      await recordEvent(env.DB, {
-        kind: "staged-retention",
-        subject: "scheduler",
-        code: "step-failed",
-        now: Date.now(),
-      });
-    }
-  }
-  const result = await runOperations(context, message);
-  if (reconcileMore)
-    await env.OPERATIONS.send({ kind: "ingest" } satisfies OperationsMessage, { delaySeconds: 1 });
-  if (message.kind === "recovery") {
-    const families = {
-      history: ["history"],
-      retention: ["reference-retention", "source-retention", "snapshot-retention", "retention"],
-      profiles: ["profile-retention"],
-    } as const;
-    for (const family of Object.keys(families) as (keyof typeof families)[]) {
-      if (families[family].some((name) => result.reports[name]?.hasMore))
-        await env.OPERATIONS.send({ kind: "maintenance", family } satisfies OperationsMessage, {
-          delaySeconds: 1,
-        });
-    }
+  try {
     if (
-      ["review-decisions", "checks", "review-links", "promotion"].some(
-        (name) => result.reports[name]?.hasMore,
-      )
-    )
-      await env.OPERATIONS.send({ kind: "status" } satisfies OperationsMessage, {
+      (message.kind === "recovery" || message.kind === "ingest") &&
+      apiBindings(env).configuration.workflowOwned
+    ) {
+      const alert = { kind: "staged-retention", subject: "scheduler", code: "step-failed" };
+      try {
+        const expired = await expireStagedAttempts(context);
+        if (expired.hasMore) reconcileMore = true;
+        if (expired.attention.length === 0) {
+          completedStepAlerts.push(eventId(alert));
+        }
+      } catch {
+        await recordEvent(env.DB, { ...alert, now: Date.now() });
+      }
+    }
+    const result = await runOperations(context, message);
+    if (reconcileMore)
+      await env.OPERATIONS.send({ kind: "ingest" } satisfies OperationsMessage, {
         delaySeconds: 1,
       });
-  } else if (result.hasMore) await env.OPERATIONS.send(message, { delaySeconds: 1 });
-  await resolveSchedulerFailure(env, "runtime", "configuration-or-step-failed");
-  return result;
+    if (message.kind === "recovery") {
+      const families = {
+        history: ["history"],
+        retention: ["reference-retention", "source-retention", "snapshot-retention", "retention"],
+        profiles: ["profile-retention"],
+      } as const;
+      for (const family of Object.keys(families) as (keyof typeof families)[]) {
+        if (families[family].some((name) => result.reports[name]?.hasMore))
+          await env.OPERATIONS.send({ kind: "maintenance", family } satisfies OperationsMessage, {
+            delaySeconds: 1,
+          });
+      }
+      if (
+        ["review-decisions", "checks", "review-links", "promotion"].some(
+          (name) => result.reports[name]?.hasMore,
+        )
+      )
+        await env.OPERATIONS.send({ kind: "status" } satisfies OperationsMessage, {
+          delaySeconds: 1,
+        });
+    } else if (result.hasMore) await env.OPERATIONS.send(message, { delaySeconds: 1 });
+    // A pass of each kind can raise the alert of the pass. Only a recovery
+    // pass closes it: it runs each step of each other kind of pass, and each
+    // cron tick starts one. A pass of another kind does not show that a failed
+    // recovery pass works again.
+    if (message.kind === "recovery") {
+      completedStepAlerts.push(eventId(passAlert));
+    }
+    return result;
+  } finally {
+    // A pass that throws after the reconciliation steps still closes the
+    // alert of each step that completed.
+    await resolveEventIds(env.DB, completedStepAlerts, Date.now());
+  }
 }
 
-async function resolveSchedulerFailure(env: BackendEnv, kind: string, code: string) {
-  await env.DB.prepare(
-    "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id='scheduler' AND code=? AND resolved_at IS NULL",
-  )
-    .bind(Date.now(), kind, code)
-    .run();
-}
+const passAlert = { kind: "runtime", subject: "scheduler", code: "configuration-or-step-failed" };
 
 export async function reportSchedulerFailure(env: Env) {
   try {
     requireBackendBindings(env);
-    await recordEvent(env.DB, {
-      kind: "runtime",
-      subject: "scheduler",
-      code: "configuration-or-step-failed",
-      now: Date.now(),
-    });
+    await recordEvent(env.DB, { ...passAlert, now: Date.now() });
   } catch {
     console.error(JSON.stringify({ event: "operations-failed" }));
   }

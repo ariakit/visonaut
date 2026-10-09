@@ -3,6 +3,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
+import { recordEvent } from "./common.ts";
 import { runOperations } from "./index.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
 
@@ -20,9 +21,12 @@ const measured = measureD1(native);
 beforeAll(async () => applyTestMigrations(native));
 afterAll(async () => runtime.dispose());
 
+const closesStepAlerts = (sql: string) =>
+  sql.startsWith("UPDATE operations_events SET resolved_at=?") && sql.includes("json_each");
+
 // A pass repeats with each cron tick and each queue message. The step wrapper
-// runs one statement for each step that completes, and that statement must
-// change no row while the step has no open alert.
+// runs one statement for the steps that complete, and that statement must
+// change no row while no step has an open alert.
 it("writes no row in a pass of each kind that has no work", async () => {
   using sqlite = new TestDatabase();
   const pass = { ...context(sqlite).context, database: measured.database };
@@ -44,5 +48,24 @@ it("writes no row in a pass of each kind that has no work", async () => {
     expect(Object.values(reports).flatMap((report) => report.attention)).toEqual([]);
     expect(measured.costs.length).toBeGreaterThan(0);
     expect(measured.costs.filter((cost) => cost.rows_written > 0)).toEqual([]);
+    expect(measured.costs.filter((cost) => closesStepAlerts(cost.sql))).toHaveLength(1);
   }
+});
+
+it("closes the alert of each step of a pass with one statement", async () => {
+  using sqlite = new TestDatabase();
+  const pass = { ...context(sqlite).context, database: measured.database };
+  const { reports } = await runOperations(pass);
+  const steps = Object.keys(reports);
+  expect(steps).toHaveLength(13);
+  for (const kind of steps) {
+    await recordEvent(native, { kind, subject: "scheduler", code: "step-failed", now: 1 });
+  }
+  measured.reset();
+  await runOperations(pass);
+  const closing = measured.costs.filter((cost) => closesStepAlerts(cost.sql));
+  expect(closing.map((cost) => cost.rows_written)).toEqual([13]);
+  expect(
+    await native.prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL").all(),
+  ).toMatchObject({ results: [] });
 });

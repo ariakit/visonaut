@@ -194,6 +194,16 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
   const { database, budget } = context;
   const service = new Service(database);
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
+  // Only an active main run that is not accepted can be a candidate. The alert
+  // of each other run has no step that can close it, so close it here.
+  await database
+    .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
+      SELECT id FROM operations_events WHERE kind='promotion' AND subject_id!='scheduler'
+        AND resolved_at IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_runs run
+          WHERE run.id=subject_id AND run.active=1 AND run.kind='main' AND run.state!='accepted')
+      ORDER BY last_seen_at,id LIMIT ?)`)
+    .bind(context.now(), budget.tasksPerStep)
+    .run();
   const interrupted = await promotionPage<
     PromotionPosition & {
       run_id: string;
