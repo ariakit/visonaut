@@ -9,7 +9,7 @@ The server now starts the read of the run list while it sends the document of th
 
 - **Between pages.** A move between the Queue and History reads nothing. A return to the Queue from a run shows the last list at once and reads again in the background.
 
-- **Refresh.** The button `Refresh runs` keeps the list, the scroll position, and the focus while it reads.
+- **Refresh.** The button `Refresh runs` of History keeps the list, the scroll position, and the focus while it reads.
 
 - **Status.** The Status page reads only the alerts, so it also loads when the run list fails.
 

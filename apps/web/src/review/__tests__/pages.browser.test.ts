@@ -51,7 +51,7 @@ async function signedIn(page: Page) {
 test("each dashboard page has its own path below the layout route", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Queue 1 run to review" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -75,7 +75,7 @@ test("each dashboard page has its own path below the layout route", async ({ pag
   );
 });
 
-test("the header and the Queue link to the page paths", async ({ page }) => {
+test("the header links to the page paths", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/"));
   const navigation = page.getByRole("navigation", { name: "Pages" });
@@ -85,14 +85,14 @@ test("the header and the Queue link to the page paths", async ({ page }) => {
     "/history",
   );
   await expect(navigation.getByRole("link", { name: "Status" })).toHaveAttribute("href", "/status");
-  await page.getByRole("link", { name: "View history" }).click();
+  await navigation.getByRole("link", { name: "History" }).click();
   await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
 });
 
 test("the old view parameter has no redirect and shows the Queue", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/?view=history"));
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Run history." })).toHaveCount(0);
 });
 

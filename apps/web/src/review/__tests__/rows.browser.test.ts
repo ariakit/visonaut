@@ -75,13 +75,12 @@ for (const scheme of ["light", "dark"] as const) {
       await expectColoredText(page, error, "danger");
     });
 
-    test("the icon of a run list that cannot load is warning colored", async ({ page }) => {
+    test("the icon of a run list that cannot load is danger colored", async ({ page }) => {
       await page.route("**/api/**", (route) => route.fulfill({ status: 500, json: {} }));
       await page.goto(`${fixture}?entry=%2F`);
-      const heading = page.getByRole("heading", { level: 1 });
-      await expect(heading).toBeVisible();
-      const icon = page.locator("section", { has: heading }).locator("svg").first();
-      await expectColoredText(page, icon, "warning");
+      await expect(page.getByRole("alert")).toHaveText("Could not load runs");
+      const icon = page.getByRole("main").locator("svg").first();
+      await expectColoredText(page, icon, "danger");
     });
 
     test("the icon of a finished review queue is success colored", async ({ page }) => {
@@ -99,9 +98,8 @@ for (const scheme of ["light", "dark"] as const) {
         return route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } });
       });
       await page.goto(`${fixture}?entry=%2F`);
-      const heading = page.getByRole("heading", { name: "All reviews are complete." });
-      await expect(heading).toBeVisible();
-      const icon = heading.locator("xpath=..").locator("svg").first();
+      await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
+      const icon = page.getByRole("main").locator("svg").first();
       await expectColoredText(page, icon, "success");
     });
 

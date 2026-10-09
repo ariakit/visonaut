@@ -7,12 +7,9 @@ import {
   BadgeSlot,
 } from "../components/ariakit/components/badge.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
+import { runKindWords } from "../components/kit/run-row.tsx";
 
-export const kindLabels: Record<DashboardRun["kind"], string> = {
-  main: "Main",
-  pull_request: "Pull request",
-  merge_group: "Merge queue",
-};
+export const kindLabels = runKindWords;
 
 // A closed run with no stored reason has words that name no cause.
 export const stateLabels: Record<RunReviewState, string> = {
@@ -46,7 +43,7 @@ export function needsRecovery(run: Pick<DashboardRun, "state">) {
 
 /**
  * A run of the Queue that waits for a decision. The Queue lists these runs
- * under "Ready to review", and the header has their number.
+ * first, and the header has their number.
  */
 export function awaitsReview(run: Pick<DashboardRun, "state">) {
   return !isInProgress(run) && !needsRecovery(run);
