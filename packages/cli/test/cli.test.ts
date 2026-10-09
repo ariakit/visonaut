@@ -6,6 +6,17 @@ import { digestJson } from "@visonaut/protocol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
+import {
+  emptyReferencePage,
+  imagePutNumbers,
+  reserveAnswer,
+  stagedCounts,
+  submitShard,
+} from "./trusted.js";
+
+const prepared = vi.hoisted(() => ({ directory: "", server: "https://review.example.test" }));
+// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
+vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
 
 const environment = {
   VISONAUT_SERVER: "https://review.example.test",
@@ -16,6 +27,18 @@ const environment = {
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
 };
 const directories: string[] = [];
+
+/** The requests of one staged shard: reserve, reference, declaration, PUT, finalize, and submit. */
+const stagedPaths = [
+  "/id-token",
+  "/v1/runs",
+  "/v1/runs/run-123/reference",
+  "/v1/runs/run-123/shards/chrome-1",
+  "/v1/uploads/ticket-1",
+  "/v1/runs/run-123/finalize",
+  "/id-token",
+  "/v1/runs/456/submit",
+];
 
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -53,9 +76,16 @@ async function localFixture() {
   return local;
 }
 
+type Local = Awaited<ReturnType<typeof localFixture>>;
+
+/** Run `submit --shard` on the capture of `local`. */
+function submit(local: Local, overrides: NodeJS.ProcessEnv = {}) {
+  return submitShard(prepared, local.directory, { ...environment, ...overrides });
+}
+
 interface MockServiceOptions {
-  local: Awaited<ReturnType<typeof fixture>>;
-  change?: (url: URL, response: unknown) => unknown;
+  local: Local;
+  change?: (url: URL, response: Record<string, unknown>) => unknown;
   requestToken?: string;
   oidcToken?: string;
 }
@@ -66,12 +96,16 @@ async function mockService({
   requestToken = "github-request-secret",
   oidcToken = "oidc-secret",
 }: MockServiceOptions) {
-  const manifestDigest = await digestJson(local.manifest);
   const requests: { url: URL; options: RequestInit | undefined }[] = [];
+  // Submit adds the result of the local comparison to the manifest. The declaration digest is
+  // the digest of the posted manifest.
+  let declared: Record<string, unknown> | undefined;
+  let manifestDigest = "";
+  let reservation = { capability: "capability-secret", expiresAt: "" };
   const fetch = vi.fn(async (input: string | URL | Request, options?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : input);
     requests.push({ url, options });
-    let response: unknown;
+    let response: Record<string, unknown>;
     if (url.hostname.endsWith(".actions.githubusercontent.com")) {
       expect([environment.VISONAUT_SERVER, `${environment.VISONAUT_SERVER}/submit`]).toContain(
         url.searchParams.get("audience"),
@@ -80,14 +114,18 @@ async function mockService({
       response = { value: oidcToken };
     } else if (url.pathname === "/v1/runs") {
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
-      response = {
-        schemaVersion: "1.0",
-        runId: "run-123",
+      reservation = {
         capability: "capability-secret",
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
       };
+      response = reserveAnswer({ schemaVersion: "1.0", runId: "run-123", ...reservation });
+    } else if (url.pathname === "/v1/runs/run-123/reference") {
+      expect(new Headers(options?.headers).get("Authorization")).toBe("Bearer capability-secret");
+      response = await emptyReferencePage(options, reservation);
     } else if (url.pathname.endsWith("/shards/chrome-1")) {
       expect(new Headers(options?.headers).get("Authorization")).toBe("Bearer capability-secret");
+      declared = JSON.parse(String(options?.body));
+      manifestDigest = await digestJson(declared);
       response = {
         schemaVersion: "1.0",
         manifestDigest,
@@ -137,27 +175,19 @@ async function mockService({
     return json(change ? await change(url, response) : response);
   });
   vi.stubGlobal("fetch", fetch);
-  return { requests, fetch };
+  return { requests, fetch, declared: () => declared };
 }
 
-describe("public upload command", () => {
-  it("uploads with GitHub runner and OIDC credentials larger than ordinary text fields", async () => {
+describe("submit --shard transport", () => {
+  it("stages with GitHub runner and OIDC credentials larger than ordinary text fields", async () => {
     const local = await localFixture();
     const requestToken = "request-" + "a".repeat(8192);
     const oidcToken = "oidc-" + "b".repeat(12288);
     const { requests } = await mockService({ local, requestToken, oidcToken });
-    const result = await execute(["upload", "--dir", local.directory, "--json"], {
-      ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken,
-    });
+    const result = await submit(local, { ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken });
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({ shardStaged: true, visualApproval: false });
-    expect(requests.map(({ url }) => url.pathname)).toEqual([
-      "/id-token",
-      "/v1/runs",
-      "/v1/runs/run-123/shards/chrome-1",
-      "/v1/uploads/ticket-1",
-      "/v1/runs/run-123/finalize",
-    ]);
+    expect(result.stdout).toContain("Shard chrome-1 staged and run run-123 submitted.");
+    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths);
     expect(result.stdout + result.stderr).not.toContain(requestToken);
     expect(result.stdout + result.stderr).not.toContain(oidcToken);
   });
@@ -167,9 +197,7 @@ describe("public upload command", () => {
     async (requestToken) => {
       const local = await localFixture();
       const { fetch } = await mockService({ local });
-      const result = await execute(["upload", "--dir", local.directory], {
-        ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken,
-      });
+      const result = await submit(local, { ACTIONS_ID_TOKEN_REQUEST_TOKEN: requestToken });
       expect(result.code).toBe(4);
       expect(fetch).not.toHaveBeenCalled();
       expect(result.stdout + result.stderr).not.toContain(requestToken);
@@ -180,7 +208,7 @@ describe("public upload command", () => {
     const local = await localFixture();
     const oidcToken = "b".repeat(65537);
     const { fetch } = await mockService({ local, oidcToken });
-    const result = await execute(["upload", "--dir", local.directory]);
+    const result = await submit(local);
     expect(result.code).toBe(4);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(result.stdout + result.stderr).not.toContain(oidcToken);
@@ -189,39 +217,24 @@ describe("public upload command", () => {
   it("stages exact bytes with a stable run identity and does not wait for review", async () => {
     const local = await localFixture();
     const { requests } = await mockService({ local });
-    const result = await execute(["upload", "--dir", local.directory, "--json"]);
+    const result = await submit(local);
     expect(result.code).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toEqual({
-      schemaVersion: "1.0",
-      operation: "upload",
-      runId: "run-123",
-      state: "staged",
-      shardKey: "chrome-1",
-      manifestDigest: await digestJson(local.manifest),
-      uploadedImages: 1,
-      reusedImages: 0,
-      transferElapsedMs: expect.any(Number),
-      imagePutElapsedMs: expect.any(Number),
-      imagePutBytes: imageBytes.length,
-      imagePutRetryWaitMs: 0,
-      shardStaged: true,
-      visualApproval: false,
+    expect(result.stdout).toContain(
+      "Shard chrome-1 staged and run run-123 submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n",
+    );
+    expect(stagedCounts(result.stdout)).toEqual({ originals: 1, reused: 0, uploaded: 1 });
+    expect(imagePutNumbers(result.stdout)).toMatchObject({
+      bytes: imageBytes.length,
+      retryWaitMs: 0,
     });
-    expect(requests.map((item) => item.url.pathname)).toEqual([
-      "/id-token",
-      "/v1/runs",
-      "/v1/runs/run-123/shards/chrome-1",
-      "/v1/uploads/ticket-1",
-      "/v1/runs/run-123/finalize",
-    ]);
+    expect(requests.map((item) => item.url.pathname)).toEqual(stagedPaths);
     expect(requests.every((item) => item.options?.redirect === "error")).toBe(true);
     expect(result.stdout).not.toContain("secret");
   });
 
   it("accepts the workflow-owned staged receipt without inventing expected shards", async () => {
     const local = await localFixture();
-    const manifestDigest = await digestJson(local.manifest);
     await mockService({
       local,
       change: (url, response) =>
@@ -230,30 +243,14 @@ describe("public upload command", () => {
               schemaVersion: "1.0",
               runId: "run-123",
               shardKey: "chrome-1",
-              manifestDigest,
+              manifestDigest: response.manifestDigest,
               state: "staged",
             }
           : response,
     });
-    const result = await execute(["upload", "--dir", local.directory, "--json"]);
+    const result = await submit(local);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual({
-      operation: "upload",
-      schemaVersion: "1.0",
-      runId: "run-123",
-      shardKey: "chrome-1",
-      manifestDigest,
-      state: "staged",
-      uploadedImages: 1,
-      reusedImages: 0,
-      transferElapsedMs: expect.any(Number),
-      imagePutElapsedMs: expect.any(Number),
-      imagePutBytes: imageBytes.length,
-      imagePutRetryWaitMs: 0,
-      shardStaged: true,
-      visualApproval: false,
-    });
-    expect(result.stdout).not.toContain("expectedShards");
+    expect(result.stdout).toContain("Shard chrome-1 staged and run run-123 submitted.");
   });
 
   it("rejects a staged receipt for a different manifest", async () => {
@@ -262,25 +259,20 @@ describe("public upload command", () => {
       local,
       change: (url, response) =>
         url.pathname.endsWith("/finalize")
-          ? {
-              schemaVersion: "1.0",
-              runId: "run-123",
-              shardKey: "chrome-1",
-              manifestDigest: "f".repeat(64),
-              state: "staged",
-            }
+          ? { ...response, manifestDigest: "f".repeat(64) }
           : response,
     });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
+    expect((await submit(local)).code).toBe(1);
   });
 
   it("keeps compatible optional manifest fields in the declared digest", async () => {
     const local = await localFixture();
     Object.assign(local.manifest, { schemaVersion: "1.4", futureMetadata: { text: "compatible" } });
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-    const { requests } = await mockService({ local });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(0);
-    expect(JSON.parse(String(requests[2]?.options?.body))).toEqual(local.manifest);
+    const service = await mockService({ local });
+    expect((await submit(local)).code).toBe(0);
+    // Submit adds only the result of the local comparison to the manifest.
+    expect(service.declared()).toEqual({ ...local.manifest, localComparison: expect.any(Object) });
   });
 
   it("rejects a legacy run-status response instead of treating it as a staged shard", async () => {
@@ -300,7 +292,7 @@ describe("public upload command", () => {
             }
           : response,
     });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
+    expect((await submit(local)).code).toBe(1);
   });
 
   it("refuses a mismatched declaration digest", async () => {
@@ -312,29 +304,24 @@ describe("public upload command", () => {
           ? { schemaVersion: "1.0", manifestDigest: "unused", uploads: [] }
           : response,
     });
-    const result = await execute(["upload", "--dir", local.directory]);
+    const result = await submit(local);
     expect(result.code).toBe(1);
-    expect(requests).toHaveLength(3);
+    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
   });
 
   it("replays an accepted shard without uploading its images again", async () => {
     const local = await localFixture();
-    const manifestDigest = await digestJson(local.manifest);
     const { requests } = await mockService({
       local,
       change: (url, response) =>
-        url.pathname.includes("/shards/")
-          ? { schemaVersion: "1.0", manifestDigest, uploads: [] }
-          : response,
+        url.pathname.includes("/shards/") ? { ...response, uploads: [] } : response,
     });
-    const result = await execute(["upload", "--dir", local.directory, "--json"]);
+    const result = await submit(local);
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      uploadedImages: 0,
-      shardStaged: true,
-      visualApproval: false,
-    });
-    expect(requests).toHaveLength(4);
+    expect(stagedCounts(result.stdout)).toMatchObject({ uploaded: 0 });
+    expect(requests.map(({ url }) => url.pathname)).toEqual(
+      stagedPaths.filter((path) => !path.startsWith("/v1/uploads/")),
+    );
   });
 
   it("checks the image again if it changes after preflight", async () => {
@@ -348,8 +335,8 @@ describe("public upload command", () => {
         return response;
       },
     });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
-    expect(requests).toHaveLength(3);
+    expect((await submit(local)).code).toBe(1);
+    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
   });
 
   it("does not use an expired capability", async () => {
@@ -357,53 +344,108 @@ describe("public upload command", () => {
     const { requests } = await mockService({
       local,
       change: (url, response) =>
-        url.pathname === "/v1/runs"
-          ? {
-              schemaVersion: "1.0",
-              runId: "run-123",
-              capability: "expired-secret",
-              expiresAt: "2000-01-01T00:00:00Z",
-            }
-          : response,
+        url.pathname === "/v1/runs" ? { ...response, expiresAt: "2000-01-01T00:00:00Z" } : response,
     });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(4);
+    expect((await submit(local)).code).toBe(4);
     expect(requests).toHaveLength(2);
   });
 
   it("refuses an upload ticket for a different image", async () => {
     const local = await localFixture();
-    const manifestDigest = await digestJson(local.manifest);
     const { requests } = await mockService({
       local,
       change: (url, response) =>
         url.pathname.includes("/shards/")
           ? {
-              schemaVersion: "1.0",
-              manifestDigest,
+              ...response,
               uploads: [
                 { imageDigest: "a".repeat(64), ticket: "other", maxBytes: imageBytes.length },
               ],
             }
           : response,
     });
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
-    expect(requests).toHaveLength(3);
+    expect((await submit(local)).code).toBe(1);
+    expect(requests.map(({ url }) => url.pathname)).toEqual(stagedPaths.slice(0, 4));
   });
 
-  it("fails upload errors without printing a credential echoed by the service", async () => {
+  it("fails refusals without printing a credential echoed by the service", async () => {
     const local = await localFixture();
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => json({ message: environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, 500)),
     );
-    const result = await execute(["upload", "--dir", local.directory, "--json"]);
+    const result = await submit(local);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("HTTP 500");
     expect(result.stderr).not.toContain("secret");
   });
 });
 
-describe("private upload and submission transport", () => {
+describe("submit step", () => {
+  it("sends the signed workflow attempt with a token for the submit audience", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({ local });
+    const result = await submit(local);
+    expect(result.code).toBe(0);
+    // The reserve call and the submit call each use their own token.
+    const audiences = requests
+      .filter(({ url }) => url.pathname === "/id-token")
+      .map(({ url }) => url.searchParams.get("audience"));
+    expect(audiences).toEqual([
+      "https://review.example.test/submit",
+      "https://review.example.test/submit",
+    ]);
+    const last = requests.at(-1);
+    expect(last?.url.pathname).toBe("/v1/runs/456/submit");
+    expect(JSON.parse(String(last?.options?.body))).toEqual({
+      schemaVersion: "1.0",
+      workflowAttempt: 1,
+    });
+  });
+
+  it("prints only aggregate image PUT measurements for a signed submit", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({ local });
+    const result = await submit(local);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
+    expect(result.stdout).toMatch(
+      new RegExp(
+        `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait\\.`,
+      ),
+    );
+    expect(result.stdout).not.toContain(local.capture.name);
+    expect(result.stdout).not.toContain(local.capture.image.path);
+    expect(result.stdout).not.toContain("secret");
+    expect(requests).toHaveLength(stagedPaths.length);
+  });
+
+  it.each([{ GITHUB_RUN_ATTEMPT: "2" }, { GITHUB_RUN_ID: "457" }])(
+    "rejects a capture from another run or attempt before staging: %j",
+    async (overrides) => {
+      const local = await localFixture();
+      const { fetch } = await mockService({ local });
+      const result = await submit(local, overrides);
+      expect(result.code).toBe(4);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a submission receipt for a different internal run", async () => {
+    const local = await localFixture();
+    const { requests } = await mockService({
+      local,
+      change: (url, response) =>
+        url.pathname.endsWith("/submit") ? { ...response, runId: "other-run" } : response,
+    });
+    const result = await submit(local);
+    expect(result.code).toBe(1);
+    expect(requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
+  });
+});
+
+// The command `submit --run` stays until the next pull request removes it with `upload`.
+describe("submit --run", () => {
   it("uses a separate OIDC audience and sends the signed workflow attempt", async () => {
     const local = await localFixture();
     const { requests } = await mockService({ local });
@@ -423,67 +465,6 @@ describe("private upload and submission transport", () => {
     });
   });
 
-  it("uploads and submits one pinned job with --dir", async () => {
-    const local = await localFixture();
-    const manifestDigest = await digestJson(local.manifest);
-    const { requests } = await mockService({
-      local,
-      change: (url, response) =>
-        url.pathname.endsWith("/finalize")
-          ? {
-              schemaVersion: "1.0",
-              runId: "run-123",
-              shardKey: "chrome-1",
-              manifestDigest,
-              state: "staged",
-            }
-          : response,
-    });
-    const result = await execute(["submit", "--dir", local.directory, "--json"]);
-    expect(result.code).toBe(0);
-    expect(requests.map(({ url }) => url.pathname)).toEqual([
-      "/id-token",
-      "/v1/runs",
-      "/v1/runs/run-123/shards/chrome-1",
-      "/v1/uploads/ticket-1",
-      "/v1/runs/run-123/finalize",
-      "/id-token",
-      "/v1/runs/456/submit",
-    ]);
-    expect(requests[5]?.url.searchParams.get("audience")).toBe(
-      "https://review.example.test/submit",
-    );
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      operation: "submit",
-      runId: "run-123",
-      state: "submitted",
-      shardKey: "chrome-1",
-      manifestDigest,
-      uploadedImages: 1,
-      imagePutElapsedMs: expect.any(Number),
-      imagePutBytes: imageBytes.length,
-      imagePutRetryWaitMs: 0,
-      visualApproval: false,
-    });
-  });
-
-  it("prints only aggregate image PUT measurements for a signed submit", async () => {
-    const local = await localFixture();
-    const { requests } = await mockService({ local });
-    const result = await execute(["submit", "--dir", local.directory]);
-    expect(result.code).toBe(0);
-    expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
-    expect(result.stdout).toMatch(
-      new RegExp(
-        `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait\\.`,
-      ),
-    );
-    expect(result.stdout).not.toContain(local.capture.name);
-    expect(result.stdout).not.toContain(local.capture.image.path);
-    expect(result.stdout).not.toContain("secret");
-    expect(requests).toHaveLength(7);
-  });
-
   it("rejects the wrong run or attempt before requesting OIDC", async () => {
     const local = await localFixture();
     const { fetch } = await mockService({ local });
@@ -491,30 +472,6 @@ describe("private upload and submission transport", () => {
     expect((await execute(["submit", "--run", "456"], { GITHUB_RUN_ATTEMPT: "0" })).code).toBe(2);
     expect((await execute(["submit", "--run", "not-a-run"])).code).toBe(2);
     expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("rejects a one-job capture from another attempt before staging", async () => {
-    const local = await localFixture();
-    const { fetch } = await mockService({ local });
-    const result = await execute(["submit", "--dir", local.directory], {
-      GITHUB_RUN_ATTEMPT: "2",
-    });
-    expect(result.code).toBe(4);
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it("rejects a submission receipt for a different internal run", async () => {
-    const local = await localFixture();
-    const { requests } = await mockService({
-      local,
-      change: (url, response) =>
-        url.pathname.endsWith("/submit") && typeof response === "object" && response !== null
-          ? { ...response, runId: "other-run" }
-          : response,
-    });
-    const result = await execute(["submit", "--dir", local.directory]);
-    expect(result.code).toBe(1);
-    expect(requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
   });
 });
 
@@ -555,7 +512,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    const result = await execute(["upload", "--dir", local.directory]);
+    const result = await submit(local);
     expect(result.code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -574,7 +531,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
+    expect((await submit(local)).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -585,7 +542,7 @@ describe("local data validation before network access", () => {
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(["upload", "--dir", local.directory])).code).toBe(1);
+    expect((await submit(local)).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -595,7 +552,7 @@ describe("local data validation before network access", () => {
     const file = join(directory, "manifest.json");
     await writeFile(file, "{}");
     await truncate(file, 8 * 1024 * 1024 + 1);
-    expect((await execute(["submit", "--dir", directory])).code).toBe(1);
+    expect((await submitShard(prepared, directory, environment)).code).toBe(1);
   });
 });
 
@@ -743,7 +700,7 @@ describe("argument and transport boundaries", () => {
     const local = await localFixture();
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    const result = await execute(["upload", "--dir", local.directory], {
+    const result = await submit(local, {
       ACTIONS_ID_TOKEN_REQUEST_URL: "https://attacker.example.test/id-token",
     });
     expect(result.code).toBe(4);
