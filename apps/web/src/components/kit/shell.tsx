@@ -4,6 +4,7 @@ import { Aperture, ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useAppSession } from "../../app-session.tsx";
+import { InsideShellContext } from "../../error-screen.tsx";
 import { Button, ButtonLabel, ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
 import { Heading } from "../ariakit/components/heading.ariakit.react.tsx";
 import { Nav, NavLink, NavLinkLabel, NavSlot } from "../ariakit/components/nav.ariakit.react.tsx";
@@ -228,7 +229,7 @@ export function AppShell({ children, className, ...props }: AppShellProps) {
       {...props}
     >
       <AppHeader />
-      {children}
+      <InsideShellContext.Provider value={true}>{children}</InsideShellContext.Provider>
     </Shell>
   );
 }

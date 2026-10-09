@@ -1,14 +1,14 @@
 import { createFileRoute, useBlocker, useNavigate, useRouter } from "@tanstack/react-router";
-import { createAuthClient } from "better-auth/react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { noAccessFacts, useSessionFacts } from "../../app-session.tsx";
+import { useAccessDenied, useSessionFacts } from "../../app-session.tsx";
+import { pageTitle } from "../../page-title.ts";
 import { AppHeader, AppShell } from "../../components/kit/shell.tsx";
 import {
   ButtonLabel,
   ButtonSlot,
 } from "../../components/ariakit/components/button.ariakit.react.tsx";
 import { Text } from "../../components/ariakit/components/text.ariakit.react.tsx";
-import { LogIn, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { ControlButton as Button } from "../../components/control-button.tsx";
 import { Frame } from "../../components/ariakit/components/frame.ariakit.react.tsx";
 import {
@@ -30,6 +30,8 @@ export const Route = createFileRoute("/_app/runs/$runId")({
     variant: typeof search.variant === "string" ? search.variant : undefined,
   }),
   ssr: false,
+  // The loading text shows at once after a click on a run.
+  pendingMs: 0,
   // The review workspace renders the shell root itself.
   staticData: { shell: "page" },
   // Do not hold the hydrated loading shell after the model is ready.
@@ -48,6 +50,15 @@ export const Route = createFileRoute("/_app/runs/$runId")({
       throw error;
     }
   },
+  head: ({ loaderData }) => ({
+    meta: [
+      {
+        title: pageTitle(
+          loaderData?.status === "ready" ? (loaderData.model.run.title ?? "Run") : "Run",
+        ),
+      },
+    ],
+  }),
   pendingComponent: () => <RunLoading />,
   errorComponent: ({ error, reset }) => <RunError error={error} reset={reset} />,
   component: Run,
@@ -78,7 +89,11 @@ function RunLoading() {
 function RunError({ error, reset }: { error: unknown; reset(): void }) {
   const router = useRouter();
   const noAccess = error instanceof ReviewCommandError && error.status === 403;
-  useSessionFacts(noAccess ? noAccessFacts : undefined);
+  // The layout route shows the no access page.
+  useAccessDenied(
+    noAccess ? 403 : undefined,
+    "Write access to this repository is required to open this run.",
+  );
   const message = noAccess
     ? "Write access to this repository is required to open this run."
     : error instanceof Error
@@ -162,12 +177,12 @@ function RunPage({
   state: RunState;
 }) {
   const commands = useMemo(() => createReviewCommands(runId, comparisonId), [runId, comparisonId]);
-  const [action, setAction] = useState<"sign-in" | null>(null);
   useSessionFacts(
     state.status === "ready"
       ? { signedIn: true, preview: state.model.preview, repository: state.model.run.repository }
-      : { signedIn: false },
+      : undefined,
   );
+  useAccessDenied(state.status === "guest" ? 401 : undefined);
   const [unsentDecisions, setUnsentDecisions] = useState(false);
   // A router navigation does not fire `beforeunload`, so a link of the header
   // asks here. A change of the selection keeps the path and does not ask.
@@ -179,31 +194,6 @@ function RunPage({
       return !window.confirm("A decision is not saved. Leave this run?");
     },
   });
-  const [actionError, setActionError] = useState("");
-
-  const signIn = async () => {
-    setAction("sign-in");
-    setActionError("");
-    try {
-      const search = new URLSearchParams();
-      if (comparisonId) search.set("comparison", comparisonId);
-      if (route.selection) {
-        search.set("item", route.selection.itemKey);
-        search.set("variant", route.selection.variantKey);
-      }
-      const result = await createAuthClient().signIn.social({
-        provider: "github",
-        callbackURL: `/runs/${encodeURIComponent(runId)}${search.size ? `?${search}` : ""}`,
-      });
-      if (result.error) throw new Error("Sign-in could not start. Please try again.");
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "Sign-in could not start. Please try again.",
-      );
-      setAction(null);
-    }
-  };
-
   if (state.status === "ready") {
     return (
       <ReviewWorkspace
@@ -215,34 +205,6 @@ function RunPage({
       />
     );
   }
-  return (
-    <RunShell>
-      <Frame
-        $layer="canvas"
-        $lighten={2}
-        $rounded="2xl"
-        $p={6}
-        $border
-        className="grid gap-4 text-sm"
-      >
-        <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">
-          Sign in to review this run
-        </Text>
-        <p>This review is available to Ariakit maintainers.</p>
-        {actionError && (
-          <p role="alert" className="ak-text ak-text-danger">
-            {actionError}
-          </p>
-        )}
-        <Button $layer="brand" disabled={action !== null} onClick={() => void signIn()}>
-          <ButtonSlot>
-            <LogIn />
-          </ButtonSlot>
-          <ButtonLabel>
-            {action === "sign-in" ? "Opening GitHub…" : "Sign in with GitHub"}
-          </ButtonLabel>
-        </Button>
-      </Frame>
-    </RunShell>
-  );
+  // The layout route shows the sign-in page for the state `guest`.
+  return <RunLoading />;
 }
