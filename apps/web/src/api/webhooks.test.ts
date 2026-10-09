@@ -4030,6 +4030,107 @@ describe("pull request titles in processed webhooks", () => {
   });
 });
 
+describe("why a webhook closes a run", () => {
+  const insertRun = async (id: string, kind: "pull_request" | "merge_group", testedSha: string) => {
+    await database
+      .prepare(`INSERT INTO visonaut_runs
+        (id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,
+          plan_digest,plan_json,state,created_at)
+        VALUES (?,'project',?,1,?,?,?,'plan','{}','reviewing',1)`)
+      .bind(id, id, kind, testedSha, kind === "pull_request" ? "pr:7" : "merge_group")
+      .run();
+  };
+  afterEach(async () => {
+    // Closing a run writes rows that reference it.
+    for (const table of ["visonaut_audit", "visonaut_status_outbox", "work_retained_runs"]) {
+      await database.prepare(`DELETE FROM ${table}`).run();
+    }
+  });
+  const closed = async (id: string) =>
+    database
+      .prepare("SELECT state, active, closed_reason FROM visonaut_runs WHERE id=?")
+      .bind(id)
+      .first();
+
+  it("stores pull-request-closed when the pull request closes", async () => {
+    await insertRun("pull", "pull_request", mergeSha);
+    const fixture = preRunFixture();
+    fixture.state.pullState = "closed";
+    const scoped = await githubBindings(bindings, fixture);
+    await processWebhook(apiContext(scoped), {
+      deliveryId: crypto.randomUUID(),
+      event: "pull_request",
+      payloadDigest: "c".repeat(64),
+      payload: {
+        action: "closed",
+        number: 7,
+        pull_request: { number: 7, title: "Closed" },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("pull")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "pull-request-closed",
+    });
+  });
+
+  it("stores replaced when the pull request has a newer commit", async () => {
+    await insertRun("pull", "pull_request", mergeSha);
+    const fixture = preRunFixture();
+    const newMergeSha = "6".repeat(40);
+    fixture.state.pullHeadSha = "5".repeat(40);
+    fixture.state.currentSha = newMergeSha;
+    fixture.state.refSha = newMergeSha;
+    const scoped = await githubBindings(bindings, fixture);
+    await processWebhook(apiContext(scoped), {
+      deliveryId: crypto.randomUUID(),
+      event: "pull_request",
+      payloadDigest: "c".repeat(64),
+      payload: {
+        action: "synchronize",
+        number: 7,
+        pull_request: { number: 7, title: "Changed" },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("pull")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "replaced",
+    });
+  });
+
+  it("stores merge-group-destroyed when the merge group is destroyed", async () => {
+    const headSha = "d".repeat(40);
+    await insertRun("group", "merge_group", headSha);
+    await processWebhook(apiContext(bindings), {
+      deliveryId: crypto.randomUUID(),
+      event: "merge_group",
+      payloadDigest: "e".repeat(64),
+      payload: {
+        action: "destroyed",
+        merge_group: { head_sha: headSha },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("group")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "merge-group-destroyed",
+    });
+  });
+});
+
 describe("trusted Plan report with native D1", () => {
   afterEach(async () => {
     vi.restoreAllMocks();

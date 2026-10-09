@@ -16,6 +16,7 @@ export async function retireReplacedMainRuns(context: OperationsContext): Promis
     try {
       await service.retireRun({
         runId: run.id,
+        reason: "replaced",
         replacementSnapshotId: run.snapshot_id,
         now: context.now(),
       });

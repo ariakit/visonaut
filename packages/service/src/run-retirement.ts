@@ -1,3 +1,4 @@
+import type { RunClosedReason } from "@visonaut/protocol";
 import { assertion, atomic, ConflictError, statement } from "./database.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Service } from "./service.ts";
@@ -10,7 +11,13 @@ export const reviewTaskRetirementPageSize = 100;
 
 export async function retireRun(
   service: Service,
-  input: { runId: string; now: number; replacementSnapshotId?: string },
+  input: {
+    runId: string;
+    now: number;
+    /** The other reasons belong to the statements that store them. */
+    reason?: Exclude<RunClosedReason, "baseline-retired" | "expired">;
+    replacementSnapshotId?: string;
+  },
 ) {
   const run = await service.run(input.runId);
   const project = await service.project(run.project_id);
@@ -34,8 +41,8 @@ export async function retireRun(
     ),
     statement(
       service.database,
-      "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
-      [input.now, run.id],
+      "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), closed_reason = ? WHERE id = ?",
+      [input.now, input.reason ?? null, run.id],
     ),
     statement(
       service.database,
@@ -108,7 +115,7 @@ export async function expireIncompleteWorkflowRun(
       ),
       statement(
         service.database,
-        "UPDATE visonaut_runs SET active = 0, state = 'failed', closed_at = COALESCE(closed_at, ?) WHERE id = ?",
+        "UPDATE visonaut_runs SET active = 0, state = 'failed', closed_at = COALESCE(closed_at, ?), closed_reason = 'expired' WHERE id = ?",
         [input.now, run.id],
       ),
       statement(

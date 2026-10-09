@@ -138,6 +138,8 @@ it("retires proven old main work during the ordinary recovery pass", async () =>
   const report = await runOperations(fixture.context, { kind: "recovery" });
   expect(report.reports["main-retirement"]?.completed).toEqual(["old"]);
   expect(
-    database.connection.prepare("SELECT active,state FROM visonaut_runs WHERE id='old'").get(),
-  ).toEqual({ active: 0, state: "superseded" });
+    database.connection
+      .prepare("SELECT active,state,closed_reason FROM visonaut_runs WHERE id='old'")
+      .get(),
+  ).toEqual({ active: 0, state: "superseded", closed_reason: "replaced" });
 });
