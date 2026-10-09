@@ -2,7 +2,6 @@ import {
   captureJobNames,
   digestJson,
   validateManifestProfiles,
-  workflowSourceDigest,
   type Manifest,
   type VerifiedDiscoveryEvidence,
 } from "@visonaut/protocol";
@@ -13,7 +12,7 @@ import {
   type VerifiedRun,
 } from "@visonaut/security";
 import { IncompleteError } from "@visonaut/service";
-import { isTrustedWorkflowExecutor, type ApiContext } from "./context.js";
+import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 import {
   completeWorkflowJobs,
@@ -144,7 +143,7 @@ async function stagedBundle(
   const manifest = await readManifestEvidence(context, stored);
   const executorDigest = manifest.discovery?.executorDigest;
   if (
-    !isTrustedWorkflowExecutor(context.configuration, executorDigest) ||
+    !executorDigest ||
     (await digestJson(manifest)) !== bundle.manifest_digest ||
     manifest.run.repository !== github.repository ||
     manifest.run.repositoryId !== run.repository_id ||
@@ -194,10 +193,10 @@ const bundleSql = `
     ON manifest.run_id = bundle.run_id AND manifest.job_id = bundle.job_id
 `;
 
-/** Resolve only the matrix proved by successful pinned capture and submit jobs. */
+/** Resolve only the matrix proved by successful signed capture and submit jobs. */
 export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: string) {
   const configuration = context.configuration.workflowOwned;
-  if (!configuration || !context.configuration.trustedExecutorDigest) {
+  if (!configuration) {
     throw new SecurityError("workflow_configuration", 503, "The trusted workflow is unavailable.");
   }
   const run = await context.database
@@ -211,14 +210,11 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     run.submitted_at === null ||
     !run.submit_job_id ||
     !run.submit_verified_json ||
-    run.workflow_source_digest !==
-      (await workflowSourceDigest(configuration.reusableWorkflowSha)) ||
     run.caller_workflow_path !== configuration.callerWorkflowPath ||
-    run.reusable_workflow_ref !== configuration.reusableWorkflowRef ||
     run.capture_job_prefix !== configuration.captureJobName ||
     run.submit_job_name !== configuration.submitJobName
   ) {
-    throw new IncompleteError("The pinned workflow has no matching signed submit intent.");
+    throw new IncompleteError("The configured workflow has no matching signed submit intent.");
   }
   const submit = verifiedRun(run.submit_verified_json);
   if (
@@ -236,9 +232,9 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   // has its own record.
   const attempt = run.workflow_attempt > 1 ? await workflowAttempt(github, submit, true) : latest;
   // Gate may still be running or may fail while a visual review is pending.
-  // The signed submit and every pinned capture job must succeed below.
+  // The signed submit and every required capture job must succeed below.
   if (attempt.path !== run.caller_workflow_path) {
-    throw new IncompleteError("The pinned workflow path changed.");
+    throw new IncompleteError("The caller workflow path changed.");
   }
   const attemptJobs = await completeWorkflowJobs(github, run.workflow_run_id, run.workflow_attempt);
   const latestJobs =
@@ -262,7 +258,7 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     (job) => typeof job.name === "string" && captureNames.shard(job.name) !== undefined,
   );
   if (!captureJobs.length) {
-    throw new IncompleteError("The pinned workflow has no required capture jobs.");
+    throw new IncompleteError("The workflow attempt has no required capture jobs.");
   }
   const staged = await context.database
     .prepare(
@@ -354,7 +350,7 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   }
   const current = await workflowAttempt(github, submit);
   if (current.path !== run.caller_workflow_path) {
-    throw new IncompleteError("The pinned workflow path changed during reconciliation.");
+    throw new IncompleteError("The caller workflow path changed during reconciliation.");
   }
   return {
     run,

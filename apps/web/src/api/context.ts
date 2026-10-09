@@ -19,17 +19,14 @@ export interface ApiConfiguration {
   webhookSecret: string;
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
-  /** Names and immutable source of the workflow-owned upload and submit jobs. */
+  /** Paths and job names of the workflow-owned capture and Submit jobs. */
   workflowOwned?: {
     callerWorkflowPath: string;
-    callerWorkflowBlobSha?: string;
     captureJobName: string;
     submitJobName: string;
-    reusableWorkflowRef: string;
-    reusableWorkflowSha: string;
-    trustedWorkflowPath?: string;
+    /** The workflow that the caller references. A run lists it with the tested merge commit. */
+    reusableWorkflowPath: string;
   };
-  trustedExecutorDigest?: string;
   limits: {
     maximumImageBytes: number;
     maximumShardBytes: number;
@@ -40,14 +37,6 @@ export interface ApiConfiguration {
     maximumPlanBytes: number;
     maximumCaptures: number;
   };
-}
-
-export function isTrustedWorkflowExecutor(
-  configuration: ApiConfiguration,
-  digest: string | undefined,
-): digest is string {
-  if (!digest) return false;
-  return digest === configuration.trustedExecutorDigest;
 }
 
 export interface ObjectStorage {
