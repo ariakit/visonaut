@@ -202,6 +202,7 @@ test("receipts support consecutive reviews with no new read of the run model", (
     verdict: "approved",
     source: "human",
     reviewer: "maintainer-1",
+    ownDecision: true,
   });
   expect(afterFirst.comparisonRevision).toBe(initial.comparisonRevision + 1);
   expect(afterFirst.counts).toEqual({ pending: 10, rejected: 0, approved: 1 });
@@ -321,6 +322,20 @@ test.each(["error", "pending"] as const)(
 
 test("conflict responses carry current evidence and reviewer without inventing success", async () => {
   const model = fixtureModel();
+  // The decision of another reviewer, and one of the person of the page.
+  Object.assign(model.items[0]?.variants[0] ?? {}, {
+    verdict: "rejected",
+    source: "human",
+    revision: 1,
+    reviewer: "Kenji Mori",
+  });
+  Object.assign(model.items[0]?.variants[1] ?? {}, {
+    verdict: "approved",
+    source: "human",
+    revision: 1,
+    reviewer: "Maintainer One",
+    ownDecision: true,
+  });
   vi.stubGlobal("fetch", async (path: unknown) => {
     if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
     if (path === "/api/runs/run-42") return json(compactReviewModel(model));
@@ -328,7 +343,6 @@ test("conflict responses carry current evidence and reviewer without inventing s
       {
         error: { code: "conflict", message: "A newer verdict exists." },
         model: compactReviewModel(model),
-        reviewer: "octocat",
       },
       409,
     );
@@ -343,7 +357,6 @@ test("conflict responses carry current evidence and reviewer without inventing s
   ).rejects.toMatchObject({
     name: "ReviewCommandError",
     conflict: true,
-    reviewer: "octocat",
     model,
   });
 });
@@ -626,10 +639,7 @@ test("a command with too many targets says how to continue", async () => {
 test("a conflict keeps its status when its evidence is malformed", async () => {
   await expect(
     failedRefresh(() =>
-      json(
-        { error: { code: "conflict" }, model: { format: "compact-review-2" }, reviewer: 42 },
-        409,
-      ),
+      json({ error: { code: "conflict" }, model: { format: "compact-review-2" } }, 409),
     ),
   ).rejects.toMatchObject({
     name: "ReviewCommandError",
@@ -637,7 +647,6 @@ test("a conflict keeps its status when its evidence is malformed", async () => {
     code: "conflict",
     conflict: true,
     model: undefined,
-    reviewer: undefined,
   });
 });
 

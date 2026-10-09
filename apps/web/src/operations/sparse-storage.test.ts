@@ -654,6 +654,8 @@ describe("sparse inventory operations", () => {
         projectId: "project",
         github: { repository: "owner/repo", repositoryId: "123" },
       },
+      // The model marks the decisions of the person who reads it.
+      identity: { githubUserId: "viewer" },
     });
     const before = parseReviewModel(await reviewModel(api, "run"));
     // The first response has the rows that D1 stores, and it counts the others.

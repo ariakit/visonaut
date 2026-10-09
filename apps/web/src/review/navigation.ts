@@ -102,10 +102,41 @@ export function applyPendingReviews(model: ReviewModel, commands: ReviewCommand[
       variants: item.variants.map((variant) => {
         const change = changes.get(variant.id);
         if (!change) return variant;
-        return { ...variant, ...change, source: "human", reviewer: undefined };
+        // The receipt of the decision brings the name of the reviewer.
+        return { ...variant, ...change, source: "human", reviewer: undefined, ownDecision: true };
       }),
     })),
   };
+}
+
+/**
+ * The sentence for a decision that the service refused because a person
+ * decided for one of its variants first. The model is the state of the refusal.
+ * The result is null when no target has a newer decision of a person.
+ */
+export function decisionConflict(model: ReviewModel, command: ReviewCommand): string | null {
+  const variants = new Map(
+    model.items.flatMap((item) => item.variants).map((variant) => [variant.id, variant]),
+  );
+  const decided = command.targets.flatMap((target) => {
+    const variant = variants.get(target.id);
+    if (!variant?.verdict) return [];
+    if (variant.source !== "human") return [];
+    if (variant.revision === target.expectedRevision) return [];
+    return [variant];
+  });
+  // A decision for the whole item has each changed variant as a target. The
+  // page keeps the selection, so the sentence is about that variant if it can be.
+  const selected = model.items
+    .find((item) => item.key === command.selection.itemKey)
+    ?.variants.find((variant) => variant.key === command.selection.variantKey);
+  const variant = decided.find((entry) => entry === selected) ?? decided[0];
+  if (!variant) return null;
+  // The other decision is one of the same person, for example in another tab.
+  const reviewer = variant.ownDecision ? "You already" : (variant.reviewer ?? "Another reviewer");
+  const place = variant === selected ? "this variant" : "another variant of this item";
+  const refused = command.verdict === "approved" ? "approval" : "rejection";
+  return `${reviewer} ${variant.verdict} ${place}. Your ${refused} was not saved.`;
 }
 
 export function latestReviewModel(current: ReviewModel, next: ReviewModel): ReviewModel {
@@ -133,6 +164,8 @@ export function applySavedReview(
   const { runRevision, reviewer, runStatus, counts } = result;
   if (result.noop) return null;
   if (runRevision === undefined) return null;
+  // A receipt has no name for a person with no stored name. A new model then
+  // gives the state.
   if (reviewer === undefined) return null;
   if (runStatus === undefined) return null;
   if (counts === undefined) return null;
@@ -161,6 +194,7 @@ export function applySavedReview(
         verdict: command.verdict,
         source: "human" as const,
         reviewer,
+        ownDecision: true,
       };
     }),
   }));

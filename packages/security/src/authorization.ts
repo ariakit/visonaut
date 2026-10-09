@@ -84,6 +84,7 @@ export async function requireMaintainer({
     return {
       ...cached.identity,
       userId: session.user.id,
+      name: session.user.name,
       sessionId: session.session.id,
       sessionHeaders,
     };
@@ -99,5 +100,11 @@ export async function requireMaintainer({
     }
   }
   permissions.set(key, { identity, checkedAt });
-  return { ...identity, userId: session.user.id, sessionId: session.session.id, sessionHeaders };
+  return {
+    ...identity,
+    userId: session.user.id,
+    name: session.user.name,
+    sessionId: session.session.id,
+    sessionHeaders,
+  };
 }

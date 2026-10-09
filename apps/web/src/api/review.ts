@@ -52,7 +52,10 @@ interface VariantView {
   revision: number;
   verdict: "approved" | "rejected" | null;
   source: "human" | "automatic" | null;
+  /** The stored profile name of the person of a human decision. */
   reviewer?: string;
+  /** True for a human decision of the person who reads this model. */
+  ownDecision?: true;
   reference: ImageView | null;
   candidate: ImageView | null;
   diff: ImageView | null;
@@ -253,11 +256,24 @@ function lacksStoredBaseline(row: ReviewRow) {
   return typeof object(JSON.parse(row.tuple_json)).referenceDigest === "string";
 }
 
+/**
+ * The stored profile name of a person as the page shows it. The result is
+ * undefined for a person with no account row and for an empty name: the page
+ * then says "Another reviewer".
+ */
+function profileName(name: string | undefined) {
+  return name?.trim() || undefined;
+}
+
 interface ReviewItemsParams {
   rows: ReviewRow[];
   captures: Map<string, CaptureRecord>;
   images: Map<string, ImageRecord>;
   decisions: Map<string, DecisionRecord>;
+  /** The stored profile name of each reviewer, by GitHub user ID. */
+  reviewerNames: Map<string, string>;
+  /** The GitHub user ID of the person who reads the model. */
+  viewerId: string;
   eligibleApprovals: Set<string>;
   /** The capture lists, for a capture or a baseline that D1 does not hold. */
   inventory: Awaited<ReturnType<typeof readReviewInventory>>;
@@ -274,6 +290,8 @@ function reviewItems({
   captures,
   images: imageById,
   decisions,
+  reviewerNames,
+  viewerId,
   eligibleApprovals,
   inventory,
   comparisonStopped,
@@ -331,6 +349,7 @@ function reviewItems({
       (decision.verdict !== "approved" || eligibleApprovals.has(row.id))
         ? decision
         : null;
+    const reviewer = profileName(reviewerNames.get(effective?.actor_id ?? ""));
     const item = items.get(row.item_key) ?? {
       key: row.item_key,
       name: typeof metadata.name === "string" ? metadata.name : row.item_key,
@@ -367,7 +386,8 @@ function reviewItems({
       revision: row.decision_revision,
       verdict: effective?.verdict ?? null,
       source: effective?.kind ?? null,
-      ...(effective?.actor_id ? { reviewer: effective.actor_id } : {}),
+      ...(reviewer ? { reviewer } : {}),
+      ...(effective?.actor_id === viewerId ? { ownDecision: true as const } : {}),
       reference: imageView(reference?.image_id),
       candidate: candidateOmitted ? null : imageView(candidate?.image_id),
       ...(candidateOmitted ? { candidateOmitted: true } : {}),
@@ -491,6 +511,8 @@ export async function reviewCapturePage(
     captures: new Map(),
     images: new Map(evidence.images.map((image) => [image.id, image])),
     decisions: new Map(),
+    reviewerNames: new Map(),
+    viewerId: context.identity.githubUserId,
     eligibleApprovals: new Set(),
     inventory: evidence,
     comparisonStopped: false,
@@ -569,6 +591,12 @@ export async function reviewModel(
           "SELECT json_extract(payload_json,'$.pull_request.title') AS title FROM github_webhook_delivery WHERE event='pull_request' AND CAST(json_extract(payload_json,'$.repository.id') AS TEXT)=? AND json_extract(payload_json,'$.pull_request.number')=? ORDER BY received_at DESC LIMIT 1",
         )
         .bind(context.configuration.github.repositoryId, pullRequestNumber),
+      // The stored profile name of each person who signed in, by GitHub user
+      // ID. A filter for the reviewers of the run costs more rows: it reads
+      // the decisions again, and no index has the account ID.
+      context.database.prepare(
+        `SELECT a.accountId AS actorId, u.name FROM "account" a JOIN "user" u ON u.id = a.userId WHERE a.providerId = 'github'`,
+      ),
     ]),
     context.service.project(run.project_id),
     // A closed summary has the comparison, and a selected one is loaded.
@@ -679,6 +707,12 @@ export async function reviewModel(
   const decisions = archive
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
+  const reviewerNames = new Map(
+    batchRows<{ actorId: string; name: string }>(metadata[3]).map((reviewer) => [
+      reviewer.actorId,
+      reviewer.name,
+    ]),
+  );
   const threshold = policyThreshold(policyRow ? historyString(policyRow, "policy_json") : "{}");
   const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
@@ -692,6 +726,8 @@ export async function reviewModel(
     captures: captureById,
     images: imageById,
     decisions: decisionById,
+    reviewerNames,
+    viewerId: context.identity.githubUserId,
     eligibleApprovals,
     inventory,
     comparisonStopped,
@@ -804,6 +840,24 @@ async function commandResult(context: PrivateContext, result: CommandResult, run
   return Response.json({ ...result, model: await reviewModel(context, runId) });
 }
 
+/**
+ * The answer of a saved decision: its stored receipt, the run revision of this
+ * moment, and the stored profile name of the reviewer. Only the reviewer of a
+ * decision can read its receipt, so the name is the one of this session. The
+ * name is not a part of the stored receipt.
+ */
+function receiptResponse(
+  context: PrivateContext,
+  receipt: Record<string, unknown>,
+  currentRunRevision: number,
+) {
+  return Response.json({
+    ...receipt,
+    reviewer: profileName(context.identity.name),
+    currentRunRevision,
+  });
+}
+
 async function wakeReviewStatus(context: PrivateContext, commandId?: string) {
   // Start the saved command while the shared consumer may be occupied with ingest.
   context.lifetime.waitUntil(
@@ -847,11 +901,6 @@ async function archivedCommandResult(
 
 async function conflictResponse(context: PrivateContext, error: ConflictError, runId: string) {
   const model = await reviewModel(context, runId);
-  const current = error.current && typeof error.current === "object" ? object(error.current) : {};
-  const targetId = typeof current.id === "string" ? current.id : "";
-  const row = model.items
-    .flatMap((item) => item.variants)
-    .find((variant) => variant.id === targetId);
   return Response.json(
     {
       error:
@@ -859,7 +908,6 @@ async function conflictResponse(context: PrivateContext, error: ConflictError, r
           ? concurrentChange
           : { code: "conflict", message: error.message },
       model,
-      ...(row?.reviewer ? { reviewer: row.reviewer } : {}),
     },
     { status: 409 },
   );
@@ -960,7 +1008,7 @@ export async function handleReview(
       // The stored receipt, with no model. This request read the run after the
       // task, so the revision is not older than the receipt. The page reads
       // the model only when the two do not agree.
-      return Response.json({ ...result, currentRunRevision: run.revision });
+      return receiptResponse(context, result ?? {}, run.revision);
     }
     if (task.state === "complete" || task.state === "dead") {
       // Other decisions can finish before the browser reads this receipt.
@@ -1047,10 +1095,11 @@ export async function handleReview(
       // The receipt, with no model. The run is read after the review state: a
       // write that the state already counts then shows in the run revision.
       const status = await context.service.status(run.id);
-      return Response.json({
-        ...decisionReceipt(result, context.identity.githubUserId, status),
-        currentRunRevision: (await context.service.run(run.id)).revision,
-      });
+      return receiptResponse(
+        context,
+        decisionReceipt(result, status),
+        (await context.service.run(run.id)).revision,
+      );
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {
         return archivedCommandResult(context, error, run.id);

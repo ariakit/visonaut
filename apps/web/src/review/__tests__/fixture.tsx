@@ -72,7 +72,29 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
   if (behavior === "conflict") {
     throw new ReviewCommandError("The decision changed. Refresh and review the current evidence.", {
       conflict: true,
-      reviewer: "octocat",
+      model,
+    });
+  }
+  if (behavior === "other-conflict" || behavior === "own-conflict") {
+    // A person decided for the first target before this decision: another
+    // reviewer, or the same person in another tab.
+    model = structuredClone(model);
+    model.comparisonRevision += 1;
+    const decided = model.items
+      .flatMap((item) => item.variants)
+      .find((entry) => entry.id === command.targets[0]?.id);
+    if (!decided) throw new Error("The fixture has no variant for the other decision.");
+    Object.assign(
+      decided,
+      { source: "human", revision: decided.revision + 1 },
+      behavior === "other-conflict"
+        ? { verdict: "rejected", reviewer: "Kenji Mori" }
+        : { verdict: "approved", reviewer: "maintainer-1", ownDecision: true },
+    );
+    throw new ReviewCommandError("A target changed or belongs to another comparison.", {
+      status: 409,
+      code: "conflict",
+      conflict: true,
       model,
     });
   }
@@ -98,7 +120,7 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
     Object.assign(other, {
       verdict: "rejected",
       source: "human",
-      reviewer: "octocat",
+      reviewer: "Kenji Mori",
       revision: other.revision + 1,
     });
   }
@@ -115,6 +137,7 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
       entry.verdict = command.verdict;
       entry.source = "human";
       entry.reviewer = "maintainer-1";
+      entry.ownDecision = true;
       entry.revision++;
     }
   }
@@ -160,7 +183,7 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
     Object.assign(other, {
       verdict: "rejected",
       source: "human",
-      reviewer: "octocat",
+      reviewer: "Kenji Mori",
       revision: other.revision + 1,
     });
   }
@@ -176,7 +199,6 @@ async function undo(command: UndoCommand): Promise<ReviewCommandResult> {
   if (behavior === "conflict") {
     throw new ReviewCommandError("A later promotion is current. Refresh to recover explicitly.", {
       conflict: true,
-      reviewer: "octocat",
       model,
     });
   }

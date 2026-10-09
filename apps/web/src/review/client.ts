@@ -128,6 +128,7 @@ function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
     verdict: data.verdict === null ? null : oneOf(data.verdict, ["approved", "rejected"]),
     source: data.source === null ? null : oneOf(data.source, ["human", "automatic"]),
     reviewer: optionalString(data.reviewer),
+    ownDecision: data.ownDecision == null ? undefined : boolean(data.ownDecision),
     reference: evidence(data.reference),
     candidate: evidence(data.candidate),
     diff: evidence(data.diff),
@@ -297,10 +298,7 @@ export function parseSaveResult(value: unknown): ReviewSaveResult {
 function failureEvidence(body: unknown) {
   try {
     const data = record(body);
-    return {
-      model: data.model ? parseReviewModel(data.model) : undefined,
-      reviewer: optionalString(data.reviewer),
-    };
+    return { model: data.model ? parseReviewModel(data.model) : undefined };
   } catch {
     return {};
   }

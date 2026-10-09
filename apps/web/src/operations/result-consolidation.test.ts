@@ -198,6 +198,8 @@ async function localFixture(
       projectId: "project",
       github: { repository: "ariakit/visonaut", repositoryId: "123" },
     },
+    // The model marks the decisions of the person who reads it.
+    identity: { githubUserId: "viewer" },
   });
   return {
     service,

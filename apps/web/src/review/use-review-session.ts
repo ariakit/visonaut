@@ -13,6 +13,7 @@ import type {
 import {
   applyPendingReviews,
   applySavedReview,
+  decisionConflict,
   latestReviewModel,
   nextPending,
   reviewTargets,
@@ -270,20 +271,23 @@ export function useReviewSession({
   }, [awaitingComparison, commands]);
 
   const reportError = (error: unknown, failed?: ReviewCommand, failedUndo?: UndoCommand) => {
+    const namedConflict =
+      failed && error instanceof ReviewCommandError && error.code === "conflict" && error.model
+        ? decisionConflict(error.model, failed)
+        : null;
     const message =
-      error instanceof Error
+      namedConflict ??
+      (error instanceof Error
         ? error.message
-        : "The command could not be saved. Check your connection.";
+        : "The command could not be saved. Check your connection.");
     if (error instanceof ReviewCommandError && error.model) {
       const currentModel = error.model;
       setModel((model) => latestReviewModel(model, currentModel));
     }
     const conflict = error instanceof ReviewCommandError && error.conflict;
-    const reviewer =
-      error instanceof ReviewCommandError && error.reviewer ? ` Updated by ${error.reviewer}.` : "";
     setSaveState({
       status: conflict ? "conflict" : "error",
-      message: `${conflict ? "Conflict. " : "Not saved. "}${message}${reviewer}`,
+      message: `${conflict ? "Conflict. " : "Not saved. "}${message}`,
       failed: conflict ? undefined : failed,
       failedUndo: conflict ? undefined : failedUndo,
     });

@@ -60,6 +60,11 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
       "INSERT INTO ingest_review_sessions(id,auth_session_id,actor_id,created_at) VALUES(?,'auth','reviewer',?)",
     )
     .run(sessionId, Date.now());
+  // The account of the reviewer, with the profile name that the sign-in stored.
+  database.connection.exec(
+    `INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES ('user', 'Kenji Mori', 'kenji@example.com', 1, 1, 1);
+    INSERT INTO "account" (id, accountId, providerId, userId, createdAt, updatedAt) VALUES ('account', 'reviewer', 'github', 'user', 1, 1);`,
+  );
   // HTTP authentication and GitHub transport are outside these private-route tests.
   const api = {} as PrivateContext;
   Object.assign(api, {
@@ -159,7 +164,7 @@ describe("private permanent closed review", () => {
       variants: [
         {
           verdict: "approved",
-          reviewer: "reviewer",
+          reviewer: "Kenji Mori",
           changedPixels: 5,
           candidate: null,
           reference: null,
@@ -327,7 +332,7 @@ describe("private permanent closed review", () => {
       });
       expect((await test.model()).items[0]?.variants[0]).toMatchObject({
         verdict: "approved",
-        reviewer: "reviewer",
+        reviewer: "Kenji Mori",
       });
       expect(get).not.toHaveBeenCalled();
     },
@@ -457,7 +462,7 @@ describe("private permanent closed review", () => {
       expect((await test.model(historicalId)).evidenceState).toBe("summary");
       expect((await test.model()).items[0]?.variants[0]).toMatchObject({
         verdict: "approved",
-        reviewer: "reviewer",
+        reviewer: "Kenji Mori",
       });
     },
   );
