@@ -198,6 +198,47 @@ it("refreshes the same required head check after approval and Undo", async () =>
   ]);
 });
 
+function storedReviews(database: TestDatabase) {
+  return database.connection
+    .prepare(`SELECT conclusion, review_state, review_pending, review_rejected, review_approved
+      FROM work_status_outbox ORDER BY revision`)
+    .all();
+}
+
+it("stores the review state and the three counts of the run in the update of a mirror check", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time, "rejected");
+  await publishReviewLinks(fixture.context);
+  expect(storedReviews(database)).toEqual([
+    {
+      conclusion: "failure",
+      review_state: "rejected",
+      review_pending: 1,
+      review_rejected: 1,
+      review_approved: 0,
+    },
+  ]);
+});
+
+it("stores no review state in the update of a mirror check that has no run status", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  await publishReviewLinks(fixture.context);
+  expect(storedReviews(database)).toEqual([
+    {
+      conclusion: "failure",
+      review_state: null,
+      review_pending: null,
+      review_rejected: null,
+      review_approved: null,
+    },
+  ]);
+});
+
 it("upgrades an existing neutral PR-head link without replacing its check or tested merge", async () => {
   using database = new TestDatabase();
   const fixture = reviewContext(database);

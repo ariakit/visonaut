@@ -28,6 +28,7 @@ export function operationsMessage(value: unknown): OperationsMessage | null {
 }
 
 import { assertion, type Database, type Statement } from "./database.ts";
+import type { ReviewStatusSummary } from "./review-status.ts";
 
 export interface WorkInput {
   id: string;
@@ -373,6 +374,8 @@ export interface StatusIntent {
   comparisonRevision: number;
   sourceRevision: number;
   conclusion: "pending" | "success" | "failure";
+  /** The review state of the run and its three counts. A check with no run status has none. */
+  review: ReviewStatusSummary | null;
   detailsUrl: string;
   maxAttempts: number;
   now: number;
@@ -386,6 +389,11 @@ export interface StatusDelivery {
   comparison_revision: number;
   source_revision: number;
   conclusion: "pending" | "success" | "failure";
+  /** The four review values are NULL for a check with no run status and for an old row. */
+  review_state: ReviewStatusSummary["status"] | null;
+  review_pending: number | null;
+  review_rejected: number | null;
+  review_approved: number | null;
   details_url: string;
   attempts: number;
   max_attempts: number;
@@ -409,13 +417,16 @@ export function statusIntentStatements(database: Database, input: StatusIntent):
     database
       .prepare(`
       INSERT INTO work_status_outbox (check_id, revision, run_id, attempt,
-        comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at)
-      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at,
+        review_state, review_pending, review_rejected, review_approved)
+      SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       WHERE EXISTS (SELECT 1 FROM work_checks WHERE id = ? AND desired_revision = ?)
       ON CONFLICT(check_id, revision) DO UPDATE SET run_id = excluded.run_id,
         attempt = excluded.attempt, comparison_revision = excluded.comparison_revision,
         source_revision = excluded.source_revision, conclusion = excluded.conclusion,
-        details_url = excluded.details_url, max_attempts = excluded.max_attempts
+        details_url = excluded.details_url, max_attempts = excluded.max_attempts,
+        review_state = excluded.review_state, review_pending = excluded.review_pending,
+        review_rejected = excluded.review_rejected, review_approved = excluded.review_approved
     `)
       .bind(
         input.checkId,
@@ -428,6 +439,10 @@ export function statusIntentStatements(database: Database, input: StatusIntent):
         input.detailsUrl,
         input.maxAttempts,
         input.now,
+        input.review?.status ?? null,
+        input.review?.pending ?? null,
+        input.review?.rejected ?? null,
+        input.review?.approved ?? null,
         input.checkId,
         input.revision,
       ),

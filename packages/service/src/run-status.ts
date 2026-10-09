@@ -130,6 +130,7 @@ export async function prepareStatusIntent(
       comparisonRevision: comparison?.ordinal ?? 0,
       sourceRevision: project.revision,
       conclusion,
+      review: status,
       detailsUrl: input.detailsUrl,
       maxAttempts: input.maxAttempts,
       now: input.now,

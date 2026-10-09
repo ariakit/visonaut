@@ -74,7 +74,8 @@ interface ReviewStatusInput {
   currentPromotion?: boolean;
 }
 
-interface ReviewStatusSummary extends ReviewCounts {
+/** The review state of a run with its three counts. */
+export interface ReviewStatusSummary extends ReviewCounts {
   status: RunReviewState;
 }
 

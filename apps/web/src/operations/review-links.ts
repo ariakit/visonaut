@@ -17,6 +17,7 @@ import {
   statement,
   statusIntentStatements,
   type StatusDelivery,
+  type StatusIntent,
 } from "@visonaut/service";
 import type { OperationsContext, OperationReport } from "./types.ts";
 import { afterRestoreSql, readRestoreCutoff } from "./recovery.ts";
@@ -98,6 +99,8 @@ async function verdict(context: OperationsContext, candidate: Candidate) {
     .first<{ id: string }>();
   let conclusion: StatusDelivery["conclusion"] = "pending";
   let comparisonRevision = 0;
+  // Only a result that comes from the status of the run has a review state.
+  let review: StatusIntent["review"] = null;
   if (candidate.state === "failed") {
     conclusion = "failure";
   } else if (
@@ -114,13 +117,14 @@ async function verdict(context: OperationsContext, candidate: Candidate) {
   ) {
     const status = await new Service(context.database).status(run.id);
     comparisonRevision = "comparison" in status ? (status.comparison?.ordinal ?? 0) : 0;
+    review = status;
     if (status.status === "passed") {
       conclusion = "success";
     } else if (["rejected", "failed", "needs-review", "superseded"].includes(status.status)) {
       conclusion = "failure";
     }
   }
-  return { conclusion, comparisonRevision };
+  return { conclusion, comparisonRevision, review };
 }
 
 async function sameHead(context: OperationsContext, candidate: Candidate) {
@@ -314,6 +318,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
             comparisonRevision: status.comparisonRevision,
             sourceRevision: candidate.projectRevision,
             conclusion: status.conclusion,
+            review: status.review,
             detailsUrl,
             maxAttempts: context.budget.maxAttempts,
             now: context.now(),

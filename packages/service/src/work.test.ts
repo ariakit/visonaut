@@ -114,10 +114,18 @@ function statusInput(
     comparisonRevision: revision,
     sourceRevision: revision,
     conclusion,
+    review: null,
     detailsUrl: "https://visonaut.example/runs/run-1",
     maxAttempts: 2,
     now: 100,
   };
+}
+
+function storedReview(database: TestDatabase) {
+  return database.connection
+    .prepare(`SELECT revision, review_state, review_pending, review_rejected, review_approved
+      FROM work_status_outbox ORDER BY revision`)
+    .all();
 }
 
 function deferred() {
@@ -639,6 +647,84 @@ describe("serialized GitHub status outbox", () => {
     expect(await database.prepare("SELECT desired_revision FROM work_checks").first()).toEqual({
       desired_revision: 2,
     });
+  });
+
+  it("stores the review state and the three counts in the row of the status intent", async () => {
+    using database = new TestDatabase();
+    const review = { status: "rejected", pending: 79, rejected: 3, approved: 12 } as const;
+    await database.batch(statusIntentStatements(database, { ...statusInput(), review }));
+    // A check with no run status has no review values.
+    await database.batch(statusIntentStatements(database, statusInput(2, "failure")));
+    expect(storedReview(database)).toEqual([
+      {
+        revision: 1,
+        review_state: "rejected",
+        review_pending: 79,
+        review_rejected: 3,
+        review_approved: 12,
+      },
+      {
+        revision: 2,
+        review_state: null,
+        review_pending: null,
+        review_rejected: null,
+        review_approved: null,
+      },
+    ]);
+    const claimed = await claimStatus(database, {
+      id: "github:123",
+      token: "worker",
+      now: 100,
+      leaseMs: 10,
+    });
+    expect(claimed).toMatchObject({ revision: 2, review_state: null, review_pending: null });
+  });
+
+  // The Worker of the release before runs for a short time on the new schema.
+  it("accepts the INSERT that has no review values and completes its row later", async () => {
+    using database = new TestDatabase();
+    const input = statusInput();
+    await database.batch([
+      database
+        .prepare("INSERT INTO work_checks (id, desired_revision) VALUES (?, ?)")
+        .bind(input.checkId, input.revision),
+      database
+        .prepare(`INSERT INTO work_status_outbox (check_id, revision, run_id, attempt,
+          comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        .bind(
+          input.checkId,
+          input.revision,
+          input.runId,
+          input.attempt,
+          input.comparisonRevision,
+          input.sourceRevision,
+          input.conclusion,
+          input.detailsUrl,
+          input.maxAttempts,
+          input.now,
+        ),
+    ]);
+    expect(storedReview(database)).toEqual([
+      {
+        revision: 1,
+        review_state: null,
+        review_pending: null,
+        review_rejected: null,
+        review_approved: null,
+      },
+    ]);
+    const review = { status: "passed", pending: 0, rejected: 0, approved: 2 } as const;
+    await database.batch(statusIntentStatements(database, { ...input, review }));
+    expect(storedReview(database)).toEqual([
+      {
+        revision: 1,
+        review_state: "passed",
+        review_pending: 0,
+        review_rejected: 0,
+        review_approved: 2,
+      },
+    ]);
   });
 
   it("does not deliver an obsolete success after rejection or source invalidation", async () => {
