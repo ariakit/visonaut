@@ -41,7 +41,7 @@ const HELP = `Usage:
 VISONAUT_SERVER supplies the service origin when --server is absent.
 VISONAUT_RUN supplies the run ID when status has no --run.
 Begin and submit require GitHub Actions OIDC (id-token: write).
-Status requires VISONAUT_TOKEN, a maintainer session token.
+Status requires VISONAUT_TOKEN, a maintainer session token with its signature.
 Submit --shard downloads verified ordinary artifacts in one signed job, then uploads and submits them.
 Submit --no-visual reports a successful native CI Plan that requires no capture.
 Submission never grants visual approval.
