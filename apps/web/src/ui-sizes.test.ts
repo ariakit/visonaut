@@ -21,9 +21,9 @@ test("no class sets a fixed text size", () => {
 test("each page shell sets the one base text size", () => {
   const shells = [
     "review/review-workspace.tsx",
-    "routes/index.tsx",
-    "routes/pulls.$pullNumber.tsx",
-    "routes/runs.$runId.tsx",
+    "dashboard/dashboard-page.tsx",
+    "routes/_app/pulls.$pullNumber.tsx",
+    "routes/_app/runs.$runId.tsx",
   ];
   for (const file of shells) {
     const content = readFileSync(join(source, file), "utf8");
