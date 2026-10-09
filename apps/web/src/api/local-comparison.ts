@@ -117,11 +117,13 @@ export async function referenceCaptureInputs(
       profileDigest: capture.profileDigest,
       renderingProfileDigest: capture.renderingProfileDigest,
       image: capture.image,
+      metadata: capture.metadata,
     }));
   }
   const rows = await context.database
     .prepare(`SELECT capture.id AS capture_id,capture.item_key,capture.variant_key,
       capture.profile_digest,COALESCE(profile.rendering_digest,capture.profile_digest) AS rendering_digest,
+      json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant')) AS label_json,
       image.* FROM visonaut_snapshot_images member JOIN visonaut_captures capture ON capture.id=member.capture_id
       JOIN visonaut_images image ON image.id=member.image_id
       LEFT JOIN visonaut_capture_profiles profile ON profile.digest=capture.profile_digest
@@ -133,6 +135,7 @@ export async function referenceCaptureInputs(
       variant_key: string;
       profile_digest: string;
       rendering_digest: string;
+      label_json: string;
       id: string;
       run_id: string;
       digest: string;
@@ -158,6 +161,8 @@ export async function referenceCaptureInputs(
       width: row.width,
       height: row.height,
     },
+    // Only the name and the variant leave D1: the review row of a removal stores them.
+    metadata: JSON.parse(row.label_json),
   }));
 }
 

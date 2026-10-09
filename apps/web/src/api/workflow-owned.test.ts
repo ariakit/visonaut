@@ -1620,6 +1620,90 @@ describe("trusted local Submit", () => {
     60_000,
   );
 
+  it("stores the baseline of each review row in the rows that Submit already writes", async () => {
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    if (!source) throw new Error("Expected a source capture.");
+    const capture = (name: string, ordinal: number): Manifest["captures"][number] => ({
+      ...structuredClone(source),
+      itemKey: `dialog/${name}`,
+      name: `Dialog ${name}`,
+      variant: { ...source.variant, framework: "react", colorScheme: "light" },
+      ordinal,
+    });
+    const changedNames = ["changed-0", "changed-1", "changed-2", "changed-3"];
+    // The baseline has the 4 captures that change, 1 that stays, and 1 that the run removes.
+    test.manifest.captures = [...changedNames, "same", "removed"].map(capture);
+    const seed = await acceptedInventoryReference(test);
+    test.manifest.captures = [...changedNames, "same", "added"].map(capture);
+    for (const candidate of test.manifest.captures) {
+      if (candidate.itemKey === "dialog/same") continue;
+      candidate.image = {
+        ...candidate.image,
+        digest: profiledImage.digest,
+        bytes: profiledPng.byteLength,
+      };
+    }
+    const session = await localSession(test);
+    const receipt = test.manifest.localComparison;
+    if (!receipt) throw new Error("Expected the complete local receipt.");
+    for (const result of receipt.captures) {
+      if (!changedNames.includes(result.itemKey.slice("dialog/".length))) continue;
+      result.outcome = "changed";
+      result.changedPixels = 1;
+      result.ratio = 1 / (image.width * image.height);
+      result.mask = {
+        digest: image.digest,
+        bytes: png.byteLength,
+        width: image.width,
+        height: image.height,
+        mediaType: "image/png",
+        path: `images/mask-${result.itemKey.slice("dialog/".length)}.png`,
+      };
+    }
+    receipt.removals = [{ itemKey: "dialog/removed", variantKey: source.variant.key }];
+    await stageLocal(test, session);
+    const costs = measureD1(nativeDatabase);
+    test.context.database = costs.database;
+    test.context.service = new Service(costs.database);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const rowWrites = costs.costs.filter((cost) =>
+      cost.sql.startsWith("INSERT INTO visonaut_comparison_rows"),
+    );
+    // Each count is the count of `main` before the column. One statement writes
+    // the 6 review rows, and D1 counts 29 written rows for them with the indexes.
+    expect(rowWrites.map((cost) => cost.rows_written)).toEqual([29]);
+    expect(costs.totals().rows_written).toBe(142);
+    const stored = await nativeDatabase
+      .prepare(
+        "SELECT item_key,reference_json FROM visonaut_comparison_rows WHERE comparison_id=? ORDER BY item_key",
+      )
+      .bind(run.comparison_id)
+      .all<{ item_key: string; reference_json: string | null }>();
+    const baseline = { imageId: seed.imageId, width: image.width, height: image.height };
+    expect(
+      stored.results.map((row) => [
+        row.item_key,
+        row.reference_json === null ? null : JSON.parse(row.reference_json),
+      ]),
+    ).toEqual([
+      ["dialog/added", null],
+      ["dialog/changed-0", baseline],
+      ["dialog/changed-1", baseline],
+      ["dialog/changed-2", baseline],
+      ["dialog/changed-3", baseline],
+      // A removed capture has no candidate row, so its name and its variant are here.
+      [
+        "dialog/removed",
+        {
+          ...baseline,
+          name: "Imported baseline",
+          variant: { ...source.variant, framework: "react", colorScheme: "light" },
+        },
+      ],
+    ]);
+  }, 60_000);
+
   it("uses a flat R2 baseline for a complete unchanged run and recovers without staged evidence", async () => {
     const test = await fixture();
     const seed = await acceptedReference(test);
@@ -2064,6 +2148,20 @@ describe("trusted local Submit", () => {
       .find((variant) => variant.kind === "removed");
     expect(removed).toMatchObject({ kind: "removed", candidate: null });
     expect(removed?.candidateOmitted).toBeUndefined();
+    // The baseline of this run has its captures in D1 and no capture list in R2.
+    const stored = await database
+      .prepare(
+        "SELECT reference_json FROM visonaut_comparison_rows WHERE comparison_id=? AND candidate_capture_id IS NULL",
+      )
+      .bind(run.comparison_id)
+      .first<{ reference_json: string }>();
+    expect(JSON.parse(stored?.reference_json ?? "null")).toEqual({
+      imageId: seed.imageId,
+      width: image.width,
+      height: image.height,
+      name: "Previously matched capture",
+      variant: { key: "light" },
+    });
     const added = model.items
       .flatMap((item) => item.variants)
       .find((variant) => variant.kind === "added");
