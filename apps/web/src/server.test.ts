@@ -302,7 +302,8 @@ function withoutDatabase(): BackendEnv {
 // The status is the answer of Better Auth to a request with no session.
 const servedAuthRoutes = [
   "302 GET /api/auth/callback/github",
-  "200 GET /api/auth/error",
+  // The error route of the library sends the person to the app: see `onAPIError`.
+  "302 GET /api/auth/error",
   "200 POST /api/auth/sign-in/social",
   "200 POST /api/auth/sign-out",
 ];
@@ -378,7 +379,7 @@ it.each([
   expect(security.createAuth).not.toHaveBeenCalled();
 });
 
-it("sends a failed GitHub callback to the served error page", async () => {
+it("sends a failed GitHub callback with no state back to the app with its reason", async () => {
   const lifetime = { waitUntil() {} };
   const callback = await server.fetch(
     appRequest("GET", "/api/auth/callback/github?error=access_denied"),
@@ -386,16 +387,46 @@ it("sends a failed GitHub callback to the served error page", async () => {
     lifetime,
   );
   expect(callback.status).toBe(302);
-  const location = new URL(callback.headers.get("location") ?? "", env.VISONAUT_ORIGIN);
-  expect(location.origin + location.pathname).toBe(`${env.VISONAUT_ORIGIN}/api/auth/error`);
-  const page = await server.fetch(
-    appRequest("GET", location.pathname + location.search),
+  // The app shows its sign-in page with the reason. The request has no state,
+  // so the library names its own reason.
+  expect(callback.headers.get("location")).toBe(`${env.VISONAUT_ORIGIN}/?error=state_not_found`);
+});
+
+it("sends a failed GitHub callback back to the page that started the sign-in", async () => {
+  const lifetime = { waitUntil() {} };
+  const jar = new Map<string, string>();
+  const start = await server.fetch(
+    appRequest("POST", "/api/auth/sign-in/social", {
+      body: {
+        provider: "github",
+        callbackURL: "/history?q=dialog",
+        errorCallbackURL: "/history?q=dialog",
+      },
+      // An address of its own, so that this test has its own sign-in limit.
+      headers: { "cf-connecting-ip": "203.0.113.14" },
+    }),
     env,
     lifetime,
   );
-  expect(page.status).toBe(200);
-  expect(page.headers.get("content-type")).toContain("text/html");
-  privateHeaders(page);
+  expect(start.status).toBe(200);
+  storeCookies(jar, start);
+  const { url } = object(await start.json());
+  const state = new URL(string(url, 4096)).searchParams.get("state");
+  // The person refuses the access at GitHub.
+  const callback = await server.fetch(
+    appRequest(
+      "GET",
+      `/api/auth/callback/github?error=access_denied&state=${encodeURIComponent(state ?? "")}`,
+      { cookie: cookieHeader(jar) },
+    ),
+    env,
+    lifetime,
+  );
+  expect(callback.status).toBe(302);
+  expect(callback.headers.get("location")).toBe("/history?q=dialog&error=access_denied");
+  // No session exists after the failed sign-in.
+  storeCookies(jar, callback);
+  expect([...jar.keys()].some((name) => name.endsWith(".session_token"))).toBe(false);
 });
 
 function cookieHeader(jar: Map<string, string>) {
@@ -662,6 +693,14 @@ it("counts the D1 work of the access check of one private request", async () => 
  * gives to the renderer. The loader of the Queue and History calls it.
  */
 async function documentRunListRead(cookie: string | undefined, environment: BackendEnv) {
+  return (await documentContextOf(cookie, environment)).readRunList;
+}
+
+/** Asks for a document and returns the context that the entry gives to the renderer. */
+async function documentContextOf(
+  cookie: string | undefined,
+  environment: BackendEnv,
+): Promise<DocumentContext> {
   render.mockReset();
   render.mockResolvedValue(new Response("document"));
   const response = await server.fetch(appRequest("GET", "/", { cookie }), environment, {
@@ -669,18 +708,21 @@ async function documentRunListRead(cookie: string | undefined, environment: Back
   });
   expect(await response.text()).toBe("document");
   const options: unknown = render.mock.calls.at(-1)?.[1];
-  const read = object(object(options).context).readRunList;
-  if (typeof read !== "function") {
-    throw new Error("The document request has no read of the run list.");
+  const context = object(object(options).context);
+  const { readRunList, guest } = context;
+  if (typeof readRunList !== "function" || typeof guest !== "boolean") {
+    throw new Error("The document request has no document context.");
   }
   // The entry sets this function with the type of the document context.
-  return read as DocumentContext["readRunList"];
+  return { readRunList: readRunList as DocumentContext["readRunList"], guest };
 }
 
 it("gives a document with no session cookie the sign-in state, with no D1 statement", async () => {
   const measured = measureD1(await runtime.getD1Database("DB"));
-  const read = await documentRunListRead(undefined, { ...env, DB: measured.database });
-  expect(await read()).toEqual({ status: "guest" });
+  const context = await documentContextOf(undefined, { ...env, DB: measured.database });
+  // The layout route renders the sign-in page with the document for this fact.
+  expect(context.guest).toBe(true);
+  expect(await context.readRunList()).toEqual({ status: "guest" });
   // The answer comes before the sign-in instance and before the first read.
   expect(security.createAuth).toHaveBeenCalledTimes(0);
   expect(measured.roundTrips()).toBe(0);
@@ -702,8 +744,10 @@ it("gives a document the run list after the access check of the run list endpoin
   expect(endpoint.status).toBe(200);
   const answer = object(await endpoint.json());
   const fromEndpoint = check.mock.calls.at(-1)?.[0];
-  const read = await documentRunListRead(cookie, env);
-  const result = await read();
+  const context = await documentContextOf(cookie, env);
+  // A session cookie is there, so the document has the page and not the sign-in.
+  expect(context.guest).toBe(false);
+  const result = await context.readRunList();
   const fromDocument = check.mock.calls.at(-1)?.[0];
   expect(check).toHaveBeenCalledTimes(2);
   expect(result).toMatchObject({
@@ -794,8 +838,10 @@ it("gives a document with an expired session the sign-in state", async () => {
 });
 
 it("gives a preview document the fixture run list", async () => {
-  const read = await documentRunListRead(undefined, { ...env, VISONAUT_ENVIRONMENT: "preview" });
-  expect(await read()).toMatchObject({ status: "ready", list: { preview: true } });
+  const context = await documentContextOf(undefined, { ...env, VISONAUT_ENVIRONMENT: "preview" });
+  // The preview has no sign-in, so its document never has the sign-in page.
+  expect(context.guest).toBe(false);
+  expect(await context.readRunList()).toMatchObject({ status: "ready", list: { preview: true } });
   expect(security.createAuth).toHaveBeenCalledTimes(0);
 });
 

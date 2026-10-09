@@ -1,7 +1,7 @@
 import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { CloudOffIcon } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
-import { noAccessFacts, useSessionFacts } from "../app-session.tsx";
+import { useAccessDenied, useSessionFacts } from "../app-session.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ErrorBand, ErrorBandButton } from "../components/kit/error-band.tsx";
 import { AccessFrame } from "./access-frame.tsx";
@@ -22,8 +22,6 @@ export interface DashboardContent extends RunList {
 }
 
 export interface DashboardPageProps {
-  /** The path of the page. A sign-in returns to it. */
-  path: "/" | "/history";
   children(content: DashboardContent): ReactNode;
 }
 
@@ -83,7 +81,7 @@ function listAge(readAt: number) {
   return `list of ${hours} h ago`;
 }
 
-function DashboardFrame({ result, path, children }: DashboardFrameProps) {
+function DashboardFrame({ result, children }: DashboardFrameProps) {
   const router = useRouter();
   // The loader of the route reads again, and the route keeps its data until
   // the new data is there.
@@ -118,21 +116,25 @@ function DashboardFrame({ result, path, children }: DashboardFrameProps) {
           reviewCount: result.list.actionable.filter(awaitsReview).length,
           alertCount: result.list.alertCount,
         }
-      : result?.status === "guest"
-        ? { signedIn: false }
-        : result?.status === "forbidden"
-          ? // The Queue of today offers the sign-out in this state.
-            { signedIn: true, ...noAccessFacts }
-          : result?.status === "error"
-            ? { signedIn: true }
-            : undefined,
+      : result?.status === "error"
+        ? { signedIn: true }
+        : undefined,
+  );
+  // A 401 or a 403 replaces the page at once: the layout route shows the
+  // sign-in page or the no access page.
+  useAccessDenied(
+    result?.status === "guest" ? 401 : result?.status === "forbidden" ? 403 : undefined,
+    result?.status === "forbidden" ? result.message : undefined,
   );
   return (
     <AccessFrame
       state={
-        !result ? { status: "loading" } : result.status === "ready" ? { status: "ready" } : result
+        result?.status === "ready"
+          ? { status: "ready" }
+          : result?.status === "error"
+            ? { status: "error", message: result.message }
+            : { status: "loading" }
       }
-      path={path}
       onRetry={refresh}
     >
       {result?.status === "ready" && (
@@ -225,7 +227,7 @@ export function DashboardPage(props: DashboardPageProps) {
 /** The page while the first read of the run list runs. */
 export function DashboardPending() {
   return (
-    <AccessFrame state={{ status: "loading" }} path="/" onRetry={() => {}}>
+    <AccessFrame state={{ status: "loading" }} onRetry={() => {}}>
       {null}
     </AccessFrame>
   );

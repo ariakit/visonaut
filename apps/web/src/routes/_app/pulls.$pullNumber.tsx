@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { createAuthClient } from "better-auth/react";
 import { useEffect, useState } from "react";
 import {
   ArrowLeftIcon,
@@ -9,7 +8,8 @@ import {
   Clock3Icon,
   GitPullRequestIcon,
 } from "lucide-react";
-import { noAccessFacts, useSessionFacts } from "../../app-session.tsx";
+import { useAppSession, useSessionFacts } from "../../app-session.tsx";
+import { pageTitle } from "../../page-title.ts";
 import {
   ButtonLabel,
   ButtonSlot,
@@ -26,12 +26,13 @@ export const Route = createFileRoute("/_app/pulls/$pullNumber")({
   validateSearch: (search: Record<string, unknown>): { check?: string } => ({
     check: typeof search.check === "string" ? search.check : undefined,
   }),
+  head: ({ params }) => ({ meta: [{ title: pageTitle(`Pull request #${params.pullNumber}`) }] }),
   component: PullRequest,
 });
 
 type PageState =
-  | { status: "loading" | "guest" }
-  | { status: "forbidden" | "error"; message: string }
+  | { status: "loading" }
+  | { status: "error"; message: string }
   | {
       status: "pending";
       repository: string;
@@ -44,15 +45,9 @@ function PullRequest() {
   const navigate = useNavigate();
   const [state, setState] = useState<PageState>({ status: "loading" });
   const [reload, setReload] = useState(0);
-  const [action, setAction] = useState(false);
+  const { deny } = useAppSession();
   useSessionFacts(
-    state.status === "pending"
-      ? { signedIn: true, repository: state.repository }
-      : state.status === "guest"
-        ? { signedIn: false }
-        : state.status === "forbidden"
-          ? noAccessFacts
-          : undefined,
+    state.status === "pending" ? { signedIn: true, repository: state.repository } : undefined,
   );
 
   useEffect(() => {
@@ -66,15 +61,13 @@ function PullRequest() {
           cache: "no-store",
           signal: controller.signal,
         });
+        // The layout route shows the sign-in page or the no access page.
         if (response.status === 401) {
-          setState({ status: "guest" });
+          deny(401);
           return;
         }
         if (response.status === 403) {
-          setState({
-            status: "forbidden",
-            message: "Write access to this repository is required to open its review.",
-          });
+          deny(403, "Write access to this repository is required to open its review.");
           return;
         }
         if (response.status === 404) {
@@ -115,7 +108,7 @@ function PullRequest() {
     };
     void load();
     return () => controller.abort();
-  }, [check, navigate, pullNumber, reload]);
+  }, [check, deny, navigate, pullNumber, reload]);
 
   useEffect(() => {
     if (state.status !== "pending" || state.capture !== "pending") return;
@@ -132,35 +125,6 @@ function PullRequest() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [state]);
-
-  const signIn = async () => {
-    setAction(true);
-    try {
-      const result = await createAuthClient().signIn.social({
-        provider: "github",
-        callbackURL: `/pulls/${encodeURIComponent(pullNumber)}?check=${encodeURIComponent(check ?? "")}`,
-      });
-      if (result.error) throw new Error("Sign-in could not start.");
-    } catch {
-      setState({ status: "error", message: "Sign-in could not start. Please retry." });
-      setAction(false);
-    }
-  };
-
-  const switchAccount = async () => {
-    setAction(true);
-    try {
-      const result = await createAuthClient().signOut();
-      if (result.error) {
-        throw new Error("Sign-out failed. Please try again.");
-      }
-      setState({ status: "guest" });
-    } catch {
-      setState({ status: "error", message: "Sign-out failed. Please try again." });
-    } finally {
-      setAction(false);
-    }
-  };
 
   return (
     <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
@@ -191,54 +155,21 @@ function PullRequest() {
               Finding this pull request’s visual review…
             </Text>
           )}
-          {state.status === "guest" && (
+          {state.status === "error" && (
             <>
               <Text render={<h1 />} className="text-2xl sm:text-3xl font-semibold tracking-tight">
-                Sign in to review pull request #{pullNumber}
-              </Text>
-              <Text render={<p />} className="text-sm leading-relaxed ak-ink-60">
-                Compare screenshots and approve expected changes. Use a GitHub account with write
-                access to this repository.
-              </Text>
-              <Button
-                $layer="brand"
-                className="justify-self-start"
-                disabled={action}
-                onClick={() => void signIn()}
-              >
-                <ButtonLabel>{action ? "Opening GitHub…" : "Sign in with GitHub"}</ButtonLabel>
-                <ButtonSlot>
-                  <ArrowUpRightIcon />
-                </ButtonSlot>
-              </Button>
-            </>
-          )}
-          {(state.status === "error" || state.status === "forbidden") && (
-            <>
-              <Text render={<h1 />} className="text-2xl sm:text-3xl font-semibold tracking-tight">
-                {state.status === "forbidden" ? "Repository access required" : "Review unavailable"}
+                Review unavailable
               </Text>
               <Text render={<p />} className="text-sm leading-relaxed ak-ink-60" role="alert">
                 {state.message}
               </Text>
-              {state.status === "error" ? (
-                <Button
-                  $border
-                  className="justify-self-start"
-                  onClick={() => setReload((value) => value + 1)}
-                >
-                  <ButtonLabel>Retry</ButtonLabel>
-                </Button>
-              ) : (
-                <Button
-                  $layer="brand"
-                  className="justify-self-start"
-                  disabled={action}
-                  onClick={() => void switchAccount()}
-                >
-                  <ButtonLabel>{action ? "Signing out…" : "Use another account"}</ButtonLabel>
-                </Button>
-              )}
+              <Button
+                $border
+                className="justify-self-start"
+                onClick={() => setReload((value) => value + 1)}
+              >
+                <ButtonLabel>Retry</ButtonLabel>
+              </Button>
             </>
           )}
           {state.status === "pending" && (

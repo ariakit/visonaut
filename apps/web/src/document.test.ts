@@ -201,15 +201,52 @@ it("sends the shell of the document before the D1 read of the run list ends", as
   expect(document.setCookie).toEqual([]);
 }, 20000);
 
-it("gives a document with no session cookie the sign-in state and no run", async () => {
-  const document = await readDocument("/", { "x-d1-wait": String(d1Wait) });
-  expect(document.status).toBe(200);
+const signInHeading = "Sign in to review";
+const signInButton = "Sign in with GitHub";
+
+it.each(["/", "/history?q=dialog", "/status", "/pulls/7", "/runs/unknown-run"])(
+  "gives the document of %s with no session cookie the sign-in page, with no wait for D1",
+  async (path) => {
+    const document = await readDocument(path, { "x-d1-wait": String(d1Wait) });
+    expect(document.status).toBe(200);
+    // The sign-in page is in the markup of the document: it needs no script.
+    expect(document.text).toContain(signInHeading);
+    expect(document.text).toContain(signInButton);
+    // The page has no header, no navigation, and no run.
+    expect(document.text).not.toContain(nav);
+    expect(document.text).not.toContain(runTitle);
+    // No D1 statement runs for it, so the complete document is there before
+    // one statement could end.
+    expect(document.arrival("</html>")).toBeLessThan(d1Wait);
+  },
+  20000,
+);
+
+it("gives a document with a session the page and not the sign-in page", async () => {
+  const document = await readDocument("/", { cookie });
   expect(document.text).toContain(nav);
-  expect(document.text).toContain('status:"guest"');
-  expect(document.text).not.toContain(runTitle);
-  // The answer needs no D1 statement, so it does not wait for one.
-  expect(document.arrival('status:"guest"')).toBeLessThan(d1Wait);
-}, 20000);
+  expect(document.text).not.toContain(signInHeading);
+});
+
+it.each([
+  ["/", "Queue · Visonaut"],
+  ["/history", "History · Visonaut"],
+  ["/status", "Status · Visonaut"],
+  ["/pulls/7", "Pull request #7 · Visonaut"],
+  ["/runs/unknown-run", "Run · Visonaut"],
+])("gives the document of %s its own title", async (path, title) => {
+  const document = await readDocument(path, { cookie });
+  expect(document.status).toBe(200);
+  expect(document.text).toContain(`<title>${title}</title>`);
+});
+
+it("answers an unknown URL with the not found page and a link to the Queue", async () => {
+  const document = await readDocument("/no-such-page", { cookie });
+  expect(document.status).toBe(404);
+  expect(document.text).toContain("Page not found");
+  expect(document.text).toContain(nav);
+  expect(document.text).toContain("Open the Queue");
+});
 
 it("starts no run list read for a page that shows no run list", async () => {
   const document = await readDocument("/status", { cookie, "x-d1-wait": String(d1Wait) });

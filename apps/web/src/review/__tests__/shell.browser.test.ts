@@ -85,18 +85,6 @@ test("the header says a change of the alert count and shows the login of the vie
   expect(operations).toEqual([]);
 });
 
-test("the header has no account menu before a request passed the access check", async ({
-  page,
-}) => {
-  await page.route("**/api/runs", (route) =>
-    route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } }),
-  );
-  await page.goto(entry("/"));
-  await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Pages" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Account menu" })).toHaveCount(0);
-});
-
 test("a header link on the run page asks before it leaves while a decision is not saved", async ({
   page,
 }) => {
@@ -195,38 +183,6 @@ test("a header link on the run page asks before it leaves while a decision is be
   await expect(page.getByRole("heading", { name: "Run history." })).toHaveCount(0);
 });
 
-test("the header drops the facts of a session that ended", async ({ page }) => {
-  let status = 200;
-  await page.route("**/api/runs", (route) =>
-    status === 200
-      ? route.fulfill({
-          json: runList({
-            alertCount: 2,
-            user: { id: "user-1", githubUserId: "1", login: "octo-maintainer" },
-          }),
-        })
-      : route.fulfill({ status, json: { error: { code: "denied" } } }),
-  );
-  await page.goto(entry("/"));
-  const account = page.getByRole("button", { name: "Account menu" });
-  await expect(account).toContainText("@octo-maintainer");
-  const repository = page.getByRole("banner").getByRole("link", { name: "ariakit/ariakit" });
-  await expect(repository).toBeVisible();
-  // The access of the account ends: the account stays for a sign-out.
-  status = 403;
-  await page.getByRole("button", { name: "Refresh runs" }).click();
-  await expect(page.getByRole("heading", { name: "Repository access required" })).toBeVisible();
-  await expect(account).toContainText("@octo-maintainer");
-  await expect(repository).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Status", exact: true })).toBeVisible();
-  // The session ends: the header has no account and no fact of the repository.
-  status = 401;
-  await page.getByRole("button", { name: "Retry" }).click();
-  await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
-  await expect(account).toHaveCount(0);
-  await expect(repository).toHaveCount(0);
-});
-
 test("the pull request page gives the header its repository", async ({ page }) => {
   await page.route("**/api/pulls/7*", (route) =>
     route.fulfill({ json: { runId: null, repository: "ariakit/ariakit", state: "pending" } }),
@@ -238,37 +194,10 @@ test("the pull request page gives the header its repository", async ({ page }) =
   ).toBeVisible();
 });
 
-test("the run page with no access drops the repository of the header and keeps the account", async ({
+test("a sign-out from the Queue loads the same URL again and shows the sign-in page", async ({
   page,
 }) => {
-  await page.route("**/api/runs", (route) =>
-    route.fulfill({
-      json: runList({ user: { id: "user-1", githubUserId: "1", login: "octo-maintainer" } }),
-    }),
-  );
-  await page.route("**/api/runs/run-42*", (route) =>
-    route.fulfill({ status: 403, json: { error: { code: "not_maintainer" } } }),
-  );
-  await page.goto(entry("/"));
-  const repository = page.getByRole("banner").getByRole("link", { name: "ariakit/ariakit" });
-  await expect(repository).toBeVisible();
-  await page.evaluate(() =>
-    window.fixtureRouter.navigate({ to: "/runs/$runId", params: { runId: "run-42" } }),
-  );
-  await expect(page.getByRole("heading", { name: "This run could not be opened" })).toBeVisible();
-  await expect(repository).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Account menu" })).toContainText(
-    "@octo-maintainer",
-  );
-});
-
-for (const [name, path, ready] of [
-  ["the Queue", "/", "Your review queue."],
-  ["the no access screen of the run page", "/runs/run-42", "This run could not be opened"],
-] as const) {
-  test(`a sign-out from ${name} loads the same URL again and shows its sign-in`, async ({
-    page,
-  }) => {
+  {
     let signedOut = false;
     await page.route("**/api/**", (route) => {
       const url = new URL(route.request().url());
@@ -287,21 +216,15 @@ for (const [name, path, ready] of [
       return route.fulfill({ status: 403, json: { error: { code: "not_maintainer" } } });
     });
     await page.goto(entry("/"));
-    await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
-    if (path !== "/") {
-      await page.evaluate(() =>
-        window.fixtureRouter.navigate({ to: "/runs/$runId", params: { runId: "run-42" } }),
-      );
-    }
-    await expect(page.getByRole("heading", { name: ready })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
     await page.getByRole("button", { name: "Account menu" }).click();
     const load = page.waitForEvent("load");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await load;
     await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Account menu" })).toHaveCount(0);
-  });
-}
+  }
+});
 
 test("the count of the Queue link is the number of runs under Ready to review", async ({
   page,
