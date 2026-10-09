@@ -852,6 +852,46 @@ test("protected whole-item rejection refuses every target, while individual acti
   await callCount(page, 1);
 });
 
+test("a clean save applies its receipt with no new read of the model", async ({ page }) => {
+  await page.keyboard.press("a");
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 0,
+    model: 0,
+  });
+});
+
+test("a save from an old run revision makes the page read the model again", async ({ page }) => {
+  await expect(page.getByRole("link", { name: /Wide.*Needs review/ })).toBeVisible();
+  await page.evaluate(() => window.reviewFixture.setBehavior("other-review"));
+  await page.keyboard.press("a");
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  // The receipt does not name the variant that the other reviewer rejected.
+  await expect(page.getByRole("link", { name: /Wide.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
+    status: 0,
+    model: 1,
+  });
+  // The next decision starts from the model of the read.
+  await page.keyboard.press("a");
+  await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  expect((await page.evaluate(() => window.reviewFixture.pollReads())).model).toBe(1);
+});
+
+test("a receipt that is older than the run makes the page read the model again", async ({
+  page,
+}) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("later-review"));
+  await page.keyboard.press("a");
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Wide.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  expect((await page.evaluate(() => window.reviewFixture.pollReads())).model).toBe(1);
+});
+
 test("already accepted history creates no session undo command", async ({ page }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("noop"));
   await page.keyboard.press("a");

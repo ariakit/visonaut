@@ -78,7 +78,6 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
   }
   if (behavior === "noop")
     return {
-      model,
       commandId: command.commandId,
       selection: command.selection,
       revisions: command.targets,
@@ -86,6 +85,23 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
       promotionId: model.promotionId,
       noop: true,
     };
+  if (behavior === "other-review") {
+    // Another reviewer rejects the last variant of the item before this
+    // decision. The page learns of it only from the run revision.
+    behavior = "normal";
+    model = structuredClone(model);
+    model.comparisonRevision += 1;
+    const other = model.items
+      .find((item) => item.key === command.selection.itemKey)
+      ?.variants.at(-1);
+    if (!other) throw new Error("The fixture has no variant for the other reviewer.");
+    Object.assign(other, {
+      verdict: "rejected",
+      source: "human",
+      reviewer: "octocat",
+      revision: other.revision + 1,
+    });
+  }
   const previous = structuredClone(model);
   model = structuredClone(model);
   model.comparisonRevision += 2;
@@ -123,10 +139,31 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
     })),
     baselineRevision: model.baselineRevision,
     promotionId: model.promotionId,
+    previousRunRevision: previous.comparisonRevision,
     runRevision: model.comparisonRevision,
+    currentRunRevision: model.comparisonRevision,
     reviewer: "maintainer-1",
     runStatus: model.run.status,
+    counts: model.counts,
   };
+  if (behavior === "later-review") {
+    // Another reviewer rejects the last variant of the item after this
+    // decision and before the read of its receipt.
+    behavior = "normal";
+    model = structuredClone(model);
+    model.comparisonRevision += 1;
+    result.currentRunRevision = model.comparisonRevision;
+    const other = model.items
+      .find((item) => item.key === command.selection.itemKey)
+      ?.variants.at(-1);
+    if (!other) throw new Error("The fixture has no variant for the other reviewer.");
+    Object.assign(other, {
+      verdict: "rejected",
+      source: "human",
+      reviewer: "octocat",
+      revision: other.revision + 1,
+    });
+  }
   saved.set(command.commandId, { model: previous, result });
   return result;
 }

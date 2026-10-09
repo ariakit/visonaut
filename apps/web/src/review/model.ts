@@ -159,17 +159,26 @@ export interface ReviewCommandResult {
   noop?: boolean;
 }
 
+/**
+ * The receipt of a saved decision. It has no model: the page applies it to the
+ * model that it holds.
+ */
 export interface ReviewSaveResult {
   commandId: string;
   selection: ReviewSelection;
   revisions: ReviewTarget[];
   baselineRevision: number;
   promotionId: string | null;
+  /** The run revision that the decision started from. */
+  previousRunRevision?: number;
+  /** The run revision that the decision made. */
   runRevision?: number;
+  /** The run revision when the service answered. */
+  currentRunRevision?: number;
   reviewer?: string;
   runStatus?: string;
+  counts?: ReviewCounts;
   noop?: boolean;
-  model?: ReviewModel;
 }
 
 export interface ReviewCommands {

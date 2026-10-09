@@ -52,9 +52,12 @@ for (const queued of [false, true]) {
             revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
+            previousRunRevision: initial.comparisonRevision,
             runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: initial.comparisonRevision + 1,
             reviewer: "maintainer-reference",
             runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -762,14 +765,20 @@ test("an early conflict keeps later decisions chained and preserves newer confir
         return;
       }
       if (index === 0 && releaseFirst) {
+        // Another reviewer saved a decision before the read of this receipt.
         return route.fulfill({
           json: {
             commandId: command.commandId,
             selection: command.selection,
-            revisions: [],
+            revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
-            model: compactReviewModel(latest),
+            previousRunRevision: initial.comparisonRevision,
+            runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: latest.comparisonRevision,
+            reviewer: "maintainer-1",
+            runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -785,7 +794,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
         },
       });
     }
-    return route.fulfill({ json: compactReviewModel(initial) });
+    return route.fulfill({ json: compactReviewModel(releaseFirst ? latest : initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
   const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
@@ -806,6 +815,81 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect.poll(() => posted.length).toBe(4);
   expect(posted[3]).not.toHaveProperty("previousCommandId");
+});
+
+test("a newer run revision in an earlier receipt makes the page read the model after the last receipt", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  const revision = initial.comparisonRevision;
+  // Two decisions of this page, and then a rejection of another reviewer.
+  const latest = structuredClone(initial);
+  latest.comparisonRevision = revision + 3;
+  const [first, second, other] = latest.items[0]?.variants ?? [];
+  if (!first || !second || !other) throw new Error("Missing review variants");
+  Object.assign(first, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(second, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(other, { verdict: "rejected", source: "human", revision: 1 });
+  const posted: Array<{ commandId: string; selection: unknown }> = [];
+  let release = false;
+  let modelReads = 0;
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-order" } });
+    }
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON();
+      posted.push(command);
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/queued")) {
+      const index = posted.findIndex((command) => path.includes(command.commandId));
+      const command = posted[index];
+      if (!command) throw new Error("Missing queued command");
+      if (!release) {
+        return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+      }
+      // The read of the second receipt came before the other reviewer, and
+      // the read of the first receipt came after.
+      return route.fulfill({
+        json: {
+          commandId: command.commandId,
+          selection: command.selection,
+          revisions: [{ id: index ? second.id : first.id, expectedRevision: 1 }],
+          baselineRevision: initial.baselineRevision,
+          promotionId: null,
+          previousRunRevision: revision + index,
+          runRevision: revision + index + 1,
+          currentRunRevision: index ? revision + 2 : revision + 3,
+          reviewer: "maintainer-1",
+          runStatus: "needs-review",
+          counts: { pending: 10 - index, rejected: 0, approved: 1 + index },
+        },
+      });
+    }
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: { run: initial.run, comparisonState: "ready", reviewReady: true, archived: false },
+      });
+    }
+    modelReads += 1;
+    return route.fulfill({ json: compactReviewModel(release ? latest : initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(1);
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(2);
+  const readsBefore = modelReads;
+  release = true;
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
+  expect(modelReads - readsBefore).toBe(1);
 });
 
 /** The largest number of page requests that ran at the same time in a test. */
