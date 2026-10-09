@@ -5,15 +5,30 @@ import { deflateSync } from "node:zlib";
 import { digestJson } from "@visonaut/protocol";
 import { afterEach, expect, it, vi } from "vitest";
 import { issueReuseChallenge, issueUploadTicket } from "../../security/src/capabilities.js";
-import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture } from "./fixture.js";
+import {
+  emptyReferencePage,
+  imagePutNumbers,
+  reserveAnswer,
+  stagedCounts,
+  submitShard,
+} from "./trusted.js";
+
+const prepared = vi.hoisted(() => ({ directory: "", server: "https://visonaut.example" }));
+// Workflow tests cover artifact and job provenance. These cases start at the verified manifest.
+vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
 
 const directories: string[] = [];
 const environment = {
   VISONAUT_SERVER: "https://visonaut.example",
+  GITHUB_RUN_ID: "456",
+  GITHUB_RUN_ATTEMPT: "1",
   ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
 };
+// Submit adds its comparison result to the manifest, so the digest of the declaration is the one of
+// the posted manifest. A test writes this placeholder, and the stub of the service replaces it.
+const DIGEST_PLACEHOLDER = "0".repeat(64);
 const configuration = {
   secret: "test-only-signing-key-".repeat(2),
   issuer: environment.VISONAUT_SERVER,
@@ -100,10 +115,11 @@ async function declaration(local: Awaited<ReturnType<typeof fixture>>, withReuse
       }),
     });
   }
+  // No stub checks the digest of the challenge, so it keeps the digest of the capture manifest.
   const manifestDigest = await digestJson(local.manifest);
   return {
     schemaVersion: "1.0",
-    manifestDigest,
+    manifestDigest: DIGEST_PLACEHOLDER,
     uploads,
     ...(withReuse
       ? {
@@ -118,32 +134,39 @@ async function declaration(local: Awaited<ReturnType<typeof fixture>>, withReuse
   };
 }
 
-async function execute(local: Awaited<ReturnType<typeof fixture>>) {
-  let stdout = "";
-  let stderr = "";
-  const code = await runCli({
-    argv: ["upload", "--dir", local.directory, "--json"],
-    environment,
-    stdout: (value) => {
-      stdout += value;
-    },
-    stderr: (value) => {
-      stderr += value;
-    },
-  });
-  return { code, stdout, stderr };
+function execute(local: Awaited<ReturnType<typeof fixture>>) {
+  return submitShard(prepared, local.directory, environment);
+}
+
+interface ReserveAnswer {
+  schemaVersion: string;
+  runId: string;
+  capability: string;
+  expiresAt: string;
 }
 
 interface MockServiceParams {
   local: Awaited<ReturnType<typeof fixture>>;
   response: () => Response;
   upload?: (ticket: string, options?: RequestInit) => Response | Promise<Response>;
-  reserve?: () => object;
+  reserve?: () => ReserveAnswer;
   reuse?: (options?: RequestInit) => Response | Promise<Response>;
 }
 
+/**
+ * The requests of Submit besides the shard images: OIDC, reserve, reference, declaration,
+ * finalize, OIDC, and submit.
+ */
+const FIXED_REQUESTS = 7;
+
 function mockService({ local, response, upload, reserve, reuse }: MockServiceParams) {
   const paths: string[] = [];
+  let reservation: ReserveAnswer = {
+    schemaVersion: "1.0",
+    runId,
+    capability: "capability-secret",
+    expiresAt: "",
+  };
   vi.stubGlobal("fetch", async (input: string | URL | Request, options?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : input);
     paths.push(url.pathname);
@@ -151,29 +174,36 @@ function mockService({ local, response, upload, reserve, reuse }: MockServicePar
       return Response.json({ value: "oidc-secret" });
     }
     if (url.pathname === "/v1/runs") {
-      return Response.json(
-        reserve?.() ?? {
-          schemaVersion: "1.0",
-          runId,
-          capability: "capability-secret",
-          expiresAt: new Date(Date.now() + 600_000).toISOString(),
-        },
-      );
+      const answer = reserve?.() ?? {
+        schemaVersion: "1.0",
+        runId,
+        capability: "capability-secret",
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      };
+      reservation = answer;
+      return Response.json(reserveAnswer(answer));
+    }
+    if (url.pathname.endsWith("/reference")) {
+      return Response.json(await emptyReferencePage(options, reservation));
     }
     if (url.pathname.endsWith("/reuse")) {
       if (!reuse) throw new Error("Unexpected reuse request");
       return reuse(options);
     }
     if (url.pathname.includes("/shards/")) {
-      expect(JSON.parse(String(options?.body))).toEqual(local.manifest);
-      return response();
+      const posted = JSON.parse(String(options?.body));
+      // Submit adds only its comparison result to the manifest of the capture.
+      expect.soft(posted).toEqual({ ...local.manifest, localComparison: expect.any(Object) });
+      const answer = response();
+      const text = (await answer.text()).replaceAll(DIGEST_PLACEHOLDER, await digestJson(posted));
+      return new Response(text, { status: answer.status, headers: answer.headers });
     }
     if (url.pathname.endsWith("/finalize")) {
       return Response.json({
         schemaVersion: "1.0",
-        runId,
+        runId: reservation.runId,
         shardKey: local.manifest.shard.key,
-        manifestDigest: await digestJson(local.manifest),
+        manifestDigest: JSON.parse(String(options?.body)).manifestDigest,
         state: "staged",
       });
     }
@@ -182,6 +212,14 @@ function mockService({ local, response, upload, reserve, reuse }: MockServicePar
         upload?.(decodeURIComponent(url.pathname.slice("/v1/uploads/".length)), options) ??
         new Response(null, { status: 204 })
       );
+    }
+    if (url.pathname === "/v1/runs/456/submit") {
+      return Response.json({
+        schemaVersion: "1.0",
+        runId: reservation.runId,
+        state: "submitted",
+        submittedAt: 1,
+      });
     }
     throw new Error("Unexpected request");
   });
@@ -261,12 +299,13 @@ it("reuses proved originals in four bounded pages at once and uploads only misse
   const result = await operation;
   expect(result.code).toBe(0);
   expect(result.stderr).toBe("");
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 1, reusedImages: 128 });
+  expect(stagedCounts(result.stdout)).toEqual({ originals: 129, reused: 128, uploaded: 1 });
   expect(proofPages).toBe(5);
   expect(maximumActivePages).toBe(4);
   expect(uploads).toBe(1);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(1);
-  expect(paths).toHaveLength(10);
+  // Besides the fixed requests: 5 proof pages and 1 PUT.
+  expect(paths).toHaveLength(FIXED_REQUESTS + 5 + 1);
 
   const baseline = await imagesFixture(129);
   const baselineDeclaration = await declaration(baseline);
@@ -275,7 +314,7 @@ it("reuses proved originals in four bounded pages at once and uploads only misse
     response: () => Response.json(baselineDeclaration),
   });
   expect((await execute(baseline)).code).toBe(0);
-  expect(baselinePaths).toHaveLength(133);
+  expect(baselinePaths).toHaveLength(FIXED_REQUESTS + 129);
 }, 20_000);
 
 it("renews after concurrent proof pages when the upload capability expires", async () => {
@@ -339,13 +378,8 @@ it("renews after concurrent proof pages when the upload capability expires", asy
   const result = await operation;
   expect(result.stderr).toBe("");
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
-    uploadedImages: 0,
-    reusedImages: 129,
-    imagePutElapsedMs: 0,
-    imagePutBytes: 0,
-    imagePutRetryWaitMs: 0,
-  });
+  expect(stagedCounts(result.stdout)).toEqual({ originals: 129, reused: 129, uploaded: 0 });
+  expect(imagePutNumbers(result.stdout)).toEqual({ elapsedMs: 0, bytes: 0, retryWaitMs: 0 });
   expect(reservations).toBe(2);
   expect(offered).toHaveLength(5);
   for (const page of offered.slice(0, 4)) {
@@ -380,7 +414,7 @@ it("falls back to uploads when a reuse challenge expires without progress", asyn
   });
   const result = await execute(local);
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 129, reusedImages: 0 });
+  expect(stagedCounts(result.stdout)).toEqual({ originals: 129, reused: 0, uploaded: 129 });
   expect(pages).toBe(4);
   expect(uploads).toBe(129);
   expect(paths.filter((path) => path.includes("/shards/"))).toHaveLength(1);
@@ -416,7 +450,8 @@ it("stops renewal when the upload capability expires without staged images", asy
   expect(result.stderr).toContain("expired before any image could be staged");
   expect(reservations).toBe(1);
   expect(pages).toBe(4);
-  expect(paths).toHaveLength(7);
+  // OIDC, reserve, reference, declaration, and 4 proof pages.
+  expect(paths).toHaveLength(8);
 });
 
 it("drains reuse pages before rejecting a receipt from another page", async () => {
@@ -482,13 +517,13 @@ it.each([3000, 12300])(
     const result = await execute(local);
     expect(result.stderr).toBe("");
     expect(result.code).toBe(0);
-    expect(JSON.parse(result.stdout)).toMatchObject({
-      uploadedImages: count,
-      shardStaged: true,
-      visualApproval: false,
+    expect(stagedCounts(result.stdout)).toEqual({
+      originals: count,
+      reused: 0,
+      uploaded: count,
     });
     expect(pending.size).toBe(0);
-    expect(paths).toHaveLength(count + 4);
+    expect(paths).toHaveLength(count + FIXED_REQUESTS);
   },
   120_000,
 );
@@ -517,7 +552,7 @@ it("keeps image PUTs concurrent and bounded", async () => {
   });
   const result = await execute(local);
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 11 });
+  expect(stagedCounts(result.stdout)).toMatchObject({ uploaded: 11 });
   expect(maximumActive).toBe(5);
   expect(active).toBe(0);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(11);
@@ -594,7 +629,7 @@ it.each(["advertised", "streamed"])(
     const result = await execute(local);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain("response exceeds");
-    expect(paths).toHaveLength(3);
+    expect(paths).toHaveLength(4);
   },
 );
 
@@ -622,7 +657,7 @@ it.each(["excess-count", "unknown-image", "duplicate-image", "duplicate-ticket",
     const paths = mockService({ local, response: () => Response.json(declared) });
     const result = await execute(local);
     expect(result.code).toBe(1);
-    expect(paths).toHaveLength(3);
+    expect(paths).toHaveLength(4);
   },
 );
 
@@ -674,7 +709,7 @@ it("renews credentials and pending tickets without repeating successful uploads"
   });
   const result = await execute(local);
   expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({ uploadedImages: 4 });
+  expect(stagedCounts(result.stdout)).toMatchObject({ uploaded: 4 });
   expect(pending.size).toBe(0);
   expect(reservations).toBe(3);
   expect(declarations).toBe(2);
@@ -721,7 +756,9 @@ it.each(["different-run", "no-time", "repeated-upload"])(
     expect(result.code).toBe(kind === "no-time" ? 4 : 1);
     expect(reservations).toBe(2);
     expect(uploaded).toBe(1);
-    expect(paths.length).toBeLessThanOrEqual(7);
+    // Two reservations with a reference page each, one PUT, and one declaration. Only the case
+    // "repeated-upload" asks for a second declaration.
+    expect(paths).toHaveLength(kind === "repeated-upload" ? 9 : 8);
   },
 );
 
@@ -739,7 +776,7 @@ it("does not loop when declaration uses the available credential lifetime", asyn
   });
   const result = await execute(local);
   expect(result.code).toBe(4);
-  expect(paths).toHaveLength(3);
+  expect(paths).toHaveLength(4);
 });
 
 it.each(["oidc", "reserve", "finalize"])(
@@ -747,24 +784,27 @@ it.each(["oidc", "reserve", "finalize"])(
   async (stage) => {
     const local = await imagesFixture(1);
     let requests = 0;
-    vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+    let reservation = { capability: "capability-secret", expiresAt: "" };
+    vi.stubGlobal("fetch", async (input: string | URL | Request, options?: RequestInit) => {
       requests++;
       const url = new URL(input instanceof Request ? input.url : input);
       if (url.hostname.endsWith(".actions.githubusercontent.com") && stage !== "oidc") {
         return Response.json({ value: "oidc-secret" });
       }
       if (url.pathname === "/v1/runs" && stage !== "reserve") {
-        return Response.json({
-          schemaVersion: "1.0",
-          runId,
+        reservation = {
           capability: "capability-secret",
           expiresAt: new Date(Date.now() + 600_000).toISOString(),
-        });
+        };
+        return Response.json(reserveAnswer({ schemaVersion: "1.0", runId, ...reservation }));
+      }
+      if (url.pathname.endsWith("/reference") && stage === "finalize") {
+        return Response.json(await emptyReferencePage(options, reservation));
       }
       if (url.pathname.includes("/shards/") && stage === "finalize") {
         return Response.json({
           schemaVersion: "1.0",
-          manifestDigest: await digestJson(local.manifest),
+          manifestDigest: await digestJson(JSON.parse(String(options?.body))),
           uploads: [],
         });
       }
@@ -772,17 +812,10 @@ it.each(["oidc", "reserve", "finalize"])(
         headers: { "Content-Type": "application/json" },
       });
     });
-    let stderr = "";
-    const code = await runCli({
-      argv: ["upload", "--dir", local.directory],
-      environment,
-      stdout: () => {},
-      stderr: (value) => {
-        stderr += value;
-      },
-    });
-    expect(code).toBe(1);
-    expect(stderr).toContain("response exceeds");
-    expect(requests).toBe(stage === "oidc" ? 1 : stage === "reserve" ? 2 : 4);
+    const result = await execute(local);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("response exceeds");
+    // finalize: OIDC, reserve, reference, declaration, and the finalize call.
+    expect(requests).toBe(stage === "oidc" ? 1 : stage === "reserve" ? 2 : 5);
   },
 );
