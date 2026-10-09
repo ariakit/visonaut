@@ -7,14 +7,19 @@ import {
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
-interface RetainedImageOwner {
+export interface RetainedImageOwner {
   id: string;
   object_prefix: string;
   inventory_key: string | null;
   inventory_digest: string | null;
 }
 
-function imagePrefix(owner: RetainedImageOwner) {
+/**
+ * Return the prefix of the images that a retained run owns, or null when the
+ * stored prefix is not one of the two forms that the collector can delete.
+ * The candidate query applies the same rule in SQL.
+ */
+export function imagePrefix(owner: RetainedImageOwner) {
   if (
     owner.object_prefix === `runs/${owner.id}/` &&
     /^runs\/[A-Za-z0-9_-]+\/$/u.test(owner.object_prefix)
@@ -43,6 +48,35 @@ function imagePrefix(owner: RetainedImageOwner) {
   return owner.object_prefix;
 }
 
+const runIdCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+const digestCharacters = "0123456789abcdef";
+// The 64 characters after "baselines/import/" in the prefix of an import.
+const importDigestSql = "substr(work_retained_runs.object_prefix,18,64)";
+
+/**
+ * The rule of `imagePrefix` as a condition on a row of `work_retained_runs`.
+ * A row that the collector cannot delete is then not a candidate, so it does
+ * not fill the candidate page. SQLite has no regular expression: `ltrim`
+ * removes the characters of a set, so an empty result shows that the text has
+ * no other character. `||` and `ltrim` read a BLOB as text, so `typeof`
+ * refuses a BLOB first. `imagePrefix` stays the last check before a deletion,
+ * and a test compares the two forms on a table of prefixes.
+ */
+const deletableImageOwnerSql = `(
+  (work_retained_runs.object_prefix='runs/' || work_retained_runs.id || '/'
+    AND typeof(work_retained_runs.id)='text'
+    AND work_retained_runs.id!='' AND ltrim(work_retained_runs.id,'${runIdCharacters}')='')
+  OR (work_retained_runs.object_prefix='baselines/import/' || ${importDigestSql} || '/images/'
+    AND length(${importDigestSql})=64 AND ltrim(${importDigestSql},'${digestCharacters}')=''
+    AND work_retained_runs.id=substr(${importDigestSql},1,8) || '-' || substr(${importDigestSql},9,4)
+      || '-' || substr(${importDigestSql},13,4) || '-' || substr(${importDigestSql},17,4)
+      || '-' || substr(${importDigestSql},21,12)
+    AND EXISTS(SELECT 1 FROM visonaut_runs run WHERE run.id=work_retained_runs.id
+      AND typeof(run.inventory_digest)='text'
+      AND length(run.inventory_digest)=64 AND ltrim(run.inventory_digest,'${digestCharacters}')=''
+      AND run.inventory_key='baselines/import/' || ${importDigestSql} || '/inventory/'
+        || run.inventory_digest || '.json')))`;
+
 /** Keep sparse review inventories after their original images expire. */
 export async function expireRunImages(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
@@ -52,6 +86,7 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
       (SELECT inventory_digest FROM visonaut_runs WHERE id=work_retained_runs.id) AS inventory_digest FROM work_retained_runs
     WHERE EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=work_retained_runs.id AND summary.state='ready') AND NOT EXISTS(SELECT 1 FROM work_retention_pins WHERE run_id=work_retained_runs.id) AND ((byte_state='live' AND closed_at IS NOT NULL AND closed_at<=?)
        OR (byte_state='deleting' AND deletion_until<=?))
+      AND ${deletableImageOwnerSql}
     ORDER BY closed_at,id LIMIT ?`)
     .bind(context.now() - closedRunRetentionMs, context.now(), budget.tasksPerStep)
     .all<RetainedImageOwner>();
@@ -64,6 +99,8 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
     // The slash boundary prevents run "a" from deleting run "ab".
     const prefix = imagePrefix(candidate);
     if (!prefix) {
+      // The candidate query applies the same rule, so this branch runs only
+      // if the two forms of the rule differ.
       await recordEvent(database, {
         kind: "retention",
         subject: candidate.id,
