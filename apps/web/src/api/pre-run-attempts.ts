@@ -5,7 +5,7 @@ import {
   type VerifiedRun,
   type VerifiedWebhook,
 } from "@visonaut/security";
-import { captureJobNames, workflowSourceDigest } from "@visonaut/protocol";
+import { captureJobNames } from "@visonaut/protocol";
 import { loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { object } from "./input.js";
 import { completeWorkflowJobs } from "./jobs.js";
@@ -33,7 +33,7 @@ import { inheritVisualPlan } from "./pre-run-plan.js";
 import { stagedAttemptRetentionMs } from "./workflow-retention.js";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
-async function successfulSubmittedPinnedJobs(
+async function successfulSubmittedJobs(
   context: ApiContext,
   github: GitHubClient,
   run: Record<string, unknown>,
@@ -54,13 +54,13 @@ async function successfulSubmittedPinnedJobs(
     (job) => typeof job.name === "string" && captureNames.shard(job.name) !== undefined,
   );
   const submitJobs = jobs.filter((job) => job.name === configuration.submitJobName);
-  const pinnedJobs = [...captureJobs, ...submitJobs];
+  const visualJobs = [...captureJobs, ...submitJobs];
   return {
     submitted: true,
     successful:
       submitJobs.length === 1 &&
       String(submitJobs[0]?.id) === submitted.submit_job_id &&
-      pinnedJobs.every((job) => job.status === "completed" && job.conclusion === "success"),
+      visualJobs.every((job) => job.status === "completed" && job.conclusion === "success"),
   };
 }
 
@@ -128,8 +128,7 @@ async function retireBoundHistoricalCheck(
 async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRunCheck) {
   const configuration = context.configuration.workflowOwned;
   if (!configuration || !row.workflow_run_id || row.workflow_attempt === null) return false;
-  const digest = await workflowSourceDigest(configuration.reusableWorkflowSha);
-  // Match the durable reconciler's retention and workflow-pin admission
+  // Match the durable reconciler's retention and workflow admission
   // before acknowledging a receipt that leaves its App check pending.
   const staged = await context.database
     .prepare(
@@ -140,8 +139,7 @@ async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRu
         AND staged.retention_state='live' AND staged.submitted_at IS NOT NULL
         AND staged.created_at>? AND staged.submit_job_id IS NOT NULL
         AND staged.submit_verified_json IS NOT NULL
-        AND staged.workflow_source_digest=? AND staged.caller_workflow_path=?
-        AND staged.reusable_workflow_ref=? AND staged.capture_job_prefix=?
+        AND staged.caller_workflow_path=? AND staged.capture_job_prefix=?
         AND staged.submit_job_name=?
         AND (materialized.id IS NULL OR (materialized.active=1
           AND materialized.sealed_at IS NULL AND materialized.state='uploading'))
@@ -156,9 +154,7 @@ async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRu
       row.workflow_attempt,
       row.tested_sha,
       Date.now() - stagedAttemptRetentionMs,
-      digest,
       configuration.callerWorkflowPath,
-      configuration.reusableWorkflowRef,
       configuration.captureJobName,
       configuration.submitJobName,
       context.configuration.projectId,
@@ -217,7 +213,7 @@ async function retireSupersededMainAttempt({
       .bind(context.configuration.projectId, runId, attempt, testedSha)
       .first();
     if (sealed) return true;
-    const submitted = await successfulSubmittedPinnedJobs(context, github, run, row);
+    const submitted = await successfulSubmittedJobs(context, github, run, row);
     // A successful signed Submit can still materialize after the workflow ends.
     if (submitted.successful && (await historicalMainStageCanMaterialize(context, row))) {
       return true;
@@ -481,8 +477,7 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
     row.workflow_attempt !== null ||
     row.plan_visual_required !== null ||
     row.plan_reported_at !== null ||
-    row.plan_job_id !== null ||
-    row.plan_workflow_sha !== null
+    row.plan_job_id !== null
   ) {
     return false;
   }
@@ -515,7 +510,7 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
         AND candidate.check_id IS NULL AND candidate.request_started=0 AND candidate.lease_until IS NULL
         AND candidate.workflow_run_id IS NULL AND candidate.workflow_attempt IS NULL
         AND candidate.plan_visual_required IS NULL AND candidate.plan_reported_at IS NULL
-        AND candidate.plan_job_id IS NULL AND candidate.plan_workflow_sha IS NULL
+        AND candidate.plan_job_id IS NULL
         AND ${afterRestoreSql("candidate.created_at")}
         AND NOT EXISTS(SELECT 1 FROM pre_run_checks other
           WHERE other.repository_id=candidate.repository_id AND other.kind='pull_request'
@@ -878,7 +873,7 @@ export async function ensureSignedAttemptCheck(
   await inheritVisualPlan(context, github, run, bound);
 }
 
-/** A terminal pinned workflow settles only a check started by signed submit. */
+/** A terminal caller workflow settles only a check started by signed submit. */
 export async function settlePreRunWorkflow(
   context: ApiContext,
   github: GitHubClient,
@@ -922,11 +917,7 @@ export async function settlePreRunWorkflow(
     (webhook.payload.action === "completed" &&
       (run.status !== "completed" || run.conclusion !== event.conclusion))
   ) {
-    throw new SecurityError(
-      "workflow_identity",
-      503,
-      "The pinned workflow identity is unavailable.",
-    );
+    throw new SecurityError("workflow_identity", 503, "The workflow identity is unavailable.");
   }
   if (run.event === "workflow_dispatch") {
     const candidate = await mainWorkflowCandidate(context, github, runId, Number(run.run_attempt));
@@ -1006,16 +997,16 @@ export async function settlePreRunWorkflow(
   }
   // A signed submit stays eligible while Gate waits for review, even if Gate
   // makes the enclosing workflow fail before reconciliation finishes.
-  const submitted = await successfulSubmittedPinnedJobs(context, github, run, row);
+  const submitted = await successfulSubmittedJobs(context, github, run, row);
   if (submitted.successful && row.plan_visual_required === 1) return;
   const reason =
     row.plan_visual_required === null
       ? "The trusted Plan or signed Submit is missing. Missing Plan never means no visual work."
       : submitted.submitted
-        ? "A pinned capture or submit job did not complete successfully."
+        ? "A capture or submit job did not complete successfully."
         : run.conclusion === "success"
           ? "The capture workflow finished without a signed Visonaut submit job."
-          : `The pinned capture workflow ended with ${String(run.conclusion)}.`;
+          : `The capture workflow ended with ${String(run.conclusion)}.`;
   await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
     method: "PATCH",
     body: JSON.stringify({

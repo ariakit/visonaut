@@ -34,7 +34,6 @@ interface Candidate {
   state: string;
   visualRequired: number | null;
   planJobId: string | null;
-  planWorkflowSha: string | null;
   projectId: string;
   projectRevision: number;
 }
@@ -51,7 +50,7 @@ const candidatesSql = `WITH ranked AS (
     source.workflow_run_id AS workflowRunId,source.workflow_attempt AS workflowAttempt,
     source.check_head_sha AS checkHeadSha,
     source.state,source.plan_visual_required AS visualRequired,source.plan_job_id AS planJobId,
-    source.plan_workflow_sha AS planWorkflowSha,project.id AS projectId,project.revision AS projectRevision,
+    project.id AS projectId,project.revision AS projectRevision,
     ROW_NUMBER() OVER (PARTITION BY source.repository_id,source.pull_request_number
       ORDER BY source.created_at DESC,source.generation DESC,source.tested_sha DESC) AS position
   FROM pre_run_checks source JOIN visonaut_projects project ON project.repository_id=source.repository_id
@@ -99,16 +98,14 @@ async function verdict(context: OperationsContext, candidate: Candidate) {
   } else if (
     candidate.state === "docs_complete" &&
     candidate.visualRequired === 0 &&
-    candidate.planJobId &&
-    candidate.planWorkflowSha
+    candidate.planJobId
   ) {
     conclusion = "success";
   } else if (
     run &&
     candidate.state === "active" &&
     candidate.visualRequired === 1 &&
-    candidate.planJobId &&
-    candidate.planWorkflowSha
+    candidate.planJobId
   ) {
     const status = await new Service(context.database).status(run.id);
     comparisonRevision = "comparison" in status ? (status.comparison?.ordinal ?? 0) : 0;

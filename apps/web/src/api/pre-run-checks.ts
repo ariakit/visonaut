@@ -2,8 +2,6 @@ import {
   CHECK_NAME,
   createGitHubClient,
   findGitHubCheck,
-  GitHubUnavailableError,
-  isTrustedWorkflowBlob,
   numericId,
   SecurityError,
   type GitHubClient,
@@ -36,7 +34,6 @@ export interface PreRunCheck {
   plan_visual_required: number | null;
   plan_reported_at: number | null;
   plan_job_id: string | null;
-  plan_workflow_sha: string | null;
   external_id: string;
   check_id: string | null;
   check_head_sha: string | null;
@@ -49,105 +46,6 @@ export interface PreRunCheck {
 
 export function sha(value: unknown): string | null {
   return typeof value === "string" && /^[a-f0-9]{40}$/.test(value) ? value : null;
-}
-
-/** A main push can record a candidate only after the trusted App workflow reaches main. */
-export async function hasPinnedMainWorkflow(
-  context: ApiContext,
-  github: GitHubClient,
-  testedSha: string,
-): Promise<boolean> {
-  const configuration = context.configuration.workflowOwned;
-  const path = configuration?.trustedWorkflowPath;
-  if (!configuration || !path) return true;
-  let file: Record<string, unknown>;
-  try {
-    file = object(
-      await github.request(`/repos/${github.repository}/contents/${path}?ref=${testedSha}`),
-    );
-  } catch (error) {
-    if (error instanceof GitHubUnavailableError && error.upstreamStatus === 404) return false;
-    throw error;
-  }
-  return file.type === "file" && isTrustedWorkflowBlob(file.sha, configuration);
-}
-
-/** Retire checks created before the pinned App workflow existed on main. */
-export async function retireUnpinnedMainChecks(
-  context: ApiContext,
-  limit = 25,
-  client?: GitHubClient,
-) {
-  if (!context.configuration.workflowOwned?.trustedWorkflowPath) {
-    return { checked: 0, pending: [] as string[] };
-  }
-  const rows = await context.database
-    .prepare(
-      `SELECT * FROM pre_run_checks WHERE kind='main' AND workflow_run_id IS NULL AND created_at < ? AND ${afterRestoreSql("pre_run_checks.created_at")} AND (state IN ('active','ambiguous') OR (state='creating' AND lease_until < ?)) ORDER BY updated_at,created_at`,
-    )
-    .bind(Date.now() - 120_000, Date.now())
-    .all<PreRunCheck>();
-  if (!rows.results.length) return { checked: 0, pending: [] as string[] };
-  const github = client ?? (await createGitHubClient(context.configuration.github));
-  const pending: string[] = [];
-  let retired = 0;
-  for (const row of rows.results) {
-    if (retired + pending.length >= limit) break;
-    try {
-      if (await hasPinnedMainWorkflow(context, github, row.tested_sha)) continue;
-      const checkId =
-        row.check_id ??
-        (await findGitHubCheck({
-          github,
-          testedSha: row.tested_sha,
-          externalId: row.external_id,
-        }));
-      if (!checkId) throw new Error("The ambiguous GitHub check is not visible yet.");
-      const check = await verifiedCheck(github, row, checkId);
-      if (check.status === "completed" && check.conclusion !== "neutral") {
-        await context.database
-          .prepare(
-            "UPDATE pre_run_checks SET state='failed',check_id=?,updated_at=? WHERE external_id=? AND state IN ('active','ambiguous','creating') AND workflow_run_id IS NULL",
-          )
-          .bind(checkId, Date.now(), row.external_id)
-          .run();
-        retired += 1;
-        continue;
-      }
-      if (check.status !== "completed") {
-        await github.request(`/repos/${github.repository}/check-runs/${checkId}`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: "completed",
-            conclusion: "neutral",
-            completed_at: new Date().toISOString(),
-            output: {
-              title: "Visual capture was not active",
-              summary: "Ariakit had not yet merged the pinned Visonaut App workflow.",
-            },
-          }),
-        });
-      }
-      const completed = await verifiedCheck(github, row, checkId);
-      if (completed.status !== "completed" || completed.conclusion !== "neutral") {
-        throw new Error("The retired GitHub check did not complete as neutral.");
-      }
-      await context.database
-        .prepare(
-          "UPDATE pre_run_checks SET state='docs_complete',check_id=?,updated_at=? WHERE external_id=? AND state IN ('active','ambiguous','creating') AND workflow_run_id IS NULL",
-        )
-        .bind(checkId, Date.now(), row.external_id)
-        .run();
-      retired += 1;
-    } catch {
-      pending.push(row.external_id);
-      await context.database
-        .prepare("UPDATE pre_run_checks SET updated_at=? WHERE external_id=?")
-        .bind(Date.now(), row.external_id)
-        .run();
-    }
-  }
-  return { checked: retired + pending.length, pending };
 }
 
 export function externalId(testedSha: string, generation: number) {

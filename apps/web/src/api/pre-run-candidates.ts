@@ -205,10 +205,9 @@ export async function mainWorkflowCandidate(
 function referencedPullMergeSha(
   run: Record<string, unknown>,
   number: number,
-  configuredWorkflowRef: string | undefined,
+  workflowPath: string | undefined,
 ) {
-  if (!configuredWorkflowRef || !Array.isArray(run.referenced_workflows)) return null;
-  const workflowPath = configuredWorkflowRef.split("@")[0];
+  if (!workflowPath || !Array.isArray(run.referenced_workflows)) return null;
   const ref = `refs/pull/${number}/merge`;
   const matches = new Set<string>();
   for (const value of run.referenced_workflows) {
@@ -314,6 +313,7 @@ export async function workflowCandidate({
     }
     candidates.push(bound);
   } else {
+    const reusableWorkflowPath = context.configuration.workflowOwned?.reusableWorkflowPath;
     for (const value of run.pull_requests) {
       const association = object(value);
       const number = association.number;
@@ -323,7 +323,7 @@ export async function workflowCandidate({
         referencedPullMergeSha(
           run,
           number,
-          context.configuration.workflowOwned?.reusableWorkflowRef,
+          reusableWorkflowPath && `${github.repository}/${reusableWorkflowPath}`,
         );
       let row: PreRunCheck | null = null;
       if (selectedSha) {

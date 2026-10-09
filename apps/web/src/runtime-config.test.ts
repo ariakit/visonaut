@@ -252,6 +252,36 @@ describe("runtime numeric configuration", () => {
     );
   });
 
+  it("refuses a workflow configuration without the path of the reusable workflow", () => {
+    // The configuration of the time before D-OPS-04 has the pinned values and
+    // not this path. One deploy changes the code and the configuration together.
+    // If the two ever differ, the new code stops each request and guesses no path.
+    const before = {
+      callerWorkflowPath: ".github/workflows/ci.yml",
+      submitJobName: "App / Visual Submit",
+      captureJobName: "App / Visual Capture ({shard})",
+      pinnedValue: "2".repeat(40),
+    };
+    expect(() =>
+      apiBindings(configurationEnv({ VISONAUT_WORKFLOW_OWNED: JSON.stringify(before) })),
+    ).toThrow("VISONAUT_WORKFLOW_OWNED.reusableWorkflowPath is not configured.");
+    const mixed = apiBindings(
+      configurationEnv({
+        VISONAUT_WORKFLOW_OWNED: JSON.stringify({
+          ...before,
+          reusableWorkflowPath: ".github/workflows/app.yml",
+        }),
+      }),
+    );
+    // The code reads the four fields that it names, and no other field.
+    expect(mixed.configuration.workflowOwned).toEqual({
+      callerWorkflowPath: ".github/workflows/ci.yml",
+      reusableWorkflowPath: ".github/workflows/app.yml",
+      submitJobName: "App / Visual Submit",
+      captureJobName: "App / Visual Capture ({shard})",
+    });
+  });
+
   it.each(["BETTER_AUTH_SECRET", "VISONAUT_WORKFLOW_OWNED"])(
     "keeps %s required when numeric overrides are absent",
     (name) => {

@@ -23,7 +23,6 @@ const port = Number(process.env.REVIEW_ROUTE_PORT || 4183);
 if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
   throw new Error("Choose a local port from 1024 to 65535.");
 const origin = `http://127.0.0.1:${port}`;
-const workflowSha = "b".repeat(40);
 const secret = randomBytes(32).toString("hex");
 const sessionToken = randomBytes(32).toString("hex");
 const { privateKey } = generateKeyPairSync("rsa", {
@@ -76,14 +75,10 @@ const runtime = new Miniflare(
       // Preview builds omit upload trust; this read/save probe uses local fixtures.
       VISONAUT_WORKFLOW_OWNED: JSON.stringify({
         callerWorkflowPath: ".github/workflows/fixture-ci.yml",
-        callerWorkflowBlobSha: workflowSha,
-        trustedWorkflowPath: ".github/workflows/fixture-capture.yml",
+        reusableWorkflowPath: ".github/workflows/fixture-capture.yml",
         captureJobName: "Fixture / Capture / {shard}",
         submitJobName: "Fixture / Submit",
-        reusableWorkflowRef: `fixture/repository/.github/workflows/fixture-capture.yml@${workflowSha}`,
-        reusableWorkflowSha: workflowSha,
       }),
-      VISONAUT_TRUSTED_EXECUTOR_DIGEST: "c".repeat(64),
       VISONAUT_PROJECT_ID: "review-routes",
       VISONAUT_REPOSITORY: "fixture/repository",
       GITHUB_APP_ID: "12",
