@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DashboardPage } from "../../dashboard/dashboard-page.tsx";
-import { ReviewQueue } from "../../dashboard/review-queue.tsx";
+import { DashboardPage } from "../../../dashboard/dashboard-page.tsx";
+import { ReviewQueue } from "../../../dashboard/review-queue.tsx";
 
-export const Route = createFileRoute("/_app/")({
+export const Route = createFileRoute("/_app/_runs/")({
   component: Queue,
 });
 

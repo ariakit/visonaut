@@ -9,6 +9,12 @@ export interface RequireMaintainerParams {
   database: D1Database;
   github: GitHubClient;
   access?: "read" | "review" | "write";
+  /**
+   * True when the answer cannot set a cookie, because its headers are already
+   * sent: the run list of a streamed document. The session is then read and
+   * not renewed, so no new cookie is lost. The checks are the same.
+   */
+  disableRefresh?: boolean;
 }
 
 interface PrivatePermission {
@@ -39,10 +45,11 @@ export async function requireMaintainer({
   database,
   github,
   access = "write",
+  disableRefresh = false,
 }: RequireMaintainerParams) {
   const { response: session, headers } = await auth.api.getSession({
     headers: request.headers,
-    query: { disableCookieCache: true },
+    query: { disableCookieCache: true, disableRefresh },
     returnHeaders: true,
   });
   if (!session) {

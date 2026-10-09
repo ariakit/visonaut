@@ -173,7 +173,8 @@ test("the History filter shows a state of the URL that no loaded run has", async
 
 for (const path of ["/history", "/status"] as const) {
   test(`a sign-in from ${path} returns to ${path}`, async ({ page }) => {
-    await page.route("**/api/runs", (route) =>
+    // History reads the run list, and Status reads the alert list.
+    await page.route(/\/api\/(runs|operations)$/, (route) =>
       route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } }),
     );
     await page.route("**/api/auth/sign-in/social", (route) =>

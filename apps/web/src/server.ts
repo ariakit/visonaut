@@ -11,6 +11,7 @@ import {
 import { logOperationFailure } from "./operations/failure.ts";
 import { previewFixtureResponse } from "./review/preview-fixtures.ts";
 import { handleApi } from "./api/index.ts";
+import { type DocumentContext, runListResult } from "./dashboard/run-list.ts";
 import {
   apiBindings,
   authConfiguration,
@@ -21,7 +22,12 @@ import {
   runScheduledOperations,
 } from "./runtime.ts";
 
-const render = createStartHandler(async (context) => {
+// The type of the context that each document request gives to the router.
+interface DocumentRegister {
+  server: { requestContext: DocumentContext };
+}
+
+const render = createStartHandler<DocumentRegister>(async (context) => {
   const result = await defaultStreamHandler(context);
   const nonce = context.router.options.ssr?.nonce;
   if (result instanceof Response) return securePrivateResponse(result, nonce);
@@ -37,6 +43,32 @@ const servedAuthRoutes: ReadonlySet<string> = new Set([
   "POST /api/auth/sign-out",
   "GET /api/auth/error",
 ]);
+
+/**
+ * The context of one document request: the read of the run list that the
+ * loader of the Queue and History starts. The answer comes from the handler
+ * of `/api/runs` in the same process, so one endpoint and one access check
+ * serve the document and the browser. The read does not throw.
+ */
+function documentContext(
+  request: Request,
+  respond: (request: Request) => Promise<Response | null> | Response | null,
+): DocumentContext {
+  return {
+    readRunList: async () => {
+      try {
+        // The same headers as the document request: the cookie of the session.
+        const response = await respond(
+          new Request(new URL("/api/runs", request.url), { headers: request.headers }),
+        );
+        if (!response) throw new Error("The run list has no answer.");
+        return await runListResult(response);
+      } catch {
+        return { status: "error", message: "The run list is temporarily unavailable." };
+      }
+    },
+  };
+}
 
 const loopbackHostnames = new Set(["127.0.0.1", "localhost", "[::1]"]);
 
@@ -94,7 +126,7 @@ export default {
         }
         const fixture = previewFixtureResponse(request);
         if (fixture) return securePrivateResponse(fixture);
-        return await render(request);
+        return await render(request, { context: documentContext(request, previewFixtureResponse) });
       }
       requireBackendBindings(env);
       if (url.pathname.startsWith("/api/auth/")) {
@@ -138,7 +170,16 @@ export default {
         });
         if (response) return response;
       }
-      return await render(request);
+      return await render(request, {
+        context: documentContext(request, (runsRequest) =>
+          handleApi(runsRequest, apiBindings(env), {
+            waitUntil: (promise) => lifetime.waitUntil(promise),
+            // The document sends its headers before this answer is ready, so
+            // a renewed session could not set its cookie.
+            disableSessionRefresh: true,
+          }),
+        ),
+      });
     } catch (error) {
       logOperationFailure({
         operation: url.pathname.startsWith("/api/auth/") ? "auth" : "http",

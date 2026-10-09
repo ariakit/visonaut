@@ -203,6 +203,11 @@ function eventId(event: OperationEvent) {
 
 export interface OperationsAttentionProps {
   onAccessDenied: (status: 401 | 403) => void;
+  /**
+   * Called when a read of the alerts passed the access check. `preview` is
+   * true for the answer of the preview deployment, which has sample data.
+   */
+  onAccess?: (preview: boolean) => void;
 }
 
 /**
@@ -210,7 +215,7 @@ export interface OperationsAttentionProps {
  * the alerts when it opens and each minute after that. A hidden tab sends no
  * request, and the page reads again when the tab becomes visible.
  */
-export function OperationsAttention({ onAccessDenied }: OperationsAttentionProps) {
+export function OperationsAttention({ onAccessDenied, onAccess }: OperationsAttentionProps) {
   const [status, setStatus] = useState<OperationsStatus | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -237,7 +242,14 @@ export function OperationsAttention({ onAccessDenied }: OperationsAttentionProps
           return;
         }
         if (!response.ok) throw new Error("Operation alerts are temporarily unavailable.");
-        const data = parseStatus(await response.json());
+        const answer: unknown = await response.json();
+        const data = parseStatus(answer);
+        onAccess?.(
+          typeof answer === "object" &&
+            answer !== null &&
+            "preview" in answer &&
+            answer.preview === true,
+        );
         if (controller.signal.aborted) return;
         const nextEvents = new Set(data.events.map(eventId));
         const known = knownEvents.current;
@@ -298,7 +310,7 @@ export function OperationsAttention({ onAccessDenied }: OperationsAttentionProps
       clearTimeout(timeout);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [reload, onAccessDenied]);
+  }, [reload, onAccessDenied, onAccess]);
 
   return (
     <div className="flex flex-col gap-5 max-w-4xl mx-auto">
