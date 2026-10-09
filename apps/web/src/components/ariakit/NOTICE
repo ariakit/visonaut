@@ -1,7 +1,7 @@
-Ariakit UI components and recipes copied from ariakit/ariakit commit fc85b809f3b44d3bc72fa1eae927f785ce744f02.
-Source: https://github.com/ariakit/ariakit/tree/fc85b809f3b44d3bc72fa1eae927f785ce744f02/packages/ariakit-ui/src
+Ariakit UI components and recipes copied from ariakit/ariakit commit 643a23aff5a5ac4c0a81022973d5297de004b506.
+Source: https://github.com/ariakit/ariakit/tree/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/src
 Copyright Diego Haz. Distributed under the MIT license in LICENSE.
-The source behavior is retained; styles/ui.css requires @ariakit/tailwind.
-Shell, Table, Badge, and Popover components and recipes use that pinned revision.
-Existing inlined base recipes are re-exported through styles/* adapters for these components.
-NavDisclosure and its Disclosure, Nav, and Prose recipes use the same pinned revision.
+The copy is complete and unmodified, except that test files are omitted.
+LICENSE is the file packages/ariakit-tailwind/license of the same commit.
+styles/ui.css requires @ariakit/tailwind.
+Run `node tooling/ariakit-ui-copy.ts` to copy again, and `--check` to verify.

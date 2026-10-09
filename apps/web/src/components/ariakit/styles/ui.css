@@ -10,8 +10,8 @@
   --color-danger: var(--color-red-600);
 
   --font-sans:
-    "Inter Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
+    "Inter Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   --radius: 0.25em;
   --spacing: 0.25em;
@@ -176,6 +176,15 @@ body > * {
 :root {
   --choice-mark-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
   --choice-mark-dash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3C/svg%3E");
+}
+
+/* The optical extra a text frame adds to its frame padding (see
+   text-frame.ts). Registered, it computes in the frame's own font, so a slot
+   that adjusts its font metrics, such as an avatar, inherits the length. */
+@property --text-frame-inset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
 }
 
 /* Disclosure geometry: the root measures its icon column in its own line
@@ -363,7 +372,9 @@ body > * {
     --shell-main-header-visible: 0;
   }
   .shell:has(> .shell-main > .shell-main-header-sticky) > & {
-    --shell-main-head: calc(var(--shell-main-header-height) * var(--shell-main-header-visible));
+    --shell-main-head: calc(
+      var(--shell-main-header-height) * var(--shell-main-header-visible)
+    );
   }
 
   /* Reset inherited state so nested shells only read their own sidebars. */
@@ -378,54 +389,91 @@ body > * {
   --shell-end-1-from-main: 0;
   --shell-end-1-from-body: 0;
   --shell-header-free-1: calc(
-    1 - var(--shell-end-1-open) * var(--shell-end-1-fit) * var(--shell-end-1-from-main)
+    1 - var(--shell-end-1-open) * var(--shell-end-1-fit) *
+      var(--shell-end-1-from-main)
   );
   --shell-intro-free-1: calc(
-    1 - var(--shell-end-1-open) * var(--shell-end-1-fit) * (1 - var(--shell-end-1-from-body))
+    1 - var(--shell-end-1-open) * var(--shell-end-1-fit) *
+      (1 - var(--shell-end-1-from-body))
   );
   --shell-end-2-from-main: 0;
   --shell-end-2-from-body: 0;
   --shell-header-free-2: calc(
-    1 - var(--shell-end-2-open) * var(--shell-end-2-fit) * var(--shell-end-2-from-main)
+    1 - var(--shell-end-2-open) * var(--shell-end-2-fit) *
+      var(--shell-end-2-from-main)
   );
   --shell-intro-free-2: calc(
-    1 - var(--shell-end-2-open) * var(--shell-end-2-fit) * (1 - var(--shell-end-2-from-body))
+    1 - var(--shell-end-2-open) * var(--shell-end-2-fit) *
+      (1 - var(--shell-end-2-from-body))
   );
 
-  .shell:has(> .shell-sidebar-start:not(.shell-sidebar-start ~ *) > .shell-sidebar-panel[data-open])
+  .shell:has(
+      > .shell-sidebar-start:not(.shell-sidebar-start ~ *)
+        > .shell-sidebar-panel[data-open]
+    )
     > & {
     --shell-start-1-open: 1;
   }
-  .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start > .shell-sidebar-panel[data-open]) > & {
+  .shell:has(
+      > .shell-sidebar-start
+        ~ .shell-sidebar-start
+        > .shell-sidebar-panel[data-open]
+    )
+    > & {
     --shell-start-2-open: 1;
   }
-  .shell:has(> .shell-sidebar-end:not(.shell-sidebar-end ~ *) > .shell-sidebar-panel[data-open])
+  .shell:has(
+      > .shell-sidebar-end:not(.shell-sidebar-end ~ *)
+        > .shell-sidebar-panel[data-open]
+    )
     > & {
     --shell-end-1-open: 1;
   }
-  .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end > .shell-sidebar-panel[data-open]) > & {
+  .shell:has(
+      > .shell-sidebar-end
+        ~ .shell-sidebar-end
+        > .shell-sidebar-panel[data-open]
+    )
+    > & {
     --shell-end-2-open: 1;
   }
-  .shell:has(> .shell-sidebar-end:not(.shell-sidebar-end ~ *).shell-sidebar-from-main) > & {
+  .shell:has(
+      > .shell-sidebar-end:not(.shell-sidebar-end ~ *).shell-sidebar-from-main
+    )
+    > & {
     --shell-end-1-from-main: 1;
   }
-  .shell:has(> .shell-sidebar-end:not(.shell-sidebar-end ~ *).shell-sidebar-from-body) > & {
+  .shell:has(
+      > .shell-sidebar-end:not(.shell-sidebar-end ~ *).shell-sidebar-from-body
+    )
+    > & {
     --shell-end-1-from-body: 1;
   }
-  .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-from-main) > & {
+  .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-from-main)
+    > & {
     --shell-end-2-from-main: 1;
   }
-  .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-from-body) > & {
+  .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-from-body)
+    > & {
     --shell-end-2-from-body: 1;
   }
 
-  .shell:has(> .shell-sidebar-start.shell-sidebar-hidden:not(.shell-sidebar-start ~ *)) > & {
+  .shell:has(
+      > .shell-sidebar-start.shell-sidebar-hidden:not(.shell-sidebar-start ~ *)
+    )
+    > & {
     --shell-start-1-fit: 0;
   }
-  .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-hidden) > & {
+  .shell:has(
+      > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-hidden
+    )
+    > & {
     --shell-start-2-fit: 0;
   }
-  .shell:has(> .shell-sidebar-end.shell-sidebar-hidden:not(.shell-sidebar-end ~ *)) > & {
+  .shell:has(
+      > .shell-sidebar-end.shell-sidebar-hidden:not(.shell-sidebar-end ~ *)
+    )
+    > & {
     --shell-end-1-fit: 0;
   }
   .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-hidden) > & {
@@ -438,16 +486,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-3xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-3xs:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-3xs:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-3xs) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-3xs
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-3xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-3xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-3xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-3xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -455,16 +513,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-2xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-2xs:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-2xs:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-2xs) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-2xs
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-2xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-2xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-2xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-2xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -472,16 +540,24 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-xs:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-xs:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-xs) > & {
+    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-xs)
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -489,16 +565,24 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-sm) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-sm:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-sm:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-sm) > & {
+    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-sm)
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-sm:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-sm:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-sm) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-sm)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -506,16 +590,24 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-md) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-md:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-md:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-md) > & {
+    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-md)
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-md:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-md:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-md) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-md)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -523,16 +615,24 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-lg) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-lg:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-lg:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-lg) > & {
+    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-lg)
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-lg:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-lg:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-lg) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-lg)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -540,16 +640,24 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-xl) > & {
+    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-xl)
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -557,16 +665,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-2xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-2xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-2xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-2xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-2xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-2xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-2xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-2xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-2xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -574,16 +692,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-3xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-3xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-3xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-3xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-3xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-3xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-3xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-3xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-3xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -591,16 +719,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-4xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-4xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-4xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-4xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-4xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-4xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-4xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-4xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-4xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -608,16 +746,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-5xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-5xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-5xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-5xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-5xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-5xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-5xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-5xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-5xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -625,16 +773,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-6xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-6xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-6xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-6xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-6xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-6xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-6xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-6xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-6xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -642,16 +800,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-7xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-7xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-7xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-7xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-7xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-7xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-7xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-7xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-7xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -659,17 +827,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-3xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-3xs:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-3xs:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-3xs) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-3xs
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-3xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-3xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-3xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-3xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -677,17 +854,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-2xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-2xs:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-2xs:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-2xs) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-2xs
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-2xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-2xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-2xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-2xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -695,16 +881,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-xs) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-xs:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-xs:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-xs) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-xs
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-xs:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-xs:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-xs) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-xs)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -712,16 +908,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-sm) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-sm:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-sm:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-sm) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-sm
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-sm:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-sm:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-sm) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-sm)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -729,16 +935,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-md) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-md:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-md:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-md) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-md
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-md:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-md:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-md) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-md)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -746,16 +962,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-lg) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-lg:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-lg:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-lg) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-lg
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-lg:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-lg:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-lg) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-lg)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -763,16 +989,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-xl:not(.shell-sidebar-start ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-xl:not(.shell-sidebar-start ~ *)
+      )
+      > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -780,17 +1016,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-2xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-2xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-2xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-2xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-2xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-2xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-2xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-2xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-2xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -798,17 +1043,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-3xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-3xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-3xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-3xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-3xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-3xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-3xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-3xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-3xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -816,17 +1070,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-4xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-4xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-4xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-4xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-4xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-4xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-4xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-4xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-4xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -834,17 +1097,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-5xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-5xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-5xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-5xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-5xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-5xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-5xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-5xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-5xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -852,17 +1124,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-6xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-6xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-6xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-6xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-6xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-6xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-6xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-6xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-6xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -870,17 +1151,26 @@ body > * {
     .shell:has(> .shell-main > .shell-main-header-show-max-7xl) > & {
       --shell-main-header-visible: 0;
     }
-    .shell:has(> .shell-sidebar-start.shell-sidebar-show-max-7xl:not(.shell-sidebar-start ~ *))
+    .shell:has(
+        > .shell-sidebar-start.shell-sidebar-show-max-7xl:not(.shell-sidebar-start ~ *)
+      )
       > & {
       --shell-start-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-7xl) > & {
+    .shell:has(
+        > .shell-sidebar-start ~ .shell-sidebar-start.shell-sidebar-show-max-7xl
+      )
+      > & {
       --shell-start-2-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end.shell-sidebar-show-max-7xl:not(.shell-sidebar-end ~ *)) > & {
+    .shell:has(
+        > .shell-sidebar-end.shell-sidebar-show-max-7xl:not(.shell-sidebar-end ~ *)
+      )
+      > & {
       --shell-end-1-fit: 0;
     }
-    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-7xl) > & {
+    .shell:has(> .shell-sidebar-end ~ .shell-sidebar-end.shell-sidebar-show-max-7xl)
+      > & {
       --shell-end-2-fit: 0;
     }
   }
@@ -982,33 +1272,33 @@ body > * {
   &:is(:disabled, [aria-disabled="true"]),
   &:has(
       :is(
-        input:not(
-          [type="hidden"],
-          [type="button"],
-          [type="submit"],
-          [type="reset"],
-          [type="image"],
-          [type="checkbox"],
-          [type="radio"]
-        ),
-        textarea,
-        select
-      )
+          input:not(
+              [type="hidden"],
+              [type="button"],
+              [type="submit"],
+              [type="reset"],
+              [type="image"],
+              [type="checkbox"],
+              [type="radio"]
+            ),
+          textarea,
+          select
+        )
     ):not(
       :has(
         :is(
-          input:not(
-            [type="hidden"],
-            [type="button"],
-            [type="submit"],
-            [type="reset"],
-            [type="image"],
-            [type="checkbox"],
-            [type="radio"]
-          ),
-          textarea,
-          select
-        ):not(:disabled, [aria-disabled="true"])
+            input:not(
+                [type="hidden"],
+                [type="button"],
+                [type="submit"],
+                [type="reset"],
+                [type="image"],
+                [type="checkbox"],
+                [type="radio"]
+              ),
+            textarea,
+            select
+          ):not(:disabled, [aria-disabled="true"])
       )
     ) {
     @slot;
@@ -1164,18 +1454,22 @@ body > * {
 
 @custom-variant ui-choice-disabled {
   &:is(:disabled, [aria-disabled="true"]),
-  :where(label:has(:disabled, [aria-disabled="true"]), [aria-disabled="true"]) & {
+  :where(label:has(:disabled, [aria-disabled="true"]), [aria-disabled="true"])
+    & {
     @slot;
   }
 }
 
+/* ARIA reads an empty or false aria-current as not current and any other
+   value, even one outside its list, as current. The selected variants below
+   repeat this test, so they have to change with it. */
 @custom-variant ui-selected {
   &:is(
     :checked,
     .selected,
     [aria-checked="true"],
     [aria-selected="true"],
-    [aria-current]:not([aria-current="false"])
+    [aria-current]:not([aria-current=""], [aria-current="false"])
   ) {
     @slot;
   }
@@ -1186,13 +1480,13 @@ body > * {
     :checked,
     [aria-checked="true"],
     [aria-selected="true"],
-    [aria-current]:not([aria-current="false"])
+    [aria-current]:not([aria-current=""], [aria-current="false"])
   ),
   &:has(
     :checked,
     [aria-checked="true"],
     [aria-selected="true"],
-    [aria-current]:not([aria-current="false"])
+    [aria-current]:not([aria-current=""], [aria-current="false"])
   ) {
     @slot;
   }
@@ -1200,14 +1494,13 @@ body > * {
 
 @custom-variant ui-has-selected-row {
   &:has(
-    li
-      > .control:is(
-        :checked,
-        .selected,
-        [aria-checked="true"],
-        [aria-selected="true"],
-        [aria-current]:not([aria-current="false"])
-      )
+    li > .control:is(
+      :checked,
+      .selected,
+      [aria-checked="true"],
+      [aria-selected="true"],
+      [aria-current]:not([aria-current=""], [aria-current="false"])
+    )
   ) {
     @slot;
   }
@@ -1222,17 +1515,15 @@ body > * {
       .selected,
       [aria-checked="true"],
       [aria-selected="true"],
-      [aria-current]:not([aria-current="false"])
+      [aria-current]:not([aria-current=""], [aria-current="false"])
     ),
-    ~ *
-      li
-      > .control:is(
-        :checked,
-        .selected,
-        [aria-checked="true"],
-        [aria-selected="true"],
-        [aria-current]:not([aria-current="false"])
-      ):not(:is([hidden], [data-leave]) *)
+    ~ * li > .control:is(
+      :checked,
+      .selected,
+      [aria-checked="true"],
+      [aria-selected="true"],
+      [aria-current]:not([aria-current=""], [aria-current="false"])
+    ):not(:is([hidden], [data-leave]) *)
   ) {
     @slot;
   }
@@ -1246,7 +1537,7 @@ body > * {
       :checked,
       [aria-checked="true"],
       [aria-selected="true"],
-      [aria-current]:not([aria-current="false"])
+      [aria-current]:not([aria-current=""], [aria-current="false"])
     )
     ~ &,
   &:has(
@@ -1254,7 +1545,7 @@ body > * {
       :checked,
       [aria-checked="true"],
       [aria-selected="true"],
-      [aria-current]:not([aria-current="false"])
+      [aria-current]:not([aria-current=""], [aria-current="false"])
     )
   ) {
     @slot;
@@ -1273,7 +1564,7 @@ body > * {
       :checked,
       [aria-checked="true"],
       [aria-selected="true"],
-      [aria-current]:not([aria-current="false"])
+      [aria-current]:not([aria-current=""], [aria-current="false"])
     )
     + &,
   &:has(
@@ -1281,7 +1572,7 @@ body > * {
       :checked,
       [aria-checked="true"],
       [aria-selected="true"],
-      [aria-current]:not([aria-current="false"])
+      [aria-current]:not([aria-current=""], [aria-current="false"])
     )
   ) {
     @slot;
@@ -1315,12 +1606,11 @@ body > * {
 }
 
 @custom-variant ui-text {
-  &.text:not(.ak-layer),
-  & .text:not(.ak-layer),
-  & svg {
+  &.text:not(.ak-layer), & .text:not(.ak-layer), & svg {
     @slot;
   }
 }
+
 
 @utility ui-bevel {
   --min-l: 0.25;
@@ -1412,7 +1702,10 @@ body > * {
        box, on the panel's surface, which matches the folder's. A border
        folder ends on the seam with nothing below its box, so it does not cut
        there at all. */
-    clip-path: inset(-4rem -4rem calc(-4rem + min(var(--folder-ring) * 1000000, 4rem + 2px)) -4rem);
+    clip-path: inset(
+      -4rem -4rem
+        calc(-4rem + min(var(--folder-ring) * 1000000, 4rem + 2px)) -4rem
+    );
     --folder-edge: var(--ak-edge);
     --folder-ring: var(--ak-frame-ring, 0px);
     --folder-border: var(--ak-frame-border, 0px);
@@ -1441,36 +1734,25 @@ body > * {
       --folder-outer-border: calc(var(--folder-outer) + var(--folder-smoothness));
       --folder-outer-bg: calc(var(--folder-outer) - var(--folder-smoothness));
       --folder-transparent: transparent var(--folder-outer-bg);
-      --folder-border:
-        var(--folder-edge) var(--folder-outer-border), var(--folder-edge) var(--folder-inner-border);
+      --folder-border: var(--folder-edge) var(--folder-outer-border), var(--folder-edge) var(--folder-inner-border);
       --folder-bg: var(--ak-layer) var(--folder-inner-bg);
       --folder-gradient: var(--folder-transparent), var(--folder-border), var(--folder-bg);
       --folder-backdrop-ring: calc(var(--folder-outer-border) + var(--folder-ring));
-      --folder-backdrop:
-        transparent var(--folder-outer-border), var(--ak-layer-parent) var(--folder-outer-border),
-        var(--ak-layer-parent) var(--folder-backdrop-ring),
-        var(--ak-layer) var(--folder-backdrop-ring);
+      --folder-backdrop: transparent var(--folder-outer-border), var(--ak-layer-parent) var(--folder-outer-border), var(--ak-layer-parent) var(--folder-backdrop-ring), var(--ak-layer) var(--folder-backdrop-ring);
       /* The extra band runs from the band's inner edge to --folder-extra
          further in, over the layer below. It starts a hair before the edge
          ends, so the two blend, and it has its own hair of smoothness, since
          an edgeless folder has none. */
       --folder-extra-smoothness: min(0.2px, var(--folder-extra, 0px));
       --folder-extra-inner: calc(var(--folder-inner) + var(--folder-extra, 0px));
-      --folder-extra-gradient:
-        transparent calc(var(--folder-inner-border) - var(--folder-extra-smoothness)),
-        var(--folder-edge) var(--folder-inner-border),
-        var(--folder-edge) calc(var(--folder-extra-inner) - var(--folder-extra-smoothness)),
-        transparent calc(var(--folder-extra-inner) + var(--folder-extra-smoothness));
+      --folder-extra-gradient: transparent calc(var(--folder-inner-border) - var(--folder-extra-smoothness)), var(--folder-edge) var(--folder-inner-border), var(--folder-edge) calc(var(--folder-extra-inner) - var(--folder-extra-smoothness)), transparent calc(var(--folder-extra-inner) + var(--folder-extra-smoothness));
       content: "";
       pointer-events: none;
       width: calc(var(--folder-radius) + var(--folder-extra, 0px));
       height: calc(var(--folder-radius) + var(--folder-over));
       /* The extra band's layer has no width until the extra is on, and it
          stops at the seam. */
-      background-size:
-        min(var(--folder-extra, 0px) * 1000000, 100%) var(--folder-radius),
-        auto,
-        auto;
+      background-size: min(var(--folder-extra, 0px) * 1000000, 100%) var(--folder-radius), auto, auto;
       transition-property: --folder-radius;
       transition-duration: var(--duration-tabs);
       transition-timing-function: var(--ease-tabs);
@@ -1478,16 +1760,14 @@ body > * {
 
     &::before {
       inset-inline-end: 100%;
-      background-image:
-        radial-gradient(circle at 0 0, var(--folder-extra-gradient)),
+      background-image: radial-gradient(circle at 0 0, var(--folder-extra-gradient)),
         radial-gradient(circle at 0 0, var(--folder-gradient)),
         radial-gradient(circle at 0 0, var(--folder-backdrop));
     }
 
     &::after {
       inset-inline-start: 100%;
-      background-image:
-        radial-gradient(circle at 100% 0, var(--folder-extra-gradient)),
+      background-image: radial-gradient(circle at 100% 0, var(--folder-extra-gradient)),
         radial-gradient(circle at 100% 0, var(--folder-gradient)),
         radial-gradient(circle at 100% 0, var(--folder-backdrop));
     }
@@ -1517,15 +1797,16 @@ body > * {
   --well-radius: max(0px, calc(var(--tabs-radius, 0px) - var(--tabs-border, 0px)));
   --well-smoothness: 0.5px;
   --well-color: var(--ak-layer);
-  --well-corner:
-    var(--well-color) calc(var(--well-radius) - var(--well-smoothness)),
+  --well-corner: var(--well-color) calc(var(--well-radius) - var(--well-smoothness)),
     transparent calc(var(--well-radius) + var(--well-smoothness));
   --well-fill: linear-gradient(var(--well-color), var(--well-color));
   /* The layer utility paints the whole box; the images below paint instead. */
   background-color: transparent !important;
   background-image:
     radial-gradient(circle at 100% 100%, var(--well-corner)),
-    radial-gradient(circle at 0 100%, var(--well-corner)), var(--well-fill), var(--well-fill);
+    radial-gradient(circle at 0 100%, var(--well-corner)),
+    var(--well-fill),
+    var(--well-fill);
   background-size:
     var(--well-radius) var(--well-radius),
     var(--well-radius) var(--well-radius),

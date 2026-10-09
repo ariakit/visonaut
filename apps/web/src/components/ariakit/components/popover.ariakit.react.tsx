@@ -30,10 +30,13 @@ export interface PopoverDisclosureProps
  */
 export function PopoverDisclosure(props: PopoverDisclosureProps) {
   const [variantProps, rest] = splitProps(props, popoverDisclosure);
-  return <ak.PopoverDisclosure {...popoverDisclosure.jsx(variantProps)} {...rest} />;
+  return (
+    <ak.PopoverDisclosure {...popoverDisclosure.jsx(variantProps)} {...rest} />
+  );
 }
 
-export interface PopoverProps extends ak.PopoverProps, VariantProps<typeof popover> {}
+export interface PopoverProps
+  extends ak.PopoverProps, VariantProps<typeof popover> {}
 
 /**
  * Floats 8px away from its anchor by default, like `ComboboxPopover` and
@@ -42,7 +45,9 @@ export interface PopoverProps extends ak.PopoverProps, VariantProps<typeof popov
  */
 export function Popover({ gutter = 8, ...props }: PopoverProps) {
   const [variantProps, rest] = splitProps(props, popover);
-  return <ak.Popover gutter={gutter} {...popover.jsx(variantProps)} {...rest} />;
+  return (
+    <ak.Popover gutter={gutter} {...popover.jsx(variantProps)} {...rest} />
+  );
 }
 
 export interface PopoverArrowProps extends ak.PopoverArrowProps {}
@@ -73,7 +78,12 @@ export interface PopoverDescriptionProps
  */
 export function PopoverDescription(props: PopoverDescriptionProps) {
   const [variantProps, rest] = splitProps(props, popoverDescription);
-  return <ak.PopoverDescription {...popoverDescription.jsx(variantProps)} {...rest} />;
+  return (
+    <ak.PopoverDescription
+      {...popoverDescription.jsx(variantProps)}
+      {...rest}
+    />
+  );
 }
 
 export interface PopoverDismissProps

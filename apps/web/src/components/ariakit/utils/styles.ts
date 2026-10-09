@@ -48,7 +48,9 @@ type OptionalStyleValue = StyleValue | boolean | null | undefined;
  * token and strings pass through as raw lengths or expressions.
  */
 export function getSpacingValue(value: string | number) {
-  return typeof value === "string" ? value : `calc(var(--spacing) * (${value}))`;
+  return typeof value === "string"
+    ? value
+    : `calc(var(--spacing) * (${value}))`;
 }
 
 interface GetScaledStyleClassParams {
@@ -75,7 +77,10 @@ interface GetScaledStyleValueOptions extends Pick<
   "multiplier" | "unit"
 > {}
 
-export function getScaledStyleValue(value: StyleValue, options: GetScaledStyleValueOptions = {}) {
+export function getScaledStyleValue(
+  value: StyleValue,
+  options: GetScaledStyleValueOptions = {},
+) {
   const { multiplier, unit } = options;
   if (unit === "%") {
     return `calc((${value}) * 1%)`;
