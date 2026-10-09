@@ -16,7 +16,7 @@ import type {
 import { beginSubmission } from "./bundle-submit.js";
 import { CliError, protocolVersion, record, ServiceRefusal, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
-import { imageLabeller, loadCapture, readImageFile, validateImages } from "./files.js";
+import { imageLabeller, loadCapture, readImageFile } from "./files.js";
 import type { LocalManifest } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
 import { compareLocally, readReference, validateLocalImages } from "./local-comparison.js";
@@ -55,7 +55,7 @@ Exit codes: 0 success, 1 operation failure, 2 invalid arguments,
 `;
 
 interface Arguments {
-  command: "upload" | "submit" | "begin" | "status";
+  command: "submit" | "begin" | "status";
   directory?: string;
   run?: string;
   server?: string;
@@ -64,8 +64,8 @@ interface Arguments {
 
 function argumentsFrom(argv: string[], environment: Record<string, string | undefined>): Arguments {
   const command = argv[0];
-  if (command !== "upload" && command !== "submit" && command !== "begin" && command !== "status") {
-    throw new CliError("Choose upload, submit, or status. Use --help for usage.", 2);
+  if (command !== "submit" && command !== "begin" && command !== "status") {
+    throw new CliError("Choose begin, submit, or status. Use --help for usage.", 2);
   }
   const result: Arguments = { command, json: false };
   const seen = new Set<string>();
@@ -101,15 +101,13 @@ function argumentsFrom(argv: string[], environment: Record<string, string | unde
     }
   } else if (command === "begin" && (result.directory || result.json || !result.run)) {
     throw new CliError("Begin requires --run and accepts only --server.", 2);
-  } else if (command === "upload" && result.run) {
-    throw new CliError("Upload does not accept --run.", 2);
-  } else if (command === "submit" && result.run && result.directory) {
-    throw new CliError("Submit accepts either --run or --dir, not both.", 2);
+  } else if (command === "submit" && (result.run || result.json)) {
+    throw new CliError("Submit accepts only --dir and --server.", 2);
   }
   return result;
 }
 
-function reservedRun(value: unknown, localComparison = false): ReserveRunResponse {
+function reservedRun(value: unknown): ReserveRunResponse {
   protocolVersion(value);
   if (
     !record(value) ||
@@ -127,7 +125,7 @@ function reservedRun(value: unknown, localComparison = false): ReserveRunRespons
       4,
     );
   }
-  if (localComparison && value.comparisonMode !== LOCAL_COMPARISON_MODE) {
+  if (value.comparisonMode !== LOCAL_COMPARISON_MODE) {
     throw new CliError(
       "The service does not support local comparison. Update the service before Submit.",
     );
@@ -137,7 +135,6 @@ function reservedRun(value: unknown, localComparison = false): ReserveRunRespons
     runId: value.runId,
     capability: value.capability,
     expiresAt: value.expiresAt,
-    ...(localComparison ? { comparisonMode: LOCAL_COMPARISON_MODE } : {}),
   };
 }
 
@@ -349,6 +346,7 @@ function submittedRun(value: unknown): SubmittedRun {
 interface SubmitRunParams {
   origin: URL;
   externalRunId: string;
+  attempt: number;
   environment: NodeJS.ProcessEnv;
   secrets: Set<string>;
 }
@@ -356,21 +354,10 @@ interface SubmitRunParams {
 async function submitRun({
   origin,
   externalRunId,
+  attempt,
   environment,
   secrets,
 }: SubmitRunParams): Promise<SubmittedRun> {
-  const attempt = Number(environment.GITHUB_RUN_ATTEMPT);
-  if (
-    !/^[1-9]\d*$/u.test(externalRunId) ||
-    !Number.isSafeInteger(Number(externalRunId)) ||
-    !Number.isSafeInteger(attempt) ||
-    attempt < 1
-  ) {
-    throw new CliError("Submit requires a numeric GitHub run ID and run attempt.", 2);
-  }
-  if (environment.GITHUB_RUN_ID !== externalRunId) {
-    throw new CliError("The requested run does not match this GitHub job.", 4);
-  }
   const token = await githubToken(origin, environment, "submit");
   secrets.add(token);
   const response = await request({
@@ -388,7 +375,6 @@ interface ReserveParams {
   manifest: Manifest;
   environment: NodeJS.ProcessEnv;
   secrets: Set<string>;
-  localComparison?: boolean;
 }
 
 async function reserve({
@@ -396,7 +382,6 @@ async function reserve({
   manifest,
   environment,
   secrets,
-  localComparison = Boolean(manifest.localComparison),
 }: ReserveParams): Promise<ReserveRunResponse> {
   const token = await githubToken(origin, environment, "submit");
   secrets.add(token);
@@ -409,10 +394,10 @@ async function reserve({
       schemaVersion: SCHEMA_VERSION,
       ...manifest.run,
       shardKey: manifest.shard.key,
-      ...(localComparison ? { comparisonMode: LOCAL_COMPARISON_MODE } : {}),
+      comparisonMode: LOCAL_COMPARISON_MODE,
     }),
   });
-  const reservation = reservedRun(response, localComparison);
+  const reservation = reservedRun(response);
   secrets.add(reservation.capability);
   return reservation;
 }
@@ -466,7 +451,7 @@ interface UploadShardParams extends ReserveParams {
   local: LocalManifest;
   manifestDigest: string;
   reservation: ReserveRunResponse;
-  progress?: (value: string) => void;
+  progress: (value: string) => void;
 }
 
 async function uploadShard({
@@ -478,15 +463,7 @@ async function uploadShard({
   manifestDigest,
   reservation,
   progress,
-}: UploadShardParams): Promise<{
-  uploadedImages: number;
-  reusedImages: number;
-  elapsedMs: number;
-  imagePutElapsedMs: number;
-  imagePutBytes: number;
-  imagePutRetryWaitMs: number;
-  reservation: ReserveRunResponse;
-}> {
+}: UploadShardParams): Promise<ReserveRunResponse> {
   const started = performance.now();
   const runId = reservation.runId;
   const images = uploadImages(manifest);
@@ -600,7 +577,7 @@ async function uploadShard({
           }
         }
         if (reusedCount - lastReportedReused >= 128) {
-          progress?.(`Visonaut reused ${reusedCount} unchanged originals.\n`);
+          progress(`Visonaut reused ${reusedCount} unchanged originals.\n`);
           lastReportedReused = reusedCount;
         }
         if (expired) {
@@ -674,27 +651,19 @@ async function uploadShard({
       const failure = results.find((result) => result.status === "rejected");
       if (failure?.status === "rejected") throw failure.reason;
       if (uploadedImages - lastReportedUploaded >= 128) {
-        progress?.(`Visonaut uploaded ${uploadedImages} originals.\n`);
+        progress(`Visonaut uploaded ${uploadedImages} originals.\n`);
         lastReportedUploaded = uploadedImages;
       }
       if (renewalRequired) break;
     }
     if (!renewalRequired) {
-      progress?.(
+      progress(
         `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
       );
-      progress?.(
+      progress(
         `Image PUTs: ${Math.round(imagePutElapsedMs)}ms aggregate request time, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait.\n`,
       );
-      return {
-        uploadedImages,
-        reusedImages: reusedCount,
-        elapsedMs: Math.round(performance.now() - started),
-        imagePutElapsedMs: Math.round(imagePutElapsedMs),
-        imagePutBytes,
-        imagePutRetryWaitMs: Math.round(imagePutRetryWaitMs),
-        reservation,
-      };
+      return reservation;
     }
     // Renew only after progress, so a short-lived response cannot create a loop.
     // Replaying the same declaration issues fresh tickets for incomplete images.
@@ -721,15 +690,12 @@ export interface CliOptions {
 }
 
 /** Execute one CLI command without terminating the caller's process. */
-export async function runInternalCli(
-  {
-    argv,
-    environment = process.env,
-    stdout = (value) => process.stdout.write(value),
-    stderr = (value) => process.stderr.write(value),
-  }: CliOptions,
-  trustedSubmit = false,
-): Promise<ExitCode> {
+export async function runInternalCli({
+  argv,
+  environment = process.env,
+  stdout = (value) => process.stdout.write(value),
+  stderr = (value) => process.stderr.write(value),
+}: CliOptions): Promise<ExitCode> {
   const secrets = new Set(
     [environment.VISONAUT_TOKEN, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
       (value): value is string => Boolean(value),
@@ -786,75 +752,40 @@ export async function runInternalCli(
       }
       return status.state === "passed" ? 0 : 3;
     }
-    if (options.command === "submit" && options.run) {
-      const submitted = await submitRun({
-        origin,
-        externalRunId: options.run,
-        environment,
-        secrets,
-      });
-      if (options.json) {
-        output({ operation: "submit", ...submitted, visualApproval: false });
-      } else {
-        stdout(
-          redact(
-            `Run ${submitted.runId} submitted. Visonaut will verify the complete workflow before comparison.\nSubmission does not grant visual approval.\n`,
-          ),
-        );
-      }
-      return 0;
-    }
     const local = await loadCapture(options.directory ?? DEFAULT_CAPTURE_DIRECTORY);
     // Validate every input before sending credentials or mutating remote data.
-    if (trustedSubmit) {
-      await validateLocalImages(local);
-    } else {
-      await validateImages(local);
-    }
+    await validateLocalImages(local);
     let { manifest } = local;
     if (
-      options.command === "submit" &&
-      (environment.GITHUB_RUN_ID !== manifest.run.workflowRunId ||
-        Number(environment.GITHUB_RUN_ATTEMPT) !== manifest.run.workflowAttempt)
+      environment.GITHUB_RUN_ID !== manifest.run.workflowRunId ||
+      Number(environment.GITHUB_RUN_ATTEMPT) !== manifest.run.workflowAttempt
     ) {
       throw new CliError("The capture does not match this GitHub workflow attempt.", 4);
     }
     // The wait notices go to standard error, so they never mix with the output of the command.
-    let reservation = await reserveWhenAdmitted(
-      { origin, manifest, environment, secrets, localComparison: trustedSubmit },
-      stderr,
-    );
-    if (trustedSubmit) {
-      const selected = await readReference({ origin, manifest, reservation, secrets });
-      const localComparison = await compareLocally({
-        origin,
-        manifest,
-        reservation: selected.reservation,
-        secrets,
-        local,
-        selected,
-        renew: () =>
-          renewReservation(
-            { origin, manifest, environment, secrets, localComparison: true },
-            selected.reference,
-          ),
-      });
-      reservation = selected.reservation;
-      manifest = { ...manifest, localComparison };
-      await refreshSubmissionReceipt(manifest, local.directory, environment);
-    }
+    let reservation = await reserveWhenAdmitted({ origin, manifest, environment, secrets }, stderr);
+    const selected = await readReference({ origin, manifest, reservation, secrets });
+    const localComparison = await compareLocally({
+      origin,
+      manifest,
+      reservation: selected.reservation,
+      secrets,
+      local,
+      selected,
+      renew: () => renewReservation({ origin, manifest, environment, secrets }, selected.reference),
+    });
+    reservation = selected.reservation;
+    manifest = { ...manifest, localComparison };
+    await refreshSubmissionReceipt(manifest, local.directory, environment);
     const manifestDigest = await digestJson(manifest);
-    if (
-      trustedSubmit &&
-      Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS
-    ) {
+    if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
       const renewed = await renewReservation({ origin, manifest, environment, secrets });
       if (renewed.runId !== reservation.runId) {
         throw new CliError("The service changed the run identity after local comparison.");
       }
       reservation = renewed;
     }
-    const uploaded = await uploadShard({
+    reservation = await uploadShard({
       origin,
       manifest,
       environment,
@@ -862,9 +793,8 @@ export async function runInternalCli(
       local,
       manifestDigest,
       reservation,
-      progress: options.json ? undefined : (value) => stdout(redact(value)),
+      progress: (value) => stdout(redact(value)),
     });
-    reservation = uploaded.reservation;
     if (Date.parse(reservation.expiresAt) - Date.now() <= UPLOAD_CREDENTIAL_HEADROOM_MS) {
       const renewed = await renewReservation({ origin, manifest, environment, secrets });
       if (renewed.runId !== reservation.runId) {
@@ -889,61 +819,21 @@ export async function runInternalCli(
       shardKey: manifest.shard.key,
       manifestDigest,
     });
-    if (options.command === "submit") {
-      const submitted = await submitRun({
-        origin,
-        externalRunId: manifest.run.workflowRunId,
-        environment,
-        secrets,
-      });
-      if (submitted.runId !== receipt.runId) {
-        throw new CliError("The service submitted a different run.");
-      }
-      if (options.json) {
-        output({
-          operation: "submit",
-          ...submitted,
-          shardKey: manifest.shard.key,
-          manifestDigest,
-          uploadedImages: uploaded.uploadedImages,
-          reusedImages: uploaded.reusedImages,
-          transferElapsedMs: uploaded.elapsedMs,
-          imagePutElapsedMs: uploaded.imagePutElapsedMs,
-          imagePutBytes: uploaded.imagePutBytes,
-          imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
-          visualApproval: false,
-        });
-      } else {
-        stdout(
-          redact(
-            `Shard ${manifest.shard.key} staged and run ${submitted.runId} submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n`,
-          ),
-        );
-      }
-      return 0;
+    const submitted = await submitRun({
+      origin,
+      attempt: manifest.run.workflowAttempt,
+      externalRunId: manifest.run.workflowRunId,
+      environment,
+      secrets,
+    });
+    if (submitted.runId !== receipt.runId) {
+      throw new CliError("The service submitted a different run.");
     }
-    if (options.json) {
-      output({
-        operation: "upload",
-        ...receipt,
-        shardKey: manifest.shard.key,
-        manifestDigest,
-        uploadedImages: uploaded.uploadedImages,
-        reusedImages: uploaded.reusedImages,
-        transferElapsedMs: uploaded.elapsedMs,
-        imagePutElapsedMs: uploaded.imagePutElapsedMs,
-        imagePutBytes: uploaded.imagePutBytes,
-        imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
-        shardStaged: true,
-        visualApproval: false,
-      });
-    } else {
-      stdout(
-        redact(
-          `Shard ${manifest.shard.key} staged for run ${receipt.runId}. Run state: ${receipt.state}.\nUpload does not submit the run or grant visual approval.\n`,
-        ),
-      );
-    }
+    stdout(
+      redact(
+        `Shard ${manifest.shard.key} staged and run ${submitted.runId} submitted. Visonaut will verify the complete workflow.\nSubmission does not grant visual approval.\n`,
+      ),
+    );
     return 0;
   } catch (error) {
     const failure =

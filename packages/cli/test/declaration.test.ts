@@ -8,6 +8,7 @@ import { issueReuseChallenge, issueUploadTicket } from "../../security/src/capab
 import { fixture } from "./fixture.js";
 import {
   emptyReferencePage,
+  expectLocalReserve,
   imagePutNumbers,
   reserveAnswer,
   stagedCounts,
@@ -174,6 +175,7 @@ function mockService({ local, response, upload, reserve, reuse }: MockServicePar
       return Response.json({ value: "oidc-secret" });
     }
     if (url.pathname === "/v1/runs") {
+      expectLocalReserve(options);
       const answer = reserve?.() ?? {
         schemaVersion: "1.0",
         runId,

@@ -25,14 +25,11 @@ export async function runCli(options: CliOptions) {
       stdout("No visual capture is required.\n");
       return 0;
     }
-    return runInternalCli(
-      {
-        ...options,
-        argv: ["submit", "--dir", prepared.directory],
-        environment: { ...environment, VISONAUT_SERVER: prepared.server },
-      },
-      true,
-    );
+    return runInternalCli({
+      ...options,
+      argv: ["submit", "--dir", prepared.directory],
+      environment: { ...environment, VISONAUT_SERVER: prepared.server },
+    });
   } catch (error) {
     const failure =
       error instanceof CliError ? error : new CliError("The verified capture submission failed.");

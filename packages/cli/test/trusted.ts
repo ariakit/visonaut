@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { digestJson, LOCAL_COMPARISON_MODE } from "@visonaut/protocol";
+import { expect } from "vitest";
 import { runCli } from "../src/index.js";
 
 /** The mocked workflow of a test file returns this object: the verified capture and the service. */
@@ -10,7 +11,7 @@ export interface Prepared {
 
 /**
  * Run `submit --shard` through the public entry point. The test file mocks the workflow module
- * with `prepared`, so the run starts at the verified manifest and uses the trusted engine.
+ * with `prepared`, so the run starts at the verified manifest.
  */
 export async function submitShard(
   prepared: Prepared,
@@ -33,7 +34,14 @@ export async function submitShard(
   return { code, stdout, stderr };
 }
 
-/** A trusted Submit refuses a reserve answer without the comparison mode. */
+/** The service refuses a reserve request without the comparison mode, so each stub checks it. */
+export function expectLocalReserve(init: RequestInit | undefined) {
+  expect.soft(JSON.parse(String(init?.body))).toMatchObject({
+    comparisonMode: LOCAL_COMPARISON_MODE,
+  });
+}
+
+/** Submit refuses a reserve answer without the comparison mode. */
 export function reserveAnswer(answer: object) {
   return { comparisonMode: LOCAL_COMPARISON_MODE, ...answer };
 }

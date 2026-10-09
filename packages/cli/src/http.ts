@@ -237,7 +237,7 @@ export async function request({
 export async function githubToken(
   origin: URL,
   environment: NodeJS.ProcessEnv,
-  purpose: "upload" | "submit" | "transfer-key" | "plan-report" = "upload",
+  purpose: "upload" | "submit" | "plan-report" = "upload",
 ): Promise<string> {
   const endpoint = environment.ACTIONS_ID_TOKEN_REQUEST_URL;
   const credential = environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
