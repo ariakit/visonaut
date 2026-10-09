@@ -1,11 +1,6 @@
 import { appendFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  createDiscoveryReceipt,
-  parseManifest,
-  workflowSourceDigest,
-  type Manifest,
-} from "@visonaut/protocol";
+import { createDiscoveryReceipt, parseManifest, type Manifest } from "@visonaut/protocol";
 import { CliError, record } from "./errors.js";
 import { githubToken } from "./http.js";
 
@@ -21,14 +16,12 @@ export async function bindSubmission(
     throw new CliError("GitHub returned an invalid signed identity.", 4);
   }
   const claims: unknown = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
-  const workflowSha = environment.VISONAUT_WORKFLOW_SOURCE_SHA;
   if (
     !record(claims) ||
-    !/^[a-f0-9]{40}$/.test(workflowSha ?? "") ||
     claims.job_workflow_sha !== environment.GITHUB_SHA ||
     !/^[1-9][0-9]*$/.test(String(claims.check_run_id))
   ) {
-    throw new CliError("Submit did not use this commit's pinned visual workflow.", 4);
+    throw new CliError("Submit did not use this commit's visual workflow.", 4);
   }
   const matches: Record<string, unknown>[] = [];
   for (let page = 1; page <= 20; page++) {
@@ -78,7 +71,6 @@ export async function bindSubmission(
     run: {
       ...manifest.run,
       workflowAttempt: Number(environment.GITHUB_RUN_ATTEMPT),
-      planDigest: await workflowSourceDigest(String(workflowSha)),
     },
     shard: {
       key: "combined",

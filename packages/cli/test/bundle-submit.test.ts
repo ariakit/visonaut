@@ -35,8 +35,6 @@ it("binds a verified carried artifact to a fresh current Submit bundle", async (
     GITHUB_SHA: "a".repeat(40),
     GITHUB_RUN_ATTEMPT: "2",
     VISONAUT_SERVER: "https://visonaut.com",
-    VISONAUT_PACKAGE_SHA256: "b".repeat(64),
-    VISONAUT_WORKFLOW_SOURCE_SHA: "c".repeat(40),
   };
   const prepared = await prepareBundleSubmission(["linux"], environment);
   expect(captures.downloadCaptures).toHaveBeenCalledWith(
@@ -47,14 +45,4 @@ it("binds a verified carried artifact to a fresh current Submit bundle", async (
   );
   expect(signed.bindSubmission).toHaveBeenCalledOnce();
   expect(prepared.server).toBe("https://visonaut.com");
-});
-it("does not request artifact credentials for an invalid workflow pin", async () => {
-  await expect(
-    prepareBundleSubmission(["linux"], {
-      VISONAUT_SERVER: "https://visonaut.com",
-      VISONAUT_PACKAGE_SHA256: "b".repeat(64),
-      VISONAUT_WORKFLOW_SOURCE_SHA: "main",
-    }),
-  ).rejects.toMatchObject({ exitCode: 4 });
-  expect(captures.downloadCaptures).not.toHaveBeenCalled();
 });

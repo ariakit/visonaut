@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
 import {
+  FIXED_DIGEST,
   createDiscoveryReceipt,
   parseManifest,
   sha256,
@@ -22,11 +23,11 @@ import { discoverInventory, inventoryEntry } from "./discovery.js";
 
 export interface ReporterOptions {
   outputFile?: string;
-  run: RunProvenance;
+  /** The reporter sends the fixed digest in `planDigest`, so the caller sets none. */
+  run: Omit<RunProvenance, "planDigest">;
   shard: Manifest["shard"];
-  /** Package digest and repository root for workflow-owned collection discovery. */
+  /** Repository root and expected invocation for workflow-owned collection discovery. */
   discovery?: {
-    executorDigest: string;
     repositoryRoot: string;
     expectedInvocation?: string[];
     expectedProjects?: string[];
@@ -111,15 +112,13 @@ export default class VisonautReporter implements Reporter {
     await rm(this.receiptFile, { force: true });
     await rm(path.join(path.dirname(this.outputFile), "images"), { recursive: true, force: true });
     if (this.options.discovery) {
-      const { repositoryRoot, executorDigest, expectedInvocation, expectedProjects } =
-        this.options.discovery;
+      const { repositoryRoot, expectedInvocation, expectedProjects } = this.options.discovery;
       if (!path.isAbsolute(repositoryRoot)) {
         throw new Error("Trusted discovery requires an absolute repositoryRoot");
       }
       this.discovery = await discoverInventory({
         config,
         suite,
-        executorDigest,
         repositoryRoot,
         expectedInvocation,
         expectedProjects,
@@ -242,7 +241,7 @@ export default class VisonautReporter implements Reporter {
           nodeVersion: process.versions.node,
           playwrightVersion: await playwrightVersion(),
         },
-        run: this.options.run,
+        run: { ...this.options.run, planDigest: FIXED_DIGEST },
         shard: this.options.shard,
         profiles: [...profiles.values()],
         tests,

@@ -67,17 +67,12 @@ export async function beginSubmission(environment: Record<string, string | undef
   });
 }
 
-/** Download and verify ordinary artifacts only inside the pinned signed Submit job. */
+/** Download and verify ordinary artifacts only inside the signed Submit job. */
 export async function prepareBundleSubmission(
   shards: string[],
   environment: Record<string, string | undefined>,
 ) {
   const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
-  const packageDigest = required(environment, "VISONAUT_PACKAGE_SHA256");
-  const workflowSha = required(environment, "VISONAUT_WORKFLOW_SOURCE_SHA");
-  if (!/^[a-f0-9]{64}$/.test(packageDigest) || !/^[a-f0-9]{40}$/.test(workflowSha)) {
-    throw new CliError("The pinned package or workflow digest is invalid.", 4);
-  }
   const workflowAttempt = Number(required(environment, "GITHUB_RUN_ATTEMPT"));
   if (!Number.isSafeInteger(workflowAttempt) || workflowAttempt < 1) {
     throw new CliError("The current workflow attempt is invalid.", 4);
@@ -90,7 +85,6 @@ export async function prepareBundleSubmission(
     const manifest = await combineBundles({
       bundles: sources,
       directory,
-      packageDigest,
       workflowAttempt,
     });
     await bindSubmission(manifest, directory, origin, environment);

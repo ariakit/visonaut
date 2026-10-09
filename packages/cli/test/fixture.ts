@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { digestJson } from "@visonaut/protocol";
+import { FIXED_DIGEST, digestJson } from "@visonaut/protocol";
 import type { Capture, CaptureProfile, Manifest } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 
@@ -65,7 +65,7 @@ export async function fixture() {
       workflowRunId: "456",
       workflowAttempt: 1,
       testedSha: "d".repeat(40),
-      planDigest: "e".repeat(64),
+      planDigest: FIXED_DIGEST,
     },
     shard: { key: "chrome-1", jobId: "789", sourceAttempt: 1 },
     profiles: [{ digest: profileDigest, profile }],
@@ -79,9 +79,9 @@ export async function fixture() {
       },
     ],
     captures: [capture],
-    // The signed Submit job adds the digests of the trusted candidate discovery.
+    // The adapter sends the fixed digest in both fields of a bundle.
     discovery: {
-      executorDigest: "e".repeat(64),
+      executorDigest: FIXED_DIGEST,
       configurationDigest: "f".repeat(64),
       inventoryDigest: "a".repeat(64),
     },
@@ -90,4 +90,34 @@ export async function fixture() {
   await writeFile(join(directory, "capture.png"), imageBytes);
   await writeFile(manifestPath, JSON.stringify(manifest));
   return { directory, manifest, manifestPath, capture };
+}
+
+/**
+ * The capture bundles of two shards, as the adapter writes them, and an empty
+ * directory for the combined bundle. Each directory goes into `directories`.
+ */
+export async function bundlePair(directories: string[]) {
+  const linux = await fixture();
+  const safari = await fixture();
+  const output = await mkdtemp(join(tmpdir(), "visonaut-combined-test-"));
+  directories.push(linux.directory, safari.directory, output);
+  linux.manifest.shard.key = "linux";
+  safari.manifest.shard.key = "safari";
+  safari.manifest.profiles[0]!.profile.browser = "webkit";
+  safari.manifest.profiles[0]!.digest = await digestJson(safari.manifest.profiles[0]!.profile);
+  safari.manifest.captures[0]!.profileDigest = safari.manifest.profiles[0]!.digest;
+  safari.manifest.captures[0]!.variant = {
+    ...safari.manifest.captures[0]!.variant,
+    key: "react-safari",
+    browser: "webkit",
+  };
+  for (const source of [linux, safari]) {
+    source.manifest.discovery = {
+      executorDigest: FIXED_DIGEST,
+      configurationDigest: await digestJson(source.manifest.shard.key),
+      inventoryDigest: await digestJson(source.manifest.tests),
+    };
+    await writeFile(source.manifestPath, JSON.stringify(source.manifest));
+  }
+  return { linux, safari, output };
 }
