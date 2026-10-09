@@ -252,10 +252,10 @@ export async function reconcileEquivalentPullRequestChecks(
         .first<PreRunCheck & { result_run_id: string; result_run_active: number }>();
       if (!source?.check_id) continue;
       const sourceCheck = await verifiedCheck(github, source, source.check_id);
-      if (
-        sourceCheck.status !== "completed" ||
-        !["success", "failure"].includes(String(sourceCheck.conclusion))
-      ) {
+      // GitHub passes a required check for `neutral`, so retire the alias only
+      // after the tested result passed. A failed result is not final: the review
+      // can still approve it. Until then the alias stays pending.
+      if (sourceCheck.status !== "completed" || sourceCheck.conclusion !== "success") {
         continue;
       }
       const detailsUrl = `${context.configuration.origin}/runs/${encodeURIComponent(source.result_run_id)}`;
