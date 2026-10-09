@@ -91,6 +91,12 @@ export type DocumentRunListRead = () => Promise<RunListResult>;
 /** What the server puts into the context of the router for one document. */
 export interface DocumentContext {
   readRunList: DocumentRunListRead;
+  /**
+   * True when the document request has no session cookie and no bearer
+   * token. The layout route then renders the sign-in page with the document.
+   * It is a check of a name only, with no D1 read.
+   */
+  guest: boolean;
 }
 
 // The router gives the context of the server to a loader as `serverContext`.
@@ -103,6 +109,16 @@ function documentRead(loaderOptions: unknown): DocumentRunListRead | undefined {
   if (typeof readRunList !== "function") return;
   // The server sets this function with the type of `DocumentContext`.
   return readRunList as DocumentRunListRead;
+}
+
+/**
+ * True when the server says that the document request has no session
+ * credential. It is false in the browser, which cannot read the cookie.
+ */
+export function isGuestDocument(loaderOptions: unknown) {
+  if (!isRecord(loaderOptions)) return false;
+  const { serverContext } = loaderOptions;
+  return isRecord(serverContext) && serverContext.guest === true;
 }
 
 /**
@@ -126,14 +142,21 @@ export function loadRunList(loaderOptions: unknown, signal: AbortSignal) {
 type ReadyRunList = Extract<RunListResult, { status: "ready" }>;
 
 // The last list that a read gave to this document. A failed refresh keeps it.
-// Only the browser sets it: the server has no list between two requests.
+// Only the browser sets it and reads it. The Worker also loads this module,
+// and one isolate serves many persons, so the server keeps no list here.
 let lastList: ReadyRunList | undefined;
+
+/** True in a browser. The server has no document. */
+function hasDocument() {
+  return typeof document !== "undefined";
+}
 
 /**
  * Keeps the list of a read for a later refresh that fails. A result with no
  * access removes it: a 401 or a 403 replaces the list at once.
  */
 export function rememberRunList(result: RunListResult) {
+  if (!hasDocument()) return;
   if (result.status === "ready") {
     lastList = result;
     return;
@@ -151,7 +174,7 @@ async function refreshRunList(signal?: AbortSignal): Promise<RunListResult> {
   readsInFlight += 1;
   try {
     const result = await fetchRunList(signal);
-    const kept = lastList;
+    const kept = hasDocument() ? lastList : undefined;
     rememberRunList(result);
     if (result.status === "error" && kept) {
       return { ...kept, refreshFailure: result.message };

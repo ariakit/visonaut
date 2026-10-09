@@ -193,14 +193,13 @@ test("a refresh that gets a 403 replaces the kept list with the no access screen
   await expect(page.getByRole("main")).toContainText("Could not refresh runs");
   server.setStatus(403);
   await page.clock.fastForward(minute);
-  await expect(page.getByRole("heading", { name: "Repository access required" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No write access" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toHaveCount(0);
-  // A later failure has no list to keep: the access ended.
-  server.setStatus(503);
-  await page.getByRole("button", { name: "Retry" }).click();
-  await expect(
-    page.getByRole("heading", { name: "The review queue could not be loaded" }),
-  ).toBeVisible();
+  // The no access page asks for nothing at an interval.
+  const reads = server.reads();
+  await page.clock.fastForward(2 * minute);
+  await nextFrame(page);
+  expect(server.reads()).toBe(reads);
 });
 
 test("a read that takes longer than the interval is not stopped by the next interval", async ({

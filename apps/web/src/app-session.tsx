@@ -16,10 +16,7 @@ import type { ReactNode } from "react";
  * none, and the header then shows no count and no login.
  */
 export interface SessionFacts {
-  /**
-   * True when a request of the page passed the access check. False when a
-   * request got a 401: the header then drops each fact of the session.
-   */
+  /** True when a request of the page passed the access check. */
   signedIn?: boolean;
   /** The GitHub login of the viewer. */
   login?: string;
@@ -34,22 +31,30 @@ export interface SessionFacts {
 }
 
 /**
- * The facts of a page that got a 403: each fact of the repository goes. The
- * account stays in the header when the header already has it.
+ * The answer of the service that ends the access of this document: no
+ * session (401), or an account with no write access (403).
  */
-export const noAccessFacts: SessionFacts = {
-  repository: undefined,
-  reviewCount: undefined,
-  alertCount: undefined,
-};
+export type AccessDenial =
+  | { status: "guest" }
+  | {
+      status: "forbidden";
+      /** The sentence of the cause. */
+      message?: string;
+      /** The login of the refused account, when a page knew it. */
+      login?: string;
+    };
 
 export interface AppSession {
   facts: SessionFacts;
-  /**
-   * Adds the facts of a page to the facts that the header has. Facts with
-   * `signedIn: false` replace them all.
-   */
+  /** Adds the facts of a page to the facts that the header has. */
   report(facts: SessionFacts): void;
+  /**
+   * Set after a request got a 401 or a 403. The layout route then shows the
+   * sign-in page or the no access page in place of each page.
+   */
+  denial?: AccessDenial;
+  /** Tells the layout route that a request got a 401 or a 403. */
+  deny(status: 401 | 403, message?: string): void;
   signingOut: boolean;
   signOutError: string;
   signOut(): Promise<void>;
@@ -58,6 +63,7 @@ export interface AppSession {
 const fallback: AppSession = {
   facts: {},
   report: () => {},
+  deny: () => {},
   signingOut: false,
   signOutError: "",
   signOut: async () => {},
@@ -69,18 +75,26 @@ export interface AppSessionProviderProps {
   children?: ReactNode;
 }
 
-/** Holds the session facts and the sign-out for each page below the layout route. */
+/** Holds the session facts, the access state, and the sign-out for each page below the layout route. */
 export function AppSessionProvider({ children }: AppSessionProviderProps) {
   const [facts, setFacts] = useState<SessionFacts>({});
+  const [denial, setDenial] = useState<AccessDenial>();
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const report = useCallback((next: SessionFacts) => {
     setFacts((current) => {
-      // The facts of a session that ended must not stay in the header.
-      const merged = next.signedIn === false ? {} : { ...current, ...next };
+      const merged = { ...current, ...next };
       const same = JSON.stringify(merged) === JSON.stringify(current);
       return same ? current : merged;
     });
+  }, []);
+  const deny = useCallback((status: 401 | 403, message?: string) => {
+    // The first answer decides. A sign-in or a sign-out loads a new document.
+    setDenial(
+      (current) =>
+        current ??
+        (status === 401 ? { status: "guest" } : { status: "forbidden", message, login: undefined }),
+    );
   }, []);
   const signOut = useCallback(async () => {
     setSigningOut(true);
@@ -91,7 +105,7 @@ export function AppSessionProvider({ children }: AppSessionProviderProps) {
         throw new Error("Sign-out failed. Please try again.");
       }
       // A new document has no state of the account that left. Each page then
-      // shows its sign-in, and a sign-in returns to the same URL.
+      // shows the sign-in, and a sign-in returns to the same URL.
       window.location.reload();
     } catch (error) {
       setSignOutError(
@@ -101,13 +115,22 @@ export function AppSessionProvider({ children }: AppSessionProviderProps) {
     }
   }, []);
   const value = useMemo(
-    () => ({ facts, report, signingOut, signOutError, signOut }),
-    [facts, report, signingOut, signOutError, signOut],
+    () => ({
+      facts,
+      report,
+      // The no access page names the account that the header had.
+      denial: denial?.status === "forbidden" ? { ...denial, login: facts.login } : denial,
+      deny,
+      signingOut,
+      signOutError,
+      signOut,
+    }),
+    [facts, report, denial, deny, signingOut, signOutError, signOut],
   );
   return <AppSessionContext.Provider value={value}>{children}</AppSessionContext.Provider>;
 }
 
-/** The session facts and the sign-out of the layout route. */
+/** The session facts, the access state, and the sign-out of the layout route. */
 export function useAppSession(): AppSession {
   return useContext(AppSessionContext);
 }
@@ -118,11 +141,8 @@ export function useAppSession(): AppSession {
  */
 export function useSessionFacts(facts: SessionFacts | undefined) {
   const { report } = useAppSession();
-  // The facts are small and plain, so their text says when they change. A key
-  // with the value `undefined` removes a fact, so the text keeps such a key.
-  const key = facts
-    ? JSON.stringify(facts, (_name, value: unknown) => (value === undefined ? null : value))
-    : "";
+  // The facts are small and plain, so their text says when they change.
+  const key = facts ? JSON.stringify(facts) : "";
   const reportFacts = useEffectEvent(() => {
     if (facts) {
       report(facts);
@@ -132,4 +152,16 @@ export function useSessionFacts(facts: SessionFacts | undefined) {
     if (!key) return;
     reportFacts();
   }, [key]);
+}
+
+/**
+ * Tells the layout route that a request of this page got a 401 or a 403. Pass
+ * `undefined` while no request of the page was refused.
+ */
+export function useAccessDenied(status: 401 | 403 | undefined, message?: string) {
+  const { deny } = useAppSession();
+  useEffect(() => {
+    if (!status) return;
+    deny(status, message);
+  }, [deny, status, message]);
 }

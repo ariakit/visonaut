@@ -53,8 +53,10 @@ const servedAuthRoutes: ReadonlySet<string> = new Set([
 function documentContext(
   request: Request,
   respond: (request: Request) => Promise<Response | null> | Response | null,
+  guest: boolean,
 ): DocumentContext {
   return {
+    guest,
     readRunList: async () => {
       try {
         // The same headers as the document request: the cookie of the session.
@@ -68,6 +70,16 @@ function documentContext(
       }
     },
   };
+}
+
+/** True when the request has no session cookie and no bearer token. It reads only two headers. */
+function hasNoSessionCredential(request: Request) {
+  try {
+    requireSessionCredential(request);
+    return false;
+  } catch {
+    return true;
+  }
 }
 
 const loopbackHostnames = new Set(["127.0.0.1", "localhost", "[::1]"]);
@@ -126,7 +138,10 @@ export default {
         }
         const fixture = previewFixtureResponse(request);
         if (fixture) return securePrivateResponse(fixture);
-        return await render(request, { context: documentContext(request, previewFixtureResponse) });
+        // The preview has sample data and no sign-in.
+        return await render(request, {
+          context: documentContext(request, previewFixtureResponse, false),
+        });
       }
       requireBackendBindings(env);
       if (url.pathname.startsWith("/api/auth/")) {
@@ -171,13 +186,16 @@ export default {
         if (response) return response;
       }
       return await render(request, {
-        context: documentContext(request, (runsRequest) =>
-          handleApi(runsRequest, apiBindings(env), {
-            waitUntil: (promise) => lifetime.waitUntil(promise),
-            // The document sends its headers before this answer is ready, so
-            // a renewed session could not set its cookie.
-            disableSessionRefresh: true,
-          }),
+        context: documentContext(
+          request,
+          (runsRequest) =>
+            handleApi(runsRequest, apiBindings(env), {
+              waitUntil: (promise) => lifetime.waitUntil(promise),
+              // The document sends its headers before this answer is ready, so
+              // a renewed session could not set its cookie.
+              disableSessionRefresh: true,
+            }),
+          hasNoSessionCredential(request),
         ),
       });
     } catch (error) {
