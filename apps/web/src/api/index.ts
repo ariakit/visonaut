@@ -209,14 +209,14 @@ export async function handleApi(
     // no bearer token gets its 401 before the first read.
     requireSessionCredential(request);
     const dashboardRead = path === "/api/runs" && request.method === "GET";
-    if (!dashboardRead) {
-      await assertConfiguredProject(context);
-    }
     // A signed upload token is never accepted by this live-session boundary.
     const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
     const github = await createGitHubClient(bindings.configuration.github);
     const reviewWrite = request.method === "POST" && reviewCommandRoute.test(path);
-    const identity = await requireMaintainer({
+    // The project read starts together with the session read, so it adds no
+    // wait of its own.
+    const projectRead = dashboardRead ? undefined : assertConfiguredProject(context);
+    const sessionRead = requireMaintainer({
       request,
       auth,
       database: bindings.database,
@@ -228,6 +228,16 @@ export async function handleApi(
             ? "review"
             : "write",
     });
+    const [project, maintainer] = await Promise.allSettled([projectRead, sessionRead]);
+    // The answer of the access check comes before the answer of the project
+    // check.
+    if (maintainer.status === "rejected") {
+      throw maintainer.reason;
+    }
+    if (project.status === "rejected") {
+      throw project.reason;
+    }
+    const identity = maintainer.value;
     if (!["GET", "HEAD"].includes(request.method)) {
       requireSameOrigin(request, bindings.configuration.origin);
     }
