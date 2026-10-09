@@ -460,6 +460,7 @@ async function rowCapture({
 async function capturePagesFacts(
   index: CapturePagesIndex,
   pages: StoredCapturePage[],
+  check: InventoryCheck = "complete",
 ): Promise<CaptureInventory> {
   const { receipt } = index;
   if (pages.length !== index.pages.length) {
@@ -508,6 +509,8 @@ async function capturePagesFacts(
     }
     const sent = receipt?.pages[pageAt];
     if (!sent) continue;
+    // The digest of a page of the client is a second hash of the content.
+    if (check === "bytes") continue;
     // The page of the client is the stored page with no field of the service.
     const { stored: _stored, ...page } = stored;
     if (
@@ -582,6 +585,19 @@ interface StoredObjectPointer {
 }
 
 /**
+ * How much a reader checks of a stored capture list.
+ *
+ * - `"complete"`: the key, the size, and the digest of the stored bytes, and
+ *   then the complete validation of the content. Submit, promotion, and
+ *   recovery use it.
+ * - `"bytes"`: the key, the size, and the digest of the stored bytes, and the
+ *   format version. A review read uses it: the digest is the digest that
+ *   Submit stored after its complete validation, so the content cannot differ
+ *   from the validated one.
+ */
+export type InventoryCheck = "complete" | "bytes";
+
+/**
  * Read one stored object and check its key, its size, and the digest of its
  * bytes. This is the complete check of a review read: it does not validate
  * the content.
@@ -615,26 +631,37 @@ function canonicalValue(text: string): unknown {
 }
 
 /**
- * Read the index and all pages of one run with the complete validation of the
- * stored form. The caller validates the capture list that this returns.
+ * Read the index and all pages of one run. With the complete check, it
+ * validates the stored form, and the caller validates the capture list that
+ * this returns. With the check of the bytes, it does not parse the content
+ * with the two parsers and does not compare the canonical text. The builder of
+ * the list still checks the order and the counts of the rows that it reads.
  */
 export async function readCapturePages(
   store: Pick<InventoryStore, "get">,
   pointer: CaptureInventoryPointer,
+  check: InventoryCheck = "complete",
 ) {
+  // A text with the check of the bytes has the digest that its writer stored
+  // after the validation, so it has the form that the two parsers assert.
+  const decodeIndex = (text: string): CapturePagesIndex =>
+    check === "complete" ? parseIndex(canonicalValue(text)) : JSON.parse(text);
+  const decodePage = (text: string): StoredCapturePage =>
+    check === "complete" ? parseStoredPage(canonicalValue(text)) : JSON.parse(text);
   const runId = indexKeyPattern.exec(pointer.objectKey)?.[1];
   if (!runId || !pointer.objectKey.endsWith(`/${pointer.digest}.json`)) {
     fail("the pointer identity differs.");
   }
-  const index = parseIndex(
-    canonicalValue(
-      await readStoredText(store, {
-        key: pointer.objectKey,
-        bytes: pointer.bytes,
-        digest: pointer.digest,
-      }),
-    ),
+  const index = decodeIndex(
+    await readStoredText(store, {
+      key: pointer.objectKey,
+      bytes: pointer.bytes,
+      digest: pointer.digest,
+    }),
   );
+  if (index.schemaVersion !== capturePagesVersion) {
+    fail("the index version is unsupported.");
+  }
   if (index.runId !== runId) {
     fail("the index belongs to another run.");
   }
@@ -645,7 +672,7 @@ export async function readCapturePages(
       bytes: entry.bytes,
       digest: entry.digest,
     });
-    pages.push(parseStoredPage(canonicalValue(text)));
+    pages.push(decodePage(text));
   }
-  return { inventory: await capturePagesFacts(index, pages), document: index };
+  return { inventory: await capturePagesFacts(index, pages, check), document: index };
 }

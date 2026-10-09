@@ -1,6 +1,10 @@
 import { identityKey } from "@visonaut/protocol";
 import { IncompleteError, type ReviewRow, type RunRow } from "@visonaut/service";
-import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
+import {
+  readStoredCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "../capture-inventory.ts";
 import { readRunInventory, readSnapshotInventory } from "../inventory-records.ts";
 import type { PrivateContext } from "./context.ts";
 
@@ -40,12 +44,20 @@ function reviewImages(inventory: CaptureInventory): InventoryReviewImage[] {
   }));
 }
 
-/** The capture list of a run and the list of its baseline, from the run row that the caller has. */
+/**
+ * The capture list of a run and the list of its baseline, from the run row
+ * that the caller has. A review read checks the key, the size, and the digest
+ * of each list, and it does not validate the content a second time.
+ */
 export async function readReviewInventory(context: PrivateContext, run: RunRow) {
-  const inventory = await readRunInventory(context, run);
+  const inventory = await readRunInventory(context, run, readStoredCaptureInventory);
   if (!inventory) return null;
   const referenceInventory = inventory.referenceSnapshotId
-    ? await readSnapshotInventory(context, inventory.referenceSnapshotId)
+    ? await readSnapshotInventory(
+        context,
+        inventory.referenceSnapshotId,
+        readStoredCaptureInventory,
+      )
     : null;
   if (referenceInventory && referenceInventory.projectId !== inventory.projectId) {
     throw new IncompleteError("The review reference belongs to a different project.");
