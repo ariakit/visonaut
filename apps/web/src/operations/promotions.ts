@@ -8,7 +8,14 @@ import {
 } from "@visonaut/service";
 import { readCaptureInventory, type CaptureInventory } from "../capture-inventory.ts";
 import { inventoryPointer } from "../inventory-records.ts";
-import { digestStream, mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
+import {
+  digestStream,
+  eventId,
+  mapConcurrent,
+  recordEvent,
+  resolveEventIds,
+  resolveEvents,
+} from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
 interface PromotionPosition {
@@ -190,17 +197,26 @@ async function savePromotionCursor(
   return !complete;
 }
 
+/** The runs that the promotion step can promote, for a join of `run` and `comparison`. */
+const promotionCandidateSql =
+  "run.active=1 AND run.kind='main' AND run.state!='accepted' AND comparison.state='ready'";
+
+/** Each code of an alert that the promotion of one run can raise. */
+const promotionAlertCodes = ["state-changed", "source-verification-failed"] as const;
+
 export async function promoteBaselines(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const service = new Service(database);
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
-  // Only an active main run that is not accepted can be a candidate. The alert
-  // of each other run has no step that can close it, so close it here.
+  // Only an active main run that is not accepted, with a comparison that is
+  // ready, can be a candidate. The alert of each other run has no step that
+  // can close it, so close it here.
   await database
     .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
       SELECT id FROM operations_events WHERE kind='promotion' AND subject_id!='scheduler'
         AND resolved_at IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_runs run
-          WHERE run.id=subject_id AND run.active=1 AND run.kind='main' AND run.state!='accepted')
+          JOIN visonaut_comparisons comparison ON comparison.id=run.comparison_id
+          WHERE run.id=subject_id AND ${promotionCandidateSql})
       ORDER BY last_seen_at,id LIMIT ?)`)
     .bind(context.now(), budget.tasksPerStep)
     .run();
@@ -254,8 +270,11 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     cursorId: "baseline-promotion",
     query: `SELECT run.id,run.created_at,run.comparison_id FROM visonaut_runs run
       JOIN visonaut_comparisons comparison ON comparison.id=run.comparison_id
-      WHERE run.active=1 AND run.kind='main' AND run.state!='accepted' AND comparison.state='ready'`,
+      WHERE ${promotionCandidateSql}`,
   });
+  // A candidate that no longer has the status `passed` gets no promotion, so
+  // the pass does not reach the place that closes its alerts after a success.
+  const skippedCandidateAlerts: string[] = [];
   let candidateAfter = candidates.after;
   const copyBudget = Math.min(budget.objectsPerStep, maximumPromotionObjectsPerStep);
   let remainingObjects = copyBudget;
@@ -266,7 +285,12 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     }
     candidateAfter = candidate;
     const state = await service.status(candidate.id);
-    if (state.status !== "passed") continue;
+    if (state.status !== "passed") {
+      for (const code of promotionAlertCodes) {
+        skippedCandidateAlerts.push(eventId({ kind: "promotion", subject: candidate.id, code }));
+      }
+      continue;
+    }
     const existing = await database
       .prepare("SELECT id,prefix FROM visonaut_snapshots WHERE comparison_id=? AND state='copying'")
       .bind(candidate.comparison_id)
@@ -428,7 +452,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       }
     } catch (error) {
       outcome = "attention";
-      const code =
+      const code: (typeof promotionAlertCodes)[number] =
         error instanceof ConflictError || error instanceof IncompleteError
           ? "state-changed"
           : "source-verification-failed";
@@ -459,6 +483,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       }
     }
   }
+  await resolveEventIds(database, skippedCandidateAlerts, context.now());
   const candidatesRemaining = await savePromotionCursor(context, candidates, candidateAfter);
   report.hasMore ||=
     candidatesRemaining && (report.completed.length > 0 || remainingObjects < copyBudget);

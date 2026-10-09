@@ -6,7 +6,7 @@ Service alerts close when their cause is gone
 
 This update fixes when the scheduled service pass opens and closes its alerts:
 
-- **Alerts of a closed run.** A promotion alert now closes in the next pass after its run closes or is accepted. A check creation alert of a closed run closes in the same way, except the alert with the code `ambiguous`: that check can still be in progress on GitHub. Before this update, these alerts stayed open until a person changed the database.
+- **Alerts of a closed run.** A promotion alert now closes in the next pass after its run closes or is accepted. It also closes when the run no longer waits for its promotion: its comparison is no longer ready, or the run no longer has the status `passed`. A check creation alert of a closed run closes in the same way, except the alert with the code `ambiguous`: that check can still be in progress on GitHub. Before this update, these alerts stayed open until a person changed the database.
 
 - **No alert while a new run is not ready.** A signed capture run whose Submit job still runs no longer raises the alert `staged` of the step. The pass tries the run again, and a run that fails 5 times still gets its own alert.
 
