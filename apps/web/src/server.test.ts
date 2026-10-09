@@ -85,7 +85,36 @@ function privateHeaders(response: Response) {
   expect(response.headers.get("Cache-Control")).toBe("no-store, private");
   expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
   expect(response.headers.get("Content-Security-Policy")).toBeTruthy();
+  expect(response.headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
 }
+
+function headerNames(response: Response) {
+  return [...new Set(response.headers.keys())].sort();
+}
+
+it.each([
+  { environment: "production", launch: "true", status: "ready" },
+  { environment: "preview", launch: "false", status: "setup" },
+] as const)(
+  "answers the $environment health request with the private headers",
+  async ({ environment, launch, status }) => {
+    const response = await server.fetch(
+      new Request(`${env.VISONAUT_ORIGIN}/health`),
+      { ...env, VISONAUT_ENVIRONMENT: environment, VISONAUT_LAUNCH_ENABLED: launch },
+      { waitUntil() {} },
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/json");
+    expect(await response.json()).toEqual({
+      service: "visonaut",
+      status,
+      launchEnabled: launch === "true",
+      environment,
+      fixtureMode: environment === "preview",
+    });
+    privateHeaders(response);
+  },
+);
 
 it.each([
   { error: new ConflictError("A newer verdict exists."), code: "conflict", status: 409 },
@@ -231,15 +260,16 @@ interface AppRequestOptions {
   origin?: string;
   cookie?: string;
   body?: unknown;
+  headers?: Record<string, string>;
 }
 
 /** A request as the page sends it, with the Origin header and a JSON body. */
 function appRequest(
   method: string,
   path: string,
-  { origin = env.VISONAUT_ORIGIN, cookie, body }: AppRequestOptions = {},
+  { origin = env.VISONAUT_ORIGIN, cookie, body, headers: extraHeaders }: AppRequestOptions = {},
 ) {
-  const headers = new Headers({ origin });
+  const headers = new Headers({ ...extraHeaders, origin });
   if (cookie) {
     headers.set("cookie", cookie);
   }
@@ -383,9 +413,15 @@ function storeCookies(jar: Map<string, string>, response: Response) {
   }
 }
 
-it("signs in with GitHub, reads the identity, and signs out through the served routes", async () => {
-  const githubUserId = 4_242;
-  const email = "maintainer@example.com";
+interface SignInOptions {
+  githubUserId: number;
+  email: string;
+  /** Headers of the client connection, which each request of the sign-in has. */
+  headers?: Record<string, string>;
+}
+
+/** Signs in through the two served routes, with a stub for GitHub. */
+async function signIn({ githubUserId, email, headers }: SignInOptions) {
   const lifetime = { waitUntil() {} };
   const jar = new Map<string, string>();
   // Better Auth asks GitHub for the token and for the profile of the user.
@@ -402,7 +438,7 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
     }
     throw new Error(`Unexpected request to ${url}.`);
   });
-  // The identity route asks the GitHub App for the user and for the permission.
+  // A private route asks the GitHub App for the user and for the permission.
   const { appId, repositoryId, repository } = githubConfiguration(env);
   vi.spyOn(security, "createGitHubClient").mockResolvedValue({
     appId,
@@ -419,6 +455,7 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
   const start = await server.fetch(
     appRequest("POST", "/api/auth/sign-in/social", {
       body: { provider: "github", callbackURL: "/?view=history" },
+      headers,
     }),
     env,
     lifetime,
@@ -438,7 +475,10 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
     state: authorization.searchParams.get("state") ?? "",
   });
   const callback = await server.fetch(
-    appRequest("GET", `/api/auth/callback/github?${callbackQuery}`, { cookie: cookieHeader(jar) }),
+    appRequest("GET", `/api/auth/callback/github?${callbackQuery}`, {
+      cookie: cookieHeader(jar),
+      headers,
+    }),
     env,
     lifetime,
   );
@@ -446,6 +486,13 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
   expect(callback.headers.get("location")).toBe("/?view=history");
   storeCookies(jar, callback);
   expect(github).toHaveBeenCalledTimes(3);
+  return jar;
+}
+
+it("signs in with GitHub, reads the identity, and signs out through the served routes", async () => {
+  const githubUserId = 4_242;
+  const lifetime = { waitUntil() {} };
+  const jar = await signIn({ githubUserId, email: "maintainer@example.com" });
 
   const signedIn = cookieHeader(jar);
   const identity = await server.fetch(
@@ -482,6 +529,121 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
       .bind(userId)
       .all(),
   ).toMatchObject({ results: [{ action: "sign_in" }, { action: "sign_out" }] });
+});
+
+// A private JSON answer has these headers and no other, except for the cookie
+// of a renewed session.
+const privateJsonHeaders = [
+  "cache-control",
+  "content-security-policy",
+  "content-type",
+  "cross-origin-opener-policy",
+  "cross-origin-resource-policy",
+  "permissions-policy",
+  "referrer-policy",
+  "strict-transport-security",
+  "x-content-type-options",
+  "x-frame-options",
+];
+
+it("keeps a session through a renewal, a bearer request, and a sign-out", async () => {
+  const githubUserId = 4_243;
+  const lifetime = { waitUntil() {} };
+  const clientAddress = "203.0.113.7";
+  // Cloudflare sets the first header. The sign-in library must read only that one.
+  const connection = { "cf-connecting-ip": clientAddress, "x-forwarded-for": "198.51.100.9" };
+  const jar = await signIn({ githubUserId, email: "reviewer@example.com", headers: connection });
+  const [cookieName = ""] = [...jar.keys()].filter((name) => name.endsWith(".session_token"));
+  const session = await env.DB.prepare(
+    "SELECT session.id, session.token, session.ipAddress FROM session JOIN account ON account.userId = session.userId WHERE account.accountId = ?",
+  )
+    .bind(String(githubUserId))
+    .first<{ id: string; token: string; ipAddress: string }>();
+  if (!session) {
+    throw new Error("The sign-in stored no session.");
+  }
+
+  // The sign-in library reads the client address from the header of Cloudflare.
+  expect(session.ipAddress).toBe(clientAddress);
+  const limits = await env.DB.prepare(
+    'SELECT "key" FROM rateLimit WHERE "key" LIKE ? OR "key" LIKE ? ORDER BY "key"',
+  )
+    .bind(`${clientAddress}|%`, `${connection["x-forwarded-for"]}|%`)
+    .all<{ key: string }>();
+  expect(limits.results.map((limit) => limit.key)).toEqual([
+    `${clientAddress}|/callback/github`,
+    `${clientAddress}|/sign-in/social`,
+  ]);
+
+  // One path is a route of the Worker entry, and one is a route of the API.
+  for (const path of ["/api/me", "/api/runs"]) {
+    const current = await server.fetch(
+      appRequest("GET", path, { cookie: cookieHeader(jar) }),
+      env,
+      lifetime,
+    );
+    expect(current.status).toBe(200);
+    expect(headerNames(current)).toEqual(privateJsonHeaders);
+
+    // The session is now old enough that the next private request renews it.
+    await env.DB.prepare('UPDATE session SET "updatedAt" = ?, "expiresAt" = ? WHERE id = ?')
+      .bind(
+        new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        new Date(Date.now() + 5 * 86_400_000).toISOString(),
+        session.id,
+      )
+      .run();
+    const renewed = await server.fetch(
+      appRequest("GET", path, { cookie: cookieHeader(jar) }),
+      env,
+      lifetime,
+    );
+    expect(renewed.status).toBe(200);
+    expect(headerNames(renewed)).toEqual([...privateJsonHeaders, "set-cookie"].sort());
+    const cookies = renewed.headers.getSetCookie();
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toContain(`${cookieName}=`);
+    expect(cookies[0]).toContain("HttpOnly");
+    storeCookies(jar, renewed);
+    // The browser keeps its session with the cookie of the renewal.
+    const next = await server.fetch(
+      appRequest("GET", path, { cookie: cookieHeader(jar) }),
+      env,
+      lifetime,
+    );
+    expect(next.status).toBe(200);
+  }
+
+  const withBearer = (token: string) =>
+    server.fetch(
+      new Request(`${env.VISONAUT_ORIGIN}/api/me`, {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+      env,
+      lifetime,
+    );
+  // `visonaut status` sends `<session token>.<signature>` as a bearer token.
+  // That is the URL-decoded value of the session cookie.
+  const signedToken = decodeURIComponent(jar.get(cookieName) ?? "");
+  expect(signedToken.startsWith(`${session.token}.`)).toBe(true);
+  expect(signedToken).not.toContain("%");
+  expect((await withBearer(signedToken)).status).toBe(200);
+  // The token of the session is not a bearer token without its signature.
+  expect((await withBearer(session.token)).status).toBe(401);
+
+  const signedIn = cookieHeader(jar);
+  const signOut = await server.fetch(
+    appRequest("POST", "/api/auth/sign-out", { cookie: signedIn, body: {} }),
+    env,
+    lifetime,
+  );
+  expect(signOut.status).toBe(200);
+  const signedOut = await server.fetch(
+    appRequest("GET", "/api/me", { cookie: signedIn }),
+    env,
+    lifetime,
+  );
+  expect(signedOut.status).toBe(401);
 });
 
 it("preserves the request lifetime receiver when passing failure context to the API", async () => {

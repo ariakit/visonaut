@@ -35,6 +35,7 @@ export function securePrivateResponse(response: Response, nonce?: string): Respo
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Frame-Options", "DENY");
   headers.set("Cross-Origin-Opener-Policy", "same-origin");
+  headers.set("Cross-Origin-Resource-Policy", "same-origin");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   headers.set("Strict-Transport-Security", "max-age=31536000");
   const script = nonce ? `'self' 'nonce-${nonce}'` : "'self'";

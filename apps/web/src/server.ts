@@ -76,15 +76,14 @@ export default {
     const correlationId = crypto.randomUUID();
     const url = new URL(request.url);
     if (url.pathname === "/health") {
-      return Response.json(
-        {
+      return securePrivateResponse(
+        Response.json({
           service: "visonaut",
           status: launchEnabled(env.VISONAUT_LAUNCH_ENABLED) ? "ready" : "setup",
           launchEnabled: launchEnabled(env.VISONAUT_LAUNCH_ENABLED),
           environment: env.VISONAUT_ENVIRONMENT,
           fixtureMode: env.VISONAUT_ENVIRONMENT === "preview",
-        },
-        { headers: { "Cache-Control": "no-store" } },
+        }),
       );
     }
     try {

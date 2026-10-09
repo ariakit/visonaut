@@ -1,4 +1,5 @@
 import { applyTestMigrations } from "../../../tooling/test-migrations.js";
+import { createHmac } from "node:crypto";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAuth } from "../src/auth.js";
@@ -47,10 +48,27 @@ async function createSession() {
   return { auth, context, user, session };
 }
 
+/** The bearer value of a session: its token with the signature of its cookie. */
+function bearer(token: string, secret: string = configuration.secret) {
+  return `Bearer ${token}.${createHmac("sha256", secret).update(token).digest("base64")}`;
+}
+
+/** Makes the session old enough that the next read renews it. */
+async function ageSession(sessionId: string) {
+  await database
+    .prepare('UPDATE session SET "updatedAt" = ?, "expiresAt" = ? WHERE id = ?')
+    .bind(
+      new Date(Date.now() - 2 * 86_400_000).toISOString(),
+      new Date(Date.now() + 5 * 86_400_000).toISOString(),
+      sessionId,
+    )
+    .run();
+}
+
 describe("Better Auth 1.7.5 with native D1", () => {
   it("stores sessions, accepts bearer reads, and revokes logout", async () => {
     const { auth, session, user } = await createSession();
-    const headers = new Headers({ authorization: `Bearer ${session.token}` });
+    const headers = new Headers({ authorization: bearer(session.token) });
     expect(await auth.api.getSession({ headers })).toMatchObject({ user: { id: user.id } });
     const audit = await database
       .prepare("SELECT action FROM auth_audit WHERE user_id = ?")
@@ -60,6 +78,21 @@ describe("Better Auth 1.7.5 with native D1", () => {
     await auth.api.signOut({ headers });
     expect(await auth.api.getSession({ headers })).toBeNull();
   });
+  it("accepts a bearer token only with its signature", async () => {
+    const { auth, session, user } = await createSession();
+    const signed = new Headers({ authorization: bearer(session.token) });
+    expect(await auth.api.getSession({ headers: signed })).toMatchObject({ user: { id: user.id } });
+    const unsigned = new Headers({ authorization: `Bearer ${session.token}` });
+    expect(await auth.api.getSession({ headers: unsigned })).toBeNull();
+    const otherSecret = "another-random-test-secret-with-at-least-32-characters";
+    const wrong = new Headers({ authorization: bearer(session.token, otherSecret) });
+    expect(await auth.api.getSession({ headers: wrong })).toBeNull();
+    // An instance accepts only a signature that its own secret made.
+    const other = createAuth({ ...configuration, secret: otherSecret });
+    expect(await other.api.getSession({ headers: signed })).toBeNull();
+    expect(await other.api.getSession({ headers: unsigned })).toBeNull();
+    expect(await other.api.getSession({ headers: wrong })).toMatchObject({ user: { id: user.id } });
+  });
   it("expires persisted sessions and does not use cached cookies", async () => {
     const { auth, session } = await createSession();
     await database
@@ -68,7 +101,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
       .run();
     expect(
       await auth.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${session.token}` }),
+        headers: new Headers({ authorization: bearer(session.token) }),
       }),
     ).toBeNull();
     expect(auth.options.session?.cookieCache?.enabled).toBe(false);
@@ -76,13 +109,9 @@ describe("Better Auth 1.7.5 with native D1", () => {
   });
   it("renews an old session on D1 without interactive transactions", async () => {
     const { auth, session } = await createSession();
-    const old = new Date(Date.now() - 2 * 86_400_000).toISOString();
-    await database
-      .prepare('UPDATE session SET "updatedAt" = ?, "expiresAt" = ? WHERE id = ?')
-      .bind(old, new Date(Date.now() + 5 * 86_400_000).toISOString(), session.id)
-      .run();
+    await ageSession(session.id);
     const response = await auth.api.getSession({
-      headers: new Headers({ authorization: `Bearer ${session.token}` }),
+      headers: new Headers({ authorization: bearer(session.token) }),
       asResponse: true,
     });
     expect(response.ok).toBe(true);
@@ -96,16 +125,18 @@ describe("Better Auth 1.7.5 with native D1", () => {
   });
   it("keeps production sessions out of isolated preview storage", async () => {
     const { session } = await createSession();
+    const secret = "preview-only-random-secret-with-at-least-32-characters";
     const preview = createAuth({
       ...configuration,
       database: previewDatabase,
       origin: "https://preview.example",
       environment: "preview",
-      secret: "preview-only-random-secret-with-at-least-32-characters",
+      secret,
     });
+    // The signature is valid for preview, so the answer comes from its storage.
     expect(
       await preview.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${session.token}` }),
+        headers: new Headers({ authorization: bearer(session.token, secret) }),
       }),
     ).toBeNull();
     expect(preview.options.advanced?.cookiePrefix).toBe("visonaut-preview");
@@ -115,7 +146,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
     const results = await Promise.all(
       Array.from({ length: 8 }, () =>
         createAuth(configuration).api.getSession({
-          headers: new Headers({ authorization: `Bearer ${session.token}` }),
+          headers: new Headers({ authorization: bearer(session.token) }),
         }),
       ),
     );
@@ -156,7 +187,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
     await revokeGitHubAuthorization(database, webhook);
     expect(
       await auth.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${session.token}` }),
+        headers: new Headers({ authorization: bearer(session.token) }),
       }),
     ).toBeNull();
     expect(
@@ -190,7 +221,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
     await revokeGitHubAuthorization(database, webhook);
     expect(
       await auth.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${session.token}` }),
+        headers: new Headers({ authorization: bearer(session.token) }),
       }),
     ).toBeNull();
 
@@ -203,7 +234,7 @@ describe("Better Auth 1.7.5 with native D1", () => {
     await revokeGitHubAuthorization(database, webhook);
     expect(
       await auth.api.getSession({
-        headers: new Headers({ authorization: `Bearer ${fresh.token}` }),
+        headers: new Headers({ authorization: bearer(fresh.token) }),
       }),
     ).toMatchObject({ user: { id: user.id } });
     expect(
@@ -218,6 +249,42 @@ describe("Better Auth 1.7.5 with native D1", () => {
         .bind(`webhook:${webhook.deliveryId}`)
         .first(),
     ).toEqual({ count: 1 });
+  });
+});
+
+describe("session headers of a private request", () => {
+  const github: GitHubClient = {
+    appId: "session-headers",
+    repositoryId: "100",
+    repository: "ariakit/ariakit",
+    request: async (path) =>
+      path.includes("/permission")
+        ? { user: { id: 42 }, permission: "write", role_name: "write" }
+        : { id: 42, login: "maintainer" },
+  };
+
+  it("holds only the cookies of a renewed session", async () => {
+    const { auth, session } = await createSession();
+    await ageSession(session.id);
+    const request = new Request(configuration.origin, {
+      headers: { authorization: bearer(session.token) },
+    });
+    const identity = await requireMaintainer({ request, auth, database, github, access: "read" });
+    expect(new Set(identity.sessionHeaders.keys())).toEqual(new Set(["set-cookie"]));
+    const cookies = identity.sessionHeaders.getSetCookie();
+    expect(cookies).toHaveLength(1);
+    expect(cookies[0]).toMatch(/^__Secure-visonaut-production\.session_token=[^;]+; /);
+    expect(cookies[0]).toContain("HttpOnly");
+    expect(cookies[0]).toContain("Secure");
+  });
+
+  it("is empty when the session needs no renewal", async () => {
+    const { auth, session } = await createSession();
+    const request = new Request(configuration.origin, {
+      headers: { authorization: bearer(session.token) },
+    });
+    const identity = await requireMaintainer({ request, auth, database, github, access: "read" });
+    expect([...identity.sessionHeaders]).toEqual([]);
   });
 });
 
@@ -237,7 +304,7 @@ describe("bounded private-read permission", () => {
       request: requestGithub,
     };
     const request = new Request(configuration.origin, {
-      headers: { authorization: `Bearer ${session.token}` },
+      headers: { authorization: bearer(session.token) },
     });
     const parameters = { request, auth, database, github, access: "read" as const };
     const checkedAt = Date.now();
@@ -289,7 +356,7 @@ describe("bounded private-read permission", () => {
     };
     const parameters = {
       request: new Request(configuration.origin, {
-        headers: { authorization: `Bearer ${first.session.token}` },
+        headers: { authorization: bearer(first.session.token) },
       }),
       auth: first.auth,
       database,
@@ -305,7 +372,7 @@ describe("bounded private-read permission", () => {
       requireMaintainer({
         ...parameters,
         request: new Request(configuration.origin, {
-          headers: { authorization: `Bearer ${second.session.token}` },
+          headers: { authorization: bearer(second.session.token) },
         }),
       }),
     ).rejects.toMatchObject({ code: "not_maintainer" });
@@ -331,7 +398,7 @@ describe("bounded review permission", () => {
     );
     const parameters = {
       request: new Request(configuration.origin, {
-        headers: { authorization: `Bearer ${session.token}` },
+        headers: { authorization: bearer(session.token) },
       }),
       auth,
       database,
@@ -389,7 +456,7 @@ describe("bounded review permission", () => {
     };
     const parameters = {
       request: new Request(configuration.origin, {
-        headers: { authorization: `Bearer ${session.token}` },
+        headers: { authorization: bearer(session.token) },
       }),
       auth,
       database,
@@ -411,7 +478,7 @@ describe("bounded review permission", () => {
     });
     const parameters = {
       request: new Request(configuration.origin, {
-        headers: { authorization: `Bearer ${session.token}` },
+        headers: { authorization: bearer(session.token) },
       }),
       auth,
       database,
@@ -437,7 +504,7 @@ describe("bounded review permission", () => {
       requireMaintainer({
         ...parameters,
         request: new Request(configuration.origin, {
-          headers: { authorization: `Bearer ${second.session.token}` },
+          headers: { authorization: bearer(second.session.token) },
         }),
       }),
     ).rejects.toMatchObject({ code: "not_maintainer" });

@@ -10,6 +10,7 @@ import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
 import { publishReviewLinks } from "./review-links.ts";
+import { dashboard } from "../api/dashboard.ts";
 
 it("keeps an accepted restored PR read-only without preventing a fresh capture", async () => {
   using database = new TestDatabase();
@@ -399,6 +400,56 @@ it("keeps verified history and drops unfinished run and comparison archives inde
     { id: "building", active: 0, state: "failed" },
     { id: "ready", active: 0, state: "failed" },
   ]);
+});
+
+it("keeps the cause of a run that closed before the backup, and fails each run that the restore closes", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  for (const id of ["replaced", "expired", "accepted", "open"]) {
+    await captured(fixture.context, id);
+  }
+  // The states of the backup: three runs closed before it, and one is open.
+  database.connection.exec(`
+    UPDATE visonaut_runs SET lineage_key='pr:7';
+    UPDATE visonaut_runs SET active=0,state='superseded',closed_at=1 WHERE id='replaced';
+    UPDATE visonaut_runs SET active=0,state='failed',closed_at=1 WHERE id='expired';
+    UPDATE visonaut_runs SET active=0,state='accepted',closed_at=1 WHERE id='accepted';
+  `);
+  const shownStates = async () => {
+    const answer = await dashboard({
+      database,
+      configuration: {
+        projectId: "project",
+        github: { repositoryId: "123", repository: "owner/repo" },
+      },
+    });
+    return Object.fromEntries(answer.runs.map((run) => [run.id, run.state]));
+  };
+  const beforeRestore = await shownStates();
+  expect(beforeRestore).toMatchObject({
+    replaced: "superseded",
+    expired: "failed",
+    accepted: "passed",
+  });
+  expect(beforeRestore.open).not.toBe("failed");
+  await sanitizeRestoredDatabase(database, fixture.state.time);
+  expect(
+    database.connection.prepare("SELECT id,active,state FROM visonaut_runs ORDER BY id").all(),
+  ).toEqual([
+    { id: "accepted", active: 0, state: "accepted" },
+    { id: "expired", active: 0, state: "failed" },
+    { id: "open", active: 0, state: "failed" },
+    { id: "replaced", active: 0, state: "superseded" },
+  ]);
+  expect(await shownStates()).toEqual({
+    replaced: "superseded",
+    expired: "failed",
+    accepted: "passed",
+    open: "failed",
+  });
+  // A second restore pass keeps the result.
+  await sanitizeRestoredDatabase(database, fixture.state.time + 1);
+  expect(await shownStates()).toMatchObject({ replaced: "superseded", open: "failed" });
 });
 
 it("rehearses an isolated SQL rewind, fences old access and work, and reports unavailable retained originals", async () => {

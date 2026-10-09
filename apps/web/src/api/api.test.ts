@@ -364,6 +364,10 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
     userId: user.id,
   });
   const session = await authContext.internalAdapter.createSession(user.id);
+  // A bearer token is the session token with the signature of its cookie.
+  const sessionSignature = createHmac("sha256", bindings.configuration.auth.secret)
+    .update(session.token)
+    .digest("base64");
   const background: Promise<unknown>[] = [];
   const send = async (path: string, init: RequestInit = {}) => {
     const response = await handleApi(
@@ -468,7 +472,7 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
     plan,
     servicePlan,
     capability,
-    token: session.token,
+    token: `${session.token}.${sessionSignature}`,
     send,
     json,
     imageId,

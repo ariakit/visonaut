@@ -1,3 +1,4 @@
+import { fetchOrFail, readFailure, readSuccess } from "../client-error.ts";
 import { ReviewCommandError } from "./model.ts";
 import type {
   ReviewCommandResult,
@@ -251,8 +252,21 @@ function saveResult(value: unknown): ReviewSaveResult {
   };
 }
 
+// A malformed state is dropped. The status still tells the cause.
+function failureEvidence(body: unknown) {
+  try {
+    const data = record(body);
+    return {
+      model: data.model ? parseReviewModel(data.model) : undefined,
+      reviewer: optionalString(data.reviewer),
+    };
+  } catch {
+    return {};
+  }
+}
+
 async function request(path: string, body?: object, signal?: AbortSignal): Promise<unknown> {
-  const response = await fetch(path, {
+  const response = await fetchOrFail(path, {
     method: body ? "POST" : "GET",
     credentials: "same-origin",
     cache: "no-store",
@@ -260,26 +274,15 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
     body: body ? JSON.stringify(body) : undefined,
     signal,
   });
-  if (!response.headers.get("content-type")?.includes("application/json")) {
-    throw new ReviewCommandError(
-      "The service did not return review data. Check your connection and refresh.",
-    );
+  if (response.ok) {
+    return readSuccess(response);
   }
-  const result: unknown = await response.json();
-  if (!response.ok) {
-    const data = record(result);
-    const error = record(data.error);
-    const reference = optionalString(error.reference);
-    const message = `${string(error.message)}${reference ? ` Reference: ${reference}.` : ""}`;
-    throw new ReviewCommandError(message, {
-      conflict: response.status === 409,
-      status: response.status,
-      reference,
-      model: data.model ? parseReviewModel(data.model) : undefined,
-      reviewer: optionalString(data.reviewer),
-    });
-  }
-  return result;
+  const { message, body: answer, ...facts } = await readFailure(response);
+  throw new ReviewCommandError(message, {
+    ...facts,
+    conflict: facts.status === 409,
+    ...failureEvidence(answer),
+  });
 }
 
 /** Loads review evidence before creating a session for a review command. */
