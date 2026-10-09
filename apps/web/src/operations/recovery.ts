@@ -62,7 +62,9 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     "UPDATE work_status_outbox SET state='obsolete' WHERE state!='complete'",
     "UPDATE operations_check_creations SET state='dead',last_error='restored-environment' WHERE state!='complete'",
     "UPDATE work_tasks SET state='dead',lease_token=NULL,lease_until=NULL,last_error='restored-environment' WHERE state!='complete'",
-    "UPDATE visonaut_runs SET active=0,state=CASE WHEN state='accepted' THEN state ELSE 'failed' END",
+    // The restore fails each run that it closes. A run that a newer run replaced
+    // before the backup keeps that cause.
+    "UPDATE visonaut_runs SET active=0,state=CASE WHEN state='accepted' OR (active=0 AND state='superseded') THEN state ELSE 'failed' END",
     "UPDATE visonaut_snapshots SET state='revoked',reference_eligible=0 WHERE state='copying'",
     "DELETE FROM work_retention_pins WHERE reason IN ('recovery','promotion')",
     "DELETE FROM visonaut_pins WHERE reason='export'",
