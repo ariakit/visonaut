@@ -23,9 +23,11 @@ import {
   type ApiConfiguration,
 } from "./api/index.ts";
 import {
+  queueLog,
   runOperations,
   type OperationsBudget,
   type OperationsContext,
+  type OperationsDelivery,
 } from "./operations/index.ts";
 import {
   checkRunAdmission,
@@ -290,11 +292,14 @@ export type { OperationsMessage } from "@visonaut/service";
 export async function runScheduledOperations(
   env: Env,
   message: OperationsMessage = { kind: "recovery" },
+  delivery?: OperationsDelivery,
 ) {
   if (env.VISONAUT_ENVIRONMENT === "preview")
     return { completed: [], deferred: [], attention: [], hasMore: false };
   requireBackendBindings(env);
   const startedAt = Date.now();
+  // The wait in the queue ends here, before the reconciliation steps.
+  const queue = delivery && queueLog(delivery, startedAt);
   const correlationId = crypto.randomUUID();
   await assertOperationsProject(env);
   const context = operationsContext(env);
@@ -400,7 +405,7 @@ export async function runScheduledOperations(
         await recordEvent(env.DB, { ...alert, now: Date.now() });
       }
     }
-    const result = await runOperations(context, message);
+    const result = await runOperations(context, message, queue);
     if (reconcileMore)
       await env.OPERATIONS.send({ kind: "ingest" } satisfies OperationsMessage, {
         delaySeconds: 1,

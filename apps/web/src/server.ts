@@ -179,7 +179,7 @@ export default {
       for (const message of valid) {
         const parsed = operationsMessage(message.body);
         if (!parsed) continue;
-        await runScheduledOperations(env, parsed);
+        await runScheduledOperations(env, parsed, message);
         message.ack();
       }
     } catch {
