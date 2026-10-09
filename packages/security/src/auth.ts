@@ -48,9 +48,12 @@ export function createAuth(configuration: AuthConfiguration) {
       cookiePrefix: `visonaut-${configuration.environment}`,
       useSecureCookies: configuration.environment !== "local",
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", path: "/" },
+      // Cloudflare sets this header to the one address of the client connection.
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
-    plugins: [bearer()],
+    // A bearer token is the session token with the signature of its cookie.
+    plugins: [bearer({ requireSignature: true })],
     databaseHooks: {
       session: {
         create: {

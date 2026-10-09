@@ -22,6 +22,15 @@ const privateReadLifetime = 60_000;
 // Decision submissions may reuse permission briefly during continuous review.
 const reviewPermissionLifetime = 10_000;
 
+/** Keep only the cookies of a session answer. A renewed session sets them. */
+function sessionCookies(headers: Headers) {
+  const cookies = new Headers();
+  for (const cookie of headers.getSetCookie()) {
+    cookies.append("Set-Cookie", cookie);
+  }
+  return cookies;
+}
+
 export async function requireMaintainer({
   request,
   auth,
@@ -29,7 +38,7 @@ export async function requireMaintainer({
   github,
   access = "write",
 }: RequireMaintainerParams) {
-  const { response: session, headers: sessionHeaders } = await auth.api.getSession({
+  const { response: session, headers } = await auth.api.getSession({
     headers: request.headers,
     query: { disableCookieCache: true },
     returnHeaders: true,
@@ -37,6 +46,7 @@ export async function requireMaintainer({
   if (!session) {
     throw new SecurityError("sign_in_required", 401, "Sign in with GitHub.");
   }
+  const sessionHeaders = sessionCookies(headers);
   const accounts = await database
     .prepare("SELECT accountId FROM account WHERE userId = ? AND providerId = 'github'")
     .bind(session.user.id)

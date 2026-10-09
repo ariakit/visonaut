@@ -283,9 +283,10 @@ describe("browser boundary", () => {
       requireSameOrigin(new Request("https://preview.example/review"), configuration.issuer),
     ).toThrow();
   });
-  it("keeps private data out of caches and frames", () => {
+  it("keeps private data out of caches, frames, and other origins", () => {
     const response = securePrivateResponse(Response.json({ private: true }));
     expect(response.headers.get("cache-control")).toBe("no-store, private");
+    expect(response.headers.get("cross-origin-resource-policy")).toBe("same-origin");
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
