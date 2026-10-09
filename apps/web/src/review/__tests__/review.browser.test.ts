@@ -1369,7 +1369,6 @@ test("fit, 100%, 200%, and narrow layout preserve inspectable original images", 
     document.body.style.zoom = "2";
   });
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeVisible();
-  await page.screenshot({ path: test.info().outputPath("zoom-200.png"), fullPage: true });
 });
 
 test("stale decode completion cannot make a returned selection ready", async ({ page }) => {
