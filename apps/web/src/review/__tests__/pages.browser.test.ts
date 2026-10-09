@@ -52,43 +52,39 @@ test("each dashboard page has its own path below the layout route", async ({ pag
   await signedIn(page);
   await page.goto(entry("/"));
   await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Review queue", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Queue 1 run to review" })).toHaveAttribute(
     "aria-current",
     "page",
   );
   await page.goto(entry("/history"));
   await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Run history" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "History", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
+  );
+  // An exact match: the Queue link is not current on another page.
+  await expect(page.getByRole("link", { name: "Queue 1 run to review" })).not.toHaveAttribute(
+    "aria-current",
   );
   await expect(page.getByRole("row")).toHaveCount(4);
   await page.goto(entry("/status"));
   await expect(page.getByRole("heading", { name: "Service status", level: 1 })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Service status" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Status", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  // The bell of the header is not on the page that shows the same alerts.
-  await expect(page.getByRole("button", { name: /Service attention/ })).toHaveCount(0);
 });
 
 test("the header and the Queue link to the page paths", async ({ page }) => {
   await signedIn(page);
   await page.goto(entry("/"));
-  const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(navigation.getByRole("link", { name: "Review queue", exact: true })).toHaveAttribute(
-    "href",
-    "/",
-  );
-  await expect(navigation.getByRole("link", { name: "Run history" })).toHaveAttribute(
+  const navigation = page.getByRole("navigation", { name: "Pages" });
+  await expect(navigation.getByRole("link", { name: "Queue" })).toHaveAttribute("href", "/");
+  await expect(navigation.getByRole("link", { name: "History" })).toHaveAttribute(
     "href",
     "/history",
   );
-  await expect(navigation.getByRole("link", { name: "Service status" })).toHaveAttribute(
-    "href",
-    "/status",
-  );
+  await expect(navigation.getByRole("link", { name: "Status" })).toHaveAttribute("href", "/status");
   await page.getByRole("link", { name: "View history" }).click();
   await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
 });
@@ -109,6 +105,11 @@ test("the History search and filter come from the search parameters", async ({ p
   );
   await expect(page.getByRole("rowheader")).toHaveCount(1);
   await expect(page.getByRole("rowheader")).toContainText("Dialog backdrop");
+  // The search parameters do not take the current mark from the link.
+  await expect(page.getByRole("link", { name: "History", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
 test("a change of the History search and filter goes into the search parameters", async ({

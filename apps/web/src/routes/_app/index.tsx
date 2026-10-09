@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_app/")({
 
 function Queue() {
   return (
-    <DashboardPage page="queue" path="/">
+    <DashboardPage path="/">
       {({ actionable, repository, baselineRevision, refresh }) => (
         <ReviewQueue
           runs={actionable}

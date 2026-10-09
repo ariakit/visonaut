@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIcon, BellIcon, RotateCcwIcon } from "lucide-react";
+import { ActivityIcon, RotateCcwIcon } from "lucide-react";
 import { Frame } from "../ariakit/components/frame.ariakit.react.tsx";
 import { Text } from "../ariakit/components/text.ariakit.react.tsx";
 import type { CapacitySnapshot } from "../../capacity.ts";
 import { ControlButton as Button } from "../control-button.tsx";
-import { Badge, BadgeLabel } from "../ariakit/components/badge.ariakit.react.tsx";
 import { ButtonLabel, ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
-import {
-  Popover,
-  PopoverDescription,
-  PopoverDisclosure,
-  PopoverDismiss,
-  PopoverHeading,
-  PopoverProvider,
-} from "../ariakit/components/popover.ariakit.react.tsx";
 
 interface OperationEvent {
   kind: string;
@@ -210,13 +201,16 @@ function eventId(event: OperationEvent) {
   return JSON.stringify([event.kind, event.code, event.subject, event.firstSeenAt]);
 }
 
-export function OperationsAttention({
-  onAccessDenied,
-  layout = "popover",
-}: {
-  layout?: "popover" | "page";
+export interface OperationsAttentionProps {
   onAccessDenied: (status: 401 | 403) => void;
-}) {
+}
+
+/**
+ * The Status page: the open service alerts with what each one means. It reads
+ * the alerts when it opens and each minute after that. A hidden tab sends no
+ * request, and the page reads again when the tab becomes visible.
+ */
+export function OperationsAttention({ onAccessDenied }: OperationsAttentionProps) {
   const [status, setStatus] = useState<OperationsStatus | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -227,8 +221,10 @@ export function OperationsAttention({
   const refreshFailed = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
-    let timeout: ReturnType<typeof setTimeout>;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let reading = false;
     const load = async () => {
+      reading = true;
       try {
         const response = await fetch("/api/operations", {
           credentials: "same-origin",
@@ -275,68 +271,54 @@ export function OperationsAttention({
         );
         setError(error instanceof Error ? error.message : "Operation alerts could not be loaded.");
       } finally {
+        reading = false;
         if (!controller.signal.aborted) {
           setLoading(false);
-          timeout = setTimeout(load, 60000);
+          // A hidden tab has no timer. The next read is at its return.
+          if (document.visibilityState === "visible") {
+            timeout = setTimeout(load, 60000);
+          }
         }
       }
     };
-    void load();
+    const onVisibilityChange = () => {
+      clearTimeout(timeout);
+      timeout = undefined;
+      if (document.visibilityState !== "visible") return;
+      if (reading) return;
+      void load();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    // A page that opens in a hidden tab reads at its first show.
+    if (document.visibilityState === "visible") {
+      void load();
+    }
     return () => {
       controller.abort();
       clearTimeout(timeout);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [reload, onAccessDenied]);
 
-  const alertCount = status?.events.length ?? 0;
-  const alertLabel = error
-    ? alertCount
-      ? `Service attention: ${status?.hasMore ? "at least " : ""}${alertCount} cached alert${alertCount === 1 ? "" : "s"}; refresh failed`
-      : "Service attention: alert status unavailable"
-    : loading && !status
-      ? "Service attention: checking alerts"
-      : alertCount
-        ? `Service attention: ${status?.hasMore ? "at least " : ""}${alertCount} alert${alertCount === 1 ? "" : "s"}`
-        : "Service attention: no alerts";
-
-  const panel = (
-    <div
-      className={
-        layout === "page" ? "flex flex-col gap-5 max-w-4xl mx-auto" : "flex flex-col gap-3 min-h-0"
-      }
-    >
+  return (
+    <div className="flex flex-col gap-5 max-w-4xl mx-auto">
+      <span className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </span>
       <div className="flex items-center justify-between gap-3">
-        {layout === "page" ? (
-          <div>
-            <Text
-              render={<p />}
-              className="text-xs uppercase tracking-widest font-medium ak-ink-60"
-            >
-              Operations
-            </Text>
-            <Text
-              render={<h1 />}
-              className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3"
-            >
-              Service status.
-            </Text>
-          </div>
-        ) : (
-          <PopoverHeading>Service attention</PopoverHeading>
-        )}
-        {layout === "popover" && <PopoverDismiss />}
+        <div>
+          <Text render={<p />} className="text-xs uppercase tracking-widest font-medium ak-ink-60">
+            Operations
+          </Text>
+          <Text render={<h1 />} className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3">
+            Service status.
+          </Text>
+        </div>
       </div>
-      {layout === "page" ? (
-        <Text render={<p />} className="text-sm ak-ink-60 leading-relaxed">
-          Unresolved alerts and what they mean for your reviews. This page checks for updates every
-          minute.
-        </Text>
-      ) : (
-        <PopoverDescription>
-          Alerts refresh every minute while this dashboard is open. No external notifications are
-          sent.
-        </PopoverDescription>
-      )}
+      <Text render={<p />} className="text-sm ak-ink-60 leading-relaxed">
+        Unresolved alerts and what they mean for your reviews. This page checks for updates every
+        minute.
+      </Text>
       <div className="flex max-md:flex-col items-start justify-between gap-3">
         <p className="text-xs ak-ink-60">
           {status
@@ -361,11 +343,7 @@ export function OperationsAttention({
           </ButtonLabel>
         </Button>
       </div>
-      <div
-        className={
-          layout === "page" ? "grid gap-5" : "min-h-0 max-h-[50dvh] overflow-auto space-y-3"
-        }
-      >
+      <div className="grid gap-5">
         {error && (
           <Text render={<p />} $text="danger" role="alert">
             {error}{" "}
@@ -425,7 +403,7 @@ export function OperationsAttention({
             })}
           </ul>
         )}
-        {layout === "page" && status && status.events.length === 0 && !error && (
+        {status && status.events.length === 0 && !error && (
           <Frame
             $layer
             $lighten
@@ -460,61 +438,9 @@ export function OperationsAttention({
           Open the operations and recovery guide
         </ButtonLabel>
       </Button>
-      {layout === "page" && (
-        <Text render={<p />} className="text-xs ak-ink-60">
-          No external notifications are sent.
-        </Text>
-      )}
+      <Text render={<p />} className="text-xs ak-ink-60">
+        No external notifications are sent.
+      </Text>
     </div>
-  );
-
-  return (
-    <PopoverProvider placement="bottom-end">
-      <span className="sr-only" role="status" aria-live="polite">
-        {announcement}
-      </span>
-      {layout === "page" ? (
-        panel
-      ) : (
-        <>
-          <PopoverDisclosure
-            $kind="flat"
-            $border
-            $rounded="lg"
-            className="relative min-w-9 min-h-9 gap-1 [&_svg]:size-4"
-            aria-label={alertLabel}
-          >
-            <ButtonSlot>
-              <BellIcon aria-hidden="true" />
-            </ButtonSlot>
-            {alertCount > 0 && (
-              <Badge
-                $layer="danger"
-                $forceRounded
-                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 leading-none"
-                aria-hidden="true"
-              >
-                <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>
-              </Badge>
-            )}
-            {error && (
-              <Text
-                $text="danger"
-                className="dashboard-alert-error-mark font-bold"
-                aria-hidden="true"
-              >
-                !
-              </Text>
-            )}
-          </PopoverDisclosure>
-          <Popover
-            className="flex flex-col w-[min(460px,calc(100vw-24px))] max-h-[min(72dvh,var(--popover-available-height))] text-sm"
-            portal
-          >
-            {panel}
-          </Popover>
-        </>
-      )}
-    </PopoverProvider>
   );
 }

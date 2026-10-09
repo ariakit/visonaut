@@ -15,7 +15,7 @@ const status = {
   hasMore: false,
 };
 
-test("operation alerts explain recovery and poll resolved events while the dashboard is open", async ({
+test("operation alerts explain recovery and poll resolved events while the Status page is open", async ({
   page,
 }) => {
   await page.clock.install();
@@ -24,7 +24,6 @@ test("operation alerts explain recovery and poll resolved events while the dashb
     route.fulfill({ json: resolved ? { ...status, events: [] } : status }),
   );
   await page.goto(path);
-  await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
   await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   await expect(page.getByText("a failed set is terminal", { exact: false })).toBeVisible();
   await expect(page.getByText("1 unresolved operation alert", { exact: false })).toBeVisible();
@@ -44,13 +43,12 @@ test("operation alerts explain recovery and poll resolved events while the dashb
   await expect(page.getByRole("heading", { name: "A backup needs attention" })).toHaveCount(0);
 });
 
-test("a new incident is announced while the alert popover is closed", async ({ page }) => {
+test("a new incident is announced while the Status page is open", async ({ page }) => {
   await page.clock.install();
   let current = status;
   await page.route("**/api/operations", (route) => route.fulfill({ json: current }));
   await page.goto(path);
   await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
   current = {
     ...status,
     events: [
@@ -65,8 +63,7 @@ test("a new incident is announced while the alert popover is closed", async ({ p
   };
   await page.clock.fastForward(60000);
   await expect(page.getByRole("status")).toContainText("A GitHub check needs attention");
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Service attention: 1 alert" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A GitHub check needs attention" })).toBeVisible();
 });
 
 test("same-title incidents each update the live status", async ({ page }) => {
@@ -100,7 +97,6 @@ test("same-title incidents each update the live status", async ({ page }) => {
   };
   await page.clock.fastForward(60000);
   await expect(liveStatus).not.toHaveText(previousMessage ?? "");
-  await expect(page.getByRole("button", { name: "Service attention: 1 alert" })).toBeVisible();
 });
 
 test("an older alert entering the bounded list is announced as visible", async ({ page }) => {
@@ -132,7 +128,6 @@ test("an older alert entering the bounded list is announced as visible", async (
   await page.clock.fastForward(60000);
   await expect(liveStatus).toContainText("1 alert now visible");
   await expect(liveStatus).not.toContainText("new alert");
-  await expect(page.getByRole("button", { name: "Service attention: 50 alerts" })).toBeVisible();
 });
 
 test("alert refresh failure stays explicit and Retry alerts works with the keyboard", async ({
@@ -143,21 +138,12 @@ test("alert refresh failure stays explicit and Retry alerts works with the keybo
     route.fulfill(fail ? { status: 503, json: { error: "Unavailable" } } : { json: status }),
   );
   await page.goto(path);
-  await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
   await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   fail = true;
   await page.getByRole("button", { name: "Refresh alerts" }).click();
   await expect(page.getByRole("alert")).toContainText("Shown alerts may be out of date");
   await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
-  await page.getByRole("button", { name: "Dismiss popup" }).click();
-  const failedTrigger = page.getByRole("button", {
-    name: "Service attention: 1 cached alert; refresh failed",
-  });
-  await expect(failedTrigger).toBeVisible();
-  await expect(failedTrigger.locator(".dashboard-alert-count")).toHaveText("1");
-  await expect(failedTrigger.locator(".dashboard-alert-error-mark")).toHaveText("!");
   await expect(page.getByRole("status")).toContainText("alert refresh failed");
-  await failedTrigger.click();
   fail = false;
   await page.getByRole("button", { name: "Retry alerts" }).focus();
   await page.keyboard.press("Enter");
@@ -171,7 +157,6 @@ test("permission denial on refresh removes private alert content", async ({ page
     route.fulfill(denied ? { status: 403, json: { error: "Forbidden" } } : { json: status }),
   );
   await page.goto(path);
-  await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
   await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
   denied = true;
   await page.getByRole("button", { name: "Refresh alerts" }).click();
@@ -207,7 +192,6 @@ test("capacity alerts show measured usage, admission headroom, and capture slots
     }),
   );
   await page.goto(path);
-  await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
   await expect(
     page.getByRole("heading", { name: "Database capacity needs attention" }),
   ).toBeVisible();
@@ -233,7 +217,6 @@ for (const [code, action] of [
       }),
     );
     await page.goto(path);
-    await page.getByRole("button", { name: "Service attention: 1 alert" }).click();
     await expect(
       page.getByRole("heading", { name: "GitHub webhook delivery needs attention" }),
     ).toBeVisible();
@@ -241,13 +224,57 @@ for (const [code, action] of [
   });
 }
 
-test("the alert count is not under 12px", async ({ page }) => {
-  await page.route("**/api/operations", (route) => route.fulfill({ json: status }));
+test("a hidden tab sends no alert request, and a return to the tab reads the alerts again", async ({
+  page,
+}) => {
+  await page.clock.install();
+  let loads = 0;
+  await page.route("**/api/operations", (route) => {
+    loads += 1;
+    return route.fulfill({ json: status });
+  });
   await page.goto(path);
-  const count = page.locator(".dashboard-alert-count");
-  await expect(count).toBeVisible();
-  const size = await count.evaluate((element) =>
-    Number.parseFloat(getComputedStyle(element).fontSize),
-  );
-  expect(size).toBeGreaterThanOrEqual(12);
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
+  expect(loads).toBe(1);
+  const setVisibility = (state: "hidden" | "visible") =>
+    page.evaluate((value) => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => value });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, state);
+  await setVisibility("hidden");
+  // Two intervals in a hidden tab.
+  await page.clock.fastForward(120000);
+  expect(loads).toBe(1);
+  await setVisibility("visible");
+  await expect.poll(() => loads).toBe(2);
+  // The interval runs again in a visible tab.
+  await page.clock.fastForward(60000);
+  await expect.poll(() => loads).toBe(3);
+});
+
+test("a Status page that opens in a hidden tab reads the alerts at its first show", async ({
+  page,
+}) => {
+  let loads = 0;
+  await page.route("**/api/operations", (route) => {
+    loads += 1;
+    return route.fulfill({ json: status });
+  });
+  // The page is hidden before its first script runs.
+  await page.addInitScript(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+  });
+  await page.goto(path);
+  await expect(page.getByRole("heading", { name: "Service status." })).toBeVisible();
+  await expect(page.getByText("Checking for unresolved operation alerts")).toBeVisible();
+  expect(loads).toBe(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(page.getByRole("heading", { name: "A backup needs attention" })).toBeVisible();
+  expect(loads).toBe(1);
 });

@@ -105,15 +105,9 @@ for (const scheme of ["light", "dark"] as const) {
       await expectColoredText(page, icon, "success");
     });
 
-    test("the error of the operation alerts and its mark are not the body color", async ({
-      page,
-    }) => {
+    test("the error of the operation alerts is not the body color", async ({ page }) => {
       await page.route("**/api/operations", (route) => route.fulfill({ status: 500, json: {} }));
       await page.goto(operations);
-      const mark = page.locator(".dashboard-alert-error-mark");
-      await expect(mark).toBeVisible();
-      await expectColoredText(page, mark, "danger");
-      await page.getByRole("button", { name: /Service attention/ }).click();
       await expectColoredText(page, page.getByRole("alert").first(), "danger");
     });
   });
@@ -152,23 +146,16 @@ test("the status badge and the alert count stay fully rounded", async ({ page })
       .getByRole("heading", { name: "Success dialog", exact: true })
       .locator("xpath=following-sibling::*[1]"),
   );
-  await page.route("**/api/operations", (route) =>
+  await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {
-        events: [
-          {
-            kind: "backup",
-            code: "backup-failed",
-            subject: "2026-09-22T00Z",
-            firstSeenAt: 1790000000000,
-            lastSeenAt: 1790000060000,
-          },
-        ],
-        checkedAt: 1790000060000,
-        hasMore: false,
+        runs: [],
+        actionable: [],
+        project: { repository: "ariakit/ariakit", baselineRevision: 1 },
+        alertCount: 3,
       },
     }),
   );
-  await page.goto(operations);
-  await expectPill(page.locator(".dashboard-alert-count"));
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
+  await expectPill(page.getByRole("link", { name: "Status" }).getByLabel("3 open alerts"));
 });

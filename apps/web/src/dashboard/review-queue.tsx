@@ -12,7 +12,15 @@ import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import { kindLabels, RunIdentity, RunStatus, stateLabels } from "./run-parts.tsx";
+import {
+  awaitsReview,
+  isInProgress,
+  kindLabels,
+  needsRecovery,
+  RunIdentity,
+  RunStatus,
+  stateLabels,
+} from "./run-parts.tsx";
 
 export interface ReviewQueueProps {
   runs: DashboardRun[];
@@ -22,9 +30,9 @@ export interface ReviewQueueProps {
 }
 
 export function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQueueProps) {
-  const inProgress = runs.filter((run) => run.state === "comparing" || run.state === "incomplete");
-  const recovery = runs.filter((run) => run.state === "needs-recompare" || run.state === "failed");
-  const review = runs.filter((run) => !inProgress.includes(run) && !recovery.includes(run));
+  const inProgress = runs.filter(isInProgress);
+  const recovery = runs.filter(needsRecovery);
+  const review = runs.filter(awaitsReview);
   const pending = runs.reduce((total, run) => total + run.pending, 0);
   const rejected = runs.reduce((total, run) => total + run.rejected, 0);
   return (

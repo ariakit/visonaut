@@ -241,7 +241,7 @@ for (const [screen, routeEntry] of [
   });
 }
 
-test("dashboard keeps recovery runs available and operation alerts in the header", async ({
+test("dashboard keeps recovery runs available and the alert count on the Status link", async ({
   page,
 }) => {
   const recoveryRun = {
@@ -262,6 +262,8 @@ test("dashboard keeps recovery runs available and operation alerts in the header
         runs: [recoveryRun],
         actionable: [recoveryRun],
         project: { repository: "ariakit/ariakit", baselineRevision: 3 },
+        alertCount: 1,
+        user: { id: "user-1", githubUserId: "1", login: "octo-maintainer" },
       },
     }),
   );
@@ -293,16 +295,17 @@ test("dashboard keeps recovery runs available and operation alerts in the header
     "href",
     "/runs/run-42",
   );
-  const alerts = page.getByRole("button", { name: "Service attention: 1 alert" });
+  // The count is a field of the run list. The Queue reads no alert list.
+  const statusLink = page.getByRole("link", { name: "Status" });
+  const alerts = statusLink.getByLabel("1 open alert");
   await expect(alerts).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
-  await alerts.click();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toBeVisible();
-  await page.getByRole("button", { name: "Dismiss popup" }).click();
-  await expect(page.getByRole("heading", { name: "Service attention" })).toHaveCount(0);
+  await expect(alerts).toHaveText("1");
   await page.getByRole("button", { name: "Refresh runs" }).click();
-  await expect.poll(() => operationsLoads).toBe(2);
-  await expect(page.getByRole("status")).toContainText("1 unresolved service alert");
+  await expect(alerts).toBeVisible();
+  expect(operationsLoads).toBe(0);
+  await expect(page.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
   await page.getByRole("link", { name: "View history", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   const table = page.getByRole("table", { name: "Latest 100 runs" });
@@ -322,21 +325,25 @@ test("dashboard keeps recovery runs available and operation alerts in the header
   await page.setViewportSize({ width: 320, height: 700 });
   await expect(mobileDetails).toBeInViewport();
   await expect(table.getByText("New capture needed", { exact: true })).toBeInViewport();
-  await expect(alerts.locator(".dashboard-alert-count")).toBeInViewport();
+  await expect(alerts).toBeInViewport();
   expect(
-    await alerts.evaluate((button) => {
-      const count = button.querySelector(".dashboard-alert-count");
+    await statusLink.evaluate((link) => {
+      const count = link.querySelector("[aria-label='1 open alert']");
       if (!count) return false;
-      const buttonBounds = button.getBoundingClientRect();
+      const linkBounds = link.getBoundingClientRect();
       const countBounds = count.getBoundingClientRect();
       return (
-        countBounds.top >= buttonBounds.top &&
-        countBounds.bottom <= buttonBounds.bottom &&
-        countBounds.left >= buttonBounds.left &&
-        countBounds.right <= buttonBounds.right
+        countBounds.top >= linkBounds.top &&
+        countBounds.bottom <= linkBounds.bottom &&
+        countBounds.left >= linkBounds.left &&
+        countBounds.right <= linkBounds.right
       );
     }),
   ).toBe(true);
+  // The count is text that a person can read.
+  expect(
+    await alerts.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)),
+  ).toBeGreaterThanOrEqual(12);
   expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
     await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
   );

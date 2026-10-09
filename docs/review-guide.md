@@ -31,9 +31,9 @@ Only a pull request whose branch is in this repository gets a Visonaut check. A 
 
 ## Check service attention
 
-The dashboard shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
+The **Status** page shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. The link **Status** in the header has the number of open alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
 
-Alerts refresh every minute while the dashboard is open. Browser suspension can delay a refresh. Use **Refresh alerts** to check now. If a check fails, the panel marks the shown alerts as possibly out of date and offers **Retry alerts**. No external notifications are sent. Open the dashboard to check service health.
+Alerts refresh every minute while the Status page is open and its tab is visible. A hidden tab sends no request, and the page reads the alerts again when the tab becomes visible. Use **Refresh alerts** to check now. If a check fails, the panel marks the shown alerts as possibly out of date and offers **Retry alerts**. No external notifications are sent. Open the Status page to check service health.
 
 The panel is read-only. A successful operation clears its event through the service; there is no dismiss or acknowledge action. **No unresolved operation alerts** reports the event list at the shown check time. It does not certify every service dependency.
 
