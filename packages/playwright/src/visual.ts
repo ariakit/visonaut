@@ -10,6 +10,7 @@ import type { Page, PageScreenshotOptions, TestInfo } from "@playwright/test";
 import { PNG } from "pngjs";
 import { comparisonOptions } from "./comparison.js";
 import type { ComparisonOptions } from "./comparison.js";
+import { assertSubmitBounds } from "./submit-bounds.js";
 
 export interface EnvironmentProfile {
   osImageDigest: string;
@@ -395,10 +396,8 @@ function cropScreenshot(
   }
   const pixels = new PNG({ width: clip.width, height: clip.height });
   PNG.bitblt(source, pixels, x, y, clip.width, clip.height, 0, 0);
+  // assertSubmitBounds refuses an encoded crop above 2 MiB, with the item name.
   const bytes = PNG.sync.write(pixels);
-  if (bytes.byteLength > 20 * 1024 * 1024) {
-    throw new Error("Capture exceeds the encoded image limit");
-  }
   return { bytes, pixels };
 }
 
@@ -450,6 +449,13 @@ async function attachCapture({
   profile,
   comparison,
 }: AttachCaptureParams) {
+  assertSubmitBounds({
+    item: options.item,
+    variantKey: options.variant.key,
+    width: decoded.width,
+    height: decoded.height,
+    bytes: bytes.byteLength,
+  });
   const profileDigest = await digestJson(profile);
   const imageAttachment = `visonaut-image-${ordinal}`;
   const attachment: CaptureAttachment = {
