@@ -1,6 +1,6 @@
 # Comparison Worker
 
-The [current guide](../../docs/current-contract.md) defines the normal trusted CLI path. This Worker owns private image validation. The [W08 retirement runbook](../../docs/operations/retire-server-comparison.md) defines the live gate and the separate consumer-detachment steps before deployment of this fetch-only handler. Keep `POST /validate`, required codecs, and finite image bounds.
+The [current guide](../../docs/current-contract.md) defines the normal trusted CLI path. This Worker owns private image validation. The [W08 retirement runbook](../../docs/history/operations/retire-server-comparison.md) defines the live gate and the separate consumer-detachment steps before deployment of this fetch-only handler. Keep `POST /validate`, required codecs, and finite image bounds.
 
 Trusted local Submit supplies comparison results. The web Worker's five-minute scheduler recovers local receipts, finalizes ready comparisons, and delivers the durable status outbox through OPERATIONS. This Worker has no queue handler or cron. Its source configuration has no comparison producer binding or consumer entries. Existing live consumer assignments must be detached explicitly before this version is deployed. Queue resources remain in place.
 

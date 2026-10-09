@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { summarize } from "./run.mjs";
 
 const defaultFile = new URL(
-  "../../../../docs/evidence/review-scale/measurements.json",
+  "../../../../docs/history/evidence/review-scale/measurements.json",
   import.meta.url,
 );
 const data = JSON.parse(readFileSync(process.argv[2] || defaultFile, "utf8"));

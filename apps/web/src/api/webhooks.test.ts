@@ -3694,7 +3694,10 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
       )
       .run();
     const statement = await readFile(
-      new URL("../../../../docs/operations/compact-processed-webhooks.sql", import.meta.url),
+      new URL(
+        "../../../../docs/history/operations/compact-processed-webhooks.sql",
+        import.meta.url,
+      ),
       "utf8",
     );
     await database.prepare(statement).run();
@@ -3872,7 +3875,10 @@ describe("pull request titles in processed webhooks", () => {
       .bind(keptPayload)
       .run();
     const statement = await readFile(
-      new URL("../../../../docs/operations/compact-processed-webhooks.sql", import.meta.url),
+      new URL(
+        "../../../../docs/history/operations/compact-processed-webhooks.sql",
+        import.meta.url,
+      ),
       "utf8",
     );
     await database.prepare(statement).run();
