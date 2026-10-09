@@ -35,3 +35,10 @@ test("the style sheet that has the theme is imported once", () => {
   expect(find(/(?<!@)\bimport\s+["'][./]*\/?review\.css["']/)).toEqual([]);
   expect(find(/@import\s+["']\.\/review\.css["']/)).toEqual(["styles.css"]);
 });
+
+test("text and icons take their color from the text system", () => {
+  // opacity-N dims the whole element. ak-ink-N changes only the text color.
+  expect(find(/\bopacity-/)).toEqual([]);
+  // A color-named ink class is not a rule: use $text. Only ak-ink-N exists.
+  expect(find(/\bak-ink-[a-z]/)).toEqual([]);
+});

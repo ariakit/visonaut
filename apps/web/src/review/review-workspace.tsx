@@ -513,7 +513,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </a>
         ))}
       </nav>
-      <dl className="grid grid-cols-1 gap-2 my-5 [&>dt]:mt-2 [&>dt]:opacity-50 [&>dd]:wrap-anywhere">
+      <dl className="grid grid-cols-1 gap-2 my-5 [&>dt]:mt-2 [&>dt]:ak-ink-50 [&>dd]:wrap-anywhere">
         <dt>Changed pixels</dt>
         <dd>
           {variant.changedPixels?.toLocaleString() ?? "—"}
@@ -571,10 +571,10 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Review navigation"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
             Screenshots
           </Text>
-          <Text className="text-xs opacity-50">
+          <Text className="text-xs ak-ink-50">
             {model.items.length} {model.items.length === 1 ? "item" : "items"}
           </Text>
         </ShellSidebarHeader>
@@ -619,7 +619,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 </Text>
               </div>
               <div className="review-run-progress flex shrink-0 items-center gap-3">
-                <Text className="text-xs opacity-60">
+                <Text className="text-xs ak-ink-60">
                   {pending} of {total} need review
                 </Text>
                 <progress
@@ -633,7 +633,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
           </ShellMainFull>
         </ShellMainHeader>
         <ShellMainIntro className="py-0! border-b border-(--ak-edge)">
-          <div className="flex flex-wrap items-center gap-4 py-2 text-xs opacity-50">
+          <div className="flex flex-wrap items-center gap-4 py-2 text-xs ak-ink-50">
             <span className="flex items-center gap-1">
               <GitCommitHorizontal size={12} />
               {model.run.testedSha.slice(0, 7)}
@@ -669,7 +669,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                   {variant && <ReviewStatus variant={variant} />}
                 </div>
                 {variant && (
-                  <Text render={<p />} className="mt-2 text-xs opacity-55">
+                  <Text render={<p />} className="mt-2 text-xs ak-ink-55">
                     {variant.ratio != null ? (variant.ratio * 100).toFixed(2) + "% changed · " : ""}
                     {variant.changedPixels?.toLocaleString() ?? "—"} changed pixels
                   </Text>
@@ -743,15 +743,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 $forceRounded
                 $p={1}
                 $gap={1.5}
-                glider={{
-                  $kind: "flat",
-                  $rounded: "full",
-                  $forceRounded: true,
-                  $lightnessPush: false,
-                  $lightnessOffset: false,
-                  $lighten: 2,
-                  $border: true,
-                }}
+                glider={{ $kind: "bar", $barOffset: "frame" }}
                 aria-label="Variants"
                 className="review-variants max-w-full mb-4"
                 ref={variantStrip}
@@ -826,7 +818,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
                 >
                   {!model.archived &&
                     (variant.approveDisabledReason || variant.rejectDisabledReason) && (
-                      <p className="text-xs opacity-60 px-3 py-2">
+                      <p className="text-xs ak-ink-60 px-3 py-2">
                         {variant.rejectDisabledReason ?? variant.approveDisabledReason}
                       </p>
                     )}
@@ -1182,7 +1174,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         aria-label="Capture details"
       >
         <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold opacity-60">
+          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
             Capture details
           </Text>
           <Button
@@ -1281,7 +1273,7 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
         <ak.DialogHeading className="text-lg font-semibold">
           Review all changed views
         </ak.DialogHeading>
-        <ak.DialogDescription className="text-sm opacity-60 mt-2">
+        <ak.DialogDescription className="text-sm ak-ink-60 mt-2">
           This decision applies to all {targets.length} changed views in {item?.name}, including
           views with a previous decision.
         </ak.DialogDescription>

@@ -107,7 +107,7 @@ export function ScreenshotFilter({
             removeOnBackspace={false}
             aria-label="Search screenshots"
             placeholder="Search…"
-            className="w-0 min-w-0 flex-1 bg-transparent px-1 py-1.5 text-xs outline-none placeholder:opacity-50"
+            className="w-0 min-w-0 flex-1 bg-transparent px-1 py-1.5 text-xs outline-none placeholder:ak-ink-50"
             render={<ak.Combobox autoSelect={false} autoComplete="list" setValueOnChange={false} />}
           />
           {query && (
@@ -144,7 +144,7 @@ export function ScreenshotFilter({
             />
           }
         >
-          <Text className="px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] opacity-60">
+          <Text className="px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ak-ink-60">
             Review status
           </Text>
           {filterOptions.map((option) => (

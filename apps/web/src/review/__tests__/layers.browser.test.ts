@@ -1,21 +1,11 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 const brand = [0, 106, 187];
 const white = [255, 255, 255];
-
-// A computed color can be in any CSS color space. The canvas converts it to sRGB.
-function colorOf(locator: Locator, property: "backgroundColor" | "color") {
-  return locator.evaluate((element, property) => {
-    const context = document.createElement("canvas").getContext("2d");
-    if (!context) throw new Error("Canvas unavailable");
-    context.fillStyle = getComputedStyle(element)[property];
-    context.fillRect(0, 0, 1, 1);
-    return Array.from(context.getImageData(0, 0, 1, 1).data);
-  }, property);
-}
 
 async function signedOut(page: Page, status: 401 | 403) {
   await page.route("**/api/**", (route) =>
