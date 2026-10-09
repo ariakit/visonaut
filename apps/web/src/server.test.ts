@@ -429,7 +429,16 @@ async function signIn({ githubUserId, email, headers }: SignInOptions) {
   const github = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url === "https://github.com/login/oauth/access_token") {
-      return Response.json({ access_token: "test-access-token", token_type: "bearer" });
+      // GitHub sends no ID token. The stub sends one, so that the answer has a
+      // value for each token column of the account row.
+      return Response.json({
+        access_token: "test-access-token",
+        expires_in: 28_800,
+        refresh_token: "test-refresh-token",
+        refresh_token_expires_in: 15_897_600,
+        id_token: "test-id-token",
+        token_type: "bearer",
+      });
     }
     if (url === "https://api.github.com/user") {
       return Response.json({ id: githubUserId, login: "maintainer", name: "Maintainer", email });
@@ -555,6 +564,71 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
       .bind(String(githubUserId), "maintainer@example.com")
       .first(),
   ).toEqual({ accounts: 1, users: 1 });
+});
+
+it("stores no GitHub user token at a first sign-in and at a later sign-in", async () => {
+  const githubUserId = 4_245;
+  const email = "returning@example.com";
+  const lifetime = { waitUntil() {} };
+  const noToken = {
+    accessToken: null,
+    refreshToken: null,
+    idToken: null,
+    accessTokenExpiresAt: null,
+    refreshTokenExpiresAt: null,
+  };
+  const accountRows = async () => {
+    const rows = await env.DB.prepare(
+      "SELECT accessToken, refreshToken, idToken, accessTokenExpiresAt, refreshTokenExpiresAt FROM account WHERE providerId='github' AND accountId=?",
+    )
+      .bind(String(githubUserId))
+      .all();
+    return rows.results;
+  };
+  const signedInUser = async (jar: Map<string, string>) => {
+    const identity = await server.fetch(
+      appRequest("GET", "/api/me", { cookie: cookieHeader(jar) }),
+      env,
+      lifetime,
+    );
+    expect(identity.status).toBe(200);
+    return string(object(await identity.json()).userId);
+  };
+
+  // The first sign-in creates the account row.
+  const firstJar = await signIn({
+    githubUserId,
+    email,
+    headers: { "cf-connecting-ip": "203.0.113.10" },
+  });
+  expect(await accountRows()).toEqual([noToken]);
+  const userId = await signedInUser(firstJar);
+
+  // A row from before this rule holds the values of its last sign-in.
+  const expiry = new Date(Date.now() + 86_400_000).toISOString();
+  await env.DB.prepare(
+    "UPDATE account SET accessToken=?, refreshToken=?, idToken=?, accessTokenExpiresAt=?, refreshTokenExpiresAt=? WHERE providerId='github' AND accountId=?",
+  )
+    .bind("old-access", "old-refresh", "old-id", expiry, expiry, String(githubUserId))
+    .run();
+  expect(await accountRows()).toEqual([
+    {
+      accessToken: "old-access",
+      refreshToken: "old-refresh",
+      idToken: "old-id",
+      accessTokenExpiresAt: expiry,
+      refreshTokenExpiresAt: expiry,
+    },
+  ]);
+
+  // A later sign-in updates the same account row.
+  const laterJar = await signIn({
+    githubUserId,
+    email,
+    headers: { "cf-connecting-ip": "203.0.113.11" },
+  });
+  expect(await accountRows()).toEqual([noToken]);
+  expect(await signedInUser(laterJar)).toBe(userId);
 });
 
 it("counts the D1 work of the access check of one private request", async () => {
